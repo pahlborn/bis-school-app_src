@@ -101,6 +101,9 @@ test('richtiges Passwort: App startet, alte Sterne bleiben, Quest spielbar, nach
   assert.equal(await page.textContent('#home h1'), '3B Big Quest');
   assert.equal(await page.textContent('#totalStars'), '7', 'vorhandene Sterne muessen erhalten bleiben');
   assert.equal(await page.inputValue('#playerName'), 'Probe');
+  const start = await page.textContent('#home');
+  assert.ok(start.includes('Grade 3B · Bavarian'), 'Mittelpunkt kommt nach dem Entschluesseln richtig an');
+  assert.ok(start.includes('hier üben'), 'Umlaut kommt nach dem Entschluesseln richtig an');
   assert.ok(await page.evaluate((k) => localStorage.getItem(k), SCHLUESSEL), 'Schluessel gemerkt');
 
   await page.locator('button.world').first().click();

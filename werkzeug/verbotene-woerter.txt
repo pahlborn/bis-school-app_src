@@ -12,10 +12,10 @@ Grade 3B
 3B Big Quest
 3B Quest
 
-# Lehrkraefte (Schlüer steht in der App derzeit falsch kodiert)
+# Lehrkraefte
 Bhan
 Zeckser
-SchlÃ¼er
+Schlüer
 
 # Noten und Plattform
 Toddle
