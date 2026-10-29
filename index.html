@@ -208,7 +208,7 @@ button{font:inherit;color:inherit}
   <!-- HOME -->
   <section id="home" class="screen">
     <div class="hero">
-      <div class="eyebrow">Grade 3B Â· Bavarian International School</div>
+      <div class="eyebrow">Grade 3B · Bavarian International School</div>
       <h1>3B Big Quest</h1>
       <p class="tagline">8 questions per quest. Collect stars!</p>
     </div>
@@ -337,7 +337,7 @@ function numberLineSVG(start, jumps){
   }
   for(let i=0;i<jumps.length;i++){
     const x1=sx(pts[i]), x2=sx(pts[i+1]), mx=(x1+x2)/2, h=Math.max(38, Math.min(70, Math.abs(x2-x1)*.55));
-    const lbl=(jumps[i]<0?'âˆ’ ':'+ ')+Math.abs(jumps[i]);
+    const lbl=(jumps[i]<0?'− ':'+ ')+Math.abs(jumps[i]);
     s+=`<path d="M${x1.toFixed(1)} ${y-4} Q${mx.toFixed(1)} ${y-4-h*2} ${x2.toFixed(1)} ${y-4}" fill="none" stroke="var(--world)" stroke-width="3.5" stroke-linecap="round"/>`;
     s+=`<circle cx="${x2.toFixed(1)}" cy="${y-4}" r="5" fill="var(--world)"/>`;
     s+=`<text x="${mx.toFixed(1)}" y="${(y-h-14).toFixed(1)}" text-anchor="middle" font-size="18" font-weight="600" ${FD} fill="var(--world)">${lbl}</text>`;
@@ -372,7 +372,7 @@ function rulerSVG(mark){
     if(big) s+=`<text x="${sx(v).toFixed(1)}" y="112" text-anchor="middle" font-size="15" font-weight="600" ${FD} fill="var(--ink)">${v}</text>`;
   }
   s+=`<path d="M${(sx(mark)-12).toFixed(1)} 22 L${(sx(mark)+12).toFixed(1)} 22 L${sx(mark).toFixed(1)} 56 Z" fill="var(--sun)" stroke="var(--ink)" stroke-width="2"/>`;
-  s+=`<text x="${(W-px)}" y="140" text-anchor="end" font-size="14" ${FD} fill="var(--muted)">metre stick Â· cm</text>`;
+  s+=`<text x="${(W-px)}" y="140" text-anchor="end" font-size="14" ${FD} fill="var(--muted)">metre stick · cm</text>`;
   return `<svg viewBox="0 0 ${W} 150" width="100%" role="img" aria-label="Metre stick with an arrow">${s}</svg>`;
 }
 function barChartSVG(data, o){
@@ -397,7 +397,7 @@ function barChartSVG(data, o){
 }
 function columnHTML(a,b){
   const d=n=>String(n).padStart(3,' ').split('').map(c=>`<span>${c===' '?'':c}</span>`).join('');
-  return `<div class="column" role="img" aria-label="${a} minus ${b}"><span></span>${d(a)}<span class="op">âˆ’</span>${d(b).replace(/<span>/g,'<span class="u">')}<span class="u"></span></div>`;
+  return `<div class="column" role="img" aria-label="${a} minus ${b}"><span></span>${d(a)}<span class="op">−</span>${d(b).replace(/<span>/g,'<span class="u">')}<span class="u"></span></div>`;
 }
 function tableHTML(headers, rows){
   return `<div class="tablewrap"><table class="dt"><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map((c,i)=>`<td${i>0?' class="num"':''}>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
@@ -407,6 +407,7 @@ const itemCard = t => `<div class="itemcard">${esc(t)}</div>`;
 
 /* ---------- helpers ---------- */
 function mc(prompt, right, wrongs, explain, extra){
+  wrongs=uniq(wrongs).filter(t=>t!==right);
   const opts=shuffle([{t:right,ok:true}].concat(wrongs.map(t=>({t:t,ok:false}))));
   return Object.assign({kind:'mc', prompt:prompt, options:opts.map(o=>o.t), answer:opts.findIndex(o=>o.ok), explain:explain, visual:''}, extra||{});
 }
@@ -430,7 +431,7 @@ function takeFrom(bank, n){ return shuffle(bank).slice(0,n); }
 const bankMC = (bank, tag) => r => mc(r[0], r[1], r[2], r[3], tag);
 const fromBank = (bank, tag, n) => takeFrom(bank, n).map(bankMC(bank, tag));
 
-/* ======================= PAST Â· FORCES LAB (Friction Frenzy) ======================= */
+/* ======================= PAST · FORCES LAB (Friction Frenzy) ======================= */
 const FOR={label:'Forces Lab', world:'forces'};
 const SCI=[
  ["What is friction?","Rubbing that slows things down",["A kind of magnet","A type of ramp","How fast a car goes"],"Friction is rubbing. When two things rub, it slows them down. Rough things rub more."],
@@ -438,18 +439,18 @@ const SCI=[
  ["Which surface has the MOST friction?","Thick carpet",["An ice rink","Polished tiles","A glass table"],"Carpet is fluffy and rough. It grabs the wheels and slows the car."],
  ["You make the ramp steeper. What will most likely happen to the car?","It goes faster and farther",["It stops on the ramp","It rolls backwards","Nothing changes"],"A steeper ramp is like a bigger hill. Gravity pulls the car down faster."],
  ["Which force pulls the car down the ramp?","Gravity",["Magnetism","Electricity","Wind"],"Gravity pulls everything down to the ground. It pulls the car down the ramp too."],
- ["A force is aâ€¦","push or a pull",["kind of energy drink","type of car","loud sound"],"A force is a push or a pull. Pushes and pulls make things move or stop."],
+ ["A force is a…","push or a pull",["kind of energy drink","type of car","loud sound"],"A force is a push or a pull. Pushes and pulls make things move or stop."],
  ["Which of these is a PUSH?","Kicking a football",["Opening a drawer","Pulling a wagon","A game of tug of war"],"Your foot pushes the ball away from you."],
  ["Which of these is a PULL?","Opening a drawer",["Kicking a ball","Pressing a doorbell","Pushing a shopping trolley"],"You pull the drawer towards you."],
  ["In the Friction Roll experiment, what is the only thing that changes?","The surface on the ramp",["The car","The slope of the ramp","Where the ramp stands"],"You only change the surface. Everything else stays the same. That makes the test fair."],
  ["In a fair test, how many things should you change at a time?","Just one",["Two","Three","As many as you like"],"Change only one thing. Then you know what made the difference."],
  ["Which tool did 3B use to measure how far the car rolled?","A metre stick",["A thermometer","A stopwatch","A magnifying glass"],"A metre stick shows centimetres and metres."],
  ["How do you attach a new surface to the ramp?","With the velcro strip (hook and loop)",["With glue","With tape","You just lay it on top"],"Each surface has a velcro strip. Press it on the ramp so it stays."],
- ["How should you start the car at the top of the ramp?","Gently let it go, donâ€™t push",["Give it a big push","Throw it","Blow on it"],"Pushing adds extra force. Then the test is not fair."],
+ ["How should you start the car at the top of the ramp?","Gently let it go, don’t push",["Give it a big push","Throw it","Blow on it"],"Pushing adds extra force. Then the test is not fair."],
  ["From which part of the car do you measure the distance?","From the back of the car",["From the front wheels","From the middle","From the ramp"],"Always measure from the same spot. We use the back of the car."],
  ["What did you use the scale for in the experiment?","To weigh the car",["To measure the ramp","To measure time","To weigh yourself"],"Put the car on the scale. Write down its mass in grams (g)."],
  ["Why do scientists repeat an experiment?","To be sure the result is right",["Because it is boring","To use up more materials","So it takes longer"],"Same result again? Then you can trust it."],
- ["A prediction isâ€¦","a smart guess about what will happen",["the final answer","a mistake","a kind of force"],"First guess what will happen. Then test it."],
+ ["A prediction is…","a smart guess about what will happen",["the final answer","a mistake","a kind of force"],"First guess what will happen. Then test it."],
  ["Why does a rolling ball slow down and stop?","Friction with the ground",["It gets tired","Gravity switches off","It runs out of air"],"The ground rubs against the ball. That takes away its speed bit by bit."],
  ["Rub your hands together fast. Why do they get warm?","Friction",["Gravity","Magnets","Rain"],"Your hands rub together. Rubbing makes heat."],
  ["Which has the LEAST friction?","An ice rink",["A carpet","A sandy beach","A rubber mat"],"Ice is very smooth and slippery. Almost no rubbing."],
@@ -476,24 +477,24 @@ function varCtrlQ(){
 const SCI_ORDER=[
  ["Put the steps of the scientific method in order.",["Ask a question","Make a prediction","Test it","Record the data","Share what you found out"],"Ask, guess, test, write down, tell others. That is how scientists work!"],
  ["Put the Friction Roll steps in order.",["Attach a surface to the ramp with velcro","Set up the metre sticks","Place the car at the top and gently let go","Measure from the back of the car","Write the distance on your experiment sheet"],"Attach, set up, let go, measure, write down. No pushing!"],
- ["Put the parts of the Friction Frenzy lesson in order.",["Tuning in: what do we know about forces?","Letâ€™s get rolling: investigate friction","Sharing our discoveries","Reflect and upload"],"First think. Then test. Then share. Then look back."]
+ ["Put the parts of the Friction Frenzy lesson in order.",["Tuning in: what do we know about forces?","Let’s get rolling: investigate friction","Sharing our discoveries","Reflect and upload"],"First think. Then test. Then share. Then look back."]
 ];
 const SCI_READ=[
  ["Mia tested her car on two ramps. On the carpet ramp the car rolled 40 cm. On the wooden ramp it rolled 120 cm. She wrote both numbers in her table.","Why did the car roll farther on the wooden ramp?","Wood is smoother, so there is less friction",["The car was heavier","Mia pushed it harder","Carpet is magnetic"],"Wood is smooth. Less rubbing, so the car rolls farther. 120 cm is three times 40 cm!"],
- ["Leoâ€™s group tested the car three times on each surface. Every single time, the sandpaper ramp gave the shortest distance.","Why did Leoâ€™s group test three times?","To make sure the result was not just luck",["Because the teacher was busy","Because the car broke","To make the ramp longer"],"Three times the same result? Then it was not luck."],
+ ["Leo’s group tested the car three times on each surface. Every single time, the sandpaper ramp gave the shortest distance.","Why did Leo’s group test three times?","To make sure the result was not just luck",["Because the teacher was busy","Because the car broke","To make the ramp longer"],"Three times the same result? Then it was not luck."],
  ["Ana raised her ramp higher. She noticed the car zoomed off the end and bumped into the wall!","What did raising the ramp do?","It made the car go faster",["It made the car stop","It made the car heavier","Nothing changed"],"A steeper ramp makes the car faster."],
- ["Noorâ€™s group changed the surface AND moved the ramp to a new table at the same time. Their car rolled much farther.","What is the problem with Noorâ€™s test?","They changed two things, so they canâ€™t tell which one made the difference",["The car was too small","They used a metre stick","Nothing, it was perfect"],"Change only one thing at a time. Then you know what caused it."]
+ ["Noor’s group changed the surface AND moved the ramp to a new table at the same time. Their car rolled much farther.","What is the problem with Noor’s test?","They changed two things, so they can’t tell which one made the difference",["The car was too small","They used a metre stick","Nothing, it was perfect"],"Change only one thing at a time. Then you know what caused it."]
 ];
 const forcesMC = bankMC(SCI, FOR);
 const forcesOrder = () => { const r=pick(SCI_ORDER); return orderQ(r[0], r[1], null, r[2], FOR); };
 const forcesRead = () => { const r=pick(SCI_READ); return mc(r[1], r[2], r[3], r[4], Object.assign({visual:quote(r[0])}, FOR)); };
 function buildForces(){ return shuffle(takeFrom(SCI,5).map(forcesMC).concat([forcesOrder(), forcesRead(), varCtrlQ()])); }
 
-/* ======================= PAST Â· TIME & NUMBERS ======================= */
+/* ======================= PAST · TIME & NUMBERS ======================= */
 const NW={5:'five',10:'ten',20:'twenty',25:'twenty-five'};
 function timeWords(h,m){
   const nh=h%12+1;
-  if(m===0) return h+" oâ€™clock";
+  if(m===0) return h+" o’clock";
   if(m===15) return "quarter past "+h;
   if(m===30) return "half past "+h;
   if(m===45) return "quarter to "+nh;
@@ -540,14 +541,15 @@ function numberLine(){
   const start=sum<0?40+rnd(55):11+rnd(60);
   const end=start+sum;
   const wrongs=fill3(end,[end+10,end-10,end+5,end-5,end+1,end-1,start+jumps[0],start-sum]);
-  const steps=jumps.map(j=>(j<0?"âˆ’ ":"+ ")+Math.abs(j)).join(" ");
+  const steps=jumps.map(j=>(j<0?"− ":"+ ")+Math.abs(j)).join(" ");
   return mc("Start at <b>"+start+"</b> and follow the jumps. Where do you land?", String(end), wrongs.map(String),
     start+" "+steps+" = "+end+".", Object.assign({visual:numberLineSVG(start,jumps), grid:true}, NUM));
 }
 function placeValue(){
   const v=rnd(4);
   if(v===0){
-    const n=1000+rnd(9000), s=String(n); let pos=rnd(4); if(s[pos]==='0') pos=0;
+    let n, s, pos;
+    do { n=1000+rnd(9000); s=String(n); const one=[0,1,2,3].filter(i=>s[i]!=='0' && s.split(s[i]).length===2); pos=one.length?pick(one):-1; } while(pos<0);
     const d=+s[pos], place=[1000,100,10,1][pos], right=d*place, names=['thousands','hundreds','tens','ones'];
     const wrongs=fill3(right,[d, d*place*10, d*place/10, place, d*1000, d*100, d*10].filter(Number.isInteger));
     return mc("What is the value of the <b>"+d+"</b> in <b>"+fmt(n)+"</b>?", fmt(right), wrongs.map(fmt),
@@ -571,7 +573,7 @@ function placeValue(){
   const right=n+p[0];
   const wrongs=fill3(right,[n+p[0]*10, n-p[0], n+p[0]/10, n+1, n-1, n+p[0]*2].filter(Number.isInteger));
   return mc("What is <b>"+p[1]+" "+fmt(n)+"</b>?", fmt(right), wrongs.map(fmt),
-    fmt(n)+" "+(p[0]>0?"+":"âˆ’")+" "+fmt(Math.abs(p[0]))+" = "+fmt(right)+".", Object.assign({grid:true}, NUM));
+    fmt(n)+" "+(p[0]>0?"+":"−")+" "+fmt(Math.abs(p[0]))+" = "+fmt(right)+".", Object.assign({grid:true}, NUM));
 }
 function oddEven(){
   const n=pick([10+rnd(90), 100+rnd(900), 1000+rnd(9000)]);
@@ -580,18 +582,18 @@ function oddEven(){
 }
 function subtraction(){
   const a=300+rnd(700), b=100+rnd(a-100);
-  return typed("Solve the column subtraction. Type your answer.", a-b, a+" âˆ’ "+b+" = "+(a-b)+". Start with the ones. If the top digit is too small, borrow from the next column.", Object.assign({visual:columnHTML(a,b)}, NUM));
+  return typed("Solve the column subtraction. Type your answer.", a-b, a+" − "+b+" = "+(a-b)+". Start with the ones. If the top digit is too small, borrow from the next column.", Object.assign({visual:columnHTML(a,b)}, NUM));
 }
 function mental(){
   const a=pick([120,150,230,260,340,410,450,520,610,730])+rnd(5)*10, b=pick([110,150,200,250,300,340,380,420])+rnd(5)*10;
   const plus=rnd(2)===0; const right=plus?a+b:Math.abs(a-b), x=Math.max(a,b), y=Math.min(a,b);
-  const prompt=plus?"<b>"+a+" + "+b+"</b> = ?":"<b>"+x+" âˆ’ "+y+"</b> = ?";
+  const prompt=plus?"<b>"+a+" + "+b+"</b> = ?":"<b>"+x+" − "+y+"</b> = ?";
   const wrongs=fill3(right,[right+10,right-10,right+100,right-100,right+20,right-1]);
-  return mc(prompt, fmt(right), wrongs.map(fmt), (plus?a+" + "+b:x+" âˆ’ "+y)+" = "+right+". Add or take away the hundreds first, then the tens.", Object.assign({grid:true}, NUM));
+  return mc(prompt, fmt(right), wrongs.map(fmt), (plus?a+" + "+b:x+" − "+y)+" = "+right+". Add or take away the hundreds first, then the tens.", Object.assign({grid:true}, NUM));
 }
 function buildNumbers(){ return shuffle([clockRead(), clockRead(), clockPick(), ampm(), numberLine(), placeValue(), oddEven(), subtraction(), pick([mental,placeValue])()]).slice(0,8); }
 
-/* ======================= PAST Â· ROUNDING ROAD ======================= */
+/* ======================= PAST · ROUNDING ROAD ======================= */
 const RND={label:'Rounding Road', world:'round'};
 function randNotMid(){ let n; do { n=101+rnd(799); } while(n%100===0 || n%100===50); return n; }
 function nearestHundredQ(tag){
@@ -644,18 +646,18 @@ const ROUND_MC=[
 ];
 function buildRounding(){ return shuffle([nearestHundredQ(), nearestHundredQ(), benchmarkQ(), roundWordQ(), retag([roundTenQ()],RND)[0], estimateQ(), threeAddendsQ(), bankMC(ROUND_MC,RND)(pick(ROUND_MC))]); }
 
-/* ======================= PAST Â· WORD WORKSHOP (OREO + Persuade for the Park) ======================= */
+/* ======================= PAST · WORD WORKSHOP (OREO + Persuade for the Park) ======================= */
 const WRD={label:'Word Workshop', world:'words'};
 const OREO_MC=[
  ["In the OREO writing plan, what does the first <b>O</b> stand for?","Opinion",["Order","Orange","Only"],"O is for Opinion. That is what you think."],
  ["In the OREO writing plan, what does <b>R</b> stand for?","Reason",["Rhyme","Reading","Rocket"],"R is for Reason. That is why you think it."],
  ["In the OREO writing plan, what does <b>E</b> stand for?","Example",["Ending","Every","Extra"],"E is for Example. A real thing that shows your reason is true."],
- ["In the OREO writing plan, what does the last <b>O</b> stand for?","Opinion restated",["Opposite","Over","Out"],"The last O says your opinion again. Like â€˜That is whyâ€¦â€™."],
- ["Which words are a good start for a <b>reason</b> sentence?","One reason isâ€¦",["For exampleâ€¦","The end.","Once upon a timeâ€¦"],"A reason often starts with â€˜One reason isâ€¦â€™."],
- ["Which words are a good start for an <b>example</b> sentence?","For exampleâ€¦",["I thinkâ€¦","In conclusionâ€¦","Dear diaryâ€¦"],"An example often starts with â€˜For exampleâ€¦â€™."],
- ["Which words are a good start for <b>restating your opinion</b>?","That is whyâ€¦",["For exampleâ€¦","One reason isâ€¦","Dear Ms. Bhanâ€¦"],"â€˜That is whyâ€¦â€™ tells the reader: I am finishing now."],
+ ["In the OREO writing plan, what does the last <b>O</b> stand for?","Opinion restated",["Opposite","Over","Out"],"The last O says your opinion again. Like ‘That is why…’."],
+ ["Which words are a good start for a <b>reason</b> sentence?","One reason is…",["For example…","The end.","Once upon a time…"],"A reason often starts with ‘One reason is…’."],
+ ["Which words are a good start for an <b>example</b> sentence?","For example…",["I think…","In conclusion…","Dear diary…"],"An example often starts with ‘For example…’."],
+ ["Which words are a good start for <b>restating your opinion</b>?","That is why…",["For example…","One reason is…","Dear Ms. Bhan…"],"‘That is why…’ tells the reader: I am finishing now."],
  ["What is persuasive writing for?","To convince the reader to agree with you",["To tell a funny joke","To list the days of the week","To describe a clock"],"Persuade means: make someone agree with you."],
- ["In â€˜Persuade for the Parkâ€™, who needs to hear why the park should stay open?","The local council",["The fire brigade","A football team","The zoo keeper"],"The council decides about the park. Your words must convince them."],
+ ["In ‘Persuade for the Park’, who needs to hear why the park should stay open?","The local council",["The fire brigade","A football team","The zoo keeper"],"The council decides about the park. Your words must convince them."],
  ["How many reasons should you brainstorm on your OREO planning sheet for the park?","At least three",["One","Ten","None"],"Three reasons with three examples make a strong letter."],
  ["Which is a REASON why the park is valuable?","It is a place where the community can meet.",["I went there on Tuesday.","The council is closing it.","My shoes are red."],"A reason says WHY."],
  ["What should you do FIRST before writing your persuasive text?","Fill in the OREO planning sheet",["Take photos","Upload to Toddle","Draw a map"],"Plan first. Then write."],
@@ -682,22 +684,22 @@ const OPFACT=[
  {op:["Munich is the best city in Germany.","Pretzels taste better than bread rolls.","Winter is the nicest season."],fact:["Munich is the capital of Bavaria.","Bavaria is in the south of Germany.","Pretzels are made from dough."]}
 ];
 const PREFIX=[
- ["Add a prefix to make the opposite of <b>happy</b>.","unhappy",["rehappy","prehappy","dishappy"],"â€˜un-â€™ means not. Unhappy = not happy."],
- ["â€˜re-â€™ means <b>again</b>. What does <b>rewrite</b> mean?","write again",["write before","not write","write badly"],"re + write = write it again."],
- ["â€˜pre-â€™ means <b>before</b>. Which word means â€˜heat beforeâ€™?","preheat",["reheat","unheat","heatless"],"You preheat the oven before you bake."],
- ["Which word means â€˜not agreeâ€™?","disagree",["reagree","preagree","agreeful"],"â€˜dis-â€™ means not or the opposite of."],
- ["Which word has a <b>prefix</b>?","unlock",["locks","locking","locker"],"â€˜un-â€™ is added to the front of â€˜lockâ€™. That is a prefix."],
- ["â€˜mis-â€™ means <b>wrongly</b>. What does <b>misspell</b> mean?","spell wrongly",["spell again","spell before","not spell"],"mis + spell = spell it wrong."],
- ["A prefix goesâ€¦","at the front of a word",["at the end of a word","in the middle of a word","in a different sentence"],"A prefix goes at the front of the word. Pre means before!"]
+ ["Add a prefix to make the opposite of <b>happy</b>.","unhappy",["rehappy","prehappy","dishappy"],"‘un-’ means not. Unhappy = not happy."],
+ ["‘re-’ means <b>again</b>. What does <b>rewrite</b> mean?","write again",["write before","not write","write badly"],"re + write = write it again."],
+ ["‘pre-’ means <b>before</b>. Which word means ‘heat before’?","preheat",["reheat","unheat","heatless"],"You preheat the oven before you bake."],
+ ["Which word means ‘not agree’?","disagree",["reagree","preagree","agreeful"],"‘dis-’ means not or the opposite of."],
+ ["Which word has a <b>prefix</b>?","unlock",["locks","locking","locker"],"‘un-’ is added to the front of ‘lock’. That is a prefix."],
+ ["‘mis-’ means <b>wrongly</b>. What does <b>misspell</b> mean?","spell wrongly",["spell again","spell before","not spell"],"mis + spell = spell it wrong."],
+ ["A prefix goes…","at the front of a word",["at the end of a word","in the middle of a word","in a different sentence"],"A prefix goes at the front of the word. Pre means before!"]
 ];
 const SUFFIX=[
- ["â€˜-fulâ€™ means <b>full of</b>. What does <b>careful</b> mean?","full of care",["without care","care again","a person who cares"],"care + ful = full of care."],
- ["â€˜-lessâ€™ means <b>without</b>. Which word means â€˜without hopeâ€™?","hopeless",["hopeful","hoping","hoped"],"hope + less = without hope."],
- ["â€˜-erâ€™ can mean <b>a person who</b>. A person who teaches is aâ€¦","teacher",["teachful","teachless","teaching"],"teach + er = a person who teaches."],
- ["<b>kind</b> + <b>-ness</b> = ?","kindness",["kindly","kinder","kindful"],"â€˜-nessâ€™ turns a describing word into a thing: kindness."],
- ["Which word has a <b>suffix</b>?","playful",["replay","play","display"],"â€˜-fulâ€™ is added to the end of â€˜playâ€™. That is a suffix."],
- ["â€˜-lyâ€™ tells you <b>how</b>. In â€˜She ran quicklyâ€™, which word has the suffix?","quickly",["She","ran","the"],"quick + ly = quickly. It tells you how she ran."],
- ["Which word means â€˜more than one boxâ€™?","boxes",["boxs","boxen","boxies"],"Words ending in x add â€˜-esâ€™ to make more than one."]
+ ["‘-ful’ means <b>full of</b>. What does <b>careful</b> mean?","full of care",["without care","care again","a person who cares"],"care + ful = full of care."],
+ ["‘-less’ means <b>without</b>. Which word means ‘without hope’?","hopeless",["hopeful","hoping","hoped"],"hope + less = without hope."],
+ ["‘-er’ can mean <b>a person who</b>. A person who teaches is a…","teacher",["teachful","teachless","teaching"],"teach + er = a person who teaches."],
+ ["<b>kind</b> + <b>-ness</b> = ?","kindness",["kindly","kinder","kindful"],"‘-ness’ turns a describing word into a thing: kindness."],
+ ["Which word has a <b>suffix</b>?","playful",["replay","play","display"],"‘-ful’ is added to the end of ‘play’. That is a suffix."],
+ ["‘-ly’ tells you <b>how</b>. In ‘She ran quickly’, which word has the suffix?","quickly",["She","ran","the"],"quick + ly = quickly. It tells you how she ran."],
+ ["Which word means ‘more than one box’?","boxes",["boxs","boxen","boxies"],"Words ending in x add ‘-es’ to make more than one."]
 ];
 const INFER=[
  ["Tom grabbed his umbrella and pulled on his boots before he left the house.","What is the weather probably like?","Rainy",["Sunny and hot","Snowy","Foggy"],"Umbrella and boots? It is raining."],
@@ -723,38 +725,38 @@ function opinionFact(){
 function sentenceType(){
   const r=pick(SENT);
   return Object.assign({kind:'mc', prompt:"Which part of the OREO plan is this sentence?", visual:quote(r[0]), options:OREO_PARTS.slice(), answer:r[1],
-    explain:"Opinions say what you think. Reasons often start with â€˜One reason isâ€¦â€™. Examples start with â€˜For exampleâ€¦â€™. The last O restates the opinion with â€˜That is whyâ€¦â€™ or â€˜In conclusionâ€¦â€™."}, WRD);
+    explain:"Opinions say what you think. Reasons often start with ‘One reason is…’. Examples start with ‘For example…’. The last O restates the opinion with ‘That is why…’ or ‘In conclusion…’."}, WRD);
 }
 function affixQ(bank){ const r=bank.shift(); return mc(r[0], r[1], r[2], r[3], WRD); }
 function inferenceQ(){ const r=pick(INFER); return mc(r[1], r[2], r[3], r[4], Object.assign({visual:quote(r[0])}, WRD)); }
 function buildWords(){ const pre=shuffle(PREFIX), suf=shuffle(SUFFIX); return shuffle([oreoMC(), oreoMC(), oreoOrder(), opinionFact(), sentenceType(), affixQ(pre), affixQ(suf), inferenceQ()]); }
 
-/* ======================= PAST Â· LIBRARY & RESEARCH ======================= */
+/* ======================= PAST · LIBRARY & RESEARCH ======================= */
 const LIB={label:'Library & Research', world:'library'};
 const LIB_MC=[
  ["Which research source is an <b>encyclopedia</b>?","Britannica",["Kiddle","BrainPop","A comic book"],"Britannica is a big book of facts. You can read it on the iPad too."],
  ["Which research source shows <b>videos</b>?","BrainPop",["Britannica","Kiddle","A dictionary"],"BrainPop shows short videos."],
  ["What is <b>Kiddle</b>?","A safe internet search website for kids",["A video game","A type of ramp","A library code"],"Kiddle is a search website just for kids."],
  ["Why do we use sources like Britannica instead of just guessing?","So our facts are correct and we can check them",["Because guessing is against the rules","So the work takes longer","Because the internet is always right"],"Good facts come from good sources. You can check them."],
- ["What does the <b>call number</b> on a bookâ€™s spine help you do?","Find where the book lives on the shelf",["Count the pages","Know the price","Phone the author"],"The call number is the bookâ€™s address on the shelf."],
- ["You want a book in a language you speak at home. What do you look at?","The language code on the call number",["The colour of the cover","The number of pages","The authorâ€™s age"],"The call number has a code for the language."],
+ ["What does the <b>call number</b> on a book’s spine help you do?","Find where the book lives on the shelf",["Count the pages","Know the price","Phone the author"],"The call number is the book’s address on the shelf."],
+ ["You want a book in a language you speak at home. What do you look at?","The language code on the call number",["The colour of the cover","The number of pages","The author’s age"],"The call number has a code for the language."],
  ["Which of these is a <b>researchable</b> question?","Which surface has the most friction?",["Is pizza yummy?","What is my favourite colour?","Do you like Mondays?"],"You can find the answer by testing or reading. Not just by liking something."],
  ["On Bavarian Day the library celebrated stories from our host country. Which country is that?","Germany",["Spain","Japan","Brazil"],"Our school is in Bavaria. Bavaria is in Germany."],
  ["Which fairy tale comes from Germany?","The Bremen Town Musicians",["Aladdin","The Little Mermaid","Pinocchio"],"The Brothers Grimm wrote down this German fairy tale."],
  ["Who collected famous German fairy tales like Hansel and Gretel?","The Brothers Grimm",["The Beatles","Roald Dahl","Dr. Seuss"],"Jacob and Wilhelm Grimm collected German fairy tales long ago."],
  ["When you use facts from a website in your work, what should you do?","Say where you found them",["Keep it secret","Change the numbers","Copy the whole page"],"Say where you found the facts. Then others can check."],
  ["Which source would you use to <b>watch</b> how forces work?","A BrainPop video",["A dictionary","A map","A calculator"],"Videos show things moving."],
- ["3B looked up force words with Ms. Zeckser using books, Britannica andâ€¦","iPads",["telescopes","microwaves","typewriters"],"Books, iPads and Britannica."],
- ["Which is the best FIRST step when researching a new word like â€˜frictionâ€™?","Look it up in Britannica or a book",["Make up a meaning","Ask a stranger","Skip it"],"Look it up first. Then write it in your own words."],
+ ["3B looked up force words with Ms. Zeckser using books, Britannica and…","iPads",["telescopes","microwaves","typewriters"],"Books, iPads and Britannica."],
+ ["Which is the best FIRST step when researching a new word like ‘friction’?","Look it up in Britannica or a book",["Make up a meaning","Ask a stranger","Skip it"],"Look it up first. Then write it in your own words."],
  ["On 8 October the whole class read online at the same time. Why?","To try to set a Guinness World Record for the most people reading online together",["To test the Wi-Fi","Because it was raining","To win a pumpkin"],"The class tried to set a world record for reading online together."]
 ];
 const SOURCES=[
  ["You need a quick fact about how magnets work.","Britannica","An encyclopedia is perfect for checked facts."],
  ["You want to watch how a parachute slows down.","BrainPop","BrainPop shows topics in short videos."],
- ["You want to search the internet safely for â€˜gravity for kidsâ€™.","Kiddle","Kiddle is a search website made for kids."],
+ ["You want to search the internet safely for ‘gravity for kids’.","Kiddle","Kiddle is a search website made for kids."],
  ["You want to see friction happen in a cartoon explanation.","BrainPop","Videos show movement best."],
- ["You need the exact meaning of the word â€˜motionâ€™.","Britannica","Encyclopedias and dictionaries give careful definitions."],
- ["You want to find several kid-friendly websites about ramps.","Kiddle","A kidsâ€™ search engine finds safe websites."]
+ ["You need the exact meaning of the word ‘motion’.","Britannica","Encyclopedias and dictionaries give careful definitions."],
+ ["You want to find several kid-friendly websites about ramps.","Kiddle","A kids’ search engine finds safe websites."]
 ];
 function sourceQ(){
   const r=pick(SOURCES);
@@ -762,11 +764,11 @@ function sourceQ(){
 }
 function buildLibrary(){ return shuffle(fromBank(LIB_MC,LIB,6).concat([sourceQ(), sourceQ()])); }
 
-/* ======================= PAST Â· LEGOLAND TRIP ======================= */
+/* ======================= PAST · LEGOLAND TRIP ======================= */
 const TRIP={label:'Legoland Trip', world:'trip'};
 const PACK=[
  ["Your phone","Leave","Phones and electronic devices stay at home so nothing gets lost."],
- ["A favourite toy","Leave","Toys stay at home. We donâ€™t want anything special to get lost!"],
+ ["A favourite toy","Leave","Toys stay at home. We don’t want anything special to get lost!"],
  ["Jewellery","Leave","Jewellery stays at home too."],
  ["Comfortable clothes","Bring","Wear comfortable clothes, there is lots of walking."],
  ["Good walking shoes","Bring","Good shoes for a day full of walking."],
@@ -780,36 +782,36 @@ const PACK=[
 ];
 function packQ(r){ return two("Legoland trip! Do you <b>bring</b> this or <b>leave it at home</b>?", ['Bring it','Leave at home'], r[1]==='Bring'?0:1, r[2], Object.assign({visual:itemCard(r[0])}, TRIP)); }
 const TRIP_MC=[
- ["You canâ€™t see your teacher at Legoland. What do you do?","Stay with your group and look for your teacher",["Run to the biggest ride","Go to the car park","Hide"],"Stay with your group and teacher, always."],
+ ["You can’t see your teacher at Legoland. What do you do?","Stay with your group and look for your teacher",["Run to the biggest ride","Go to the car park","Hide"],"Stay with your group and teacher, always."],
  ["Who gives you your Emergency Contact Card?","Your teacher",["The bus driver","A Legoland robot","Your pet"],"Your teacher hands it out. Keep it safe."],
- ["Why do we leave toys and jewellery at home?","So nothing special gets lost",["Because toys are not allowed on buses","Because Legoland has enough toys","No reason"],"We donâ€™t want anything special to get lost!"],
+ ["Why do we leave toys and jewellery at home?","So nothing special gets lost",["Because toys are not allowed on buses","Because Legoland has enough toys","No reason"],"We don’t want anything special to get lost!"],
  ["How many snacks should you pack?","2",["0","5","10"],"A packed lunch plus 2 snacks."],
  ["What is the most important Legoland rule?","Be safe, be responsible and have fun",["Buy a souvenir","Ride everything twice","Eat all snacks on the bus"],"Safe, responsible and FUN!"],
  ["Your friend looks sad and tired on the trip. What do you do?","Look after them and tell the teacher",["Ignore them","Laugh","Run ahead"],"We look after ourselves and each other."]
 ];
 function buildTrip(){ return shuffle(takeFrom(PACK,5).map(packQ).concat(fromBank(TRIP_MC,TRIP,3))); }
 
-/* ======================= PAST Â· MUSIC & PANTASTIC ======================= */
+/* ======================= PAST · MUSIC & PANTASTIC ======================= */
 const MUS={label:'Music & Pantastic', world:'music'};
 const MUS_MC=[
  ["Which of these is a <b>percussion</b> instrument?","Drum",["Flute","Violin","Trumpet"],"Percussion means you hit it or shake it. Drums, shakers, triangles."],
  ["In music 3B composed a rhythm. What is a <b>rhythm</b>?","A pattern of long and short sounds",["A kind of paint","One very loud note","A dance costume"],"Rhythm is a pattern of long and short sounds. Like ta ta ti-ti ta."],
- ["â€˜Composingâ€™ meansâ€¦","making up your own music",["copying a song","sleeping in music class","cleaning the instruments"],"Composing means making up your own music."],
+ ["‘Composing’ means…","making up your own music",["copying a song","sleeping in music class","cleaning the instruments"],"Composing means making up your own music."],
  ["How do you play percussion well in a group?","Listen to each other and keep the beat",["Play as loud as possible","Ignore the others","Stop when you feel like it"],"Listen to each other. Keep the beat together."],
  ["Hitting a drum with your hand is which kind of force?","A push",["A pull","Gravity","Magnetism"],"Your hand pushes the drum. That makes the sound."],
- ["The Primary Production â€˜Pantasticâ€™ is based on which story?","Peter Pan",["Cinderella","The Jungle Book","Frozen"],"Pantastic is a Peter Pan story."],
+ ["The Primary Production ‘Pantastic’ is based on which story?","Peter Pan",["Cinderella","The Jungle Book","Frozen"],"Pantastic is a Peter Pan story."],
  ["Where does Peter Pan live?","Neverland",["Legoland","Munich","Atlantis"],"Neverland is the magical island where Peter Pan lives."],
  ["What can you hear inside the crocodile in Peter Pan?","A ticking clock",["A radio","A school bell","Nothing"],"The crocodile swallowed a clock, so it goes tick-tock!"],
  ["Who is the pirate captain in Peter Pan?","Captain Hook",["Captain Jack","Captain America","Captain Haddock"],"Captain Hook has a hook for a hand. He is scared of the crocodile."],
  ["Which song did EVERY student learn for the Pantastic audition?","Nobody Wants To Grow Old",["Higher and Higher","Happy Birthday","Twinkle Twinkle"],"Audition Song 1 was for everyone."],
- ["Which two songs did Ms. SchlÃ¼er ask you to learn?","Tick-Tock Crocodile and Here In Neverland",["Happy Birthday and Jingle Bells","Let It Go and Hakuna Matata","Only Higher and Higher"],"Learn the words and the melody of both songs."],
+ ["Which two songs did Ms. Schlüer ask you to learn?","Tick-Tock Crocodile and Here In Neverland",["Happy Birthday and Jingle Bells","Let It Go and Hakuna Matata","Only Higher and Higher"],"Learn the words and the melody of both songs."],
  ["To join the Pantastic show, what do you need to be ready to learn?","Lines, songs and dances",["Only the dances","Only the songs","Nothing at all"],"Everyone learns their lines, songs and dances and follows the production rules."],
  ["What is the best way to learn a new song?","Sing it a little bit every day",["Listen once and forget it","Only read the title","Sing it as fast as you can"],"A little practice every day works best."],
- ["In Peter Pan, who is the tiny fairy?","Tinker Bell",["Wendy","Smee","Nana"],"Tinker Bell is Peter Panâ€™s fairy friend."]
+ ["In Peter Pan, who is the tiny fairy?","Tinker Bell",["Wendy","Smee","Nana"],"Tinker Bell is Peter Pan’s fairy friend."]
 ];
 function buildMusic(){ return fromBank(MUS_MC,MUS,8); }
 
-/* ======================= PRACTICE Â· UNITS & GRAPHS GYM ======================= */
+/* ======================= PRACTICE · UNITS & GRAPHS GYM ======================= */
 const UNT={label:'Units & Measuring', world:'units'};
 const GRA={label:'Bar Graphs & Worksheets', world:'graphs'};
 const FIN={label:'Finish Every Task', world:'finish'};
@@ -831,7 +833,7 @@ function unitPickQ(){
 function convertQ(){
   const v=rnd(4);
   if(v===0) return mc("How many centimetres are in <b>1 metre</b>?","100",["10","1,000","50"],"1 m = 100 cm. The metre stick has 100 little centimetre marks.",Object.assign({grid:true},UNT));
-  if(v===1){ const m=2+rnd(4); return mc("<b>"+m+" m</b> = how many cm?", String(m*100), fill3(m*100,[m*10,m*1000,m*100+10,m*100-10]).map(String), m+" m = "+m+" Ã— 100 cm = "+(m*100)+" cm.", Object.assign({grid:true},UNT)); }
+  if(v===1){ const m=2+rnd(4); return mc("<b>"+m+" m</b> = how many cm?", String(m*100), fill3(m*100,[m*10,m*1000,m*100+10,m*100-10]).map(String), m+" m = "+m+" × 100 cm = "+(m*100)+" cm.", Object.assign({grid:true},UNT)); }
   if(v===2){
     let cm=105+5*rnd(38); if(cm%100===0) cm+=5;
     const m=Math.floor(cm/100), r=cm%100, right=m+" m "+r+" cm";
@@ -872,7 +874,7 @@ function tableConclusionQ(){
 }
 function massRecordQ(){
   const g=55+rnd(110);
-  return mc("The scale shows the carâ€™s mass: <b>"+g+" g</b>. What do you write in the mass column of your table?", g+" g", [String(g), g+" cm", "about "+round100(g)], "Write the number AND the unit. Mass is in grams (g), distance is in centimetres (cm).", Object.assign({grid:true}, UNT));
+  return mc("The scale shows the car’s mass: <b>"+g+" g</b>. What do you write in the mass column of your table?", g+" g", [String(g), g+" cm", "about "+round100(g)], "Write the number AND the unit. Mass is in grams (g), distance is in centimetres (cm).", Object.assign({grid:true}, UNT));
 }
 const COMPLETE_MC=[
  ["You finished 5 of 6 questions and want to hand in. What do you do first?","Go back and answer the last question",["Hand it in anyway","Rub out question 1","Draw a car on the back"],"Answer every question. Then the teacher sees all you know."],
@@ -885,31 +887,31 @@ const COMPLETE_MC=[
 const RESP_MC=[
  ["Your group finished the experiment. What is YOUR job before you leave the table?","Check the sheet: every measurement has its unit, every question is answered",["Nothing, the teacher checks","Only pack the car away","Take a selfie"],"Your job is only done when your sheet is complete."],
  ["What do you upload to Toddle at the end of Friction Frenzy?","The finished experiment sheet with all data AND photos of the setup",["Only one photo","A drawing","Nothing"],"The sheet and the photos. Both show your work."],
- ["You forgot to weigh the car. What is the responsible thing to do?","Weigh it now and write the mass in grams",["Make up a number","Leave the box empty","Write â€˜heavyâ€™"],"Every number counts. Go back and get it."],
+ ["You forgot to weigh the car. What is the responsible thing to do?","Weigh it now and write the mass in grams",["Make up a number","Leave the box empty","Write ‘heavy’"],"Every number counts. Go back and get it."],
  ["Your bar graph is half finished and the bell rings. What do you do?","Tell the teacher and finish it as soon as possible",["Throw it away","Hand it in half done","Hide it"],"Finish the job. That is being responsible."],
  ["Before you hand in a worksheet, what is the last thing to do?","Read it through once and check nothing is missing",["Draw on the back","Fold it","Hand it in fast"],"One last look finds missing answers and units."],
- ["Who is responsible for recording your groupâ€™s data correctly?","Everyone in the group, taking turns",["Only the fastest writer","Only the teacher","Nobody"],"Everyone checks the numbers and the units."]
+ ["Who is responsible for recording your group’s data correctly?","Everyone in the group, taking turns",["Only the fastest writer","Only the teacher","Nobody"],"Everyone checks the numbers and the units."]
 ];
 function buildUnits(){ return shuffle([unitPickQ(), unitPickQ(), unitPickQ(), convertQ(), convertQ(), rulerQ(), rulerQ(), massRecordQ()]); }
 function buildGraphs(){ return retag(shuffle([barReadQ(), barReadQ(), barReadQ(), barMissingQ(), barMissingQ(), tableConclusionQ()].concat(fromBank(COMPLETE_MC,UNT,2))), GRA); }
 function buildFinish(){ return fromBank(COMPLETE_MC.concat(RESP_MC), FIN, 8); }
 
-/* ======================= PRACTICE Â· SUPER SENTENCES ======================= */
+/* ======================= PRACTICE · SUPER SENTENCES ======================= */
 const SEN={label:'Capital Letters & Full Stops', world:'sentences'};
 const EXA={label:'Specific Examples', world:'examples'};
 const SENTS=[
  ["On Monday we went to Legoland.",["Monday","Legoland"]],
- ["My teacher is Ms. Bhan.",["Ms.","Bhan"]],
+ ["My teacher is Ms. Bhan.",["Ms","Bhan"]],
  ["We live in Bavaria, in the south of Germany.",["Bavaria","Germany"]],
  ["The park in Haimhausen has a big pond.",["Haimhausen"]],
  ["In October we decorated pumpkins for the library.",["October"]],
  ["Peter Pan flies to Neverland with Tinker Bell.",["Peter","Pan","Neverland","Tinker","Bell"]],
- ["Ms. Zeckser showed us Britannica on the iPads.",["Ms.","Zeckser","Britannica"]],
+ ["Ms. Zeckser showed us Britannica on the tablets.",["Ms","Zeckser","Britannica"]],
  ["Did you read Matilda by Roald Dahl?",["Matilda","Roald","Dahl"]],
  ["Captain Hook is afraid of the crocodile.",["Captain","Hook"]],
  ["Our park must stay open!",[]],
  ["Where is the metre stick?",[]],
- ["Every Friday we have music with Ms. SchlÃ¼er.",["Friday","Ms.","SchlÃ¼er"]]
+ ["Every Friday we have music with Ms. Schlüer.",["Friday","Ms","Schlüer"]]
 ];
 const stripP = w => w.replace(/[.,!?]/g,'');
 function capitalFixQ(){
@@ -927,7 +929,7 @@ function properNounQ(){
   const pn=pick(r[1].filter(p=>words.indexOf(p)>0)) || r[1][0];
   const others=shuffle(words.filter((w,i)=>i>0 && r[1].indexOf(w)<0 && w.length>1)).slice(0,3);
   return mc("Which word MUST have a capital letter, even in the middle of a sentence?", pn.toLowerCase(), others.map(w=>w.toLowerCase()),
-    "â€˜"+pn+"â€™ is a name, place, day or title. Those always get a capital letter.", Object.assign({visual:quote(s.toLowerCase()), grid:true}, SEN));
+    "‘"+pn+"’ is a name, place, day or title. Those always get a capital letter.", Object.assign({visual:quote(s.toLowerCase()), grid:true}, SEN));
 }
 const ENDS=[["What time does school start","?"],["Watch out for the crocodile","!"],["The park has a pond","."],["Can we go to Legoland again","?"],["Please pass the metre stick","."],["How far did your car roll","?"],["Hooray, we won the pumpkin contest","!"],["Peter Pan can fly","."],["Who wrote Matilda","?"],["Stop pushing the car","!"]];
 function endMarkQ(){
@@ -940,7 +942,7 @@ const SPECIFIC=[
  ["The park is good for nature.","On Tuesday I saw a woodpecker and two squirrels near the pond.","There are animals in the park."],
  ["The park is good for exercise.","Every Saturday morning my dad and I run three laps around the park.","People can run there."],
  ["The park brings people together.","At the summer picnic my family met our new neighbours by the slide.","People meet there."],
- ["Dogs are loyal.","My dog Bruno waits by the door every day at four oâ€™clock until I come home.","Dogs like people."],
+ ["Dogs are loyal.","My dog Bruno waits by the door every day at four o’clock until I come home.","Dogs like people."],
  ["Reading before bed is calming.","When I read my dinosaur book, I feel sleepy after ten minutes.","Reading is nice."],
  ["Experiments help us learn.","In the Friction Roll our car went 120 cm on wood but only 40 cm on carpet.","We did an experiment."]
 ];
@@ -952,13 +954,13 @@ function specificExampleQ(){
 const HYPO=[
  ["Which hypothesis is the most <b>specific</b>?","If I roll the car on sandpaper, it will roll a shorter distance than on tiles, because sandpaper is rough and has more friction.",["The car will roll somewhere.","Something will happen.","I think the car is fast."],"A good guess says: what will happen, on which surface, and why."],
  ["Which prediction could you actually test?","The car will roll farther on wood than on carpet.",["The car will be happy.","Carpet is my favourite.","The ramp is pretty."],"You can test this one. Just measure!"],
- ["Your hypothesis says â€˜The car will go far.â€™ How can you make it better?","Say on which surface it will go farther and why",["Make it shorter","Add a drawing","Write it in capital letters"],"Add the surface and the reason. Then it is a real guess."]
+ ["Your hypothesis says ‘The car will go far.’ How can you make it better?","Say on which surface it will go farther and why",["Make it shorter","Add a drawing","Write it in capital letters"],"Add the surface and the reason. Then it is a real guess."]
 ];
 const SEQ_SETS=[
  ["Put the recount in a logical order.",["First we put the velcro surface on the ramp.","Next we set up the metre sticks.","Then we let the car go without pushing.","Finally we wrote the distance in our table."]],
  ["Put the instructions in a logical order.",["First, spread butter on two slices of bread.","Next, put cheese on one slice.","Then, place the other slice on top.","Finally, cut the sandwich in half."]],
  ["Put the trip day in a logical order.",["In the morning we got on the bus with our backpacks.","Then we stayed with our group at Legoland.","After lunch we went on more rides.","At the end we came back to school tired and happy."]],
- ["Put the pumpkin project in a logical order.",["First, choose a book character.","Next, collect boxes, paper and paint.","Then, decorate the pumpkin (donâ€™t carve it!).","Finally, bring it to school by 28 October."]]
+ ["Put the pumpkin project in a logical order.",["First, choose a book character.","Next, collect boxes, paper and paint.","Then, decorate the pumpkin (don’t carve it!).","Finally, bring it to school by 28 October."]]
 ];
 function sequenceOrderQ(){ const r=pick(SEQ_SETS); return orderQ(r[0], r[1], null, r[2]||"Use order words like first, next, then and finally to keep ideas in a logical sequence.", SEN); }
 function countCapsQ(){
@@ -970,7 +972,7 @@ function countCapsQ(){
 function buildSentences(){ return shuffle([capitalFixQ(), capitalFixQ(), capitalFixQ(), properNounQ(), properNounQ(), endMarkQ(), endMarkQ(), countCapsQ()]); }
 function buildExamples(){ return retag(shuffle([specificExampleQ(), specificExampleQ(), specificExampleQ(), specificExampleQ(), sequenceOrderQ()].concat(fromBank(HYPO,SEN,3))), EXA); }
 
-/* ======================= PRACTICE Â· EXPLAIN IT MATHS ======================= */
+/* ======================= PRACTICE · EXPLAIN IT MATHS ======================= */
 const EXP={label:'Explain Your Rounding', world:'explain'};
 const COM={label:'Number Combinations', world:'combos'};
 function distanceExplainQ(){
@@ -983,7 +985,7 @@ function halfwayQ(){
   const lo=100*(1+rnd(8)), hi=lo+100;
   if(rnd(2)===0) return mc("What is the <b>halfway point</b> between "+lo+" and "+hi+"?", String(lo+50), fill3(lo+50,[lo+40,lo+60,lo+5,hi+50]).map(String), lo+" and "+hi+" are 100 apart. Half of 100 is 50, so halfway is "+(lo+50)+".", Object.assign({grid:true}, EXP));
   const n=lo+pick([10,20,30,40,60,70,80,90]);
-  return two(n+" is between "+lo+" and "+hi+". The halfway point is "+(lo+50)+". So "+n+"â€¦", ["rounds down to "+lo, "rounds up to "+hi], n<lo+50?0:1,
+  return two(n+" is between "+lo+" and "+hi+". The halfway point is "+(lo+50)+". So "+n+"…", ["rounds down to "+lo, "rounds up to "+hi], n<lo+50?0:1,
     n+" is "+(n<lo+50?"below":"above")+" the halfway point "+(lo+50)+", so it rounds "+(n<lo+50?"down to "+lo:"up to "+hi)+".", Object.assign({visual:benchLineSVG(n,lo,hi)}, EXP));
 }
 function tenVsHundredQ(){
@@ -1017,36 +1019,36 @@ function combosQ(){
 }
 function missingAddendQ(tag){
   const total=pick([900,905,1000,750,620,905]), a=100+10*rnd((total-200)/10), ans=total-a;
-  return typed("<b>"+a+" + ? = "+total+"</b>. Type the missing addend.", ans, total+" âˆ’ "+a+" = "+ans+". Check it: "+a+" + "+ans+" = "+total+".", Object.assign({visual:itemCard(a+" + ? = "+total)}, tag||EXP));
+  return typed("<b>"+a+" + ? = "+total+"</b>. Type the missing addend.", ans, total+" − "+a+" = "+ans+". Check it: "+a+" + "+ans+" = "+total+".", Object.assign({visual:itemCard(a+" + ? = "+total)}, tag||EXP));
 }
 function anotherWayQ(){
   const sets=[[900,"300 + 300 + 300","450 + 250 + 200",["300 + 300 + 300","400 + 400 + 200","500 + 500 + 100"]],[600,"200 + 200 + 200","350 + 150 + 100",["200 + 200 + 200","300 + 300 + 300","400 + 200 + 200"]],[1000,"500 + 500","650 + 350",["500 + 500","600 + 500","450 + 450"]]];
   const r=pick(sets);
-  return mc("Mia split "+fmt(r[0])+" km into "+r[1]+". Which is <b>another</b> way to make "+fmt(r[0])+"?", r[2], r[3], r[2]+" also makes "+fmt(r[0])+", and it is different from Miaâ€™s way. The others repeat her way or give the wrong total.", Object.assign({grid:true}, EXP));
+  return mc("Mia split "+fmt(r[0])+" km into "+r[1]+". Which is <b>another</b> way to make "+fmt(r[0])+"?", r[2], r[3], r[2]+" also makes "+fmt(r[0])+", and it is different from Mia’s way. The others repeat her way or give the wrong total.", Object.assign({grid:true}, EXP));
 }
 function reasonableQ(){
   const a=randNotMid(), b=randNotMid(), ok=rnd(2)===0, shown=ok?a+b:a+b+pick([1000,-200,500,300]);
   const est=round100(a)+" + "+round100(b)+" = "+fmt(round100(a)+round100(b));
   return two("Leo says <b>"+a+" + "+b+" = "+fmt(shown)+"</b>. Is that reasonable?", ["Yes, the estimate "+est+" is close","No, the estimate "+est+" is far away"], ok?0:1,
-    "Estimate first: "+est+". The exact answer is "+fmt(a+b)+". "+(ok?"Leoâ€™s answer is close to the estimate, so it is reasonable.":"Leoâ€™s answer is far from the estimate, so something went wrong."), EXP);
+    "Estimate first: "+est+". The exact answer is "+fmt(a+b)+". "+(ok?"Leo’s answer is close to the estimate, so it is reasonable.":"Leo’s answer is far from the estimate, so something went wrong."), EXP);
 }
 function buildExplain(){ return shuffle([distanceExplainQ(), distanceExplainQ(), distanceExplainQ(), halfwayQ(), halfwayQ(), tenVsHundredQ(), tenVsHundredQ(), roundTenQ()]); }
 function buildCombos(){ return retag(shuffle([combosQ(), combosQ(), missingAddendQ(), missingAddendQ(), anotherWayQ(), anotherWayQ(), reasonableQ(), reasonableQ()]), COM); }
 
-/* ======================= STRENGTHS Â· FRICTION CHAMPION ======================= */
+/* ======================= STRENGTHS · FRICTION CHAMPION ======================= */
 const CHA={label:'Friction Champion', world:'champion'};
 const CHAMP_MC=[
- ["Why does MORE friction mean a SHORTER travel distance?","Friction takes away the carâ€™s speed faster",["Friction makes the car heavier","Friction pushes the car forward","Friction switches off gravity"],"More rubbing takes the speed away faster. You explained this well in class!"],
+ ["Why does MORE friction mean a SHORTER travel distance?","Friction takes away the car’s speed faster",["Friction makes the car heavier","Friction pushes the car forward","Friction switches off gravity"],"More rubbing takes the speed away faster. You explained this well in class!"],
  ["Why do football boots have studs?","For more grip (friction) on the grass",["To look cool","To make the player lighter","To reduce friction"],"Studs grip the grass. More rubbing, no slipping."],
  ["Why is a water slide kept wet?","Water reduces friction so you slide faster",["Water adds friction","To clean the slide","To make it heavier"],"Water makes the slide slippery. Less rubbing, more speed."],
  ["Why do people put sand or grit on icy paths in winter?","To add friction so nobody slips",["To melt the ice faster","To make the path pretty","To reduce friction"],"Grit makes the path rough. Rough means grip."],
  ["Why do car tyres have grooves?","To grip the road, especially in rain",["To make the car faster","To save rubber","To look nice"],"The grooves push the water away. Then the tyre grips the road."],
  ["Why does an ice skater glide so far after one push?","There is very little friction on ice",["Ice is magnetic","Skates are rockets","Gravity is weaker on ice"],"Ice is smooth. Almost nothing slows the skater down."],
  ["A flat sheet of paper falls slower than a crumpled one. Why?","Air pushes against the big flat sheet (air resistance)",["The flat sheet is heavier","Gravity forgets the flat sheet","Paper likes to fly"],"The big flat sheet pushes against lots of air. The air slows it down."],
- ["Your partnerâ€™s measurement is different from yours. What is the scientific thing to do?","Measure again together, from the back of the car",["Pick the bigger number","Keep your own number","Give up"],"Measure again until you both agree."],
+ ["Your partner’s measurement is different from yours. What is the scientific thing to do?","Measure again together, from the back of the car",["Pick the bigger number","Keep your own number","Give up"],"Measure again until you both agree."],
  ["You test four surfaces, one at a time, with the same car and ramp. What kind of test is that?","A fair test",["A lucky test","A race","A guess"],"One thing changes. The rest stays the same. That is a fair test."],
  ["Which of these would make the car roll the farthest?","A smooth surface and a steep ramp",["A rough surface and a flat ramp","A rough surface and a steep ramp","Carpet on a flat table"],"Smooth means less rubbing. Steep means more pull. Both make the car go far."],
- ["In the extension task, you want to test the carâ€™s weight. What must stay the same?","The surface, the ramp and how you let go",["Nothing","Only the car","Only the metre stick"],"Only the weight changes. Everything else stays the same."],
+ ["In the extension task, you want to test the car’s weight. What must stay the same?","The surface, the ramp and how you let go",["Nothing","Only the car","Only the metre stick"],"Only the weight changes. Everything else stays the same."],
  ["Why do we rub chalk on our hands before climbing?","Chalk makes the hands dry and grippy (more friction)",["Chalk is magic","To make hands slippery","To look strong"],"Chalk makes hands dry. Dry hands grip better."],
  ["A sled goes faster on packed snow than on fresh powder. Why?","Packed snow is smoother, so there is less friction",["Fresh snow is colder","Packed snow is magnetic","Gravity is stronger on packed snow"],"Packed snow is smooth. Less rubbing, faster sled."]
 ];
@@ -1056,14 +1058,14 @@ function frictionTableQ(){
 }
 function buildChampion(){ return shuffle(fromBank(CHAMP_MC,CHA,7).concat([frictionTableQ()])); }
 
-/* ======================= STRENGTHS Â· NUMBER & OPINION DETECTIVE ======================= */
+/* ======================= STRENGTHS · NUMBER & OPINION DETECTIVE ======================= */
 const DET={label:'Data Detective', world:'detective'};
 const OPI={label:'Opinion Power', world:'opinion'};
 const TEA={label:'Teamwork', world:'team'};
 const TEAM_MC=[
  ["Your partner is recording and you are waiting. What do you do?","Get the next surface ready and watch the numbers",["Roll the car again","Leave the table","Talk loudly"],"Taking turns keeps the experiment fair and fast."],
  ["Your partner measured 85 cm, you measured 90 cm. What now?","Measure again together from the back of the car",["Write 90","Write 85","Argue"],"Scientists repeat a measurement until they agree."],
- ["A quiet group member has not said anything. What helps?","Ask them what they think",["Ignore them","Decide for them","Tell them to be quiet"],"Everyoneâ€™s idea counts in a team."],
+ ["A quiet group member has not said anything. What helps?","Ask them what they think",["Ignore them","Decide for them","Tell them to be quiet"],"Everyone’s idea counts in a team."],
  ["Your group disagrees about the order of the steps. What is best?","Talk it through and try the order together",["Shout the loudest","Give up","Do it alone"],"Listening and trying ideas out solves most disagreements."],
  ["In music you composed a rhythm with your group. What made it work?","Listening to each other and keeping the beat",["Playing as loud as possible","Playing alone","Stopping early"],"Group music is teamwork you can hear."]
 ];
@@ -1082,19 +1084,19 @@ function betweenHundredsQ(){
   return mc("Between which two hundreds does <b>"+n+"</b> sit on the number line?", lo+" and "+hi, [(lo-100)+" and "+lo, hi+" and "+(hi+100), lo+" and "+(hi+100)], n+" is bigger than "+lo+" and smaller than "+hi+".", Object.assign({grid:true}, DET));
 }
 function splitQ(){
-  const sets=[["900 km over three days","300 + 300 + 300 = 900",["300 + 300 = 900","900 + 300 + 300 = 900","300 Ã— 2 = 900"]],["600 stickers in two packs","250 + 350 = 600",["250 + 250 = 600","600 + 600 = 600","350 âˆ’ 250 = 600"]],["1,000 metres in four laps","250 + 250 + 250 + 250 = 1,000",["250 + 250 = 1,000","1,000 + 4 = 1,000","250 + 250 + 250 = 1,000"]]];
+  const sets=[["900 km over three days","300 + 300 + 300 = 900",["300 + 300 = 900","900 + 300 + 300 = 900","300 × 2 = 900"]],["600 stickers in two packs","250 + 350 = 600",["250 + 250 = 600","600 + 600 = 600","350 − 250 = 600"]],["1,000 metres in four laps","250 + 250 + 250 + 250 = 1,000",["250 + 250 = 1,000","1,000 + 4 = 1,000","250 + 250 + 250 = 1,000"]]];
   const r=pick(sets);
   return mc("Which equation correctly splits <b>"+r[0]+"</b>?", r[1], r[2], "Check: the addends must add up to the total.", DET);
 }
 const OPINION_MC=[
- ["Which sentence states a <b>clear opinion</b> about the park?","I strongly believe our park must stay open for everyone.",["The park has a pond.","The park opens at 8 oâ€™clock.","There are benches in the park."],"A strong opinion at the start and at the end. You do this well!"],
+ ["Which sentence states a <b>clear opinion</b> about the park?","I strongly believe our park must stay open for everyone.",["The park has a pond.","The park opens at 8 o’clock.","There are benches in the park."],"A strong opinion at the start and at the end. You do this well!"],
  ["Which sentence <b>restates</b> the opinion at the end?","That is why the council must keep our park open!",["The park has a pond.","One reason is exercise.","For example, I saw a bird."],"The last O says the opinion again, with power."],
- ["Which reason supports â€˜the park is good for exerciseâ€™?","People can run, climb and play football there.",["The park is green.","The council meets on Mondays.","I have new shoes."],"A reason says WHY."],
+ ["Which reason supports ‘the park is good for exercise’?","People can run, climb and play football there.",["The park is green.","The council meets on Mondays.","I have new shoes."],"A reason says WHY."],
  ["Which sentence is an opinion with a reason?","Dogs are the best pets because they are loyal.",["Dogs have four legs.","My dog is called Bruno.","Dogs bark."],"Opinion + because + reason. That persuades!"]
 ];
 const COOP_MC=[
- ["In PEâ€™s Adventure Challenge, what helped the class solve problems with greater ease?","Working together and sharing ideas",["Working alone in silence","Being the fastest","Ignoring the others"],"Working together solves problems faster."],
- ["A team mate gives you feedback you donâ€™t like. What do you do?","Listen, think about it and try it out",["Walk away","Say they are wrong","Stop playing"],"Listen to the feedback. Then try it."],
+ ["In PE’s Adventure Challenge, what helped the class solve problems with greater ease?","Working together and sharing ideas",["Working alone in silence","Being the fastest","Ignoring the others"],"Working together solves problems faster."],
+ ["A team mate gives you feedback you don’t like. What do you do?","Listen, think about it and try it out",["Walk away","Say they are wrong","Stop playing"],"Listen to the feedback. Then try it."],
  ["In a pair challenge your partner has a different idea. What is best?","Listen to the idea and try to combine both",["Only use your idea","Only use their idea without thinking","Stop talking"],"Listen first. Then mix both ideas."],
  ["Why did the class form pairs and small groups?","So everyone could share their ideas and perspectives",["So the lesson was shorter","To make noise","Because the hall was small"],"In small groups everyone gets to talk."]
 ];
@@ -1108,11 +1110,11 @@ function buildDetective(){ return shuffle([travelTableQ(), travelTableQ(), estim
 function buildOpinion(){ return retag(shuffle(fromBank(OPINION_MC,OPI,4).concat([oreoOrder(), sentenceType(), oreoMC(), oreoMC()])), OPI); }
 function buildTeam(){ return fromBank(COOP_MC.concat(TEAM_MC), TEA, 8); }
 
-/* ======================= NOW Â· STICKER MATHS (Milestone) ======================= */
+/* ======================= NOW · STICKER MATHS (Milestone) ======================= */
 const STK={label:'Sticker Maths', world:'stickers'};
 function stickerMissingQ(){
   const total=pick([905,905,850,760,1000]), a=200+10*rnd(50), ans=total-a;
-  return typed("Nadia has <b>"+total+"</b> stickers. <b>"+a+"</b> of them are stars. How many are NOT stars? Type your answer.", ans, total+" âˆ’ "+a+" = "+ans+". Check: "+a+" + "+ans+" = "+total+". Label it: "+ans+" stickers.", Object.assign({visual:itemCard(a+" + ? = "+total)}, STK));
+  return typed("Nadia has <b>"+total+"</b> stickers. <b>"+a+"</b> of them are stars. How many are NOT stars? Type your answer.", ans, total+" − "+a+" = "+ans+". Check: "+a+" + "+ans+" = "+total+". Label it: "+ans+" stickers.", Object.assign({visual:itemCard(a+" + ? = "+total)}, STK));
 }
 function stickerComboQ(){
   const target=905, a=100+5*rnd(140), b=target-a, right=a+" + "+b;
@@ -1121,15 +1123,15 @@ function stickerComboQ(){
 }
 function funnyFaceQ(){
   const hearts=55+5*rnd(10), faces=120+rnd(80), total=hearts+faces;
-  return typed("There are <b>"+total+"</b> stickers. <b>"+hearts+"</b> are hearts, the rest are funny faces. How many funny faces? Type your answer.", faces, total+" âˆ’ "+hearts+" = "+faces+" funny faces. Check: "+hearts+" + "+faces+" = "+total+".", Object.assign({visual:itemCard(total+" âˆ’ "+hearts+" = ?")}, STK));
+  return typed("There are <b>"+total+"</b> stickers. <b>"+hearts+"</b> are hearts, the rest are funny faces. How many funny faces? Type your answer.", faces, total+" − "+hearts+" = "+faces+" funny faces. Check: "+hearts+" + "+faces+" = "+total+".", Object.assign({visual:itemCard(total+" − "+hearts+" = ?")}, STK));
 }
 function roundTenAddQ(){
   let nums; do { nums=[40+rnd(60), 60+rnd(80), 100+rnd(60)]; } while(nums.some(n=>n%10===5));
   const r=nums.map(round10), right=r.reduce((p,c)=>p+c,0);
-  return mc("Round each number to the nearest <b>ten</b>, then add: <b>"+nums.join(" + ")+"</b> â‰ˆ ?", fmt(right), fill3(right,[right+10,right-10,right+20,right-20,right+100]).map(fmt), r.join(" + ")+" = "+right+". Exact: "+nums.reduce((p,c)=>p+c,0)+", so about "+right+" stickers is a good estimate.", Object.assign({grid:true}, STK));
+  return mc("Round each number to the nearest <b>ten</b>, then add: <b>"+nums.join(" + ")+"</b> ≈ ?", fmt(right), fill3(right,[right+10,right-10,right+20,right-20,right+100]).map(fmt), r.join(" + ")+" = "+right+". Exact: "+nums.reduce((p,c)=>p+c,0)+", so about "+right+" stickers is a good estimate.", Object.assign({grid:true}, STK));
 }
 const STK_MC=[
- ["How can you check that 905 âˆ’ 600 = 305?","Add 305 + 600 and see if you get 905",["Guess again","Ask the sticker","Subtract 305 from 305"],"Adding undoes taking away. So you can check."],
+ ["How can you check that 905 − 600 = 305?","Add 305 + 600 and see if you get 905",["Guess again","Ask the sticker","Subtract 305 from 305"],"Adding undoes taking away. So you can check."],
  ["Which answer is correctly <b>labelled</b>?","305 stickers",["305","stickers","305 cm"],"Write the number and what it counts. 305 stickers."],
  ["A box holds 250 stickers. You have about 254. What is true?","Almost all fit, about 4 are left over",["None fit","All fit with lots of room","You need 10 boxes"],"254 is only a little more than 250. A few stay outside."],
  ["Why do we round to the nearest ten here instead of the nearest hundred?","Tens give a closer estimate for small numbers",["Hundreds are not allowed","Tens look nicer","It makes no difference"],"For small numbers like 48, tens are closer than hundreds."],
@@ -1138,7 +1140,7 @@ const STK_MC=[
 ];
 function buildStickers(){ return shuffle([stickerMissingQ(), stickerMissingQ(), missingAddendQ(STK), stickerComboQ(), funnyFaceQ(), roundTenAddQ(), roundTenAddQ()].concat(fromBank(STK_MC,STK,1))); }
 
-/* ======================= PRACTICE Â· READ THE PROBLEM (Milestone feedback) ======================= */
+/* ======================= PRACTICE · READ THE PROBLEM (Milestone feedback) ======================= */
 const WPR={label:'Read the Problem', world:'wordprob'};
 const NAMES=['Nadia','Leo','Mia','Omar','Ana','Sam'];
 const THINGS=[['stickers','stars','hearts','funny faces'],['marbles','red ones','blue ones','green ones'],['books','comics','picture books','chapter books'],['beads','gold beads','silver beads','glass beads']];
@@ -1152,13 +1154,13 @@ function findTotalQ(){
 }
 function twoStepQ(){
   const s=wpSetup();
-  return typed("How many "+s.t[3]+" are there? Type your answer.", s.rest, s.total+" âˆ’ "+s.a+" âˆ’ "+s.b+" = "+s.rest+". Two steps: take away one part, then the other. Check: "+s.a+" + "+s.b+" + "+s.rest+" = "+s.total+".", Object.assign({visual:quote(s.text)}, WPR));
+  return typed("How many "+s.t[3]+" are there? Type your answer.", s.rest, s.total+" − "+s.a+" − "+s.b+" = "+s.rest+". Two steps: take away one part, then the other. Check: "+s.a+" + "+s.b+" + "+s.rest+" = "+s.total+".", Object.assign({visual:quote(s.text)}, WPR));
 }
 function operationQ(){
   const n=pick(NAMES), start=300+10*rnd(30), plus=20+5*rnd(16), minus=10+5*rnd(10);
   const text=n+" had "+start+" stickers. Then "+n+" got "+plus+" more and gave "+minus+" away.";
-  const right=start+" + "+plus+" âˆ’ "+minus;
-  return mc("Which calculation finds how many stickers "+n+" has now?", right, [start+" âˆ’ "+plus+" âˆ’ "+minus, start+" + "+plus+" + "+minus, plus+" âˆ’ "+minus], "Got more = add. Gave away = subtract. "+right+" = "+(start+plus-minus)+".", Object.assign({visual:quote(text)}, WPR));
+  const right=start+" + "+plus+" − "+minus;
+  return mc("Which calculation finds how many stickers "+n+" has now?", right, [start+" − "+plus+" − "+minus, start+" + "+plus+" + "+minus, plus+" − "+minus], "Got more = add. Gave away = subtract. "+right+" = "+(start+plus-minus)+".", Object.assign({visual:quote(text)}, WPR));
 }
 function partQ(){
   const s=wpSetup();
@@ -1168,62 +1170,62 @@ const WPR_MC=[
  ["What should you do FIRST with a word problem?","Read it twice and underline the numbers",["Write any number","Add all the numbers","Guess"],"Reading twice stops you from mixing up the total and the parts."],
  ["The problem says 905 stickers, but you wrote 902. What happens?","All your calculations come out wrong",["Nothing","You get extra points","The answer is still right"],"One wrong digit at the start makes every step wrong. Check the numbers against the text."],
  ["A problem has two steps. What is a good strategy?","Do one step, write the result, then do the next step",["Do both steps in your head at once","Skip the first step","Only write the final answer"],"Writing the middle result keeps multi-step problems clear."],
- ["How do you check a subtraction like 905 âˆ’ 600 = 305?","Add 305 + 600 and see if you get 905",["Subtract again faster","Ask a friend for the answer","Erase the question"],"Addition undoes subtraction."]
+ ["How do you check a subtraction like 905 − 600 = 305?","Add 305 + 600 and see if you get 905",["Subtract again faster","Ask a friend for the answer","Erase the question"],"Addition undoes subtraction."]
 ];
 function buildWordProb(){ return shuffle([findTotalQ(), findTotalQ(), twoStepQ(), twoStepQ(), operationQ(), operationQ(), partQ()].concat(fromBank(WPR_MC,WPR,1))); }
 
-/* ======================= NOW Â· ANLEITUNG-WERKSTATT (Deutsch) ======================= */
+/* ======================= NOW · ANLEITUNG-WERKSTATT (Deutsch) ======================= */
 const ANL={label:'Anleitung-Werkstatt', world:'anleitung'};
 const ANL_ORDER=[
- ["Bringe die Anleitung fÃ¼r das Traum-GerÃ¤t in die richtige Reihenfolge.",["Als Erstes schneidet man die Einzelteile aus.","Als NÃ¤chstes baut man die Teile zusammen.","Danach stellt man das GerÃ¤t auf den Tisch.","Zum Schluss schaltet man es an."],"Als Erstes, als NÃ¤chstes, danach, zum Schluss: diese SatzanfÃ¤nge zeigen die Reihenfolge."],
- ["Bringe die Anleitung fÃ¼r den Papierflieger in die richtige Reihenfolge.",["Als Erstes faltet man das Blatt in der Mitte.","Als NÃ¤chstes faltet man die oberen Ecken zur Mitte.","Danach faltet man die FlÃ¼gel nach unten.","Zum Schluss wirft man den Flieger."],"Erst falten, dann die Ecken, dann die FlÃ¼gel, am Ende werfen."],
- ["Bringe die Anleitung fÃ¼r den Tee in die richtige Reihenfolge.",["Als Erstes fÃ¼llt man Wasser in den Kocher.","Als NÃ¤chstes schaltet man den Kocher an.","Danach gieÃŸt man das Wasser in die Tasse.","Zum Schluss hÃ¤ngt man den Teebeutel hinein."],"Jeder Schritt baut auf dem vorherigen auf."]
+ ["Bringe die Anleitung für das Traum-Gerät in die richtige Reihenfolge.",["Als Erstes schneidet man die Einzelteile aus.","Als Nächstes baut man die Teile zusammen.","Danach stellt man das Gerät auf den Tisch.","Zum Schluss schaltet man es an."],"Als Erstes, als Nächstes, danach, zum Schluss: diese Satzanfänge zeigen die Reihenfolge."],
+ ["Bringe die Anleitung für den Papierflieger in die richtige Reihenfolge.",["Als Erstes faltet man das Blatt in der Mitte.","Als Nächstes faltet man die oberen Ecken zur Mitte.","Danach faltet man die Flügel nach unten.","Zum Schluss wirft man den Flieger."],"Erst falten, dann die Ecken, dann die Flügel, am Ende werfen."],
+ ["Bringe die Anleitung für den Tee in die richtige Reihenfolge.",["Als Erstes füllt man Wasser in den Kocher.","Als Nächstes schaltet man den Kocher an.","Danach gießt man das Wasser in die Tasse.","Zum Schluss hängt man den Teebeutel hinein."],"Jeder Schritt baut auf dem vorherigen auf."]
 ];
 const TRENNBAR=[
  ["ausschneiden","Man schneidet das Papier aus.",["Man ausschneidet das Papier.","Man schneidet aus das Papier.","Man das Papier ausschneidet."]],
- ["aufstellen","Man stellt das GerÃ¤t auf.",["Man aufstellt das GerÃ¤t.","Man stellt auf das GerÃ¤t.","Man das GerÃ¤t aufstellt."]],
+ ["aufstellen","Man stellt das Gerät auf.",["Man aufstellt das Gerät.","Man stellt auf das Gerät.","Man das Gerät aufstellt."]],
  ["anschalten","Man schaltet die Maschine an.",["Man anschaltet die Maschine.","Man schaltet an die Maschine.","Man die Maschine anschaltet."]],
  ["zusammenbauen","Man baut die Teile zusammen.",["Man zusammenbaut die Teile.","Man baut zusammen die Teile.","Man die Teile zusammenbaut."]],
- ["einfÃ¼llen","Man fÃ¼llt das Wasser ein.",["Man einfÃ¼llt das Wasser.","Man fÃ¼llt ein das Wasser.","Man das Wasser einfÃ¼llt."]],
+ ["einfüllen","Man füllt das Wasser ein.",["Man einfüllt das Wasser.","Man füllt ein das Wasser.","Man das Wasser einfüllt."]],
  ["umdrehen","Man dreht die Kurbel um.",["Man umdreht die Kurbel.","Man dreht um die Kurbel.","Man die Kurbel umdreht."]]
 ];
-function trennbarQ(){ const r=pick(TRENNBAR); return mc("Welcher Satz verwendet das trennbare Verb <b>"+r[0]+"</b> richtig?", r[1], r[2], "Bei trennbaren Verben wandert die Vorsilbe ans Satzende: Man schneidet â€¦ aus.", ANL); }
-const ZUSAMMEN=[["Dreh","Kurbel","Drehkurbel"],["Geschenk","Papier","Geschenkpapier"],["Buch","Seite","Buchseite"],["Wort","Schatz","Wortschatz"],["Wasser","Flasche","Wasserflasche"],["Schul","Tasche","Schultasche"],["Traum","GerÃ¤t","TraumgerÃ¤t"],["Hand","Schuh","Handschuh"]];
+function trennbarQ(){ const r=pick(TRENNBAR); return mc("Welcher Satz verwendet das trennbare Verb <b>"+r[0]+"</b> richtig?", r[1], r[2], "Bei trennbaren Verben wandert die Vorsilbe ans Satzende: Man schneidet … aus.", ANL); }
+const ZUSAMMEN=[["Dreh","Kurbel","Drehkurbel"],["Geschenk","Papier","Geschenkpapier"],["Buch","Seite","Buchseite"],["Wort","Schatz","Wortschatz"],["Wasser","Flasche","Wasserflasche"],["Schul","Tasche","Schultasche"],["Traum","Gerät","Traumgerät"],["Hand","Schuh","Handschuh"]];
 function zusammenQ(){
   const r=pick(ZUSAMMEN), others=shuffle(ZUSAMMEN.filter(x=>x!==r)).slice(0,3).map(x=>x[0]+x[2].slice(x[0].length===x[2].length?0:x[0].length).replace(x[1].toLowerCase(),'')+r[1].toLowerCase());
   const wrongs=uniq([r[1]+r[0].toLowerCase(), r[0]+" "+r[1], r[0]+"-"+r[1].toLowerCase()+"e"]).filter(x=>x!==r[2]).concat(others).slice(0,3);
-  return mc("<b>"+r[0]+"</b> + <b>"+r[1]+"</b> = ? Bilde das zusammengesetzte Wort.", r[2], wrongs, r[0]+" + "+r[1]+" = "+r[2]+". Das letzte Wort bestimmt den Artikel: die Kurbel â†’ die Drehkurbel.", Object.assign({grid:true}, ANL));
+  return mc("<b>"+r[0]+"</b> + <b>"+r[1]+"</b> = ? Bilde das zusammengesetzte Wort.", r[2], wrongs, r[0]+" + "+r[1]+" = "+r[2]+". Das letzte Wort bestimmt den Artikel: die Kurbel → die Drehkurbel.", Object.assign({grid:true}, ANL));
 }
 const ANL_MC=[
- ["Welcher Satz steht in der <b>Man-Form</b>?","Man baut die Einzelteile zusammen.",["Ich baue die Einzelteile zusammen.","Du baust die Einzelteile zusammen.","Wir bauen die Einzelteile zusammen."],"In einer Anleitung schreibt man: Man baut â€¦ Man schneidet â€¦ Nicht ich oder du."],
- ["Welcher Satzanfang passt fÃ¼r den <b>letzten</b> Schritt?","Zum Schluss",["Als Erstes","Als NÃ¤chstes","Danach"],"Zum Schluss heiÃŸt: Das ist der letzte Schritt."],
- ["Welcher Satzanfang passt fÃ¼r den <b>ersten</b> Schritt?","Als Erstes",["Danach","Zum Schluss","Als NÃ¤chstes"],"Als Erstes heiÃŸt: Das ist der erste Schritt."],
- ["Als Erstes, als NÃ¤chstes, danach, â€¦?","zum Schluss",["gestern","vielleicht","niemals"],"Als Erstes, als NÃ¤chstes, danach, zum Schluss. So geht die Reihenfolge."],
- ["Welche Anweisung ist <b>genau</b> genug, damit andere sie nachmachen kÃ¶nnen?","Man schneidet ein 10 cm langes StÃ¼ck Papier ab.",["Man macht etwas mit Papier.","Man nimmt irgendwas.","Papier ist toll."],"Genau sagen: Was? Wie viel? Womit? Dann kann es jeder nachmachen."],
- ["Was ist eine <b>Vorgangsbeschreibung</b>?","Ein Text, der Schritt fÃ¼r Schritt erklÃ¤rt, wie man etwas macht",["Eine spannende Geschichte","Ein Gedicht","Ein Brief an die Oma"],"Eine Anleitung erklÃ¤rt Schritt fÃ¼r Schritt, wie etwas geht."],
- ["Was prÃ¼fst du am Ende deiner Anleitung?","VollstÃ¤ndigkeit, Rechtschreibung und Satzzeichen",["Nur die Ãœberschrift","Ob sie bunt ist","Nichts"],"Am Ende prÃ¼fen: Fehlt ein Schritt? Sind Punkt und Komma da? Ist alles richtig geschrieben?"],
- ["Welches Wort ist <b>zusammengesetzt</b>?","Drehkurbel",["Kurbel","drehen","Tisch"],"Dreh + Kurbel = Drehkurbel. Zwei WÃ¶rter werden eins."],
+ ["Welcher Satz steht in der <b>Man-Form</b>?","Man baut die Einzelteile zusammen.",["Ich baue die Einzelteile zusammen.","Du baust die Einzelteile zusammen.","Wir bauen die Einzelteile zusammen."],"In einer Anleitung schreibt man: Man baut … Man schneidet … Nicht ich oder du."],
+ ["Welcher Satzanfang passt für den <b>letzten</b> Schritt?","Zum Schluss",["Als Erstes","Als Nächstes","Danach"],"Zum Schluss heißt: Das ist der letzte Schritt."],
+ ["Welcher Satzanfang passt für den <b>ersten</b> Schritt?","Als Erstes",["Danach","Zum Schluss","Als Nächstes"],"Als Erstes heißt: Das ist der erste Schritt."],
+ ["Als Erstes, als Nächstes, danach, …?","zum Schluss",["gestern","vielleicht","niemals"],"Als Erstes, als Nächstes, danach, zum Schluss. So geht die Reihenfolge."],
+ ["Welche Anweisung ist <b>genau</b> genug, damit andere sie nachmachen können?","Man schneidet ein 10 cm langes Stück Papier ab.",["Man macht etwas mit Papier.","Man nimmt irgendwas.","Papier ist toll."],"Genau sagen: Was? Wie viel? Womit? Dann kann es jeder nachmachen."],
+ ["Was ist eine <b>Vorgangsbeschreibung</b>?","Ein Text, der Schritt für Schritt erklärt, wie man etwas macht",["Eine spannende Geschichte","Ein Gedicht","Ein Brief an die Oma"],"Eine Anleitung erklärt Schritt für Schritt, wie etwas geht."],
+ ["Was prüfst du am Ende deiner Anleitung?","Vollständigkeit, Rechtschreibung und Satzzeichen",["Nur die Überschrift","Ob sie bunt ist","Nichts"],"Am Ende prüfen: Fehlt ein Schritt? Sind Punkt und Komma da? Ist alles richtig geschrieben?"],
+ ["Welches Wort ist <b>zusammengesetzt</b>?","Drehkurbel",["Kurbel","drehen","Tisch"],"Dreh + Kurbel = Drehkurbel. Zwei Wörter werden eins."],
  ["Welches Verb ist <b>trennbar</b>?","anschalten",["schalten","bauen","schneiden"],"an + schalten. Im Satz trennt es sich: Man schaltet es an."],
- ["WofÃ¼r braucht man die Anleitung in der HWOO-Einheit?","FÃ¼r ein selbst erfundenes Traum-GerÃ¤t",["FÃ¼r ein Rezept von Oma","FÃ¼r eine Mathe-Aufgabe","FÃ¼r ein Lied"],"Du schreibst eine Anleitung fÃ¼r dein eigenes Traum-GerÃ¤t."]
+ ["Wofür braucht man die Anleitung in der HWOO-Einheit?","Für ein selbst erfundenes Traum-Gerät",["Für ein Rezept von Oma","Für eine Mathe-Aufgabe","Für ein Lied"],"Du schreibst eine Anleitung für dein eigenes Traum-Gerät."]
 ];
 function buildAnleitung(){ const r=pick(ANL_ORDER); return shuffle([orderQ(r[0], r[1], null, r[2], Object.assign({hint:"Tippe die Schritte in der richtigen Reihenfolge an"}, ANL)), trennbarQ(), trennbarQ(), zusammenQ(), zusammenQ()].concat(fromBank(ANL_MC,ANL,3))); }
 
-/* ======================= NOW Â· SCHOOL LIFE NOW ======================= */
-const NOW={label:'School Life Now', world:'now'};
+/* ======================= NOW · SCHOOL LIFE NOW ======================= */
+const NOW={label:'School Life Now', world:'school'};
 const NOW_MC=[
  ["In library you are making a Common Craft style movie about a poem. What is that?","A video where you move paper cut-outs and drawings while you read the poem",["A cartoon made by a computer","A dance video","A photo of a book"],"You move paper pictures on a table. A voice tells the story."],
- ["Performing a poem <b>with emotion</b> meansâ€¦","changing your voice and face to show the feelings in the poem",["reading as fast as possible","whispering every line","reading with no expression"],"Loud and soft. Fast and slow. Show the feelings!"],
+ ["Performing a poem <b>with emotion</b> means…","changing your voice and face to show the feelings in the poem",["reading as fast as possible","whispering every line","reading with no expression"],"Loud and soft. Fast and slow. Show the feelings!"],
  ["Which of these books was written by <b>Roald Dahl</b>?","Charlie and the Chocolate Factory",["Harry Potter","Pippi Longstocking","The Gruffalo"],"Roald Dahl also wrote Matilda and The BFG."],
  ["Which of these is also by Roald Dahl?","The BFG",["Peter Pan","The Jungle Book","Frozen"],"The BFG is the Big Friendly Giant."],
- ["Words that end with the same sound, like â€˜catâ€™ and â€˜hatâ€™, are calledâ€¦","rhymes",["stanzas","titles","verbs"],"Cat and hat rhyme. Roald Dahlâ€™s poems are full of funny rhymes."],
- ["A group of lines in a poem is called aâ€¦","stanza (or verse)",["chapter","paragraph","sentence"],"A poem is made of stanzas. Like a song is made of verses."],
+ ["Words that end with the same sound, like ‘cat’ and ‘hat’, are called…","rhymes",["stanzas","titles","verbs"],"Cat and hat rhyme. Roald Dahl’s poems are full of funny rhymes."],
+ ["A group of lines in a poem is called a…","stanza (or verse)",["chapter","paragraph","sentence"],"A poem is made of stanzas. Like a song is made of verses."],
  ["Your group is making the poetry movie. What helps most?","Share the jobs: drawing, moving the pictures, reading",["One person does everything","Everyone talks at once","Nobody plans"],"Everyone gets a job. Drawing, moving, reading."],
  ["For the Book Character Pumpkin Contest, what should you NOT do?","Carve the pumpkin",["Decorate it as a book character","Use boxes or bottles instead","Bring it to school by 28 October"],"Whole pumpkins only. No carving."],
  ["What is the pumpkin decorated as?","A character from a book",["A football player","A car","A pumpkin pie"],"A book character. Reading is fun, even in spooky season."],
- ["No pumpkin at home? What can you use instead?","Empty bottles, boxes or paper bags",["A real cat","Your lunch","Nothing, you canâ€™t join"],"Any shape can become a book character."],
- ["In â€˜Glows and Growsâ€™, what is a <b>Glow</b>?","Something you are already really good at",["A kind of lamp","A mistake","A homework task"],"A Glow makes you proud. A Grow is what you work on next."],
+ ["No pumpkin at home? What can you use instead?","Empty bottles, boxes or paper bags",["A real cat","Your lunch","Nothing, you can’t join"],"Any shape can become a book character."],
+ ["In ‘Glows and Grows’, what is a <b>Glow</b>?","Something you are already really good at",["A kind of lamp","A mistake","A homework task"],"A Glow makes you proud. A Grow is what you work on next."],
  ["What is a <b>Grow</b>?","A learning skill you want to work on more",["A plant","A test score","A holiday"],"Pick one Grow. Make a plan."],
- ["ATL stands forâ€¦","Approaches to Learning",["All The Lessons","Always Try Later","A Tiny Lion"],"ATLs are learning skills. Finding out, thinking, talking, working together."],
+ ["ATL stands for…","Approaches to Learning",["All The Lessons","Always Try Later","A Tiny Lion"],"ATLs are learning skills. Finding out, thinking, talking, working together."],
  ["Who do you share your Glows and Grows with?","Your teacher and your parents at the conference",["The bus driver","Nobody","Only your cat"],"At the conference you show how you are growing."],
  ["What do you do AFTER sharing your Glows and Grows?","Pick one Grow and make a plan to improve it",["Forget about it","Pick a new teacher","Sleep"],"One Grow. One plan. Then practise."],
  ["Which of these is a <b>research skill</b>?","Noticing details and recording them carefully",["Running fast","Singing loudly","Jumping high"],"Finding out and writing it down. That is a research skill."],
@@ -1269,23 +1271,23 @@ const ICONS={
 const WORLDS={
   units:{name:'Units & Measuring', sub:'cm, m and g: write the unit every time', color:'var(--w-units)', from:'Friction Frenzy', mark:'C', build:buildUnits},
   graphs:{name:'Bar Graphs & Worksheets', sub:'Finish the graph, answer every question', color:'var(--w-units)', icon:'units', from:'Friction Frenzy', mark:'C', build:buildGraphs},
-  finish:{name:'Finish Every Task', sub:'Record everything, check before handing in', color:'var(--w-grow)', icon:'grow', from:'Friction Frenzy Â· Responsibility', mark:'ES (lowest)', build:buildFinish},
+  finish:{name:'Finish Every Task', sub:'Record everything, check before handing in', color:'var(--w-grow)', icon:'grow', from:'Friction Frenzy · Responsibility', mark:'ES (lowest)', build:buildFinish},
   sentences:{name:'Capital Letters & Full Stops', sub:'Start big, end with . ? or !', color:'var(--w-sentences)', from:'Persuade for the Park', mark:'C', build:buildSentences},
-  examples:{name:'Specific Examples', sub:'Who, when, where. Specific hypotheses too.', color:'var(--w-sentences)', icon:'sentences', from:'Persuade for the Park Â· Friction Frenzy', mark:'C', build:buildExamples},
-  explain:{name:'Explain Your Rounding', sub:'Say HOW you know: distances, halfway, tens', color:'var(--w-explain)', from:'Lesson 4 Â· Travel for Work', mark:'C', build:buildExplain},
+  examples:{name:'Specific Examples', sub:'Who, when, where. Specific hypotheses too.', color:'var(--w-sentences)', icon:'sentences', from:'Persuade for the Park · Friction Frenzy', mark:'C', build:buildExamples},
+  explain:{name:'Explain Your Rounding', sub:'Say HOW you know: distances, halfway, tens', color:'var(--w-explain)', from:'Lesson 4 · Travel for Work', mark:'C', build:buildExplain},
   combos:{name:'Number Combinations', sub:'More than one way to make a number', color:'var(--w-explain)', icon:'round', from:'Travel for Work', mark:'C, needed help', build:buildCombos},
-  champion:{name:'Friction Champion', sub:'Friction in the real world', color:'var(--w-champion)', from:'Friction Frenzy Â· giving reasons', mark:'Ind.', build:buildChampion},
-  detective:{name:'Data Detective', sub:'Read tables, estimate, compare with > and <', color:'var(--w-detective)', from:'Travel for Work Â· Sticker Milestone', mark:'M (comparing)', build:buildDetective},
+  champion:{name:'Friction Champion', sub:'Friction in the real world', color:'var(--w-champion)', from:'Friction Frenzy · giving reasons', mark:'Ind.', build:buildChampion},
+  detective:{name:'Data Detective', sub:'Read tables, estimate, compare with > and <', color:'var(--w-detective)', from:'Travel for Work · Sticker Milestone', mark:'M (comparing)', build:buildDetective},
   opinion:{name:'Opinion Power', sub:'Clear opinions, good reasons, OREO', color:'var(--w-words)', icon:'words', from:'Persuade for the Park', mark:'M (best)', build:buildOpinion},
-  team:{name:'Teamwork', sub:'Listen, share, take turns', color:'var(--w-forces)', icon:'team', from:'PE Â· Science', mark:'praised', build:buildTeam},
+  team:{name:'Teamwork', sub:'Listen, share, take turns', color:'var(--w-forces)', icon:'team', from:'PE · Science', mark:'praised', build:buildTeam},
   wordprob:{name:'Read the Problem', sub:'Find the right numbers, then calculate step by step', color:'var(--w-stickers)', icon:'stickers', from:'Sticker Milestone, 27 Oct', mark:'C, misread numbers', build:buildWordProb},
-  stickers:{name:'Sticker Maths', sub:'Missing addends and two-step problems', color:'var(--w-stickers)', from:'Sticker Milestone, 27 Oct', mark:'C Â· rubric 2 of 4', build:buildStickers},
+  stickers:{name:'Sticker Maths', sub:'Missing addends and two-step problems', color:'var(--w-stickers)', from:'Sticker Milestone, 27 Oct', mark:'C · rubric 2 of 4', build:buildStickers},
   anleitung:{name:'Anleitung schreiben', sub:'Deutsch: Reihenfolge, trennbare Verben, Man-Form', color:'var(--w-anleitung)', from:'New task, 23 Oct', mark:'open', build:buildAnleitung},
   poetry:{name:'Roald Dahl Poetry', sub:'Poem movie with your group', color:'var(--w-now)', icon:'read', from:'Library task', mark:'open', build:buildPoetry},
   school:{name:'Pumpkins, Records & Skills', sub:'Pumpkin contest by 28 Oct, self-assessment, PE', color:'var(--w-now)', icon:'now', from:'Announcements & portfolio', mark:'now', build:buildSchool},
   forces:{name:'Forces Lab', sub:'Friction Frenzy: ramps, variables & controls', color:'var(--w-forces)', build:buildForces},
   numbers:{name:'Time & Numbers', sub:'Clocks, number lines & place value', color:'var(--w-numbers)', build:buildNumbers},
-  round:{name:'Rounding Road', sub:'Nearest 10 and 100, benchmarks & estimating', color:'var(--w-round)', from:'Sticker Milestone Â· Lesson 4', mark:'M (rounding)', build:buildRounding},
+  round:{name:'Rounding Road', sub:'Nearest 10 and 100, benchmarks & estimating', color:'var(--w-round)', from:'Sticker Milestone · Lesson 4', mark:'M (rounding)', build:buildRounding},
   words:{name:'Word Workshop', sub:'OREO, Persuade for the Park, prefixes', color:'var(--w-words)', build:buildWords},
   library:{name:'Library & Research', sub:'Call numbers, Britannica, Kiddle, BrainPop', color:'var(--w-library)', build:buildLibrary},
   trip:{name:'Legoland Trip', sub:'Pack your bag & know the rules', color:'var(--w-trip)', build:buildTrip},
@@ -1293,10 +1295,10 @@ const WORLDS={
   mix:{name:'Mixed Quest', sub:'A bit of everything, shuffled', color:'var(--w-mix)', build:buildMix}
 };
 const CHAPTERS=[
-  {tone:'bad', title:'Bad marks Â· practise here', sub:'Schlechte Noten: hier Ã¼ben. Each card shows the task and the mark from Toddle.', items:['wordprob','stickers','units','graphs','finish','sentences','examples','explain','combos','studio:grow']},
-  {tone:'good', title:'Good marks Â· keep it up', sub:'Gute Noten: dranbleiben.', items:['round','detective','champion','opinion','team']},
-  {tone:'new', title:'New topics Â· now and next', sub:'Neue Themen: jetzt und demnÃ¤chst.', items:['anleitung','poetry','school','studio:read','studio:stage']},
-  {tone:'old', title:'Older topics Â· extra practice', sub:'Ã„ltere Themen zum Wiederholen.', items:['forces','numbers','words','library','trip','music','mix']}
+  {tone:'bad', title:'Bad marks · practise here', sub:'Schlechte Noten: hier üben. Each card shows the task and the mark from Toddle.', items:['wordprob','stickers','units','graphs','finish','sentences','examples','explain','combos','studio:grow']},
+  {tone:'good', title:'Good marks · keep it up', sub:'Gute Noten: dranbleiben.', items:['round','detective','champion','opinion','team']},
+  {tone:'new', title:'New topics · now and next', sub:'Neue Themen: jetzt und demnächst.', items:['anleitung','poetry','school','studio:read','studio:stage']},
+  {tone:'old', title:'Older topics · extra practice', sub:'Ältere Themen zum Wiederholen.', items:['forces','numbers','words','library','trip','music','mix']}
 ];
 const STUDIOS={
   grow:{name:'My Work Checklist', sub:'Tick what you did in your work this week', color:'var(--w-grow)', icon:'grow', from:'Teacher feedback', mark:'habits',
@@ -1305,17 +1307,17 @@ const STUDIOS={
     extraTitle:'How to use it',
     extra:['Choose one habit for this week and tell a grown-up which one.','After each piece of work, read the list and tick what you did.','When all are ticked, celebrate and pick a new focus!'],
     tips:['Rubric tip: a 3 (Meets) shows correct, labelled work. A 4 (Extending) shows more than one way or a check.']},
-  read:{name:'Lese-Studio (Deutsch)', sub:'Leseaufnahme Herbst: Ã¼ben, dann aufnehmen', color:'var(--w-read)', icon:'read', from:'Leseaufnahme Herbst', mark:'open since 29 Sep',
-    intro:'Suche dir eine Seite aus deinem Lesebuch aus. Lies den Text zwei- bis dreimal laut vor. Wenn du ihn flÃ¼ssig lesen kannst, mach deine Leseaufnahme in Toddle. Die Aufgabe ist noch offen!',
+  read:{name:'Lese-Studio (Deutsch)', sub:'Leseaufnahme Herbst: üben, dann aufnehmen', color:'var(--w-read)', icon:'read', from:'Leseaufnahme Herbst', mark:'open since 29 Sep',
+    intro:'Suche dir eine Seite aus deinem Lesebuch aus. Lies den Text zwei- bis dreimal laut vor. Wenn du ihn flüssig lesen kannst, mach deine Leseaufnahme in Toddle. Die Aufgabe ist noch offen!',
     timer:true,
-    checks:['Eine Seite aus meinem Lesebuch ausgesucht','1. Mal laut gelesen','2. Mal laut gelesen','3. Mal laut gelesen, jetzt flÃ¼ssig!','Leseaufnahme gemacht und in Toddle hochgeladen'],
-    extraTitle:'AufwÃ¤rmen: Zungenbrecher',
-    extra:['Fischers Fritz fischt frische Fische, frische Fische fischt Fischers Fritz.','Blaukraut bleibt Blaukraut und Brautkleid bleibt Brautkleid.','Zwischen zwei Zwetschgenzweigen zwitschern zwei Schwalben.','Acht alte Ameisen aÃŸen am Abend Ananas.'],
-    tips:['Lies langsam und deutlich, nicht schnell.','Mach bei Punkten eine kleine Pause.','Stolperst du Ã¼ber ein Wort? Lies den Satz noch einmal.']},
+    checks:['Eine Seite aus meinem Lesebuch ausgesucht','1. Mal laut gelesen','2. Mal laut gelesen','3. Mal laut gelesen, jetzt flüssig!','Leseaufnahme gemacht und in Toddle hochgeladen'],
+    extraTitle:'Aufwärmen: Zungenbrecher',
+    extra:['Fischers Fritz fischt frische Fische, frische Fische fischt Fischers Fritz.','Blaukraut bleibt Blaukraut und Brautkleid bleibt Brautkleid.','Zwischen zwei Zwetschgenzweigen zwitschern zwei Schwalben.','Acht alte Ameisen aßen am Abend Ananas.'],
+    tips:['Lies langsam und deutlich, nicht schnell.','Mach bei Punkten eine kleine Pause.','Stolperst du über ein Wort? Lies den Satz noch einmal.']},
   stage:{name:'Pantastic Rehearsal', sub:'Songs for the Primary Production', color:'var(--w-stage)', icon:'stage', from:'Pantastic songs', mark:'open',
     intro:'Pantastic is a Peter Pan story. Learn the words and melody of each song, a little every day. Tick a song once you can sing it without looking.',
     timer:true,
-    checks:['Nobody Wants To Grow Old (everyoneâ€™s audition song)','Higher and Higher (solo audition song)','Tick-Tock Crocodile','Here In Neverland','I know my lines','I know my dance moves'],
+    checks:['Nobody Wants To Grow Old (everyone’s audition song)','Higher and Higher (solo audition song)','Tick-Tock Crocodile','Here In Neverland','I know my lines','I know my dance moves'],
     extraTitle:'Production rules',
     extra:['Learn your lines, songs and dances.','Come to every rehearsal ready to work.','Listen to the directors and help your cast mates.'],
     tips:['Sing along with the recording first, then without it.','Practise the hard line five times in a row.','Record yourself and listen back, just like the Leseaufnahme!']}
@@ -1336,7 +1338,7 @@ function show(name){
 }
 function playerName(){ return ($('#playerName').value||'').trim(); }
 function cardHTML(k, d, right){
-  const mark=d.mark?`<br><span class="mark">${esc(d.from)} Â· <b>${esc(d.mark)}</b></span>`:'';
+  const mark=d.mark?`<br><span class="mark">${esc(d.from)} · <b>${esc(d.mark)}</b></span>`:'';
   return `<span class="icon">${ICONS[d.icon||k]}</span><span><span class="name">${d.name}</span><br><span class="sub">${d.sub}</span>${mark}</span><span class="best">${right}</span>`;
 }
 function renderHome(){
@@ -1377,7 +1379,7 @@ function renderQuestion(){
   const q=state.round[state.idx];
   state.answered=false; state.typed=''; state.picked=[];
   play.style.setProperty('--world', WORLDS[q.world||state.world].color);
-  $('#qLabel').textContent=q.label+' Â· Question '+(state.idx+1)+' of '+state.round.length;
+  $('#qLabel').textContent=q.label+' · Question '+(state.idx+1)+' of '+state.round.length;
   $('#qPrompt').innerHTML=q.prompt;
   const vis=$('#qVisual'); vis.innerHTML=q.visual||''; vis.hidden=!q.visual;
   const A=$('#qAnswers'); A.innerHTML=''; A.className='answers'+(q.grid?' grid':'')+(q.grid3?' grid3':'');
@@ -1392,12 +1394,12 @@ function renderQuestion(){
   } else if(q.kind==='type'){
     const out=document.createElement('div'); out.className='typed'; out.id='typedOut'; out.setAttribute('aria-live','polite'); A.appendChild(out);
     const np=document.createElement('div'); np.className='numpad';
-    ['1','2','3','4','5','6','7','8','9','âŒ«','0','Check'].forEach(k=>{
+    ['1','2','3','4','5','6','7','8','9','⌫','0','Check'].forEach(k=>{
       const b=document.createElement('button'); b.type='button'; b.className='key'+(k==='Check'?' go':''); b.textContent=k;
-      b.setAttribute('aria-label', k==='âŒ«'?'Delete':k);
+      b.setAttribute('aria-label', k==='⌫'?'Delete':k);
       b.addEventListener('click',()=>{
         if(state.answered) return;
-        if(k==='âŒ«') state.typed=state.typed.slice(0,-1);
+        if(k==='⌫') state.typed=state.typed.slice(0,-1);
         else if(k==='Check'){ if(state.typed) answerTyped(); return; }
         else if(state.typed.length<4) state.typed+=k;
         out.textContent=state.typed;
@@ -1407,11 +1409,11 @@ function renderQuestion(){
     A.appendChild(np);
   } else if(q.kind==='order'){
     const sl=document.createElement('div'); sl.className='slots';
-    sl.innerHTML=q.slots?q.slots.map((s,i)=>`<span class="slot"><i>${i+1}</i>${esc(s)}</span>`).join(''):`<span class="slot"><i>1 â†’ ${q.items.length}</i>${esc(q.hint||'Tap the steps in order')}</span>`;
+    sl.innerHTML=q.slots?q.slots.map((s,i)=>`<span class="slot"><i>${i+1}</i>${esc(s)}</span>`).join(''):`<span class="slot"><i>1 → ${q.items.length}</i>${esc(q.hint||'Tap the steps in order')}</span>`;
     A.appendChild(sl);
     q.items.forEach((t,i)=>{
       const b=document.createElement('button'); b.type='button'; b.className='opt ord'; b.dataset.i=i;
-      b.innerHTML=`<span class="badge">Â·</span><span>${esc(t)}</span>`;
+      b.innerHTML=`<span class="badge">·</span><span>${esc(t)}</span>`;
       b.addEventListener('click',()=>toggleOrder(i)); A.appendChild(b);
     });
     const cb=document.createElement('button'); cb.type='button'; cb.className='btn primary'; cb.id='checkOrder'; cb.textContent='Check my order'; cb.disabled=true;
@@ -1462,7 +1464,7 @@ function toggleOrder(i){
   if(at>=0) state.picked=state.picked.slice(0,at); else state.picked.push(i);
   document.querySelectorAll('#qAnswers .ord').forEach(b=>{
     const k=+b.dataset.i, p=state.picked.indexOf(k);
-    b.classList.toggle('picked',p>=0); b.querySelector('.badge').textContent=p>=0?p+1:'Â·';
+    b.classList.toggle('picked',p>=0); b.querySelector('.badge').textContent=p>=0?p+1:'·';
   });
   $('#checkOrder').disabled=state.picked.length!==state.round[state.idx].items.length;
 }
@@ -1518,7 +1520,7 @@ function openStudio(k){
   if(d.timer){
     html+=`<div class="timer"><span class="clock" id="tClock">00:00</span><span class="row" style="flex:1;justify-content:flex-end"><button class="btn small primary" id="tStart" type="button">Start</button><button class="btn small" id="tReset" type="button">Reset</button></span></div>`;
   }
-  html+=`<div><div class="eyebrow" style="margin-bottom:8px">Checklist Â· <span id="chkCount">${done}</span> / ${d.checks.length}</div><div class="progress"><i id="chkBar" style="width:${Math.round(done/d.checks.length*100)}%"></i></div></div>`;
+  html+=`<div><div class="eyebrow" style="margin-bottom:8px">Checklist · <span id="chkCount">${done}</span> / ${d.checks.length}</div><div class="progress"><i id="chkBar" style="width:${Math.round(done/d.checks.length*100)}%"></i></div></div>`;
   html+=`<div class="checks" id="checks">`+d.checks.map((c,i)=>`<button type="button" class="chk${checks[i]?' on':''}" data-i="${i}" aria-pressed="${checks[i]?'true':'false'}"><span class="box">${TICK}</span><span class="t">${esc(c)}</span></button>`).join('')+`</div>`;
   if(d.extra){ html+=`<div><h3 style="margin-bottom:8px">${esc(d.extraTitle)}</h3><div class="checks">`+d.extra.map(t=>`<div class="twister">${esc(t)}</div>`).join('')+`</div></div>`; }
   if(d.tips){ html+=`<div><h3 style="margin-bottom:6px">Tips</h3><ul class="tips">`+d.tips.map(t=>`<li>${esc(t)}</li>`).join('')+`</ul></div>`; }

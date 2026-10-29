@@ -101,6 +101,9 @@ test('richtiges Passwort: App startet, alte Sterne bleiben, Quest spielbar, nach
   assert.equal(await page.textContent('#home h1'), '3B Big Quest');
   assert.equal(await page.textContent('#totalStars'), '7', 'vorhandene Sterne muessen erhalten bleiben');
   assert.equal(await page.inputValue('#playerName'), 'Probe');
+  const start = await page.textContent('#home');
+  assert.ok(start.includes('Grade 3B · Bavarian'), 'Mittelpunkt kommt nach dem Entschluesseln richtig an');
+  assert.ok(start.includes('hier üben'), 'Umlaut kommt nach dem Entschluesseln richtig an');
   assert.ok(await page.evaluate((k) => localStorage.getItem(k), SCHLUESSEL), 'Schluessel gemerkt');
 
   await page.locator('button.world').first().click();
@@ -120,6 +123,23 @@ test('Browser rechnet das Passwort wie das Skript: Leerzeichen am Ende (iOS) sto
   await page.goto(basis);
   await anmelden(page, TEST_PW + ' ');
   await page.waitForSelector('#home h1');
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
+
+test('die App startet oben, auch nach Scrollen und Neuladen', async () => {
+  const { ctx, page, fehler } = await geraet();
+  await page.goto(basis);
+  await anmelden(page, TEST_PW);
+  await page.waitForSelector('#home h1');
+  assert.equal(await page.evaluate(() => scrollY), 0, 'nach der Anmeldung');
+  await page.evaluate(() => scrollTo(0, 900));
+  assert.ok(await page.evaluate(() => scrollY) > 0, 'Seite muss scrollbar sein, sonst prueft der Test nichts');
+  await page.reload();
+  await page.waitForSelector('#home h1');
+  await page.waitForTimeout(500);
+  assert.equal(await page.evaluate(() => scrollY), 0, 'nach dem Neuladen');
+  assert.equal(await page.evaluate(() => history.scrollRestoration), 'manual', 'Browser darf die alte Position nicht wiederherstellen');
   assert.deepEqual(fehler, []);
   await ctx.close();
 });

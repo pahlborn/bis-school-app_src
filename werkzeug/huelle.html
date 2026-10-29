@@ -53,6 +53,9 @@ button:disabled{opacity:.6;cursor:default}
   'use strict';
   // Muss zu werkzeug/kern.mjs passen: PBKDF2-SHA256, AES-256-GCM, Passwort NFC + trim.
   var SPEICHER = 'bq_schluessel';
+  // Die App soll immer oben starten. Sonst springt der Browser beim Neuladen
+  // an die zuletzt gescrollte Stelle - auch in die frisch geschriebene App.
+  try { history.scrollRestoration = 'manual'; } catch (e) { /* aeltere Browser */ }
   var tresor = JSON.parse(document.getElementById('tresor').textContent);
   var subtle = window.crypto && window.crypto.subtle;
   var maske = document.getElementById('maske');
@@ -70,7 +73,7 @@ button:disabled{opacity:.6;cursor:default}
     return subtle.decrypt({ name: 'AES-GCM', iv: ausB64(tresor.iv) }, schluessel, ausB64(tresor.daten))
       .then(function (klar) { return new TextDecoder('utf-8').decode(klar); });
   }
-  function zeigen(html) { document.open(); document.write(html); document.close(); }
+  function zeigen(html) { document.open(); document.write(html); document.close(); window.scrollTo(0, 0); }
 
   function ableiten(passwort) {
     var roh = new TextEncoder().encode(String(passwort).normalize('NFC').trim());
