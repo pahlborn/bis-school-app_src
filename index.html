@@ -407,6 +407,7 @@ const itemCard = t => `<div class="itemcard">${esc(t)}</div>`;
 
 /* ---------- helpers ---------- */
 function mc(prompt, right, wrongs, explain, extra){
+  wrongs=uniq(wrongs).filter(t=>t!==right);
   const opts=shuffle([{t:right,ok:true}].concat(wrongs.map(t=>({t:t,ok:false}))));
   return Object.assign({kind:'mc', prompt:prompt, options:opts.map(o=>o.t), answer:opts.findIndex(o=>o.ok), explain:explain, visual:''}, extra||{});
 }
@@ -547,7 +548,8 @@ function numberLine(){
 function placeValue(){
   const v=rnd(4);
   if(v===0){
-    const n=1000+rnd(9000), s=String(n); let pos=rnd(4); if(s[pos]==='0') pos=0;
+    let n, s, pos;
+    do { n=1000+rnd(9000); s=String(n); const one=[0,1,2,3].filter(i=>s[i]!=='0' && s.split(s[i]).length===2); pos=one.length?pick(one):-1; } while(pos<0);
     const d=+s[pos], place=[1000,100,10,1][pos], right=d*place, names=['thousands','hundreds','tens','ones'];
     const wrongs=fill3(right,[d, d*place*10, d*place/10, place, d*1000, d*100, d*10].filter(Number.isInteger));
     return mc("What is the value of the <b>"+d+"</b> in <b>"+fmt(n)+"</b>?", fmt(right), wrongs.map(fmt),
@@ -899,17 +901,17 @@ const SEN={label:'Capital Letters & Full Stops', world:'sentences'};
 const EXA={label:'Specific Examples', world:'examples'};
 const SENTS=[
  ["On Monday we went to Legoland.",["Monday","Legoland"]],
- ["My teacher is Ms. Bhan.",["Ms.","Bhan"]],
+ ["My teacher is Ms. Bhan.",["Ms","Bhan"]],
  ["We live in Bavaria, in the south of Germany.",["Bavaria","Germany"]],
  ["The park in Haimhausen has a big pond.",["Haimhausen"]],
  ["In October we decorated pumpkins for the library.",["October"]],
  ["Peter Pan flies to Neverland with Tinker Bell.",["Peter","Pan","Neverland","Tinker","Bell"]],
- ["Ms. Zeckser showed us Britannica on the iPads.",["Ms.","Zeckser","Britannica"]],
+ ["Ms. Zeckser showed us Britannica on the tablets.",["Ms","Zeckser","Britannica"]],
  ["Did you read Matilda by Roald Dahl?",["Matilda","Roald","Dahl"]],
  ["Captain Hook is afraid of the crocodile.",["Captain","Hook"]],
  ["Our park must stay open!",[]],
  ["Where is the metre stick?",[]],
- ["Every Friday we have music with Ms. Schlüer.",["Friday","Ms.","Schlüer"]]
+ ["Every Friday we have music with Ms. Schlüer.",["Friday","Ms","Schlüer"]]
 ];
 const stripP = w => w.replace(/[.,!?]/g,'');
 function capitalFixQ(){
@@ -1209,7 +1211,7 @@ const ANL_MC=[
 function buildAnleitung(){ const r=pick(ANL_ORDER); return shuffle([orderQ(r[0], r[1], null, r[2], Object.assign({hint:"Tippe die Schritte in der richtigen Reihenfolge an"}, ANL)), trennbarQ(), trennbarQ(), zusammenQ(), zusammenQ()].concat(fromBank(ANL_MC,ANL,3))); }
 
 /* ======================= NOW · SCHOOL LIFE NOW ======================= */
-const NOW={label:'School Life Now', world:'now'};
+const NOW={label:'School Life Now', world:'school'};
 const NOW_MC=[
  ["In library you are making a Common Craft style movie about a poem. What is that?","A video where you move paper cut-outs and drawings while you read the poem",["A cartoon made by a computer","A dance video","A photo of a book"],"You move paper pictures on a table. A voice tells the story."],
  ["Performing a poem <b>with emotion</b> means…","changing your voice and face to show the feelings in the poem",["reading as fast as possible","whispering every line","reading with no expression"],"Loud and soft. Fast and slow. Show the feelings!"],
