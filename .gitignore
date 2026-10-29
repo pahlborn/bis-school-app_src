@@ -1,0 +1,4 @@
+# Ergebnis von werkzeug/verschluesseln.mjs - wird ins oeffentliche Repo
+# bis-school-app hochgeladen, nicht hier eingecheckt.
+dist/
+node_modules/

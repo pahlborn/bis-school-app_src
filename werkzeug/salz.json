@@ -1,0 +1,4 @@
+{
+  "hinweis": "Salt fuer PBKDF2. Nicht geheim, bleibt fest: gleiches Passwort ergibt so denselben Schluessel und die Geraete bleiben nach einem Update angemeldet.",
+  "salt": "mTUPr3wWFa+Ees4fOUzu0g=="
+}
