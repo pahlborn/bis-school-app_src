@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap">
 <style>
-/* Layout: one phone-first column (max 560px), big tap targets; the home page is four chapters (past, practice, strengths, now) plus studios; each quest world tints the play screen through --world */
+/* Layout: one phone-first column (max 560px, wider start page on big screens), big tap targets; the start page is Practise Today plus one tile per school subject; each quest world tints the play screen through --world */
 :root{
   --bg:#EEF4FB; --surface:#FFFFFF; --ink:#172033; --muted:#5D6B80; --line:#D3DEEC; --soft:#E6ECFB;
   --accent:#3B5BDB; --accent-ink:#FFFFFF;
@@ -24,7 +24,7 @@
   --w-forces:#12A594; --w-numbers:#3B5BDB; --w-round:#0E8FD6; --w-words:#C2419A; --w-library:#7A4FD8; --w-trip:#F5820D; --w-music:#D6336C; --w-mix:#D99A00;
   --w-units:#2B8A3E; --w-sentences:#7048E8; --w-explain:#0CA678; --w-champion:#E8590C; --w-detective:#1864AB; --w-stickers:#F03E7E; --w-anleitung:#C2255C; --w-now:#7950F2;
   --w-read:#2F855A; --w-stage:#B7410E; --w-grow:#AE3EC9;
-  --world:var(--accent);
+  --world:var(--accent); --on-world:#FFFFFF;
   --display:'Fredoka',system-ui,sans-serif; --body:'Nunito',system-ui,sans-serif;
   --shadow:0 5px 0 rgba(23,32,51,.10);
 }
@@ -36,7 +36,7 @@
     --w-forces:#2AD1BF; --w-numbers:#7B93FF; --w-round:#4FB3F0; --w-words:#F06BC8; --w-library:#A98BFF; --w-trip:#FFA24C; --w-music:#FF6B9E; --w-mix:#F2C14E;
     --w-units:#51CF66; --w-sentences:#9775FA; --w-explain:#38D9A9; --w-champion:#FF922B; --w-detective:#4DABF7; --w-stickers:#FF6BA5; --w-anleitung:#F06595; --w-now:#B197FC;
     --w-read:#5BC98A; --w-stage:#F0813F; --w-grow:#DA77F2;
-    --shadow:0 5px 0 rgba(0,0,0,.35);
+    --shadow:0 5px 0 rgba(0,0,0,.35); --on-world:#0F1626;
     color-scheme:dark;
   }
 }
@@ -47,7 +47,7 @@
   --w-forces:#2AD1BF; --w-numbers:#7B93FF; --w-round:#4FB3F0; --w-words:#F06BC8; --w-library:#A98BFF; --w-trip:#FFA24C; --w-music:#FF6B9E; --w-mix:#F2C14E;
   --w-units:#51CF66; --w-sentences:#9775FA; --w-explain:#38D9A9; --w-champion:#FF922B; --w-detective:#4DABF7; --w-stickers:#FF6BA5; --w-anleitung:#F06595; --w-now:#B197FC;
   --w-read:#5BC98A; --w-stage:#F0813F; --w-grow:#DA77F2;
-  --shadow:0 5px 0 rgba(0,0,0,.35);
+  --shadow:0 5px 0 rgba(0,0,0,.35); --on-world:#0F1626;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -69,49 +69,60 @@ button{font:inherit;color:inherit}
 /* buttons */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:10px 18px;border-radius:16px;border:2px solid var(--line);background:var(--surface);font-family:var(--display);font-size:1.1rem;font-weight:600;cursor:pointer;box-shadow:var(--shadow);transition:transform .08s,box-shadow .08s}
 .btn:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.12)}
-.btn.primary{background:var(--world);border-color:var(--world);color:#fff}
+.btn.primary{background:var(--world);border-color:var(--world);color:var(--on-world)}
 .btn.ghost{box-shadow:none;background:transparent}
 .btn:disabled{opacity:.5;cursor:default}
-.btn.small{min-height:40px;padding:6px 12px;font-size:.95rem;border-radius:12px}
+.btn.small{min-height:44px;padding:6px 12px;font-size:.95rem;border-radius:12px}
 .row{display:flex;gap:10px;flex-wrap:wrap}
 .row > .btn{flex:1 1 140px}
 
 /* home */
 .hero{display:flex;flex-direction:column;gap:8px}
-.tagline{font-size:1.05rem;color:var(--muted);max-width:36ch}
 .field{display:flex;flex-direction:column;gap:6px}
 .field label{font-family:var(--display);font-weight:600}
 .field input{font:inherit;font-size:1.1rem;padding:12px 14px;border-radius:14px;border:2px solid var(--line);background:var(--surface);color:var(--ink);width:100%}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.stat{background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:12px 14px;display:flex;flex-direction:column;gap:2px}
-.stat .big{font-family:var(--display);font-size:1.7rem;font-weight:600;display:flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums}
-.stat .big svg{width:26px;height:26px;fill:var(--sun)}
-.chapter{display:flex;flex-direction:column;gap:10px;padding-top:6px;border-top:3px solid var(--line)}
-.chapter .head{display:flex;flex-direction:column;gap:2px}
-.chapter .head h2{font-size:1.45rem}
-.chapter .head p{color:var(--muted);font-size:.95rem}
 .worlds{display:flex;flex-direction:column;gap:12px}
 .world{display:grid;grid-template-columns:56px 1fr auto;align-items:center;gap:14px;text-align:left;width:100%;padding:14px 16px;border-radius:20px;border:2px solid var(--line);background:var(--surface);cursor:pointer;box-shadow:var(--shadow);transition:transform .08s,box-shadow .08s}
 .world:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.12)}
-.world .icon{width:56px;height:56px;border-radius:18px;background:var(--c);color:#fff;display:grid;place-items:center}
+.world .icon{width:56px;height:56px;border-radius:18px;background:var(--c);color:var(--on-world);display:grid;place-items:center}
 .world .icon svg{width:32px;height:32px}
 .world .name{font-family:var(--display);font-size:1.2rem;font-weight:600}
 .world .sub{color:var(--muted);font-size:.9rem}
 .world .best{font-family:var(--display);font-size:.85rem;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .world .best b{display:block;font-size:1.1rem;color:var(--c)}
-.mark{display:inline-flex;align-items:center;gap:4px;font-family:var(--display);font-size:.8rem;font-weight:600;background:var(--soft);border-radius:999px;padding:2px 9px;margin-top:5px;color:var(--muted)}
-.mark b{color:var(--ink)}
-.chapter.bad .head h2{color:var(--bad)}
-.chapter.good .head h2{color:var(--good)}
-.chapter.new .head h2{color:var(--w-trip)}
-.chapter.old .head h2{color:var(--muted)}
 .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:.88rem}
+/* start page: name and stars in one row, Practise Today, subject tiles */
+.me{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:end}
+.me .field{gap:2px}
+.me .field input{padding:8px 12px;font-size:1rem;min-height:44px}
+.chipstat{display:flex;align-items:center;gap:6px;background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:6px 12px;font-family:var(--display);font-weight:600;white-space:nowrap;min-height:44px;font-variant-numeric:tabular-nums}
+.chipstat svg{width:20px;height:20px;fill:var(--sun)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.today{display:grid;grid-template-columns:48px 1fr;gap:12px;align-items:center;text-align:left;width:100%;padding:14px 16px;border-radius:20px;border:0;background:var(--w-mix);color:#172033;cursor:pointer;box-shadow:var(--shadow);font:inherit}
+.today:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.12)}
+.today .icon{width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,.45);display:grid;place-items:center}
+.today .icon svg{width:28px;height:28px;fill:#172033}
+.today .name{font-family:var(--display);font-size:1.25rem;font-weight:600}
+.today .sub{font-size:.9rem}
+.subjects{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.subject{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;padding:12px;border-radius:18px;border:2px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;box-shadow:var(--shadow);font:inherit}
+.subject:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.12)}
+.subject .icon{width:40px;height:40px;border-radius:12px;background:var(--c);color:var(--on-world);display:grid;place-items:center;margin-bottom:4px}
+.subject .icon svg{width:24px;height:24px}
+.subject .name{font-family:var(--display);font-size:1.1rem;font-weight:600;line-height:1.2}
+.subject .sub{color:var(--muted);font-size:.82rem;line-height:1.3}
+.focus{display:inline-block;margin-top:4px;font-family:var(--display);font-size:.78rem;font-weight:600;background:var(--sun);color:#172033;border-radius:999px;padding:1px 9px}
+.archive{margin-top:14px}
+.archive summary{cursor:pointer;color:var(--muted);font-family:var(--display);font-weight:600;padding:10px 0;min-height:44px}
+/* wide screens: more on one view; questions stay at reading width */
+@media (max-width:480px){.hero .eyebrow{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.today{padding:10px 12px;grid-template-columns:40px 1fr}.today .icon{width:40px;height:40px}.subject{flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:10px}.subject .icon{width:32px;height:32px;margin:0}.subject .icon svg{width:20px;height:20px}.subject .name{font-size:1rem;flex:1 1 60%}.subject .sub{display:none}.subject .focus{margin-top:0}}
+@media (min-width:900px){#app{max-width:860px}#play,#results,#studioScreen{max-width:560px;width:100%;margin-inline:auto}.subjects{grid-template-columns:repeat(3,1fr)}#subject .worlds{display:grid;grid-template-columns:1fr 1fr}}
 
 /* play */
 .topbar{display:flex;align-items:center;gap:10px}
 .iconbtn{width:44px;height:44px;border-radius:50%;border:2px solid var(--line);background:var(--surface);display:grid;place-items:center;cursor:pointer;flex:none}
 .iconbtn svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round}
-.chip{font-family:var(--display);font-weight:600;font-size:.95rem;background:var(--world);color:#fff;padding:6px 12px;border-radius:999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%}
+.chip{font-family:var(--display);font-weight:600;font-size:.95rem;background:var(--world);color:var(--on-world);padding:6px 12px;border-radius:999px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%}
 .roundstars{margin-left:auto;font-family:var(--display);font-weight:600;font-size:1.1rem;display:flex;align-items:center;gap:5px;font-variant-numeric:tabular-nums}
 .roundstars svg{width:22px;height:22px;fill:var(--sun)}
 .dots{display:flex;gap:5px}
@@ -157,7 +168,7 @@ button{font:inherit;color:inherit}
 .numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .key{min-height:54px;border-radius:14px;border:2px solid var(--line);background:var(--surface);font-family:var(--display);font-size:1.35rem;font-weight:600;cursor:pointer;box-shadow:var(--shadow)}
 .key:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.12)}
-.key.go{background:var(--world);border-color:var(--world);color:#fff}
+.key.go{background:var(--world);border-color:var(--world);color:var(--on-world)}
 .key:disabled{opacity:.5;cursor:default}
 
 /* ordering */
@@ -166,10 +177,10 @@ button{font:inherit;color:inherit}
 .slot i{font-style:normal;color:var(--world)}
 .ord{justify-content:flex-start}
 .badge{width:32px;height:32px;border-radius:50%;background:var(--soft);display:grid;place-items:center;font-family:var(--display);font-weight:600;flex:none;color:var(--muted)}
-.ord.picked .badge{background:var(--world);color:#fff}
+.ord.picked .badge{background:var(--world);color:var(--on-world)}
 .ord.picked{border-color:var(--world)}
-.ord.correct .badge{background:var(--good);color:#fff}
-.ord.wrong .badge{background:var(--bad);color:#fff}
+.ord.correct .badge{background:var(--good);color:var(--on-world)}
+.ord.wrong .badge{background:var(--bad);color:var(--on-world)}
 
 /* results */
 .results{align-items:center;text-align:center}
@@ -211,21 +222,30 @@ button{font:inherit;color:inherit}
     <div class="hero">
       <div class="eyebrow">Grade 3B · Bavarian International School</div>
       <h1>3B Big Quest</h1>
-      <p class="tagline">8 questions per quest. Collect stars!</p>
     </div>
-    <div class="field">
-      <label for="playerName">What is your name, explorer?</label>
-      <input id="playerName" type="text" maxlength="20" placeholder="Type your name" autocomplete="off">
+    <div class="me">
+      <div class="field">
+        <label for="playerName" class="sr">Your name</label>
+        <input id="playerName" type="text" maxlength="20" placeholder="Your name" autocomplete="off">
+      </div>
+      <div class="chipstat" title="Stars collected"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7.1L12 17.3 5.7 21l1.7-7.1L2 9.2l7.1-.6z"/></svg><span id="totalStars">0</span><span class="sr">stars</span></div>
+      <div class="chipstat" id="rank">Explorer</div>
     </div>
-    <div class="stats">
-      <div class="stat"><span class="eyebrow">Stars collected</span><span class="big"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7.1L12 17.3 5.7 21l1.7-7.1L2 9.2l7.1-.6z"/></svg><span id="totalStars">0</span></span></div>
-      <div class="stat"><span class="eyebrow">Your rank</span><span class="big" id="rank">Explorer</span></div>
-    </div>
-    <div id="chapters"></div>
+    <button class="today" id="todayBtn" type="button"><span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7.1L12 17.3 5.7 21l1.7-7.1L2 9.2l7.1-.6z"/></svg></span><span><span class="name">Practise Today</span><br><span class="sub" id="todaySub">8 questions from your focus topics</span></span></button>
+    <div id="subjects" class="subjects"></div>
     <div class="foot">
-      <span>Marks and tasks from Toddle, updated 28 October.</span>
+      <span>Topics from class, updated 29 October.</span>
       <button class="btn small" id="soundBtn" type="button">Sound: on</button>
     </div>
+  </section>
+
+  <!-- SUBJECT -->
+  <section id="subject" class="screen" hidden>
+    <div class="topbar">
+      <button class="iconbtn" id="subjectBack" type="button" aria-label="Back to home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <span class="chip" id="subjectChip">Subject</span>
+    </div>
+    <div id="subjectBody"></div>
   </section>
 
   <!-- PLAY -->
@@ -398,7 +418,7 @@ function barChartSVG(data, o){
 }
 function columnHTML(a,b){
   const d=n=>String(n).padStart(3,' ').split('').map(c=>`<span>${c===' '?'':c}</span>`).join('');
-  return `<div class="column" role="img" aria-label="${a} minus ${b}"><span></span>${d(a)}<span class="op">−</span>${d(b).replace(/<span>/g,'<span class="u">')}<span class="u"></span></div>`;
+  return `<div class="column" role="img" aria-label="${a} minus ${b}"><span></span>${d(a)}<span class="op u">−</span>${d(b).replace(/<span>/g,'<span class="u">')}</div>`;
 }
 function tableHTML(headers, rows){
   return `<div class="tablewrap"><table class="dt"><thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map((c,i)=>`<td${i>0?' class="num"':''}>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
@@ -433,7 +453,7 @@ const bankMC = (bank, tag) => r => mc(r[0], r[1], r[2], r[3], tag);
 const fromBank = (bank, tag, n) => takeFrom(bank, n).map(bankMC(bank, tag));
 
 /* ======================= PAST · FORCES LAB (Friction Frenzy) ======================= */
-const FOR={label:'Forces Lab', world:'forces'};
+const FOR={label:'Forces & Friction', world:'forces'};
 const SCI=[
  ["What is friction?","Rubbing that slows things down",["A kind of magnet","A type of ramp","How fast a car goes"],"Friction is rubbing. When two things rub, it slows them down. Rough things rub more."],
  ["Your toy car rolls down the ramp onto three different surfaces. On which one will it roll the farthest?","A smooth wooden floor",["A thick carpet","Sandpaper","Grass"],"Smooth floors rub less. So the car keeps rolling."],
@@ -648,7 +668,7 @@ const ROUND_MC=[
 function buildRounding(){ return shuffle([nearestHundredQ(), nearestHundredQ(), benchmarkQ(), roundWordQ(), retag([roundTenQ()],RND)[0], estimateQ(), threeAddendsQ(), bankMC(ROUND_MC,RND)(pick(ROUND_MC))]); }
 
 /* ======================= PAST · WORD WORKSHOP (OREO + Persuade for the Park) ======================= */
-const WRD={label:'Word Workshop', world:'words'};
+const WRD={label:'Word Building', world:'words'};
 const OREO_MC=[
  ["In the OREO writing plan, what does the first <b>O</b> stand for?","Opinion",["Order","Orange","Only"],"O is for Opinion. That is what you think."],
  ["In the OREO writing plan, what does <b>R</b> stand for?","Reason",["Rhyme","Reading","Rocket"],"R is for Reason. That is why you think it."],
@@ -730,7 +750,8 @@ function sentenceType(){
 }
 function affixQ(bank){ const r=bank.shift(); return mc(r[0], r[1], r[2], r[3], WRD); }
 function inferenceQ(){ const r=pick(INFER); return mc(r[1], r[2], r[3], r[4], Object.assign({visual:quote(r[0])}, WRD)); }
-function buildWords(){ const pre=shuffle(PREFIX), suf=shuffle(SUFFIX); return shuffle([oreoMC(), oreoMC(), oreoOrder(), opinionFact(), sentenceType(), affixQ(pre), affixQ(suf), inferenceQ()]); }
+/* Word Building: prefixes, suffixes, reading between the lines. The OREO questions moved to Opinion Writing. */
+function buildWords(){ const pre=shuffle(PREFIX), suf=shuffle(SUFFIX); return shuffle([affixQ(pre), affixQ(pre), affixQ(pre), affixQ(suf), affixQ(suf), affixQ(suf)].concat(takeFrom(INFER,2).map(r=>mc(r[1], r[2], r[3], r[4], Object.assign({visual:quote(r[0])}, WRD))))); }
 
 /* ======================= PAST · LIBRARY & RESEARCH ======================= */
 const LIB={label:'Library & Research', world:'library'};
@@ -1061,7 +1082,7 @@ function buildChampion(){ return shuffle(fromBank(CHAMP_MC,CHA,7).concat([fricti
 
 /* ======================= STRENGTHS · NUMBER & OPINION DETECTIVE ======================= */
 const DET={label:'Data Detective', world:'detective'};
-const OPI={label:'Opinion Power', world:'opinion'};
+const OPI={label:'Opinion Writing', world:'opinion'};
 const TEA={label:'Teamwork', world:'team'};
 const TEAM_MC=[
  ["Your partner is recording and you are waiting. What do you do?","Get the next surface ready and watch the numbers",["Roll the car again","Leave the table","Talk loudly"],"Taking turns keeps the experiment fair and fast."],
@@ -1108,7 +1129,7 @@ function compareQ(){
     explain:fmt(a)+" is "+(a>b?"bigger":"smaller")+" than "+fmt(b)+", so "+fmt(a)+" "+sym+" "+fmt(b)+". The open side of the symbol faces the bigger number."}, DET);
 }
 function buildDetective(){ return shuffle([travelTableQ(), travelTableQ(), estimateTotalQ(), betweenHundredsQ(), splitQ(), nearestHundredQ(DET), compareQ(), compareQ()]); }
-function buildOpinion(){ return retag(shuffle(fromBank(OPINION_MC,OPI,4).concat([oreoOrder(), sentenceType(), oreoMC(), oreoMC()])), OPI); }
+function buildOpinion(){ return retag(shuffle(fromBank(OPINION_MC,OPI,4).concat([oreoOrder(), sentenceType(), oreoMC(), opinionFact()])), OPI); }
 function buildTeam(){ return fromBank(COOP_MC.concat(TEAM_MC), TEA, 8); }
 
 /* ======================= NOW · STICKER MATHS (Milestone) ======================= */
@@ -1142,7 +1163,7 @@ const STK_MC=[
 function buildStickers(){ return shuffle([stickerMissingQ(), stickerMissingQ(), missingAddendQ(STK), stickerComboQ(), funnyFaceQ(), roundTenAddQ(), roundTenAddQ()].concat(fromBank(STK_MC,STK,1))); }
 
 /* ======================= PRACTICE · READ THE PROBLEM (Milestone feedback) ======================= */
-const WPR={label:'Read the Problem', world:'wordprob'};
+const WPR={label:'Word Problems', world:'wordprob'};
 const NAMES=['Nadia','Leo','Mia','Omar','Ana','Sam'];
 const THINGS=[['stickers','stars','hearts','funny faces'],['marbles','red ones','blue ones','green ones'],['books','comics','picture books','chapter books'],['beads','gold beads','silver beads','glass beads']];
 function wpSetup(){
@@ -1212,7 +1233,6 @@ const ANL_MC=[
 function buildAnleitung(){ const r=pick(ANL_ORDER); return shuffle([orderQ(r[0], r[1], null, r[2], Object.assign({hint:"Tippe die Schritte in der richtigen Reihenfolge an"}, ANL)), trennbarQ(), trennbarQ(), zusammenQ(), zusammenQ()].concat(fromBank(ANL_MC,ANL,3))); }
 
 /* ======================= NOW · SCHOOL LIFE NOW ======================= */
-const NOW={label:'School Life Now', world:'school'};
 const NOW_MC=[
  ["In library you are making a Common Craft style movie about a poem. What is that?","A video where you move paper cut-outs and drawings while you read the poem",["A cartoon made by a computer","A dance video","A photo of a book"],"You move paper pictures on a table. A voice tells the story."],
  ["Performing a poem <b>with emotion</b> means…","changing your voice and face to show the feelings in the poem",["reading as fast as possible","whispering every line","reading with no expression"],"Loud and soft. Fast and slow. Show the feelings!"],
@@ -1232,21 +1252,34 @@ const NOW_MC=[
  ["Which of these is a <b>research skill</b>?","Noticing details and recording them carefully",["Running fast","Singing loudly","Jumping high"],"Finding out and writing it down. That is a research skill."],
  ["Which of these is a <b>thinking skill</b>?","Giving reasons to explain your thinking",["Tying your shoes","Eating lunch","Sitting still"],"Giving reasons is a thinking skill."]
 ];
-const POE={label:'Roald Dahl Poetry', world:'poetry'}, SCH={label:'Pumpkins, Records & Skills', world:'school'};
+const POE={label:'Roald Dahl Poetry', world:'poetry'}, SCH={label:'Glows, Grows & School Life', world:'school'};
 const POE_MC=NOW_MC.slice(0,7).concat([["Which Roald Dahl book has a girl with magic powers who loves books?","Matilda",["The Twits","Peter Pan","Heidi"],"Matilda reads every book in the library and can move things with her mind."]]);
 const SCH_MC=NOW_MC.slice(7);
 function buildPoetry(){ return fromBank(POE_MC,POE,8); }
 function buildSchool(){ return fromBank(SCH_MC,SCH,8); }
 
-/* ======================= MIXED ======================= */
-function buildMix(){
-  const past=[forcesMC(pick(SCI)), pick([clockRead,numberLine,nearestHundredQ])(), pick([oreoOrder,sentenceType,inferenceQ])(), pick([()=>bankMC(LIB_MC,LIB)(pick(LIB_MC)),()=>packQ(pick(PACK)),()=>bankMC(MUS_MC,MUS)(pick(MUS_MC))])()];
-  const grow=[pick([unitPickQ,barReadQ,rulerQ])(), pick([capitalFixQ,specificExampleQ])(), pick([distanceExplainQ,tenVsHundredQ])()];
-  const now=[pick([stickerMissingQ,roundTenAddQ,trennbarQ,()=>bankMC(NOW_MC,NOW)(pick(NOW_MC))])()];
-  return shuffle(past.concat(grow,now));
+/* ======================= MERGED QUESTS ======================= */
+/* Quests that covered the same topic now share one card: half the questions from each. retag() gives every question the merged quest's label and colour. */
+const half = (build, n) => build().slice(0, n);
+function buildRoundingAll(){ return retag(shuffle(half(buildRounding,4).concat(half(buildExplain,4))), RND); }
+function buildWordProblems(){ return retag(shuffle(half(buildWordProb,4).concat(half(buildStickers,4))), WPR); }
+function buildForcesAll(){ return retag(shuffle(half(buildForces,5).concat(half(buildChampion,3))), FOR); }
+
+/* ======================= MIXES ======================= */
+/* Round-robin over the given quests: one question from each in turn, 8 in total. Every question keeps its own quest colour. */
+function mixFrom(keys){
+  const pools=shuffle(keys).map(k=>WORLDS[k].build());
+  const out=[]; let i=0;
+  while(out.length<8 && pools.some(p=>p.length)){ const p=pools[i%pools.length]; if(p.length) out.push(p.shift()); i++; }
+  return shuffle(out);
+}
+const questsIn = s => s.items.filter(k=>k.indexOf('studio:')!==0 && !isArchived(WORLDS[k]));
+function buildToday(){
+  const focus=FOCUS.filter(k=>WORLDS[k] && !isArchived(WORLDS[k]));
+  return mixFrom(focus.length ? focus : SUBJECTS.flatMap(questsIn));
 }
 
-/* ======================= WORLDS, CHAPTERS & STUDIOS ======================= */
+/* ======================= WORLDS, SUBJECTS & STUDIOS ======================= */
 const ICONS={
   forces:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 26h26"/><path d="M4 22L26 8"/><path d="M12 12.5l6.5-3.8 2 3.4-6.5 3.8z" fill="currentColor" stroke="none"/><circle cx="12.5" cy="17.5" r="1.8" fill="currentColor" stroke="none"/><circle cx="19" cy="13.6" r="1.8" fill="currentColor" stroke="none"/></svg>',
   numbers:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="16" cy="16" r="12"/><path d="M16 9v7l4.5 3"/></svg>',
@@ -1270,52 +1303,66 @@ const ICONS={
   team:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="4.5"/><circle cx="22" cy="12" r="3.5"/><path d="M3 27c0-5 3.5-8 8-8s8 3 8 8"/><path d="M19 27c0-4 2-6.5 5.5-6.5S29 23 29 27"/></svg>'
 };
 const WORLDS={
-  units:{name:'Units & Measuring', sub:'cm, m and g: write the unit every time', color:'var(--w-units)', from:'Friction Frenzy', mark:'C', build:buildUnits},
-  graphs:{name:'Bar Graphs & Worksheets', sub:'Finish the graph, answer every question', color:'var(--w-units)', icon:'units', from:'Friction Frenzy', mark:'C', build:buildGraphs},
-  finish:{name:'Finish Every Task', sub:'Record everything, check before handing in', color:'var(--w-grow)', icon:'grow', from:'Friction Frenzy · Responsibility', mark:'ES (lowest)', build:buildFinish},
-  sentences:{name:'Capital Letters & Full Stops', sub:'Start big, end with . ? or !', color:'var(--w-sentences)', from:'Persuade for the Park', mark:'C', build:buildSentences},
-  examples:{name:'Specific Examples', sub:'Who, when, where. Specific hypotheses too.', color:'var(--w-sentences)', icon:'sentences', from:'Persuade for the Park · Friction Frenzy', mark:'C', build:buildExamples},
-  explain:{name:'Explain Your Rounding', sub:'Say HOW you know: distances, halfway, tens', color:'var(--w-explain)', from:'Lesson 4 · Travel for Work', mark:'C', build:buildExplain},
-  combos:{name:'Number Combinations', sub:'More than one way to make a number', color:'var(--w-explain)', icon:'round', from:'Travel for Work', mark:'C, needed help', build:buildCombos},
-  champion:{name:'Friction Champion', sub:'Friction in the real world', color:'var(--w-champion)', from:'Friction Frenzy · giving reasons', mark:'Ind.', build:buildChampion},
-  detective:{name:'Data Detective', sub:'Read tables, estimate, compare with > and <', color:'var(--w-detective)', from:'Travel for Work · Sticker Milestone', mark:'M (comparing)', build:buildDetective},
-  opinion:{name:'Opinion Power', sub:'Clear opinions, good reasons, OREO', color:'var(--w-words)', icon:'words', from:'Persuade for the Park', mark:'M (best)', build:buildOpinion},
-  team:{name:'Teamwork', sub:'Listen, share, take turns', color:'var(--w-forces)', icon:'team', from:'PE · Science', mark:'praised', build:buildTeam},
-  wordprob:{name:'Read the Problem', sub:'Find the right numbers, then calculate step by step', color:'var(--w-stickers)', icon:'stickers', from:'Sticker Milestone, 27 Oct', mark:'C, misread numbers', build:buildWordProb},
-  stickers:{name:'Sticker Maths', sub:'Missing addends and two-step problems', color:'var(--w-stickers)', from:'Sticker Milestone, 27 Oct', mark:'C · rubric 2 of 4', build:buildStickers},
-  anleitung:{name:'Anleitung schreiben', sub:'Deutsch: Reihenfolge, trennbare Verben, Man-Form', color:'var(--w-anleitung)', from:'New task, 23 Oct', mark:'open', build:buildAnleitung},
-  poetry:{name:'Roald Dahl Poetry', sub:'Poem movie with your group', color:'var(--w-now)', icon:'read', from:'Library task', mark:'open', build:buildPoetry},
-  school:{name:'Pumpkins, Records & Skills', sub:'Pumpkin contest by 28 Oct, self-assessment, PE', color:'var(--w-now)', icon:'now', from:'Announcements & portfolio', mark:'now', build:buildSchool},
-  forces:{name:'Forces Lab', sub:'Friction Frenzy: ramps, variables & controls', color:'var(--w-forces)', build:buildForces},
-  numbers:{name:'Time & Numbers', sub:'Clocks, number lines & place value', color:'var(--w-numbers)', build:buildNumbers},
-  round:{name:'Rounding Road', sub:'Nearest 10 and 100, benchmarks & estimating', color:'var(--w-round)', from:'Sticker Milestone · Lesson 4', mark:'M (rounding)', build:buildRounding},
-  words:{name:'Word Workshop', sub:'OREO, Persuade for the Park, prefixes', color:'var(--w-words)', build:buildWords},
+  /* Maths */
+  numbers:{name:'Time & Numbers', sub:'Clocks, number lines, place value', color:'var(--w-numbers)', build:buildNumbers},
+  round:{name:'Rounding Road', sub:'Nearest 10 and 100, and explain how you know', color:'var(--w-round)', build:buildRoundingAll},
+  combos:{name:'Number Combinations', sub:'More than one way to make a number', color:'var(--w-explain)', icon:'round', build:buildCombos},
+  wordprob:{name:'Word Problems', sub:'Find the right numbers, then calculate step by step', color:'var(--w-stickers)', icon:'stickers', build:buildWordProblems},
+  detective:{name:'Data Detective', sub:'Read tables, estimate, compare with > and <', color:'var(--w-detective)', build:buildDetective},
+  /* Science */
+  forces:{name:'Forces & Friction', sub:'Ramps, fair tests, friction in real life', color:'var(--w-forces)', build:buildForcesAll},
+  units:{name:'Units & Measuring', sub:'cm, m and g: write the unit every time', color:'var(--w-units)', build:buildUnits},
+  graphs:{name:'Bar Graphs & Worksheets', sub:'Finish the graph, answer every question', color:'var(--w-units)', icon:'units', build:buildGraphs},
+  /* English */
+  opinion:{name:'Opinion Writing', sub:'OREO: opinion, reason, example, opinion', color:'var(--w-words)', icon:'words', build:buildOpinion},
+  sentences:{name:'Capital Letters & Full Stops', sub:'Start big, end with . ? or !', color:'var(--w-sentences)', build:buildSentences},
+  examples:{name:'Specific Examples', sub:'Who, when, where. Specific hypotheses too.', color:'var(--w-sentences)', icon:'sentences', build:buildExamples},
+  words:{name:'Word Building', sub:'Prefixes, suffixes, reading between the lines', color:'var(--w-words)', build:buildWords},
+  /* Deutsch */
+  anleitung:{name:'Anleitung schreiben', sub:'Reihenfolge, trennbare Verben, Man-Form', color:'var(--w-anleitung)', build:buildAnleitung},
+  /* Library & Reading */
   library:{name:'Library & Research', sub:'Call numbers, Britannica, Kiddle, BrainPop', color:'var(--w-library)', build:buildLibrary},
-  trip:{name:'Legoland Trip', sub:'Pack your bag & know the rules', color:'var(--w-trip)', build:buildTrip},
+  poetry:{name:'Roald Dahl Poetry', sub:'Poem movie with your group', color:'var(--w-now)', icon:'read', build:buildPoetry},
+  /* Me as a Learner */
+  finish:{name:'Finish Every Task', sub:'Record everything, check before handing in', color:'var(--w-grow)', icon:'grow', build:buildFinish},
+  team:{name:'Teamwork', sub:'Listen, share, take turns', color:'var(--w-forces)', icon:'team', build:buildTeam},
+  school:{name:'Glows, Grows & School Life', sub:'Self-assessment, learning skills, pumpkin contest', color:'var(--w-now)', icon:'now', build:buildSchool},
+  /* Events */
   music:{name:'Music & Pantastic', sub:'Rhythm, percussion & Peter Pan', color:'var(--w-music)', build:buildMusic},
-  mix:{name:'Mixed Quest', sub:'A bit of everything, shuffled', color:'var(--w-mix)', build:buildMix}
+  trip:{name:'Legoland Trip', sub:'Pack your bag & know the rules', color:'var(--w-trip)', archived:true, build:buildTrip},
+  /* Start page */
+  today:{name:'Practise Today', sub:'8 questions from your focus topics', color:'var(--w-mix)', icon:'mix', build:buildToday}
 };
-const CHAPTERS=[
-  {tone:'bad', title:'Bad marks · practise here', sub:'Schlechte Noten: hier üben. Each card shows the task and the mark from Toddle.', items:['wordprob','stickers','units','graphs','finish','sentences','examples','explain','combos','studio:grow']},
-  {tone:'good', title:'Good marks · keep it up', sub:'Gute Noten: dranbleiben.', items:['round','detective','champion','opinion','team']},
-  {tone:'new', title:'New topics · now and next', sub:'Neue Themen: jetzt und demnächst.', items:['anleitung','poetry','school','studio:read','studio:stage']},
-  {tone:'old', title:'Older topics · extra practice', sub:'Ältere Themen zum Wiederholen.', items:['forces','numbers','words','library','trip','music','mix']}
+/* Subjects as at school. A subject page lists its quests and studios. A quest with archived:true or past its until date (YYYY-MM-DD) moves to the archive at the bottom of its subject. */
+const SUBJECTS=[
+  {key:'maths', name:'Maths', sub:'Time, rounding, problems, data', color:'var(--w-numbers)', icon:'numbers', items:['numbers','round','combos','wordprob','detective']},
+  {key:'science', name:'Science', sub:'Forces, measuring, graphs', color:'var(--w-forces)', icon:'forces', items:['forces','units','graphs']},
+  {key:'english', name:'English', sub:'Opinions, sentences, words', color:'var(--w-words)', icon:'words', items:['opinion','sentences','examples','words']},
+  {key:'deutsch', name:'Deutsch', sub:'Anleitung, Lesen', color:'var(--w-anleitung)', icon:'anleitung', items:['anleitung','studio:read']},
+  {key:'reading', name:'Library & Reading', sub:'Research, books, poems', color:'var(--w-library)', icon:'library', items:['library','poetry']},
+  {key:'learner', name:'Me as a Learner', sub:'Habits, teamwork, goals', color:'var(--w-grow)', icon:'grow', items:['finish','team','school','studio:grow']},
+  {key:'events', name:'Events', sub:'Pantastic, trips', color:'var(--w-stage)', icon:'stage', items:['music','studio:stage','trip']}
 ];
+/* FOCUS: the topics to practise right now. Chosen by a parent; this app shows no marks. "Practise Today" draws its questions from these. */
+const FOCUS=['wordprob','round','combos','units','graphs','sentences','examples','finish'];
+const todayISO=new Date().toISOString().slice(0,10);
+const isArchived = d => !!d && (d.archived===true || (!!d.until && todayISO>d.until));
+SUBJECTS.forEach(s=>{ if(questsIn(s).length>1) WORLDS['mix_'+s.key]={name:s.name+' Mix', sub:'A bit of everything in '+s.name, color:s.color, icon:'mix', build:()=>mixFrom(questsIn(s))}; });
 const STUDIOS={
-  grow:{name:'My Work Checklist', sub:'Tick what you did in your work this week', color:'var(--w-grow)', icon:'grow', from:'Teacher feedback', mark:'habits',
+  grow:{name:'My Work Checklist', sub:'Tick what you did in your work this week', color:'var(--w-grow)', icon:'grow',
     intro:'The teachers asked for these habits. Tick each one when you did it in your work this week. Start with one.',
     checks:['I wrote the unit after every measurement (cm, m, g).','I finished my bar graph: title, labels and numbers on the side.','I answered EVERY question on the worksheet.','My hypothesis says what will happen AND why.','Every sentence starts with a capital letter.','Names, places, days and months have a capital letter.','Every sentence ends with . ? or !','My examples are specific and personal (who, when, where).','I explained HOW I know (distances, halfway point).','I tried more than one combination, not just the same number.','I checked that my answer is reasonable (estimate first).','I read the word problem twice and underlined the numbers.','In a two-step problem I wrote down the middle result.'],
     extraTitle:'How to use it',
     extra:['Choose one habit for this week and tell a grown-up which one.','After each piece of work, read the list and tick what you did.','When all are ticked, celebrate and pick a new focus!'],
     tips:['Rubric tip: a 3 (Meets) shows correct, labelled work. A 4 (Extending) shows more than one way or a check.']},
-  read:{name:'Lese-Studio (Deutsch)', sub:'Leseaufnahme Herbst: üben, dann aufnehmen', color:'var(--w-read)', icon:'read', from:'Leseaufnahme Herbst', mark:'open since 29 Sep',
+  read:{name:'Lese-Studio (Deutsch)', sub:'Leseaufnahme Herbst: üben, dann aufnehmen', color:'var(--w-read)', icon:'read',
     intro:'Suche dir eine Seite aus deinem Lesebuch aus. Lies den Text zwei- bis dreimal laut vor. Wenn du ihn flüssig lesen kannst, mach deine Leseaufnahme in Toddle. Die Aufgabe ist noch offen!',
     timer:true,
     checks:['Eine Seite aus meinem Lesebuch ausgesucht','1. Mal laut gelesen','2. Mal laut gelesen','3. Mal laut gelesen, jetzt flüssig!','Leseaufnahme gemacht und in Toddle hochgeladen'],
     extraTitle:'Aufwärmen: Zungenbrecher',
     extra:['Fischers Fritz fischt frische Fische, frische Fische fischt Fischers Fritz.','Blaukraut bleibt Blaukraut und Brautkleid bleibt Brautkleid.','Zwischen zwei Zwetschgenzweigen zwitschern zwei Schwalben.','Acht alte Ameisen aßen am Abend Ananas.'],
     tips:['Lies langsam und deutlich, nicht schnell.','Mach bei Punkten eine kleine Pause.','Stolperst du über ein Wort? Lies den Satz noch einmal.']},
-  stage:{name:'Pantastic Rehearsal', sub:'Songs for the Primary Production', color:'var(--w-stage)', icon:'stage', from:'Pantastic songs', mark:'open',
+  stage:{name:'Pantastic Rehearsal', sub:'Songs for the Primary Production', color:'var(--w-stage)', icon:'stage',
     intro:'Pantastic is a Peter Pan story. Learn the words and melody of each song, a little every day. Tick a song once you can sing it without looking.',
     timer:true,
     checks:['Nobody Wants To Grow Old (everyone’s audition song)','Higher and Higher (solo audition song)','Tick-Tock Crocodile','Here In Neverland','I know my lines','I know my dance moves'],
@@ -1327,42 +1374,67 @@ const RANKS=[[0,'Explorer'],[25,'Investigator'],[60,'Scientist'],[120,'Professor
 const rankFor = s => RANKS.filter(r=>s>=r[0]).pop()[1];
 
 /* ======================= STATE & SCREENS ======================= */
-const state={screen:'home', world:null, round:[], idx:0, stars:0, streak:0, answered:false, typed:'', picked:[], results:[], studio:null};
-const play=$('#play'), home=$('#home'), results=$('#results'), studioScreen=$('#studioScreen');
+const state={screen:'home', world:null, round:[], idx:0, stars:0, streak:0, answered:false, typed:'', picked:[], results:[], studio:null, subject:null, back:'home'};
+const play=$('#play'), home=$('#home'), results=$('#results'), studioScreen=$('#studioScreen'), subjectScreen=$('#subject');
 let timerId=null, timerStart=0, timerElapsed=0;
 
 function show(name){
   state.screen=name;
-  home.hidden=name!=='home'; play.hidden=name!=='play'; results.hidden=name!=='results'; studioScreen.hidden=name!=='studio';
+  home.hidden=name!=='home'; play.hidden=name!=='play'; results.hidden=name!=='results'; studioScreen.hidden=name!=='studio'; subjectScreen.hidden=name!=='subject';
   if(name!=='studio') stopTimer();
+  confettiRun++; // stop confetti that is still falling from the last screen
   window.scrollTo(0,0);
 }
 function playerName(){ return ($('#playerName').value||'').trim(); }
-function cardHTML(k, d, right){
-  const mark=d.mark?`<br><span class="mark">${esc(d.from)} · <b>${esc(d.mark)}</b></span>`:'';
-  return `<span class="icon">${ICONS[d.icon||k]}</span><span><span class="name">${d.name}</span><br><span class="sub">${d.sub}</span>${mark}</span><span class="best">${right}</span>`;
+/* One card for a quest or studio. back: where Back and "Choose a quest" return to. */
+function questCard(item, back){
+  const isStudio=item.indexOf('studio:')===0, k=isStudio?item.slice(7):item, d=isStudio?STUDIOS[k]:WORLDS[k];
+  const b=document.createElement('button'); b.type='button'; b.className='world'; b.style.setProperty('--c',d.color); b.dataset.item=item;
+  let right;
+  if(isStudio){ const done=(store.get('chk_'+k,[])).filter(Boolean).length; right=done?'Done<b>'+done+' / '+d.checks.length+'</b>':'Open'; }
+  else { const best=store.get('best_'+k,null); right=best===null?'New!':'Best<b>'+best+' / 8</b>'; }
+  const focus=(!isStudio && FOCUS.indexOf(k)>=0)?'<br><span class="focus">Focus</span>':'';
+  b.innerHTML=`<span class="icon">${ICONS[d.icon||k]}</span><span><span class="name">${d.name}</span><br><span class="sub">${d.sub}</span>${focus}</span><span class="best">${right}</span>`;
+  b.addEventListener('click',()=>{ state.back=back; if(isStudio) openStudio(k); else startRound(k); });
+  return b;
 }
 function renderHome(){
   const total=store.get('total',0);
   $('#totalStars').textContent=total; $('#rank').textContent=rankFor(total);
   $('#playerName').value=store.get('name','');
-  const c=$('#chapters'); c.innerHTML='';
-  CHAPTERS.forEach(ch=>{
-    const sec=document.createElement('div'); sec.className='chapter '+ch.tone;
-    sec.innerHTML=`<div class="head"><h2>${esc(ch.title)}</h2><p>${esc(ch.sub)}</p></div>`;
-    const w=document.createElement('div'); w.className='worlds';
-    ch.items.forEach(it=>{
-      const isStudio=it.indexOf('studio:')===0, k=isStudio?it.slice(7):it, d=isStudio?STUDIOS[k]:WORLDS[k];
-      const b=document.createElement('button'); b.type='button'; b.className='world'; b.style.setProperty('--c',d.color);
-      let right;
-      if(isStudio){ const done=(store.get('chk_'+k,[])).filter(Boolean).length; right=done?'Done<b>'+done+' / '+d.checks.length+'</b>':'Open'; }
-      else { const best=store.get('best_'+k,null); right=best===null?'New!':'Best<b>'+best+' / 8</b>'; }
-      b.innerHTML=cardHTML(k,d,right);
-      b.addEventListener('click',()=>{ if(isStudio) openStudio(k); else startRound(k); }); w.appendChild(b);
-    });
-    sec.appendChild(w); c.appendChild(sec);
+  const c=$('#subjects'); c.innerHTML='';
+  SUBJECTS.forEach(s=>{
+    const n=s.items.filter(k=>FOCUS.indexOf(k)>=0 && !isArchived(WORLDS[k])).length;
+    const b=document.createElement('button'); b.type='button'; b.className='subject'; b.style.setProperty('--c',s.color);
+    b.innerHTML=`<span class="icon">${ICONS[s.icon]}</span><span class="name">${esc(s.name)}</span><span class="sub">${esc(s.sub)}</span>${n?`<span class="focus">${n} focus</span>`:''}`;
+    b.addEventListener('click',()=>openSubject(s.key)); c.appendChild(b);
   });
   $('#soundBtn').textContent='Sound: '+(muted?'off':'on');
+}
+function openSubject(key){
+  const s=SUBJECTS.find(x=>x.key===key); state.subject=key; state.back='home';
+  subjectScreen.style.setProperty('--world', s.color);
+  $('#subjectChip').textContent=s.name;
+  const body=$('#subjectBody'); body.innerHTML='';
+  const old=k=>k.indexOf('studio:')!==0 && isArchived(WORLDS[k]);
+  const list=document.createElement('div'); list.className='worlds';
+  s.items.filter(k=>!old(k)).forEach(k=>list.appendChild(questCard(k,key)));
+  if(WORLDS['mix_'+key]) list.appendChild(questCard('mix_'+key,key));
+  body.appendChild(list);
+  const archived=s.items.filter(old);
+  if(archived.length){
+    const det=document.createElement('details'); det.className='archive';
+    det.innerHTML='<summary>Archive · older topics</summary>';
+    const l2=document.createElement('div'); l2.className='worlds';
+    archived.forEach(k=>l2.appendChild(questCard(k,key)));
+    det.appendChild(l2); body.appendChild(det);
+  }
+  show('subject'); snapshot();
+}
+/* Back from a quest, its results or a studio: to the subject it was opened from, else home. */
+function goBack(){
+  if(SUBJECTS.some(s=>s.key===state.back)) openSubject(state.back);
+  else { renderHome(); show('home'); snapshot(); }
 }
 
 function startRound(k){
@@ -1555,9 +1627,11 @@ function openStudio(k){
   show('studio'); snapshot();
 }
 
+let confettiRun=0;
 function confetti(){
   try{
     if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const run=++confettiRun;
     const c=$('#confetti'), ctx=c.getContext('2d'), dpr=Math.min(2,window.devicePixelRatio||1);
     const W=window.innerWidth, H=window.innerHeight; c.width=W*dpr; c.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
     const colors=['#FFB800','#3B5BDB','#12A594','#C2419A','#F5820D','#1FA971','#FF6B70','#7A4FD8'];
@@ -1566,7 +1640,7 @@ function confetti(){
     (function frame(t){
       ctx.clearRect(0,0,W,H);
       P.forEach(p=>{ p.vy+=.28; p.x+=p.vx; p.y+=p.vy; p.vx*=.99; p.r+=p.vr; ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.r); ctx.fillStyle=p.c; ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*.6); ctx.restore(); });
-      if(t-t0<3200) requestAnimationFrame(frame); else ctx.clearRect(0,0,W,H);
+      if(t-t0<3200 && run===confettiRun) requestAnimationFrame(frame); else ctx.clearRect(0,0,W,H);
     })(t0);
   }catch(e){}
 }
@@ -1577,11 +1651,13 @@ function snapshot(){ try{ const hot=window.claude&&window.claude.hot; hot&&hot.s
 /* ---------- wiring ---------- */
 $('#playerName').addEventListener('input',e=>store.set('name',e.target.value.trim()));
 $('#soundBtn').addEventListener('click',()=>{ muted=!muted; store.set('muted',muted); $('#soundBtn').textContent='Sound: '+(muted?'off':'on'); if(!muted) beep('good'); });
-$('#quitBtn').addEventListener('click',()=>{ renderHome(); show('home'); snapshot(); });
-$('#studioBack').addEventListener('click',()=>{ renderHome(); show('home'); snapshot(); });
+$('#quitBtn').addEventListener('click',goBack);
+$('#studioBack').addEventListener('click',goBack);
+$('#subjectBack').addEventListener('click',()=>{ state.back='home'; goBack(); });
+$('#todayBtn').addEventListener('click',()=>{ state.back='home'; startRound('today'); });
 $('#nextBtn').addEventListener('click',next);
 $('#againBtn').addEventListener('click',()=>startRound(state.world));
-$('#homeBtn').addEventListener('click',()=>{ renderHome(); show('home'); snapshot(); });
+$('#homeBtn').addEventListener('click',goBack);
 
 function boot(data){
   renderHome();
@@ -1590,6 +1666,7 @@ function boot(data){
     $('#worldChip').textContent=WORLDS[state.world].name; $('#roundStars').textContent=state.stars;
     show('play'); renderQuestion();
   } else if(data && data.screen==='studio' && STUDIOS[data.studio]){ openStudio(data.studio); }
+  else if(data && data.screen==='subject' && SUBJECTS.some(s=>s.key===data.subject)){ openSubject(data.subject); }
   else show('home');
 }
 const hot=window.claude&&window.claude.hot;

@@ -17,16 +17,11 @@ Bhan
 Zeckser
 Schlüer
 
-# Noten und Plattform
+# Plattform (Noten stehen seit 29.10. nicht mehr in der App)
 Toddle
-Bad marks
-Schlechte Noten
-ES (lowest)
-needed help
 
 # Aufgaben aus der Schulplattform
 Friction Frenzy
 Persuade for the Park
 Travel for Work
-Sticker Milestone
 Pantastic

@@ -61,18 +61,47 @@ export const sichtbar = (page, sel) => page.evaluate((s) => {
 
 export const textAus = (html) => html.replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
 
-/** Alle Quest- und Studio-Karten der Startseite (Index fuer karteKlicken). */
-export const anzahlKarten = (page) => page.evaluate(() => document.querySelectorAll('#chapters button.world').length);
-export const karteKlicken = (page, i) => page.evaluate((n) => document.querySelectorAll('#chapters button.world')[n].click(), i);
+/** Zurueck zur Startseite, egal wo die App gerade steht. */
+export async function zurStart(page) {
+  for (let i = 0; i < 4; i++) {
+    const wo = await page.evaluate(() => ['home', 'subject', 'play', 'results', 'studioScreen'].find((id) => !document.getElementById(id).hidden));
+    if (wo === 'home') return;
+    await klick(page, { subject: '#subjectBack', play: '#quitBtn', results: '#homeBtn', studioScreen: '#studioBack' }[wo]);
+  }
+  throw new Error('Startseite nicht erreicht');
+}
 
-/** Startet die Quest, deren Karte den Text enthaelt. */
+/**
+ * Alle Karten aller Faecher: [{ fach, karte, item, studio, text, archiv }]. item ist der Schluessel (numbers, studio:read, mix_maths). fach/karte sind
+ * die Positionen fuer karteOeffnen(). Karten im (zugeklappten) Archiv zaehlen mit.
+ */
+export async function alleKarten(page) {
+  await zurStart(page);
+  const n = await page.evaluate(() => document.querySelectorAll('#subjects button.subject').length);
+  const alle = [];
+  for (let fach = 0; fach < n; fach++) {
+    await page.evaluate((i) => document.querySelectorAll('#subjects button.subject')[i].click(), fach);
+    const karten = await page.evaluate(() => [...document.querySelectorAll('#subjectBody button.world')].map((b) => ({ item: b.dataset.item, studio: b.dataset.item.startsWith('studio:'), text: b.querySelector('.name').textContent, archiv: !!b.closest('details') })));
+    karten.forEach((k, karte) => alle.push({ fach, karte, ...k }));
+    await zurStart(page);
+  }
+  return alle;
+}
+
+/** Oeffnet eine Karte (Quest oder Studio) ueber Startseite -> Fach -> Karte. */
+export async function karteOeffnen(page, { fach, karte }) {
+  await zurStart(page);
+  await page.evaluate(([f, k]) => {
+    document.querySelectorAll('#subjects button.subject')[f].click();
+    document.querySelectorAll('#subjectBody button.world')[k].click();
+  }, [fach, karte]);
+}
+
+/** Startet die Quest, deren Name den Text enthaelt. */
 export async function questStarten(page, text) {
-  const ok = await page.evaluate((t) => {
-    const b = [...document.querySelectorAll('#chapters button.world')].find((x) => x.textContent.includes(t));
-    if (b) b.click();
-    return !!b;
-  }, text);
-  if (!ok) throw new Error('Quest nicht gefunden: ' + text);
+  const k = (await alleKarten(page)).find((x) => x.text.includes(text));
+  if (!k) throw new Error('Quest nicht gefunden: ' + text);
+  await karteOeffnen(page, k);
 }
 
 /** Beantwortet die angezeigte Frage richtig. */

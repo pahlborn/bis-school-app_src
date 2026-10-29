@@ -10,11 +10,12 @@ import path from 'node:path';
 import { WURZEL, QUELLEN } from '../werkzeug/bauen.mjs';
 import {
   appServer, browserStarten, appOeffnen, zustand, klick, sichtbar, textAus,
-  anzahlKarten, karteKlicken as karte, frageBeantworten
+  alleKarten, karteOeffnen, zurStart, frageBeantworten
 } from './app-hilfen.mjs';
 
 const RUNDEN_JE_QUEST = 100;      // nur erzeugen und pruefen
-const MIX_DURCHGESPIELT = 100;   // Mixed Quest: hing bis 29.10. in etwa jeder 4. Runde
+const HEUTE_DURCHGESPIELT = 60;  // Practise Today: mischt Fragen aus mehreren Quests
+const MIX_DURCHGESPIELT = 15;    // je Fach-Mix (die alte Mixed Quest hing bis 29.10. in etwa jeder 4. Runde)
 const ANDERE_DURCHGESPIELT = 5;
 
 const quelltext = await fs.readFile(path.join(WURZEL, QUELLEN.app), 'utf8');
@@ -25,7 +26,6 @@ before(async () => { server = await appServer(); browser = await browserStarten(
 after(async () => { await browser?.close(); server?.close(); });
 
 const app = () => appOeffnen(browser, server.url);
-const kartenIndex = (page, text) => page.evaluate((t) => [...document.querySelectorAll('#chapters button.world')].findIndex((b) => b.textContent.includes(t)), text);
 const ohneZeichen = (w) => w.replace(/[.,!?]/g, '');
 const fmt = (n) => Number(n).toLocaleString('en-GB');
 
@@ -76,25 +76,24 @@ function pruefeFrage(q) {
 
 test('Fragen aller Quests: keine Widersprueche', async () => {
   const { ctx, page, fehler } = await app();
-  const n = await anzahlKarten(page);
+  const karten = (await alleKarten(page)).filter((k) => !k.studio);
   const befunde = new Map();
-  let quests = 0;
-  for (let i = 0; i < n; i++) {
+  const welten = new Set();
+  for (const k of karten) {
     for (let r = 0; r < RUNDEN_JE_QUEST; r++) {
-      await karte(page, i);
-      if (await sichtbar(page, '#studioScreen')) { await klick(page, '#studioBack'); break; }
+      await karteOeffnen(page, k);
+      if (await sichtbar(page, '#studioScreen')) break;
       const s = await zustand(page);
-      if (r === 0) quests++;
+      welten.add(s.world);
       for (const q of s.round) for (const b of pruefeFrage(q)) befunde.set(`${s.world}: ${b}`, (befunde.get(`${s.world}: ${b}`) || 0) + 1);
       await klick(page, '#quitBtn');
     }
   }
-  assert.ok(quests >= 20, `nur ${quests} Quests gefunden`);
+  assert.ok(welten.size >= 20, `nur ${welten.size} Quests gefunden`);
   assert.deepEqual([...befunde].map(([b, k]) => `${b} (${k}x)`), []);
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
-
 /** Spielt die laufende Runde mit den richtigen Antworten durch. */
 async function durchspielen(page, fehler) {
   for (let f = 0; f < 8; f++) {
@@ -112,24 +111,30 @@ async function durchspielen(page, fehler) {
   await klick(page, '#homeBtn');
 }
 
-test('Mixed Quest: viele Runden durchspielbar, ohne Haenger', async () => {
+test('Practise Today und Fach-Mixe: viele Runden durchspielbar, ohne Haenger', async () => {
   const { ctx, page, fehler } = await app();
-  const i = await kartenIndex(page, 'Mixed Quest');
-  assert.ok(i >= 0, 'Mixed Quest nicht gefunden');
-  for (let r = 0; r < MIX_DURCHGESPIELT; r++) {
-    await karte(page, i);
+  for (let r = 0; r < HEUTE_DURCHGESPIELT; r++) {
+    await zurStart(page);
+    await klick(page, '#todayBtn');
     await durchspielen(page, fehler);
+  }
+  const mixe = (await alleKarten(page)).filter((k) => k.item.startsWith('mix_'));
+  assert.ok(mixe.length >= 4, `nur ${mixe.length} Fach-Mixe`);
+  for (const m of mixe) {
+    for (let r = 0; r < MIX_DURCHGESPIELT; r++) {
+      await karteOeffnen(page, m);
+      await durchspielen(page, fehler);
+    }
   }
   await ctx.close();
 });
 
 test('jede Quest: Runden mit richtigen Antworten ergeben 8 von 8', async () => {
   const { ctx, page, fehler } = await app();
-  const n = await anzahlKarten(page);
-  for (let i = 0; i < n; i++) {
+  for (const k of await alleKarten(page)) {
     for (let r = 0; r < ANDERE_DURCHGESPIELT; r++) {
-      await karte(page, i);
-      if (await sichtbar(page, '#studioScreen')) { await klick(page, '#studioBack'); break; }
+      await karteOeffnen(page, k);
+      if (await sichtbar(page, '#studioScreen')) break;
       await durchspielen(page, fehler);
     }
   }
