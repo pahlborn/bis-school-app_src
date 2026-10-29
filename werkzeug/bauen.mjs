@@ -1,6 +1,6 @@
 // Baut dist/ aus der Klartext-App: verschluesselte Huelle, neutrales Manifest,
-// Icons. Fragt nichts ab - das Passwort kommt vom Aufrufer (verschluesseln.mjs
-// fragt es verdeckt ab, die Tests geben ein Testpasswort).
+// Icons. Fragt nichts ab - Passwort oder gemerkter Schluessel kommen vom
+// Aufrufer (verschluesseln.mjs, die Tests geben ein Testpasswort).
 //
 // Bricht ab, bevor etwas geschrieben wird, wenn
 //  - das Passwort zu kurz ist,
@@ -11,7 +11,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  passwortPruefen, verschluesseln, entschluesseln, huelleBauen, tresorAusHuelle,
+  passwortPruefen, schluesselAusPasswort, schluesselAusRoh, schluesselRoh, verschluesselnMitSchluessel,
+  entschluesseln, entschluesselnMitSchluessel, huelleBauen, tresorAusHuelle,
   ohneTresor, woerterLesen, verboteneTreffer, unb64
 } from './kern.mjs';
 
@@ -52,12 +53,22 @@ export function oeffentlichPruefen(html, manifest, woerter) {
   ];
 }
 
-export async function distBauen(passwort, { wurzel = WURZEL, ziel = path.join(wurzel, 'dist') } = {}) {
-  passwortPruefen(passwort);
+/**
+ * zugang: das Passwort (Text) oder { schluesselRoh } - die 32 gemerkten
+ * Schluessel-Bytes (schluesselablage.mjs). Mit Passwort wird zusaetzlich
+ * mit dem Passwort probe-entschluesselt, also genau so, wie die Huelle es tut.
+ */
+export async function distBauen(zugang, { wurzel = WURZEL, ziel = path.join(wurzel, 'dist') } = {}) {
+  const passwort = typeof zugang === 'string' ? zugang : null;
+  if (passwort === null && !(zugang && zugang.schluesselRoh)) throw new Error('distBauen braucht ein Passwort oder einen gemerkten Schluessel.');
+  if (passwort !== null) passwortPruefen(passwort);
   const q = await quellenLesen(wurzel);
   if (q.woerter.length === 0) throw new Error(`${QUELLEN.woerter} ist leer - ohne Liste prueft der Lauf nichts.`);
 
-  const tresor = await verschluesseln(q.app, passwort, q.salt);
+  const schluessel = passwort !== null
+    ? await schluesselAusPasswort(passwort, q.salt)
+    : await schluesselAusRoh(zugang.schluesselRoh);
+  const tresor = await verschluesselnMitSchluessel(q.app, schluessel, q.salt);
   const html = huelleBauen(q.vorlage, tresor);
 
   const treffer = oeffentlichPruefen(html, q.manifest, q.woerter);
@@ -65,7 +76,9 @@ export async function distBauen(passwort, { wurzel = WURZEL, ziel = path.join(wu
     throw new Error('Verbotene Woerter im oeffentlichen Teil, nichts geschrieben: ' + treffer.join(', '));
   }
 
-  const zurueck = await entschluesseln(tresorAusHuelle(html), passwort);
+  const zurueck = passwort !== null
+    ? await entschluesseln(tresorAusHuelle(html), passwort)
+    : await entschluesselnMitSchluessel(tresorAusHuelle(html), schluessel);
   if (!Buffer.from(zurueck).equals(q.app)) {
     throw new Error('Probe-Entschluesselung ergibt nicht die App, nichts geschrieben.');
   }
@@ -75,5 +88,34 @@ export async function distBauen(passwort, { wurzel = WURZEL, ziel = path.join(wu
   await fs.writeFile(path.join(ziel, 'manifest.webmanifest'), q.manifest, 'utf8');
   for (const icon of ICONS) await fs.copyFile(path.join(wurzel, icon), path.join(ziel, icon));
 
-  return { ziel, dateien: ['index.html', 'manifest.webmanifest', ...ICONS], appBytes: q.app.length, huelleBytes: Buffer.byteLength(html) };
+  return {
+    ziel, dateien: ['index.html', 'manifest.webmanifest', ...ICONS], appBytes: q.app.length, huelleBytes: Buffer.byteLength(html),
+    schluesselRoh: await schluesselRoh(schluessel), salt: q.salt
+  };
 }
+
+/**
+ * Prueft, ob ein Schluessel die veroeffentlichte Seite oeffnet. So faellt auf,
+ * wenn der gemerkte Schluessel nicht mehr zum Passwort der Geraete passt -
+ * sonst muessten sich nach dem Hochladen alle Geraete neu anmelden.
+ * Ergebnis: 'passt', 'passt-nicht' oder 'unbekannt' (Seite nicht erreichbar).
+ */
+export async function mitVeroeffentlichterPruefen(schluesselBytes, url = VEROEFFENTLICHT) {
+  let html;
+  try {
+    const antwort = await fetch(url + '?t=' + Date.now(), { cache: 'no-store', signal: AbortSignal.timeout(15000) });
+    if (!antwort.ok) return { ergebnis: 'unbekannt', grund: `HTTP ${antwort.status}` };
+    html = await antwort.text();
+  } catch (e) {
+    return { ergebnis: 'unbekannt', grund: e.message };
+  }
+  try {
+    await entschluesselnMitSchluessel(tresorAusHuelle(html), await schluesselAusRoh(schluesselBytes));
+    return { ergebnis: 'passt' };
+  } catch {
+    return { ergebnis: 'passt-nicht' };
+  }
+}
+
+// Fuer Tests mit BQ_VEROEFFENTLICHT auf einen lokalen Server umlenkbar.
+export const VEROEFFENTLICHT = process.env.BQ_VEROEFFENTLICHT || 'https://pahlborn.github.io/bis-school-app/';
