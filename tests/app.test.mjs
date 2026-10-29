@@ -28,3 +28,13 @@ test('index.html enthaelt keine doppelt kodierten Zeichen', () => {
     .map(([n, m]) => `Z. ${n}: ${[...new Set(m)].join(' ')}`);
   assert.deepEqual(treffer, []);
 });
+
+// Seit 29.10. ordnet die App nach Faechern und markiert Uebungsthemen mit
+// "Focus". Noten, Notenbuchstaben und Bewertungstexte aus der Schulplattform
+// gehoeren nicht mehr hinein - weder sichtbar noch im Code.
+test('index.html enthaelt keine Noten', () => {
+  const text = roh.toString('utf8');
+  const noten = ['Bad marks', 'Good marks', 'Schlechte Noten', 'Gute Noten', 'ES (lowest)', 'needed help', 'misread numbers',
+    'rubric 2 of 4', 'M (best)', 'M (rounding)', 'M (comparing)', "mark:'", 'Marks and tasks'];
+  assert.deepEqual(noten.filter((n) => text.includes(n)), []);
+});

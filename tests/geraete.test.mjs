@@ -23,6 +23,18 @@ let browser, server;
 before(async () => { server = await appServer(); browser = await browserStarten(); });
 after(async () => { await browser?.close(); server?.close(); });
 
+// Geraetepruefung 29.10.: auf dem Handy war beim Start keine einzige Quest zu sehen.
+test('iPhone SE: beim Start sind Practise Today und mindestens vier Faecher zu sehen', async () => {
+  const { ctx, page } = await appOeffnen(browser, server.url, IPHONE_SE);
+  const ganz = await page.evaluate(() => {
+    const drin = (e) => { const r = e.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; };
+    return { heute: drin(document.querySelector('#todayBtn')), faecher: [...document.querySelectorAll('#subjects button.subject')].filter(drin).length };
+  });
+  assert.ok(ganz.heute, 'Practise Today');
+  assert.ok(ganz.faecher >= 4, `nur ${ganz.faecher} Faecher ganz zu sehen`);
+  await ctx.close();
+});
+
 for (const [name, opts, warten] of GERAETE) {
   test(`${name}: nach jeder Antwort ist "Weiter" ganz zu sehen`, async () => {
     const { ctx, page, fehler } = await appOeffnen(browser, server.url, opts);
