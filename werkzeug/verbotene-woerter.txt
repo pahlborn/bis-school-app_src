@@ -1,0 +1,32 @@
+# Woerter, die im oeffentlichen Teil (Huelle ohne Tresor, Manifest) nicht
+# vorkommen duerfen. Eine Zeile je Wort, Gross/klein egal.
+# Diese Datei bleibt im privaten Repo und wird nicht veroeffentlicht.
+# tests/kern.test.mjs prueft, dass jedes Wort hier auch in der App vorkommt -
+# ein Wort, das nirgends steht, schuetzt nichts und faellt so auf.
+
+# Schule, Ort, Klasse
+Bavarian
+International School
+Haimhausen
+Grade 3B
+3B Big Quest
+3B Quest
+
+# Lehrkraefte (Schlüer steht in der App derzeit falsch kodiert)
+Bhan
+Zeckser
+SchlÃ¼er
+
+# Noten und Plattform
+Toddle
+Bad marks
+Schlechte Noten
+ES (lowest)
+needed help
+
+# Aufgaben aus der Schulplattform
+Friction Frenzy
+Persuade for the Park
+Travel for Work
+Sticker Milestone
+Pantastic

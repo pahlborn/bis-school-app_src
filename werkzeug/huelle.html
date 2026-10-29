@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="referrer" content="no-referrer">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Big Quest">
+<meta name="theme-color" content="#3B5BDB">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>Big Quest</title>
+<!--
+  Oeffentliche Huelle. Enthaelt die App nur verschluesselt (Block "tresor").
+  Gebaut von werkzeug/verschluesseln.mjs - nicht von Hand bearbeiten, sondern
+  werkzeug/huelle.html aendern und neu bauen.
+-->
+<style>
+:root{--bg:#EEF4FB;--surface:#fff;--ink:#172033;--muted:#5D6B80;--line:#D3DEEC;--accent:#3B5BDB;--bad:#C92A2F}
+@media (prefers-color-scheme: dark){:root{--bg:#0F1626;--surface:#1A2338;--ink:#EEF3FA;--muted:#9DA9BE;--line:#2B3752;--accent:#7B93FF;--bad:#FF6B70}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:17px;display:flex;align-items:center;justify-content:center;padding:24px 16px}
+[hidden]{display:none!important}
+form{width:100%;max-width:380px;background:var(--surface);border:2px solid var(--line);border-radius:22px;padding:24px 20px;display:flex;flex-direction:column;gap:14px}
+h1{margin:0;font-size:1.8rem}
+label{font-weight:600}
+input[type=password]{font:inherit;font-size:16px;padding:12px 14px;border-radius:14px;border:2px solid var(--line);background:var(--surface);color:var(--ink);width:100%}
+.merken{display:flex;gap:10px;align-items:center;font-weight:400;color:var(--muted)}
+.merken input{width:22px;height:22px}
+button{font:inherit;font-weight:700;min-height:52px;border-radius:16px;border:0;background:var(--accent);color:#fff;cursor:pointer}
+button:disabled{opacity:.6;cursor:default}
+#meldung{margin:0;min-height:1.4em;font-weight:600}
+#meldung.fehler{color:var(--bad)}
+</style>
+</head>
+<body>
+<form id="maske" hidden autocomplete="on">
+  <h1>Big Quest</h1>
+  <label for="passwort">Passwort</label>
+  <input id="passwort" name="password" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required>
+  <label class="merken"><input type="checkbox" id="merken" checked> Auf diesem Gerät angemeldet bleiben</label>
+  <button id="oeffnen" type="submit">Öffnen</button>
+  <p id="meldung" role="status" aria-live="polite"></p>
+</form>
+<noscript>Bitte JavaScript einschalten.</noscript>
+<script type="application/json" id="tresor">/*TRESOR*/</script>
+<script>
+(function () {
+  'use strict';
+  // Muss zu werkzeug/kern.mjs passen: PBKDF2-SHA256, AES-256-GCM, Passwort NFC + trim.
+  var SPEICHER = 'bq_schluessel';
+  var tresor = JSON.parse(document.getElementById('tresor').textContent);
+  var subtle = window.crypto && window.crypto.subtle;
+  var maske = document.getElementById('maske');
+  var feld = document.getElementById('passwort');
+  var merken = document.getElementById('merken');
+  var knopf = document.getElementById('oeffnen');
+  var meldung = document.getElementById('meldung');
+
+  function ausB64(s) { var b = atob(s), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; }
+  function inB64(buf) { var u = new Uint8Array(buf), s = ''; for (var i = 0; i < u.length; i++) s += String.fromCharCode(u[i]); return btoa(s); }
+  function speicher() { try { return window.localStorage; } catch (e) { return null; } }
+  function melden(text, fehler) { meldung.textContent = text; meldung.className = fehler ? 'fehler' : ''; }
+
+  function oeffnen(schluessel) {
+    return subtle.decrypt({ name: 'AES-GCM', iv: ausB64(tresor.iv) }, schluessel, ausB64(tresor.daten))
+      .then(function (klar) { return new TextDecoder('utf-8').decode(klar); });
+  }
+  function zeigen(html) { document.open(); document.write(html); document.close(); }
+
+  function ableiten(passwort) {
+    var roh = new TextEncoder().encode(String(passwort).normalize('NFC').trim());
+    return subtle.importKey('raw', roh, 'PBKDF2', false, ['deriveKey']).then(function (basis) {
+      return subtle.deriveKey({ name: 'PBKDF2', hash: 'SHA-256', salt: ausB64(tresor.salt), iterations: tresor.iter },
+        basis, { name: 'AES-GCM', length: 256 }, true, ['decrypt']);
+    });
+  }
+
+  function maskeZeigen(text, fehler) {
+    maske.hidden = false;
+    if (text) melden(text, fehler);
+    feld.focus();
+  }
+
+  var s = speicher();
+  if (location.hash === '#abmelden') {
+    if (s) s.removeItem(SPEICHER);
+    history.replaceState(null, '', location.pathname + location.search);
+  }
+
+  if (!subtle || !window.TextDecoder) {
+    maskeZeigen('Dieser Browser kann die Seite nicht öffnen.', true);
+    knopf.disabled = true;
+    return;
+  }
+
+  maske.addEventListener('submit', function (e) {
+    e.preventDefault();
+    knopf.disabled = true;
+    melden('Prüfe …');
+    var schluessel;
+    // kurz warten, damit "Prüfe …" sichtbar wird, bevor die Ableitung rechnet
+    setTimeout(function () {
+      ableiten(feld.value)
+        .then(function (k) { schluessel = k; return oeffnen(k); })
+        .then(function (html) {
+          if (merken.checked && s) {
+            return subtle.exportKey('raw', schluessel).then(function (roh) {
+              try { s.setItem(SPEICHER, inB64(roh)); } catch (err) { /* Speicher voll oder gesperrt: dann eben nicht merken */ }
+              return html;
+            });
+          }
+          return html;
+        })
+        .then(zeigen)
+        .catch(function () {
+          knopf.disabled = false;
+          melden('Das Passwort stimmt nicht.', true);
+          feld.select();
+        });
+    }, 30);
+  });
+
+  var gemerkt = s && s.getItem(SPEICHER);
+  if (!gemerkt) { maskeZeigen(); return; }
+  Promise.resolve()
+    .then(function () { return subtle.importKey('raw', ausB64(gemerkt), { name: 'AES-GCM' }, false, ['decrypt']); })
+    .then(oeffnen)
+    .then(zeigen)
+    .catch(function () {
+      // gemerkter Schluessel passt nicht mehr (neues Passwort): vergessen, neu fragen
+      s.removeItem(SPEICHER);
+      maskeZeigen('Bitte das Passwort neu eingeben.');
+    });
+})();
+</script>
+</body>
+</html>
