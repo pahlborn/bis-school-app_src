@@ -2,19 +2,16 @@
 // auf Widersprueche pruefen, dazu Runden mit den richtigen Antworten
 // durchspielen.
 //   node --test tests/fragen.test.mjs
-//
-// Zugang zu den Fragen: die App ruft an mehreren Stellen
-// window.claude.hot.snapshot(() => state) auf (Rest aus der Claude-Vorschau).
-// Der Test setzt dort einen eigenen Empfaenger ein und bekommt so jede Runde
-// samt Musterloesung, ohne dass die App dafuer geaendert werden muss.
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
-import http from 'node:http';
 import path from 'node:path';
-import { chromium } from 'playwright';
 import { WURZEL, QUELLEN } from '../werkzeug/bauen.mjs';
+import {
+  appServer, browserStarten, appOeffnen, zustand, klick, sichtbar, textAus,
+  anzahlKarten, karteKlicken as karte, frageBeantworten
+} from './app-hilfen.mjs';
 
 const RUNDEN_JE_QUEST = 100;      // nur erzeugen und pruefen
 const MIX_DURCHGESPIELT = 100;   // Mixed Quest: hing bis 29.10. in etwa jeder 4. Runde
@@ -23,54 +20,12 @@ const ANDERE_DURCHGESPIELT = 5;
 const quelltext = await fs.readFile(path.join(WURZEL, QUELLEN.app), 'utf8');
 const SENTS = new Function('return ' + quelltext.match(/const SENTS=(\[[\s\S]*?\n\]);/)[1])();
 
-let browser, server, url;
+let browser, server;
+before(async () => { server = await appServer(); browser = await browserStarten(); });
+after(async () => { await browser?.close(); server?.close(); });
 
-before(async () => {
-  server = http.createServer(async (req, res) => {
-    if (req.url.split('?')[0] !== '/') { res.writeHead(404); return res.end(); }
-    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-    res.end(await fs.readFile(path.join(WURZEL, QUELLEN.app)));
-  });
-  await new Promise((r) => server.listen(0, '127.0.0.1', r));
-  url = `http://127.0.0.1:${server.address().port}/`;
-  const pfad = process.env.CHROMIUM_PATH;
-  browser = await chromium.launch(pfad ? { executablePath: pfad } : {});
-});
-
-after(async () => {
-  await browser?.close();
-  server?.close();
-});
-
-async function app() {
-  const ctx = await browser.newContext();
-  await ctx.route('**/*', (r) => (r.request().url().startsWith(url) ? r.continue() : r.abort()));
-  await ctx.addInitScript(() => {
-    window.claude = { hot: { snapshot(fn) { try { window.__bq = JSON.parse(JSON.stringify(fn())); } catch (e) { /* egal */ } } } };
-    window.AudioContext = undefined; window.webkitAudioContext = undefined; // kein Ton im Test
-  });
-  const page = await ctx.newPage();
-  const fehler = [];
-  page.on('pageerror', (e) => fehler.push(e.message));
-  await page.goto(url);
-  await page.waitForSelector('#home h1');
-  return { ctx, page, fehler };
-}
-
-const zustand = (page) => page.evaluate(() => window.__bq);
-// Klicks direkt im Seitenkontext: Playwrights Wartelogik kostet je Klick
-// mehrere hundert ms, bei ueber tausend Klicks pro Lauf zu viel. Ein
-// gesperrter Knopf reagiert auf click() genauso wenig wie auf einen Finger.
-const klick = (page, sel) => page.evaluate((s) => {
-  const e = document.querySelector(s);
-  if (!e) throw new Error('nicht gefunden: ' + s);
-  e.click();
-}, sel);
-const anzahlKarten = (page) => page.evaluate(() => document.querySelectorAll('#chapters button.world').length);
-const karte = (page, i) => page.evaluate((n) => document.querySelectorAll('#chapters button.world')[n].click(), i);
-const sichtbar = (page, sel) => page.evaluate((s) => { const e = document.querySelector(s); return !!e && !e.hidden && !e.closest('[hidden]'); }, sel);
+const app = () => appOeffnen(browser, server.url);
 const kartenIndex = (page, text) => page.evaluate((t) => [...document.querySelectorAll('#chapters button.world')].findIndex((b) => b.textContent.includes(t)), text);
-const textAus = (html) => html.replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
 const ohneZeichen = (w) => w.replace(/[.,!?]/g, '');
 const fmt = (n) => Number(n).toLocaleString('en-GB');
 
@@ -146,14 +101,7 @@ async function durchspielen(page, fehler) {
     const s = await zustand(page);
     const q = s.round[s.idx];
     assert.equal(s.idx, f, `${s.world}: Frage ${f + 1} wurde nicht angezeigt (haengt)`);
-    if (q.kind === 'mc') await klick(page, `#qAnswers .opt[data-i="${q.answer}"]`);
-    else if (q.kind === 'type') {
-      for (const z of q.answer) await klick(page, `#qAnswers .key[aria-label="${z}"]`);
-      await klick(page, '#qAnswers .key.go');
-    } else {
-      for (const k of q.correct) await klick(page, `#qAnswers .ord[data-i="${k}"]`);
-      await klick(page, '#checkOrder');
-    }
+    await frageBeantworten(page, q);
     assert.ok(await page.evaluate(() => { const fb = document.querySelector('#feedback'); return !fb.hidden && fb.classList.contains('good'); }),
       `${s.world}: richtige Antwort nicht als richtig gewertet: ${textAus(q.prompt)}`);
     await klick(page, '#nextBtn');
