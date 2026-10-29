@@ -44,19 +44,40 @@ export async function schluesselAusPasswort(passwort, salt, iterationen = ITERAT
     basis, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
 }
 
-/** Verschluesselt Bytes. Jeder Aufruf bekommt einen neuen Zufalls-IV. */
-export async function verschluesseln(bytes, passwort, salt, iterationen = ITERATIONEN) {
+/** Die 32 Bytes des Schluessels - so wird er gemerkt (schluesselablage.mjs). */
+export async function schluesselRoh(schluessel) {
+  return new Uint8Array(await subtle.exportKey('raw', schluessel));
+}
+
+export function schluesselAusRoh(roh) {
+  return subtle.importKey('raw', roh, { name: 'AES-GCM' }, true, ['encrypt', 'decrypt']);
+}
+
+/**
+ * Verschluesselt Bytes mit einem fertigen Schluessel. Salt und Runden werden
+ * nur mitgeschrieben, damit die Huelle das Passwort genauso ableiten kann.
+ * Jeder Aufruf bekommt einen neuen Zufalls-IV.
+ */
+export async function verschluesselnMitSchluessel(bytes, schluessel, salt, iterationen = ITERATIONEN) {
   const iv = webcrypto.getRandomValues(new Uint8Array(12));
-  const schluessel = await schluesselAusPasswort(passwort, salt, iterationen);
   const daten = new Uint8Array(await subtle.encrypt({ name: 'AES-GCM', iv }, schluessel, bytes));
   return { v: FORMAT, iter: iterationen, salt: b64(salt), iv: b64(iv), daten: b64(daten) };
 }
 
-/** Entschluesselt einen Tresor. Wirft bei falschem Passwort. */
-export async function entschluesseln(tresor, passwort) {
-  const schluessel = await schluesselAusPasswort(passwort, unb64(tresor.salt), tresor.iter);
+/** Verschluesselt Bytes mit einem Passwort. */
+export async function verschluesseln(bytes, passwort, salt, iterationen = ITERATIONEN) {
+  return verschluesselnMitSchluessel(bytes, await schluesselAusPasswort(passwort, salt, iterationen), salt, iterationen);
+}
+
+/** Entschluesselt einen Tresor mit einem fertigen Schluessel. Wirft, wenn er nicht passt. */
+export async function entschluesselnMitSchluessel(tresor, schluessel) {
   const klar = await subtle.decrypt({ name: 'AES-GCM', iv: unb64(tresor.iv) }, schluessel, unb64(tresor.daten));
   return new Uint8Array(klar);
+}
+
+/** Entschluesselt einen Tresor. Wirft bei falschem Passwort. */
+export async function entschluesseln(tresor, passwort) {
+  return entschluesselnMitSchluessel(tresor, await schluesselAusPasswort(passwort, unb64(tresor.salt), tresor.iter));
 }
 
 /** Setzt den Tresor in die Vorlage ein. Der Platzhalter muss genau einmal vorkommen. */
