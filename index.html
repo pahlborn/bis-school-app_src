@@ -145,6 +145,7 @@ button{font:inherit;color:inherit}
 .feedback.good{background:var(--good-soft);border-color:var(--good)}
 .feedback.bad{background:var(--bad-soft);border-color:var(--bad)}
 .feedback ol{margin:6px 0 0;padding-left:22px;font-weight:400}
+#nextBtn{scroll-margin-bottom:20px}
 .feedback .mark{font-family:var(--display);font-size:1.15rem;display:block;margin-bottom:2px}
 
 /* typed answers */
@@ -1430,6 +1431,14 @@ function feedback(ok, q, wrongText){
     : `<span class="mark">Not quite.</span>${wrongText}${esc(q.explain)}`;
   $('#nextBtn').hidden=false;
   $('#nextBtn').focus({preventScroll:true});
+  revealNext();
+}
+/* After answering, the explanation and the Next button often sat below the screen edge (phones, small laptops). Scroll just enough to show Next. */
+function revealNext(){
+  const nb=$('#nextBtn'), r=nb.getBoundingClientRect();
+  if(r.top>=0 && r.bottom<=window.innerHeight) return;
+  const still=window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  nb.scrollIntoView({block:'end', behavior:still?'auto':'smooth'});
 }
 function score(ok){
   state.answered=true; state.results[state.idx]=ok;
