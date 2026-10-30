@@ -1274,11 +1274,109 @@ function mixFrom(keys){
   return shuffle(out);
 }
 const questsIn = s => s.items.filter(k=>k.indexOf('studio:')!==0 && !isArchived(WORLDS[k]));
-function buildToday(){
-  const focus=FOCUS.filter(k=>WORLDS[k] && !isArchived(WORLDS[k]));
-  return mixFrom(focus.length ? focus : SUBJECTS.flatMap(questsIn));
+/* ======================= LEARNING LOGIC (hidden from the child) ======================= */
+/* School key (BIS standards legend): Not applicable, Requires support, Consolidating, Meeting expectations, Extending.
+   It is used ONLY to choose the next questions. Nothing of it is ever shown to the child: no levels, no words, no percentages.
+   Skill = the quest a question belongs to (q.world). Level: 1 = support (one step, a visual help), 2 = year level, 3 = extending (explain, second way, check). */
+function withLevel(fn, level){ return function(){ const q=fn.apply(this, arguments); q.level=level; return q; }; }
+nearestHundredQ=withLevel(nearestHundredQ,1); benchmarkQ=withLevel(benchmarkQ,1);
+distanceExplainQ=withLevel(distanceExplainQ,3); halfwayQ=withLevel(halfwayQ,3); tenVsHundredQ=withLevel(tenVsHundredQ,3);
+anotherWayQ=withLevel(anotherWayQ,3); reasonableQ=withLevel(reasonableQ,3); tableConclusionQ=withLevel(tableConclusionQ,3);
+const levelOf = q => q.level||2;
+
+/* BIS standards each quest practises (from Toddle, Grade 3). Used for the parent view; never shown to the child. */
+const STANDARDS={
+  numbers:['M-N1','M-N2'], round:['M-N3','M-N6'], combos:['M-N4','M-N6'], wordprob:['M-N4','M-N5'], detective:['M-N2','M-N3','M-D1'],
+  forces:['S-F1'], units:['M-M1'], graphs:['M-D1'], opinion:['E-W1'], sentences:['E-W1'], examples:['E-W1'], words:['E-R1'],
+  anleitung:['D-W1'], library:['E-W2']
+};
+
+const dayKey = (d=new Date()) => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const addDays = (k, n) => { const d=new Date(k+'T12:00:00'); d.setDate(d.getDate()+n); return dayKey(d); };
+
+/* Evidence: per skill the last answers as [day, level, ok]. */
+const EVIDENCE_MAX=60;
+function recordAnswer(q, ok){
+  if(!q.world) return;
+  const ev=store.get('ev',{}); const list=ev[q.world]||[];
+  list.push([dayKey(), levelOf(q), ok?1:0]);
+  ev[q.world]=list.slice(-EVIDENCE_MAX); store.set('ev',ev);
+}
+/* Thresholds are starting values (not from the school) and can be tuned. */
+const KEY={minAnswers:6, minDays:2, meetsAcc:.8, meetsDays:3, meetsN:6, extAcc:.7, extDays:2, extN:4};
+function standOf(skill){
+  const e=(store.get('ev',{})[skill])||[];
+  const days=new Set(e.map(x=>x[0])).size;
+  if(e.length<KEY.minAnswers || days<KEY.minDays) return 'NA';
+  const at=l=>e.filter(x=>x[1]===l), acc=a=>a.length?a.reduce((s,x)=>s+x[2],0)/a.length:null, dayCount=a=>new Set(a.map(x=>x[0])).size;
+  const l1=at(1), l2=at(2).slice(-20), l3=at(3).slice(-12);
+  const meets=l2.length>=KEY.meetsN && acc(l2)>=KEY.meetsAcc && dayCount(l2.filter(x=>x[2]))>=KEY.meetsDays;
+  if(meets && l3.length>=KEY.extN && acc(l3)>=KEY.extAcc && dayCount(l3.filter(x=>x[2]))>=KEY.extDays) return 'E';
+  if(meets) return 'M';
+  const a1=acc(l1), a2=acc(l2);
+  if((a2!==null && a2>=.5) || (a2===null && a1!==null && a1>=.8)) return 'C';
+  return 'RS';
 }
 
+/* Adapt a single-quest round to the hidden stand: fewer extending questions while it is shaky, more once it sits. */
+const WANT={NA:{l3:[0,8]}, RS:{l3:[0,0], l1:2}, C:{l3:[0,1]}, M:{l3:[2,3]}, E:{l3:[3,4]}};
+function adaptRound(k, round){
+  const st=standOf(k), want=WANT[st];
+  if(st==='NA') return round;
+  const pool=[]; for(let i=0;i<4 && pool.length<40;i++) pool.push(...WORLDS[k].build());
+  const take=lvl=>{ const i=pool.findIndex(q=>levelOf(q)===lvl && !out.some(r=>qId(r)===qId(q))); return i<0?null:pool.splice(i,1)[0]; };
+  let out=round.slice();
+  const count=lvl=>out.filter(q=>levelOf(q)===lvl).length;
+  // too many extending questions: swap for year-level (or support) ones
+  while(count(3)>want.l3[1]){ const i=out.findIndex(q=>levelOf(q)===3); const r=take(2)||take(1); if(!r) break; out[i]=r; }
+  // too few extending questions: swap year-level ones for extending ones
+  while(count(3)<want.l3[0]){ const i=out.findIndex(q=>levelOf(q)===2); const r=take(3); if(i<0||!r) break; out[i]=r; }
+  // requires support: add supported questions where the quest has them
+  if(want.l1){ while(count(1)<want.l1){ const i=out.findIndex(q=>levelOf(q)===2); const r=take(1); if(i<0||!r) break; out[i]=r; } }
+  return shuffle(out);
+}
+
+/* Spaced repetition: a wrong question comes back on the next practice day, then after 3 and 7 days. */
+const DUE_MAX=40, GAPS=[1,3,7];
+const qId = q => (q.prompt||'')+'|'+(q.options?q.options.join('/'):'')+'|'+(q.items?q.items.join('/'):'')+'|'+(q.answer||'');
+function rememberWrong(q){
+  const due=store.get('due',[]), id=q.dueId||qId(q);
+  const copy=JSON.parse(JSON.stringify(q)); delete copy.retry; delete copy.warmup; copy.dueId=id;
+  const old=due.findIndex(d=>d.id===id); if(old>=0) due.splice(old,1);
+  due.push({id:id, box:0, at:addDays(dayKey(),GAPS[0]), q:copy});
+  store.set('due', due.slice(-DUE_MAX));
+}
+function advanceDue(q){
+  const due=store.get('due',[]), i=due.findIndex(d=>d.id===q.dueId); if(i<0) return;
+  const d=due[i]; d.box++;
+  if(d.box>=GAPS.length) due.splice(i,1); else d.at=addDays(dayKey(),GAPS[d.box]);
+  store.set('due',due);
+}
+const dueToday = () => store.get('due',[]).filter(d=>d.at<=dayKey()).map(d=>d.q);
+function reshuffled(q){
+  const c=JSON.parse(JSON.stringify(q));
+  if(c.kind==='mc' && !c.grid3 && c.options.length>2 && !c.fixedOrder){ const right=c.options[c.answer]; c.options=shuffle(c.options); c.answer=c.options.indexOf(right); }
+  return c;
+}
+
+/* Practise Today: warm-up, due repeats, focus topics at their level, and a challenge when a focus topic is ready for it. */
+function buildToday(){
+  const focus=FOCUS.filter(k=>WORLDS[k] && !isArchived(WORLDS[k]));
+  const topics=focus.length ? focus : SUBJECTS.flatMap(questsIn);
+  const out=[];
+  const solid=SUBJECTS.flatMap(questsIn).filter(k=>['M','E'].includes(standOf(k)) && topics.indexOf(k)<0);
+  const warmFrom=solid.length?pick(solid):pick(topics);
+  const warm=WORLDS[warmFrom].build().find(q=>levelOf(q)<3);
+  if(warm){ warm.warmup=true; out.push(warm); }
+  dueToday().slice(0,2).forEach(q=>out.push(reshuffled(q)));
+  const ready=topics.filter(k=>['M','E'].includes(standOf(k)));
+  let challenge=null;
+  if(ready.length){ const k=pick(ready); challenge=WORLDS[k].build().concat(WORLDS[k].build()).find(q=>levelOf(q)===3) || null; }
+  const pools=shuffle(topics).map(k=>adaptRound(k, WORLDS[k].build()).filter(q=>levelOf(q)<3 || standOf(k)!=='NA'));
+  const middle=[]; let i=0;
+  while(out.length+middle.length+(challenge?1:0)<8 && pools.some(p=>p.length)){ const p=pools[i%pools.length]; if(p.length) middle.push(p.shift()); i++; }
+  return out.concat(shuffle(middle), challenge?[challenge]:[]).slice(0,8);
+}
 /* ======================= WORLDS, SUBJECTS & STUDIOS ======================= */
 const ICONS={
   forces:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 26h26"/><path d="M4 22L26 8"/><path d="M12 12.5l6.5-3.8 2 3.4-6.5 3.8z" fill="currentColor" stroke="none"/><circle cx="12.5" cy="17.5" r="1.8" fill="currentColor" stroke="none"/><circle cx="19" cy="13.6" r="1.8" fill="currentColor" stroke="none"/></svg>',
@@ -1438,7 +1536,7 @@ function goBack(){
 }
 
 function startRound(k){
-  state.world=k; state.round=WORLDS[k].build(); state.idx=0; state.stars=0; state.streak=0;
+  state.world=k; state.round=(k==='today'||k.indexOf('mix_')===0)?WORLDS[k].build():adaptRound(k, WORLDS[k].build()); state.idx=0; state.stars=0; state.streak=0;
   state.results=state.round.map(()=>null);
   $('#worldChip').textContent=WORLDS[k].name;
   $('#roundStars').textContent='0';
@@ -1451,7 +1549,7 @@ function renderDots(){
 function renderQuestion(){
   const q=state.round[state.idx];
   state.answered=false; state.typed=''; state.picked=[];
-  play.style.setProperty('--world', WORLDS[q.world||state.world].color);
+  play.style.setProperty('--world', (WORLDS[q.world]||WORLDS[state.world]).color); // repeats saved by an older version may name a quest that no longer exists
   $('#qLabel').textContent=q.label+' · Question '+(state.idx+1)+' of '+state.round.length;
   $('#qPrompt').innerHTML=q.prompt;
   const vis=$('#qVisual'); vis.innerHTML=q.visual||''; vis.hidden=!q.visual;
@@ -1515,6 +1613,15 @@ function revealNext(){
 function score(ok){
   state.answered=true; state.results[state.idx]=ok;
   if(ok){ state.stars++; state.streak++; } else state.streak=0;
+  const q=state.round[state.idx];
+  recordAnswer(q, ok);
+  if(ok && q.dueId) advanceDue(q);
+  if(!ok){
+    rememberWrong(q);
+    // try a similar question again a little later in this round (after the explanation)
+    const j=state.idx+2;
+    if(!q.retry && j<state.round.length && state.results[j]===null) state.round[j]=Object.assign(reshuffled(q),{retry:true, warmup:false});
+  }
   $('#roundStars').textContent=state.stars;
   beep(ok?'good':'bad'); renderDots();
 }
