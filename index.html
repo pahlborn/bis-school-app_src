@@ -158,6 +158,7 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 .dot.cur{background:var(--world);opacity:.55}
 .dot.good{background:var(--good)}
 .dot.bad{background:var(--bad)}
+.dot.seen{background:var(--sun);opacity:.7}
 .qcard{background:var(--surface);border:2px solid var(--line);border-top:7px solid var(--world);border-radius:22px;padding:20px 18px 22px;display:flex;flex-direction:column;gap:16px}
 .prompt{font-size:1.3rem}
 .visual{display:flex;justify-content:center}
@@ -1882,7 +1883,7 @@ function startRound(k){
 }
 function renderDots(){
   const d=$('#dots'); d.innerHTML='';
-  state.round.forEach((_,i)=>{ const s=document.createElement('span'); s.className='dot'+(state.results[i]===true?' good':state.results[i]===false?' bad':i===state.idx?' cur':''); d.appendChild(s); });
+  state.round.forEach((_,i)=>{ const s=document.createElement('span'); s.className='dot'+(state.results[i]===true?' good':state.results[i]===false?' bad':state.results[i]==='seen'?' seen':i===state.idx?' cur':''); d.appendChild(s); });
 }
 function renderQuestion(){
   const q=state.round[state.idx];
@@ -1989,18 +1990,26 @@ function hintFeedback(q, response){
   fb.scrollIntoView({block:'nearest',behavior:'auto'});
   snapshot();
 }
+/* S1 (30.10.): asking "Show me how" BEFORE any own try is a learning strategy, not a failure.
+   It leaves no evidence (neither error nor mastery), stays neutral for the child (no star,
+   no red dot, no "Not quite", no error sound), and the task still returns for review with a
+   bridge. Help after a mistake is unchanged: the first wrong answer already counted. */
 function showWorked(){
   if(state.answered) return;
-  const q=state.round[state.idx];
-  if(!state.evidenceRecorded){ recordAnswer(Object.assign({},q,{assisted:true}),false); state.evidenceRecorded=true; rememberWrong(q); }
-  const log=store.get('attempts',[]); log.push({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,solutionShown:true}); store.set('attempts',log.slice(-200));
-  score(false);
+  const q=state.round[state.idx], beforeTry=state.attempts===0;
+  if(!state.evidenceRecorded){ state.evidenceRecorded=true; rememberWrong(q); }
+  const log=store.get('attempts',[]); log.push(Object.assign({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,solutionShown:true},beforeTry?{beforeTry:true}:{})); store.set('attempts',log.slice(-200));
+  if(beforeTry){
+    state.answered=true; state.results[state.idx]='seen'; queueBridge(q);
+    $('#roundStars').textContent=state.stars; renderDots();
+  } else score(false);
   if(q.kind==='mc') document.querySelectorAll('#qAnswers .opt').forEach(b=>{ b.disabled=true; b.classList.toggle('correct',+b.dataset.i===q.answer); });
   else if(q.kind==='type') document.querySelectorAll('#qAnswers .key').forEach(b=>b.disabled=true);
   else { document.querySelectorAll('#qAnswers .ord').forEach(b=>b.disabled=true); $('#checkOrder').hidden=true; }
   const h=guidance(q,null,true);
   const answer=q.kind==='mc'?(q.htmlOptions?'the highlighted answer':esc(q.options[q.answer])):q.kind==='type'?esc(q.answer):q.correct.map(i=>esc(q.items[i])).join(' → ');
   feedback(false,q,`<div class="worked"><p>${esc(h.text)}</p>${h.visual?`<div class="visual">${h.visual}</div>`:''}<p><b>${q.world==='anleitung'?'So geht es':'Worked answer'}: ${answer}</b></p></div>`);
+  if(beforeTry){ const fb=$('#feedback'); fb.className='feedback hint'; fb.querySelector('.mark').textContent=q.world==='anleitung'?'Schauen wir es uns zusammen an':'Let’s look at it together'; }
   snapshot();
 }
 function answerMC(i){
@@ -2712,7 +2721,7 @@ const ABOUT_DE=()=>`
 <li><b>Wiederholung:</b> Die Aufgabe kommt am nächsten Übungstag wieder, dann nach drei und nach sieben Tagen – wo möglich mit neuen Zahlen.</li>
 </ol>
 <p><b>Ausnahmen:</b> Bei nur zwei Antwortmöglichkeiten (etwa AM/PM) erklärt die App sofort. Bei Eintipp-Aufgaben bleibt die Eingabe stehen, dazu kommt ein Hinweis. Beim Ordnen werden die richtigen Plätze markiert.</p>
-<p>„Zeig mir, wie“ ist jederzeit möglich und führt direkt zum Lösungsweg. Eine Note oder Stufe sieht das Kind dabei nie.</p>
+<p>„Zeig mir, wie“ ist jederzeit möglich und führt direkt zum Lösungsweg. Wer sich den Weg zeigen lässt, bevor er selbst probiert, hat keinen Fehler gemacht: Das zählt weder als Fehler noch als Können, die Aufgabe kommt aber später wieder. Eine Note oder Stufe sieht das Kind dabei nie.</p>
 <h3>Herkunft der Aufgaben</h3>
 <p>Themen und Erfolgskriterien folgen den Lerneinheiten der 3. Klasse im Schuljahr 2026/27, wie sie auf der Lernplattform der Schule veröffentlicht sind – darunter <i>Friction Frenzy</i> (How the World Works), <i>Persuade for the Park</i> (Who We Are), <i>Mastering Basic Numbers</i> mit <i>Travel for Work</i> und dem <i>Sticker Milestone</i>, das Runden auf Zehner und Hunderter, die <i>Anleitung</i> zur Traummaschine, die Leseaufnahme, die Bibliotheksstunden sowie die Primary Production <i>Pantastic</i>. Die Aufgaben selbst sind neu formuliert oder werden mit wechselnden Zahlen erzeugt; Arbeitsblätter der Schule werden nicht wiedergegeben. Die Geschichten um <i>Pisolala</i> sind eine Erfindung der Familie.</p>
 <h3>Datenschutz</h3>
@@ -2743,7 +2752,7 @@ const ABOUT_EN=()=>`
 <li><b>Review:</b> the task returns on the next practice day, then after three and seven days – with new numbers where possible.</li>
 </ol>
 <p><b>Exceptions:</b> with only two options (such as AM/PM) the app explains at once. In typing tasks the entry stays and a hint is added. In ordering tasks the correct places are marked.</p>
-<p>“Show me how” is always available and leads straight to the worked solution. The child never sees a grade or level.</p>
+<p>“Show me how” is always available and leads straight to the worked solution. Asking to be shown before trying is not a mistake: it counts neither as an error nor as mastery, but the task comes back later. The child never sees a grade or level.</p>
 <h3>Origin of the tasks</h3>
 <p>Topics and success criteria follow the Grade 3 units of the 2026/27 school year as published on the school's learning platform. The tasks themselves are rewritten or generated with varying numbers; school worksheets are not reproduced. The stories about <i>Pisolala</i> are a family invention.</p>
 <h3>Privacy</h3>
