@@ -2192,13 +2192,22 @@ function mysteryOfDay(d=new Date()){
 const jokePool = () => { const th=themeNow(); return (th && THEME_JOKES[th]) ? THEME_JOKES[th].concat(THEME_JOKES[th], JOKES) : JOKES; };
 
 /* Pisolala: a family character. Never shown, never described – only what happens around Pisolala.
-   New stories go in only after a grown-up approved them (approved:true). Excitement: 1 cozy, 2 a bit exciting, 3 adventurous. */
+   New stories go in only after a grown-up approved them (approved:true). Excitement: 1 cozy, 2 a bit exciting, 3 adventurous.
+   Language (Peter, 30.10.): English; German only in the Deutsch subject. Each story has en and de. */
 const STORIES=[
-  {id:'halloween-2026', title:'Pisolala und die kichernden Kürbisse', approved:true /* freigegeben von Peter am 30.10.2026 */, levels:{
+  {id:'halloween-2026', approved:true /* freigegeben von Peter am 30.10.2026 (de); en = wortgetreue Übersetzung */,
+   title:{en:'Pisolala and the Giggling Pumpkins', de:'Pisolala und die kichernden Kürbisse'},
+   en:{
+    1:'On Halloween night a warm little wind blew through the garden. It smelled of cocoa and cinnamon – that is how it always smells when Pisolala is near. Nobody can see Pisolala. But if you listen carefully, you can hear a soft giggle between the leaves.\n\nNofretete was already waiting in her pumpkin costume, and Hoppel, the cuddly bunny, carried a tiny lantern.\n\n“Trick or joke?” the wind whispered at the first door. The neighbour laughed: “A joke, please!” Then something rustled: “What is a ghost’s favourite food? Spook-ghetti!”\n\nLittle pumpkins stood by the fence. Nofretete counted: “… 36, 37, 38!” The wind hummed: “About 40!” Because 38 is closer to 40 than to 30.\n\nAt home there was cocoa. Nofretete fell asleep with Hoppel in her arms, and outside a soft wind song was humming. “Good night, Pisolala.” And somewhere something giggled: “Good night.”',
+    2:'On Halloween night a warm little wind blew through the garden. It smelled of cocoa and cinnamon – that is how it always smells when Pisolala is near. Nobody can see Pisolala. But if you listen carefully, you can hear a soft giggle between the leaves.\n\nNofretete was waiting in her pumpkin costume, and Hoppel carried a tiny lantern. “Trick or joke?” the wind whispered at the first door. “What is a ghost’s favourite food? Spook-ghetti!” The neighbour laughed out loud.\n\nThen the path grew dark. Something creaked behind the fence. A long shadow slipped across the stones. Nofretete stopped. “I’m a little bit scared.” Then it became very warm beside her. “Take a deep breath,” something whispered, “and imagine the little lantern in your heart.”\n\nNofretete breathed in and out. Hoppel’s lantern shone brighter – and the shadow was … a cat with a pumpkin hat! It meowed and ran away. Everyone had to laugh.\n\nAt home there was cocoa. “Good night, Pisolala.” And somewhere something giggled: “Good night.”'
+   },
+   de:{
     1:'Am Halloween-Abend wehte ein warmer, kleiner Wind durch den Garten. Er roch nach Kakao und Zimt – so riecht es immer, wenn Pisolala in der Nähe ist. Sehen kann Pisolala niemand. Aber wer genau hinhört, hört ein leises Kichern zwischen den Blättern.\n\nNofretete wartete schon in ihrem Kürbiskostüm, und Hoppel, der Kuschelhase, trug eine winzige Laterne.\n\n„Süßes oder Witz?“, flüsterte der Wind an der ersten Tür. Die Nachbarin lachte: „Einen Witz, bitte!“ Da raschelte es: „Was essen Gespenster am liebsten? Spukhetti!“\n\nAm Zaun standen kleine Kürbisse. Nofretete zählte: „… 36, 37, 38!“ Der Wind summte: „Ungefähr 40!“ Denn 38 liegt näher an 40 als an 30.\n\nZu Hause gab es Kakao. Nofretete schlief mit Hoppel im Arm ein, und draußen summte ein leises Windlied. „Gute Nacht, Pisolala.“ Und irgendwo kicherte es: „Gute Nacht.“',
     2:'Am Halloween-Abend wehte ein warmer, kleiner Wind durch den Garten. Er roch nach Kakao und Zimt – so riecht es immer, wenn Pisolala in der Nähe ist. Sehen kann Pisolala niemand. Aber wer genau hinhört, hört ein leises Kichern zwischen den Blättern.\n\nNofretete wartete in ihrem Kürbiskostüm, und Hoppel trug eine winzige Laterne. „Süßes oder Witz?“, flüsterte der Wind an der ersten Tür. „Was essen Gespenster am liebsten? Spukhetti!“ Die Nachbarin lachte laut.\n\nDann wurde der Weg dunkel. Hinter dem Zaun knarrte etwas. Ein langer Schatten huschte über die Steine. Nofretete blieb stehen. „Ich hab ein bisschen Angst.“ Da wurde es neben ihr ganz warm. „Atme tief ein“, flüsterte es, „und stell dir die kleine Laterne in deinem Herzen vor.“\n\nNofretete atmete ein und aus. Hoppels Laterne leuchtete heller – und der Schatten war … eine Katze mit einem Kürbishut! Sie miaute und lief davon. Alle mussten lachen.\n\nZu Hause gab es Kakao. „Gute Nacht, Pisolala.“ Und irgendwo kicherte es: „Gute Nacht.“'
-  }}
+   }}
 ];
+/* German only after a round in the Deutsch subject; everywhere else English. */
+const storyLang = () => SUBJECTS.find(s=>s.key==='deutsch').items.includes(state.world) ? 'de' : 'en';
 const EXCITE={1:'🌙 cozy', 2:'⭐ a bit exciting', 3:'⚡ adventurous'};
 const storiesNow = () => STORIES.filter(s=>s.approved);
 
@@ -2368,9 +2377,9 @@ function showTreat(kind){
       body.querySelectorAll('[data-m]').forEach(x=>x.disabled=true);
     }));
   } else {
-    const cap=store.get('storyCap',2), list=storiesNow();
-    body.innerHTML=list.map(s=>`<p><b>${esc(s.title)}</b></p><div class="row">${Object.keys(s.levels).map(Number).filter(l=>l<=cap).map(l=>`<button type="button" class="btn small" data-story="${s.id}" data-l="${l}">${EXCITE[l]}</button>`).join('')}</div>`).join('')+'<div id="storyText"></div>';
-    body.querySelectorAll('[data-story]').forEach(b=>b.addEventListener('click',()=>{ const s=STORIES.find(x=>x.id===b.dataset.story); $('#storyText').innerHTML=`<div class="story">${esc(s.levels[b.dataset.l])}</div>`; }));
+    const cap=store.get('storyCap',2), list=storiesNow(), lang=storyLang();
+    body.innerHTML=list.map(s=>`<p lang="${lang}"><b>${esc(s.title[lang])}</b></p><div class="row">${Object.keys(s[lang]).map(Number).filter(l=>l<=cap).map(l=>`<button type="button" class="btn small" data-story="${s.id}" data-l="${l}">${EXCITE[l]}</button>`).join('')}</div>`).join('')+'<div id="storyText"></div>';
+    body.querySelectorAll('[data-story]').forEach(b=>b.addEventListener('click',()=>{ const s=STORIES.find(x=>x.id===b.dataset.story); $('#storyText').innerHTML=`<div class="story" lang="${lang}">${esc(s[lang][b.dataset.l])}</div>`; }));
   }
 }
 
@@ -2741,8 +2750,11 @@ function openStudio(k){
   while(checks.length<d.checks.length) checks.push(false);
   const done=checks.filter(Boolean).length;
   let html=`<div class="eyebrow">${esc(d.sub)}</div><h2>${esc(d.name)}</h2><p class="muted">${esc(d.intro)}</p>`;
+  /* Only a stopwatch: the app never records audio (the reading recording is made on the class learning platform). */
+  const sw=k==='read'?{go:'⏱ Stoppuhr starten',pause:'Pause',reset:'Zurück auf 0',note:'Die Stoppuhr misst nur die Zeit. Die App nimmt nichts auf.'}
+                     :{go:'⏱ Start stopwatch',pause:'Pause',reset:'Reset',note:'The stopwatch only measures time. The app records nothing.'};
   if(d.timer){
-    html+=`<div class="timer"><span class="clock" id="tClock">00:00</span><span class="row" style="flex:1;justify-content:flex-end"><button class="btn small primary" id="tStart" type="button">Start</button><button class="btn small" id="tReset" type="button">Reset</button></span></div>`;
+    html+=`<div class="timer"><span class="clock" id="tClock" aria-label="Stopwatch">00:00</span><span class="row" style="flex:1;justify-content:flex-end"><button class="btn small primary" id="tStart" type="button">${sw.go}</button><button class="btn small" id="tReset" type="button">${sw.reset}</button></span></div><p class="small" id="tNote">${sw.note}</p>`;
   }
   html+=`<div><div class="eyebrow" style="margin-bottom:8px">Checklist · <span id="chkCount">${done}</span> / ${d.checks.length}</div><div class="progress"><i id="chkBar" style="width:${Math.round(done/d.checks.length*100)}%"></i></div></div>`;
   html+=`<div class="checks" id="checks">`+d.checks.map((c,i)=>`<button type="button" class="chk${checks[i]?' on':''}" data-i="${i}" aria-pressed="${checks[i]?'true':'false'}"><span class="box">${TICK}</span><span class="t">${esc(c)}</span></button>`).join('')+`</div>`;
@@ -2762,10 +2774,10 @@ function openStudio(k){
     timerElapsed=0; stopTimer();
     const clock=$('#tClock'), startBtn=$('#tStart');
     startBtn.addEventListener('click',()=>{
-      if(timerId){ stopTimer(); timerElapsed+=Date.now()-timerStart; startBtn.textContent='Start'; }
-      else { timerStart=Date.now(); timerId=setInterval(()=>{ clock.textContent=fmtTime(timerElapsed+Date.now()-timerStart); },250); startBtn.textContent='Pause'; }
+      if(timerId){ stopTimer(); timerElapsed+=Date.now()-timerStart; startBtn.textContent=sw.go; }
+      else { timerStart=Date.now(); timerId=setInterval(()=>{ clock.textContent=fmtTime(timerElapsed+Date.now()-timerStart); },250); startBtn.textContent=sw.pause; }
     });
-    $('#tReset').addEventListener('click',()=>{ stopTimer(); timerElapsed=0; clock.textContent='00:00'; startBtn.textContent='Start'; });
+    $('#tReset').addEventListener('click',()=>{ stopTimer(); timerElapsed=0; clock.textContent='00:00'; startBtn.textContent=sw.go; });
   }
   show('studio'); snapshot();
 }
