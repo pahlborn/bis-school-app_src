@@ -156,8 +156,12 @@ test('order retry keeps correct prefix, marks right positions, and permits a cor
 test('parent guidance and new research sources are included; unconfirmed methods identified',async()=>{
   const {ctx,page}=await appOeffnen(browser,server.url);
   await klick(page,'#aboutBtn');
+  await page.locator('#aboutBody .about-item',{hasText:'Lernlogik'}).click();
   assert.ok((await page.textContent('#aboutBody')).includes('begründeter Entwurf'));
+  await page.locator('#aboutUp').click();
+  await page.locator('#aboutBody .about-item',{hasText:'Quellen'}).click();
   assert.ok(await page.locator('#aboutBody a[href="https://doi.org/10.3102/0034654314564881"]').count());
+  await page.locator('#aboutBack').click();
   await elternOeffnen(page);
   assert.ok((await page.textContent('#aboutBody')).includes('keine bestätigte schulweite Methode'));
   assert.equal(await page.locator('#aboutBody details.parent-method').count(),3);
