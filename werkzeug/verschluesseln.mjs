@@ -7,6 +7,10 @@
 // Weitere Schalter: --ziel <ordner> (statt dist/), --ohne-abgleich (nicht
 // gegen die veroeffentlichte Seite pruefen).
 //
+//   node werkzeug/verschluesseln.mjs --live-pruefen
+//     nach dem Hochladen: vergleicht die Version in dist/ mit der veroeffentlichten Seite
+//     ("gleich", "anders (veroeffentlicht: vX)" oder "nicht erreichbar"). Baut nichts.
+//
 // Das Passwort wird verdeckt abgefragt, zweimal. Es wird nie gespeichert und
 // nie ausgegeben. Ueber eine Pipe oder ein Argument nimmt das Skript es
 // absichtlich nicht an - so landet es weder in der Shell-Historie noch in
@@ -16,9 +20,11 @@
 // Ausgaben nur in ASCII: die Windows-Konsole zeigt Umlaute aus Node sonst
 // verstuemmelt an.
 
+import fs from 'node:fs/promises';
 import path from 'node:path';
-import { distBauen, quellenLesen, mitVeroeffentlichterPruefen } from './bauen.mjs';
-import { passwortPruefen, passwortNormal, schluesselAusPasswort, schluesselRoh, ITERATIONEN } from './kern.mjs';
+import { WURZEL, distBauen, quellenLesen, mitVeroeffentlichterPruefen, liveVergleichen } from './bauen.mjs';
+import { passwortPruefen, passwortNormal, schluesselAusPasswort, schluesselRoh, schluesselAusRoh, entschluesselnMitSchluessel, tresorAusHuelle, ITERATIONEN } from './kern.mjs';
+import { versionAuslesen, versionText } from './version.mjs';
 import * as ablage from './schluesselablage.mjs';
 
 function verdecktFragen(frage) {
@@ -49,10 +55,11 @@ function verdecktFragen(frage) {
 }
 
 function schalterLesen(argv) {
-  const s = { passwort: false, vergessen: false, ohneAbgleich: false, ziel: null };
+  const s = { passwort: false, vergessen: false, ohneAbgleich: false, ziel: null, livePruefen: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--passwort') s.passwort = true;
+    else if (a === '--live-pruefen') s.livePruefen = true;
     else if (a === '--vergessen') s.vergessen = true;
     else if (a === '--ohne-abgleich') s.ohneAbgleich = true;
     else if (a === '--ziel') s.ziel = path.resolve(argv[++i] || '');
@@ -83,6 +90,23 @@ async function main() {
   }
 
   const { salt } = await quellenLesen();
+
+  if (s.livePruefen) {
+    const g = await ablage.lesen(salt, ITERATIONEN);
+    if (!g.roh) throw new Error('Kein gemerkter Schluessel - Live-Pruefung nicht moeglich.');
+    const html = await fs.readFile(path.join(s.ziel || path.join(WURZEL, 'dist'), 'index.html'), 'utf8');
+    const klar = await entschluesselnMitSchluessel(tresorAusHuelle(html), await schluesselAusRoh(g.roh));
+    const gebaut = versionAuslesen(Buffer.from(klar).toString('utf8'));
+    if (!gebaut) throw new Error('dist/index.html enthaelt keine Version.');
+    const r = await liveVergleichen(gebaut, g.roh);
+    console.log(`Gebaut: ${versionText(gebaut)} - ${gebaut.hash} - ${gebaut.date}`);
+    console.log(r.ergebnis === 'gleich' ? 'Live-Pruefung: gleich'
+      : r.ergebnis === 'anders' ? `Live-Pruefung: anders (veroeffentlicht: ${r.text})`
+      : `Live-Pruefung: nicht erreichbar (${r.grund})`);
+    if (r.ergebnis !== 'gleich') process.exitCode = 2;
+    return;
+  }
+
   let zugang = null;
   if (!s.passwort) {
     const g = await ablage.lesen(salt, ITERATIONEN);
@@ -133,7 +157,12 @@ async function main() {
   console.log(`\nOrdner: ${r.ziel}`);
   for (const d of r.dateien) console.log(`  ${d}`);
   console.log(`\nApp ${r.appBytes} Bytes, verschluesselte Seite ${r.huelleBytes} Bytes.`);
-  console.log('\nNaechster Schritt: den Inhalt von dist/ ins Repo bis-school-app hochladen.');
+  console.log(`\nVersion ${versionText(r.version)} - ${r.version.hash} - ${r.version.date}`);
+  if (r.version.draft) {
+    console.log('ACHTUNG: Es gibt nicht eingecheckte Aenderungen (Version mit "-entwurf"). Diesen Stand NICHT veroeffentlichen.');
+  }
+  console.log('\nNaechster Schritt: den Inhalt von dist/ ins Repo bis-school-app hochladen (Commit-Nachricht mit ' + versionText(r.version) + ').');
+  console.log('Danach: node werkzeug/verschluesseln.mjs --live-pruefen');
 }
 
 main().catch((e) => {
