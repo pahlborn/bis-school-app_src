@@ -163,10 +163,11 @@ test('Mottozeiten: Halloween-Kuerbis, Adventskalender mit Tuerchen bis heute', a
 
 test('Geburtstag: das Kind traegt ihn selbst ein; zwei Tage vorher Vorfreude, am Tag Glueckwunsch', async () => {
   let a = await app({ zeit: '2026-11-01T10:00:00' });
-  await klick(a.page, '#bdayBtn');
-  await a.page.selectOption('#bdDay', '02');
-  await a.page.selectOption('#bdMonth', '11');
-  await klick(a.page, '#bdSave');
+  // S9 (30.10.): via "My profile" with real clicks (the old cake button opened off-screen)
+  await a.page.locator('#profileBtn').click();
+  await a.page.selectOption('#pfDay', '02');
+  await a.page.selectOption('#pfMonth', '11');
+  await a.page.locator('#pfSave').click();
   assert.equal(await lies(a.page, 'birthday'), '11-02');
   assert.ok((await a.page.textContent('#homeNote')).includes('coming in 1 day'));
   await a.ctx.close();

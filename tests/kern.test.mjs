@@ -94,7 +94,7 @@ test('dist: alle Dateien da, oeffentlicher Teil sauber, Tresor ergibt die App', 
 
   const html = await fs.readFile(path.join(ziel, 'index.html'), 'utf8');
   assert.deepEqual(oeffentlichPruefen(html, await fs.readFile(path.join(ziel, 'manifest.webmanifest'), 'utf8'), q.woerter), []);
-  assert.ok(!html.includes('playerName'), 'App-Code darf nicht im Klartext in der Huelle stehen');
+  assert.ok(!html.includes('profileBtn'), 'App-Code darf nicht im Klartext in der Huelle stehen');
   assert.ok(Buffer.from(await entschluesseln(tresorAusHuelle(html), TEST_PW)).equals(q.app));
   for (const icon of ICONS) {
     assert.ok((await fs.readFile(path.join(ziel, icon))).equals(await fs.readFile(path.join(WURZEL, icon))), icon);
