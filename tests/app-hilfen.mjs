@@ -31,7 +31,9 @@ export function browserStarten() {
   return chromium.launch(pfad ? { executablePath: pfad } : {});
 }
 
-export async function appOeffnen(browser, url, kontext = {}) {
+export async function appOeffnen(browser, url, kontextMitZeit = {}) {
+  // zeit: feste Uhrzeit fuer die Seite (Mottozeiten, Geburtstag, Adventskalender)
+  const { zeit, ...kontext } = kontextMitZeit;
   const ctx = await browser.newContext(kontext);
   await ctx.route('**/*', (r) => (r.request().url().startsWith(url) ? r.continue() : r.abort()));
   await ctx.addInitScript(() => {
@@ -39,6 +41,7 @@ export async function appOeffnen(browser, url, kontext = {}) {
     window.AudioContext = undefined; window.webkitAudioContext = undefined; // kein Ton im Test
   });
   const page = await ctx.newPage();
+  if (zeit) await page.clock.setFixedTime(new Date(zeit));
   const fehler = [];
   page.on('pageerror', (e) => fehler.push(e.message));
   await page.goto(url);
@@ -106,6 +109,8 @@ export async function questStarten(page, text) {
 
 /** Beantwortet die angezeigte Frage richtig. */
 export async function frageBeantworten(page, q) {
+  // Practise Today bietet die letzte Frage als freiwillige Challenge an: annehmen
+  if (await page.$('#takeChallenge')) await klick(page, '#takeChallenge');
   if (q.kind === 'mc') await klick(page, `#qAnswers .opt[data-i="${q.answer}"]`);
   else if (q.kind === 'type') {
     for (const z of q.answer) await klick(page, `#qAnswers .key[aria-label="${z}"]`);

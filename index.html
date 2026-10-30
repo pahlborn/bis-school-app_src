@@ -210,6 +210,25 @@ button{font:inherit;color:inherit}
 .progress i{display:block;height:100%;background:var(--world);width:0;transition:width .3s}
 
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:9}
+/* fun: motto, notes, tree, badges, treats, advent */
+.foot .row > .btn{flex:0 0 auto}
+.motto{font-family:var(--display);font-size:.85rem;color:var(--muted);letter-spacing:.04em}
+.note-banner{background:var(--soft);border-left:5px solid var(--sun);border-radius:14px;padding:10px 14px;font-family:var(--display);font-weight:600}
+.growrow{display:grid;grid-template-columns:84px 1fr;gap:12px;align-items:center;background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:10px 12px}
+.tree svg{width:84px;height:84px}
+.badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.badge-chip{font-family:var(--display);font-size:.78rem;font-weight:600;border-radius:999px;padding:2px 10px;background:var(--soft);color:var(--ink);border:2px solid var(--line)}
+.badge-chip.silver{border-color:#9aa5b1}.badge-chip.gold{border-color:var(--sun)}
+.treat{display:flex;flex-direction:column;gap:10px;width:100%;text-align:left}
+.treat .row .btn{flex:1 1 120px}
+.story{background:var(--soft);border-radius:14px;padding:14px 16px;line-height:1.6;white-space:pre-line}
+.advent{background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:12px}
+.doors{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px}
+.door{min-height:44px;border-radius:10px;border:2px solid var(--line);background:var(--soft);font-family:var(--display);font-weight:600;font-size:1rem;cursor:pointer;color:var(--ink)}
+.door.open{background:var(--good-soft);border-color:var(--good)}
+.door:disabled{opacity:.45;cursor:default}
+.bday{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.bday select{font:inherit;padding:8px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--ink);min-height:44px}
 /* about page */
 #sheetBtn{width:100%}
 .about{background:var(--surface);border:2px solid var(--line);border-radius:22px;padding:20px 18px;line-height:1.55}
@@ -258,6 +277,7 @@ button{font:inherit;color:inherit}
     <div class="hero">
       <div class="eyebrow">Grade 3B · Bavarian International School</div>
       <h1>3B Big Quest</h1>
+      <div class="motto">Believe. Inspire. Succeed. <span id="themeIcon" aria-hidden="true"></span></div>
     </div>
     <div class="me">
       <div class="field">
@@ -268,11 +288,15 @@ button{font:inherit;color:inherit}
       <div class="chipstat" id="rank">Explorer</div>
     </div>
     <button class="today" id="todayBtn" type="button"><span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7.1L12 17.3 5.7 21l1.7-7.1L2 9.2l7.1-.6z"/></svg></span><span><span class="name">Practise Today</span><br><span class="sub" id="todaySub">8 questions from your focus topics</span></span></button>
+    <div id="homeNote" class="note-banner" hidden></div>
+    <div id="advent" class="advent" hidden></div>
     <div id="subjects" class="subjects"></div>
+    <div class="growrow"><div id="tree" class="tree"></div><div><div class="eyebrow">My learning tree</div><div id="treeText" class="muted"></div><div id="badges" class="badges"></div></div></div>
     <button class="btn" id="sheetBtn" type="button">🖨️ Print a practice sheet</button>
     <div class="foot">
       <span>Topics from class, updated 30 October.</span>
       <span class="row" style="flex:0 0 auto">
+        <button class="btn small" id="bdayBtn" type="button" aria-label="My birthday">🎂</button>
         <button class="btn small" id="aboutBtn" type="button">About &amp; grown-ups</button>
         <button class="btn small" id="soundBtn" type="button">Sound: on</button>
       </span>
@@ -311,6 +335,7 @@ button{font:inherit;color:inherit}
     </div>
     <div class="dots" id="dots" aria-hidden="true"></div>
     <div class="qcard">
+      <div id="playNote" class="note-banner" hidden></div>
       <div class="eyebrow" id="qLabel"></div>
       <h2 class="prompt" id="qPrompt"></h2>
       <div class="visual" id="qVisual" hidden></div>
@@ -328,6 +353,8 @@ button{font:inherit;color:inherit}
       <div class="score"><span id="resScore">0</span><small> / 8</small></div>
       <h2 id="resHead">Great job!</h2>
       <p class="muted" id="resMsg"></p>
+      <div id="reflect" class="treat" hidden></div>
+      <div id="treat" class="treat"></div>
     </div>
     <div class="row" style="width:100%">
       <button class="btn primary" id="againBtn" type="button">Play again</button>
@@ -1427,7 +1454,7 @@ function buildToday(){
   dueToday().slice(0,2).forEach(q=>out.push(reshuffled(q)));
   const ready=topics.filter(k=>['M','E'].includes(standOf(k)));
   let challenge=null;
-  if(ready.length){ const k=pick(ready); challenge=WORLDS[k].build().concat(WORLDS[k].build()).find(q=>levelOf(q)===3) || null; }
+  if(ready.length){ const k=pick(ready); challenge=WORLDS[k].build().concat(WORLDS[k].build()).find(q=>levelOf(q)===3) || null; if(challenge) challenge.challenge=true; }
   const pools=shuffle(topics).map(k=>adaptRound(k, WORLDS[k].build()).filter(q=>levelOf(q)<3 || standOf(k)!=='NA'));
   const middle=[]; let i=0;
   while(out.length+middle.length+(challenge?1:0)<8 && pools.some(p=>p.length)){ const p=pools[i%pools.length]; if(p.length) middle.push(p.shift()); i++; }
@@ -1564,6 +1591,7 @@ function renderHome(){
     b.addEventListener('click',()=>openSubject(s.key)); c.appendChild(b);
   });
   $('#soundBtn').textContent='Sound: '+(muted?'off':'on');
+  renderFun();
 }
 function openSubject(key){
   const s=SUBJECTS.find(x=>x.key===key); state.subject=key; state.back='home';
@@ -1594,6 +1622,9 @@ function goBack(){
 function startRound(k){
   state.world=k; state.round=(k==='today'||k.indexOf('mix_')===0)?WORLDS[k].build():adaptRound(k, WORLDS[k].build()); state.idx=0; state.stars=0; state.streak=0;
   state.results=state.round.map(()=>null);
+  state.noteShown=false; state.noteNow=null;
+  if(WORLDS[k].build!==buildToday && k.indexOf('mix_')!==0 && store.get('best_'+k,null)===null && !store.get('tried',[]).includes(k)){ addBadge('inquirer'); store.set('tried', store.get('tried',[]).concat([k])); }
+  state.pendingNote=maybeNote('start',.25);
   $('#worldChip').textContent=WORLDS[k].name;
   $('#roundStars').textContent='0';
   show('play'); renderQuestion();
@@ -1605,6 +1636,8 @@ function renderDots(){
 function renderQuestion(){
   const q=state.round[state.idx];
   state.answered=false; state.typed=''; state.picked=[];
+  const pn=$('#playNote'); pn.hidden=!state.pendingNote; pn.textContent=state.pendingNote||''; state.pendingNote=null;
+  if(q.challenge && !q.accepted){ renderChallengeOffer(); return; }
   play.style.setProperty('--world', (WORLDS[q.world]||WORLDS[state.world]).color); // repeats saved by an older version may name a quest that no longer exists
   $('#qLabel').textContent=q.label+' · Question '+(state.idx+1)+' of '+state.round.length;
   $('#qPrompt').innerHTML=q.prompt;
@@ -1655,6 +1688,7 @@ function feedback(ok, q, wrongText){
   fb.innerHTML=ok
     ? `<span class="mark">${yay}${streakNote}</span>${esc(q.explain)}`
     : `<span class="mark">Not quite.</span>${wrongText}${esc(q.explain)}`;
+  if(state.noteNow){ fb.insertAdjacentHTML('beforeend', '<p class="note-banner" style="margin-top:8px">'+esc(state.noteNow)+'</p>'); state.noteNow=null; }
   $('#nextBtn').hidden=false;
   $('#nextBtn').focus({preventScroll:true});
   revealNext();
@@ -1678,6 +1712,9 @@ function score(ok){
     const j=state.idx+2;
     if(!q.retry && j<state.round.length && state.results[j]===null) state.round[j]=Object.assign(reshuffled(q),{retry:true, warmup:false});
   }
+  if(ok && levelOf(q)===3){ addBadge('thinker'); if(q.world==='combos') addBadge('openMinded'); }
+  if(q.challenge){ addBadge('riskTaker'); state.noteShown=true; state.noteNow=pick(NOTES.brave); }
+  else if(!ok) state.noteNow=maybeNote('wrong',.4);
   $('#roundStars').textContent=state.stars;
   beep(ok?'good':'bad'); renderDots();
 }
@@ -1745,8 +1782,213 @@ function showResults(){
   else { head='Nice try'+who+'!'; msg='Every game makes your brain stronger. Have another go!'; }
   if(s>best && best>0) msg+=' New best score for this quest!';
   $('#resHead').textContent=head; $('#resMsg').textContent=msg;
-  show('results'); snapshot();
+  show('results'); renderAfterRound(k); snapshot();
   if(s>=6){ beep('win'); confetti(); }
+}
+
+/* ---------- fun: school mottos, tree, badges, challenge, treats, themes, birthday ---------- */
+/* Rewards growth, courage and persistence (BIS: "grow and flourish", "take risks in a supportive culture"), never results or levels.
+   No streaks, nothing expires, no leaderboards. Messages appear now and then, at most one per round. */
+const NOTES={
+  start:['Believe. Your brain grows every time you practise.','You choose. Voice and choice!','Inspire someone: show a grown-up what you learned today.'],
+  wrong:['Mistakes help you learn. Try the next one!','Every mistake is a step. Keep going!','Thinkers try again. You can do it!'],
+  brave:['That was brave. Risk-taker!','You took the challenge. Risk-taker!'],
+  tree:['Your tree is growing, and so are you!']
+};
+const BADGES={riskTaker:'Risk-taker', thinker:'Thinker', openMinded:'Open-minded', reflective:'Reflective', principled:'Principled', balanced:'Balanced', inquirer:'Inquirer', knowledgeable:'Knowledgeable'};
+function addBadge(k){ const b=store.get('badges',{}); b[k]=(b[k]||0)+1; store.set('badges',b); }
+function maybeNote(kind, chance){ if(state.noteShown || Math.random()>=chance) return null; state.noteShown=true; return pick(NOTES[kind]); }
+
+/* practice days: any day with an answer in the app or an entered practice sheet */
+function practiceDays(){
+  const days=new Set();
+  Object.values(store.get('ev',{})).forEach(l=>l.forEach(e=>days.add(e[0])));
+  store.get('sheets',[]).forEach(s=>{ if(s.items.some(i=>i.res)) days.add(s.day); });
+  return days.size;
+}
+const TREE_AT=[0,1,3,6,10,15,25];
+const treeStage = d => TREE_AT.filter(x=>d>=x).length-1;
+function treeSVG(st){
+  const leaf=(x,y,r)=>`<ellipse cx="${x}" cy="${y}" rx="${r}" ry="${r*.62}" fill="var(--good)"/>`;
+  let s=`<rect x="34" y="70" width="28" height="18" rx="4" fill="var(--w-trip)"/><rect x="30" y="66" width="36" height="7" rx="3" fill="var(--w-trip)"/>`;
+  if(st===0) return `<svg viewBox="0 0 96 96" role="img" aria-label="A seed in a pot">${s}<ellipse cx="48" cy="64" rx="5" ry="3.5" fill="#8a5a2b"/></svg>`;
+  const h=[0,14,24,34,42,48,52][st];
+  s+=`<path d="M48 66 V${66-h}" stroke="#6b4a2b" stroke-width="${st>3?5:3}" stroke-linecap="round"/>`;
+  if(st>=1) s+=leaf(42,66-h*.55,7)+leaf(54,66-h*.7,7);
+  if(st>=3) s+=leaf(38,66-h*.85,9)+leaf(58,66-h*.9,9)+leaf(48,66-h-4,10);
+  if(st>=4) s+=`<circle cx="40" cy="${66-h-2}" r="4" fill="#ff7eb6"/><circle cx="57" cy="${66-h*.75}" r="4" fill="#ff7eb6"/>`;
+  if(st>=5) s+=leaf(30,66-h*.7,10)+leaf(66,66-h*.6,10)+leaf(48,66-h-14,12);
+  if(st>=6) s+=`<circle cx="36" cy="${66-h*.6}" r="4.5" fill="#e5484d"/><circle cx="62" cy="${66-h-6}" r="4.5" fill="#e5484d"/><circle cx="50" cy="${66-h-16}" r="4.5" fill="#e5484d"/>`;
+  return `<svg viewBox="0 0 96 96" role="img" aria-label="My learning tree">${s}</svg>`;
+}
+const TREE_TEXT=['A seed is waiting. Practise to help it grow!','A tiny sprout!','It is growing leaves.','A strong young plant.','Look, flowers!','A real little tree.','Your tree has fruit!'];
+
+/* themes and birthday */
+const md = (d=new Date()) => pad(d.getMonth()+1)+'-'+pad(d.getDate());
+function themeNow(d=new Date()){
+  const k=md(d);
+  if(k>='10-24' && k<='10-31') return 'halloween';
+  if(k>='12-01' && k<='12-23') return 'advent';
+  if(k>='12-24' && k<='12-26') return 'christmas';
+  return null;
+}
+const THEME_ICON={halloween:'🎃', advent:'🕯️', christmas:'🎄'};
+function birthdayIn(){ // days until the birthday (0 = today), or null
+  const b=store.get('birthday',null); if(!b) return null;
+  const now=new Date(); now.setHours(12,0,0,0);
+  for(const y of [now.getFullYear(), now.getFullYear()+1]){ const d=new Date(y+'-'+b+'T12:00:00'); const diff=Math.round((d-now)/864e5); if(diff>=0) return diff; }
+  return null;
+}
+
+/* jokes, mystery questions, stories */
+const JOKES=[
+  ['Why did the maths book look sad?','It had too many problems.'],['What do you call a sleeping dinosaur?','A dino-snore!'],
+  ['Why can’t a bicycle stand up by itself?','Because it is two-tired.'],['What has hands but cannot clap?','A clock.'],
+  ['Why are fish so clever?','Because they live in schools.'],['What did one wall say to the other wall?','I’ll meet you at the corner!'],
+  ['How do you make an octopus laugh?','With ten-tickles!'],['What did the ocean say to the beach?','Nothing, it just waved.'],
+  ['Why did the cookie go to the doctor?','Because it felt crummy.'],['What do you call a bear with no teeth?','A gummy bear!'],
+  ['Was ist grün und klopft an die Tür?','Ein Klopfsalat!'],['Was macht ein Pirat am Computer?','Er drückt die Enter-Taste.'],
+  ['Warum können Geister so schlecht lügen?','Weil man durch sie hindurchsieht.'],['Was sagt die Null zur Acht?','Schicker Gürtel!']
+];
+const THEME_JOKES={
+  halloween:[['What is a ghost’s favourite food?','Spook-hetti!'],['What do you call a witch at the beach?','A sand-witch!'],['What room does a ghost not need?','A living room.'],['Was essen Gespenster am liebsten?','Spukhetti!']],
+  advent:[['What do snowmen eat for breakfast?','Snowflakes!'],['What do elves learn at school?','The elf-abet.'],['Wie nennt man einen Schneemann im Sommer?','Eine Pfütze.'],['Why was the snowman looking through the carrots?','He was picking his nose!']],
+  christmas:[['What do you call a reindeer with no eyes?','No idea! (No-eye-deer)'],['Was ist weiß und hüpft durch den Wald?','Ein Schneehase.']]
+};
+const MYSTERY=[
+  ['I am a number between 30 and 40. Rounded to the nearest ten I am 40. My ones digit is 7. Who am I?','37',['34','47','33']],
+  ['What has a neck but no head?','A bottle',['A snake','A pencil','A spoon']],
+  ['What gets wetter the more it dries?','A towel',['The sun','Sand','A biscuit']],
+  ['Which is heavier: 1 kg of feathers or 1 kg of stones?','They weigh the same',['The stones','The feathers','Nobody knows']],
+  ['A snail climbs up 3 cm every day and slides down 1 cm every night. How high is it after 2 days and 2 nights?','4 cm',['6 cm','2 cm','5 cm']],
+  ['I have keys but I open no locks. What am I?','A piano',['A door','A car','A treasure chest']],
+  ['On which surface would a sledge slide the farthest?','Ice',['Grass','Sand','Carpet']],
+  ['What comes once in a minute, twice in a moment, but never in a thousand years?','The letter M',['A second','A blink','A star']],
+  ['Round 449 to the nearest hundred.','400',['500','450','440']],
+  ['What has many teeth but cannot bite?','A comb',['A shark','A zip','A saw']],
+  ['Tom has 3 sisters. Each sister has 1 brother. How many children are in the family?','4',['6','5','7']],
+  ['What can you catch but not throw?','A cold',['A ball','A fish','A bus']],
+  ['Which number comes next? 250, 500, 750, …','1,000',['800','900','1,250']],
+  ['What goes up but never comes down?','Your age',['A balloon','A kite','A ball']]
+];
+const THEME_MYSTERY={
+  halloween:[['38 pumpkins sit on the fence. About how many is that, to the nearest ten?','40',['30','35','50']],['A friendly ghost has 3 sheets. Each sheet needs 2 eye holes. How many holes?','6',['5','3','8']]],
+  advent:[['There are 24 doors in an Advent calendar. You opened 9. How many are left?','15',['13','16','14']],['A snowman is 120 cm tall. Is that more or less than 1 m?','More',['Less','The same','Nobody can tell']]]
+};
+const dayNo = (d=new Date()) => Math.floor(new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime()/864e5);
+function mysteryOfDay(d=new Date()){
+  const th=themeNow(d), pool=(th && THEME_MYSTERY[th]) ? THEME_MYSTERY[th].concat(MYSTERY) : MYSTERY;
+  return pool[dayNo(d)%pool.length];
+}
+const jokePool = () => { const th=themeNow(); return (th && THEME_JOKES[th]) ? THEME_JOKES[th].concat(THEME_JOKES[th], JOKES) : JOKES; };
+
+/* Pisolala: a family character. Never shown, never described – only what happens around Pisolala.
+   New stories go in only after a grown-up approved them (approved:true). Excitement: 1 cozy, 2 a bit exciting, 3 adventurous. */
+const STORIES=[
+  {id:'halloween-2026', title:'Pisolala und die kichernden Kürbisse', approved:false, levels:{
+    1:'Am Halloween-Abend wehte ein warmer, kleiner Wind durch den Garten. Er roch nach Kakao und Zimt – so riecht es immer, wenn Pisolala in der Nähe ist. Sehen kann Pisolala niemand. Aber wer genau hinhört, hört ein leises Kichern zwischen den Blättern.\n\nNofretete wartete schon in ihrem Kürbiskostüm, und Hoppel, der Kuschelhase, trug eine winzige Laterne.\n\n„Süßes oder Witz?“, flüsterte der Wind an der ersten Tür. Die Nachbarin lachte: „Einen Witz, bitte!“ Da raschelte es: „Was essen Gespenster am liebsten? Spukhetti!“\n\nAm Zaun standen kleine Kürbisse. Nofretete zählte: „… 36, 37, 38!“ Der Wind summte: „Ungefähr 40!“ Denn 38 liegt näher an 40 als an 30.\n\nZu Hause gab es Kakao. Nofretete schlief mit Hoppel im Arm ein, und draußen summte ein leises Windlied. „Gute Nacht, Pisolala.“ Und irgendwo kicherte es: „Gute Nacht.“',
+    2:'Am Halloween-Abend wehte ein warmer, kleiner Wind durch den Garten. Er roch nach Kakao und Zimt – so riecht es immer, wenn Pisolala in der Nähe ist. Sehen kann Pisolala niemand. Aber wer genau hinhört, hört ein leises Kichern zwischen den Blättern.\n\nNofretete wartete in ihrem Kürbiskostüm, und Hoppel trug eine winzige Laterne. „Süßes oder Witz?“, flüsterte der Wind an der ersten Tür. „Was essen Gespenster am liebsten? Spukhetti!“ Die Nachbarin lachte laut.\n\nDann wurde der Weg dunkel. Hinter dem Zaun knarrte etwas. Ein langer Schatten huschte über die Steine. Nofretete blieb stehen. „Ich hab ein bisschen Angst.“ Da wurde es neben ihr ganz warm. „Atme tief ein“, flüsterte es, „und stell dir die kleine Laterne in deinem Herzen vor.“\n\nNofretete atmete ein und aus. Hoppels Laterne leuchtete heller – und der Schatten war … eine Katze mit einem Kürbishut! Sie miaute und lief davon. Alle mussten lachen.\n\nZu Hause gab es Kakao. „Gute Nacht, Pisolala.“ Und irgendwo kicherte es: „Gute Nacht.“'
+  }}
+];
+const EXCITE={1:'🌙 cozy', 2:'⭐ a bit exciting', 3:'⚡ adventurous'};
+const storiesNow = () => STORIES.filter(s=>s.approved);
+
+/* home: theme icon, birthday, advent calendar, tree and badges */
+function renderFun(){
+  const th=themeNow(); $('#themeIcon').textContent=th?THEME_ICON[th]:'';
+  const note=$('#homeNote'); note.hidden=true;
+  const bd=birthdayIn();
+  if(bd!==null && bd<=2){
+    note.hidden=false;
+    note.textContent=bd===0?`🎂 Happy birthday${store.get('name','')?', '+store.get('name',''):''}! Believe. Inspire. Succeed.`:`🎂 Your birthday is coming in ${bd} day${bd>1?'s':''}!`;
+    if(bd===0 && store.get('bdayParty','')!==dayKey()){ store.set('bdayParty',dayKey()); setTimeout(confetti,300); }
+  }
+  const days=practiceDays(), st=treeStage(days);
+  if(st>store.get('treeStage',0)){ store.set('treeStage',st); if(note.hidden){ note.hidden=false; note.textContent='🌱 '+NOTES.tree[0]; } }
+  $('#tree').innerHTML=treeSVG(st);
+  $('#treeText').textContent=TREE_TEXT[st];
+  const b=store.get('badges',{}); b.knowledgeable=Math.floor(days/10);
+  $('#badges').innerHTML=Object.keys(BADGES).filter(k=>b[k]>0).map(k=>`<span class="badge-chip ${b[k]>=15?'gold':b[k]>=5?'silver':''}">${BADGES[k]}${b[k]>1?' ×'+b[k]:''}</span>`).join('');
+  renderAdvent();
+}
+function renderAdvent(){
+  const box=$('#advent'), d=new Date(), th=themeNow(d);
+  if(th!=='advent' && !(th==='christmas' && d.getDate()===24)){ box.hidden=true; return; }
+  box.hidden=false;
+  const key='advent'+d.getFullYear(), opened=store.get(key,[]);
+  box.innerHTML=`<div class="eyebrow">Advent calendar</div><div class="doors">${Array.from({length:24},(_,i)=>i+1).map(n=>`<button type="button" class="door${opened.includes(n)?' open':''}" data-door="${n}"${n>d.getDate()?' disabled':''}>${opened.includes(n)?'✓':n}</button>`).join('')}</div><div id="doorBody"></div>`;
+  box.querySelectorAll('.door').forEach(b=>b.addEventListener('click',()=>openDoor(+b.dataset.door)));
+}
+function openDoor(n){
+  const key='advent'+new Date().getFullYear(), opened=store.get(key,[]), body=$('#doorBody');
+  const treat=()=>{ const j=THEME_JOKES.advent.concat(JOKES)[(n*7)%(THEME_JOKES.advent.length+JOKES.length)]; return `<div class="story"><b>Door ${n}</b>\n${esc(j[0])}\n<i>${esc(j[1])}</i></div>`; };
+  if(opened.includes(n)){ body.innerHTML=treat(); return; }
+  const pool=THEME_MYSTERY.advent.concat(MYSTERY), m=pool[n%pool.length], opts=shuffle([m[1]].concat(m[2]));
+  body.innerHTML=`<p><b>Door ${n}:</b> ${esc(m[0])}</p><div class="row">${opts.map(o=>`<button type="button" class="btn small" data-a="${esc(o)}">${esc(o)}</button>`).join('')}</div>`;
+  body.querySelectorAll('button[data-a]').forEach(b=>b.addEventListener('click',()=>{
+    const ok=b.dataset.a===m[1]; opened.push(n); store.set(key,opened); beep(ok?'good':'bad');
+    renderAdvent(); $('#doorBody').innerHTML=`<p>${ok?'Yes!':'Good try! It is '+esc(m[1])+'.'}</p>`+treat();
+  }));
+}
+function birthdayForm(){
+  const note=$('#homeNote'), b=(store.get('birthday','')||'-').split('-');
+  const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  note.hidden=false;
+  note.innerHTML=`<div class="bday">🎂 My birthday: <select id="bdDay" aria-label="Day">${Array.from({length:31},(_,i)=>`<option value="${pad(i+1)}"${pad(i+1)===b[1]?' selected':''}>${i+1}</option>`).join('')}</select><select id="bdMonth" aria-label="Month">${months.map((m,i)=>`<option value="${pad(i+1)}"${pad(i+1)===b[0]?' selected':''}>${m}</option>`).join('')}</select><button class="btn small primary" id="bdSave" type="button">Save</button></div>`;
+  $('#bdSave').addEventListener('click',()=>{ store.set('birthday',$('#bdMonth').value+'-'+$('#bdDay').value); renderHome(); });
+}
+
+/* challenge offer (Practise Today, last question) */
+function renderChallengeOffer(){
+  $('#qLabel').textContent='Challenge';
+  $('#qPrompt').textContent='Ready for a challenge? You choose!';
+  $('#qVisual').hidden=true; $('#feedback').hidden=true; $('#nextBtn').hidden=true;
+  const A=$('#qAnswers'); A.className='answers';
+  A.innerHTML='<button class="btn primary" id="takeChallenge" type="button">⚡ Take the challenge</button><button class="btn" id="skipChallenge" type="button">Not today</button>';
+  $('#takeChallenge').addEventListener('click',()=>{ state.round[state.idx].accepted=true; renderQuestion(); });
+  $('#skipChallenge').addEventListener('click',()=>{ state.round=state.round.slice(0,state.idx); state.results=state.results.slice(0,state.idx); showResults(); });
+  renderDots(); snapshot();
+}
+
+/* after a round: reflection (Practise Today), an idea without a screen now and then, and a treat of choice */
+const OFFLINE=['Measure three things at home in cm. Write the unit!','Read one page of a book aloud to someone.','Find 5 things that are heavier than 1 kg.','Explain one thing you learned today to a grown-up.','Go outside: which surfaces would a toy car roll farthest on?'];
+function renderAfterRound(k){
+  const r=$('#reflect'); r.hidden=true; r.innerHTML='';
+  if(k==='today' && state.round.length){
+    const names=[...new Set(state.round.map(q=>WORLDS[q.world]&&WORLDS[q.world].name).filter(Boolean))].slice(0,3);
+    r.hidden=false;
+    r.innerHTML=`<p><b>What was your Glow today?</b></p><div class="row">${names.map(n=>`<button type="button" class="btn small" data-glow="${esc(n)}">${esc(n)}</button>`).join('')}</div>`;
+    r.querySelectorAll('[data-glow]').forEach(b=>b.addEventListener('click',()=>{ addBadge('reflective'); r.innerHTML='<p>🌟 Glow noted. Reflective!</p>'; }));
+  } else if(Math.random()<.25){
+    r.hidden=false;
+    r.innerHTML=`<p><b>Idea without a screen:</b> ${esc(pick(OFFLINE))}</p><div class="row"><button type="button" class="btn small" id="didIt">I did it!</button></div>`;
+    $('#didIt').addEventListener('click',()=>{ addBadge('balanced'); r.innerHTML='<p>Balanced! 🌿</p>'; });
+  }
+  const t=$('#treat');
+  const choices=[['joke','😄 Joke'],['mystery','🔍 Mystery Question']].concat(storiesNow().length?[['story','🌙 Pisolala']]:[]);
+  t.innerHTML=`<p><b>Choose your treat</b></p><div class="row">${choices.map(c=>`<button type="button" class="btn small" data-treat="${c[0]}">${c[1]}</button>`).join('')}</div><div id="treatBody"></div>`;
+  t.querySelectorAll('[data-treat]').forEach(b=>b.addEventListener('click',()=>showTreat(b.dataset.treat)));
+}
+function showTreat(kind){
+  const body=$('#treatBody');
+  if(kind==='joke'){
+    const j=pick(jokePool());
+    body.innerHTML=`<div class="story">${esc(j[0])}</div><button class="btn small" id="jokeAnswer" type="button">Show the answer</button>`;
+    $('#jokeAnswer').addEventListener('click',()=>{ $('#jokeAnswer').outerHTML=`<div class="story"><i>${esc(j[1])}</i></div>`; });
+  } else if(kind==='mystery'){
+    const m=mysteryOfDay(), done=store.get('mysteryDone','')===dayKey();
+    const opts=shuffle([m[1]].concat(m[2]));
+    body.innerHTML=`<div class="story">${esc(m[0])}</div>`+(done?`<p>You solved today’s Mystery Question: <b>${esc(m[1])}</b>. A new one comes tomorrow!</p>`:`<div class="row">${opts.map(o=>`<button type="button" class="btn small" data-m="${esc(o)}">${esc(o)}</button>`).join('')}</div>`);
+    body.querySelectorAll('[data-m]').forEach(b=>b.addEventListener('click',()=>{
+      const ok=b.dataset.m===m[1]; store.set('mysteryDone',dayKey()); beep(ok?'good':'bad');
+      body.innerHTML+=`<p>${ok?'Yes! Brilliant thinking.':'Good try! The answer is <b>'+esc(m[1])+'</b>.'} A new Mystery Question comes tomorrow.</p>`;
+      body.querySelectorAll('[data-m]').forEach(x=>x.disabled=true);
+    }));
+  } else {
+    const cap=store.get('storyCap',2), list=storiesNow();
+    body.innerHTML=list.map(s=>`<p><b>${esc(s.title)}</b></p><div class="row">${Object.keys(s.levels).map(Number).filter(l=>l<=cap).map(l=>`<button type="button" class="btn small" data-story="${s.id}" data-l="${l}">${EXCITE[l]}</button>`).join('')}</div>`).join('')+'<div id="storyText"></div>';
+    body.querySelectorAll('[data-story]').forEach(b=>b.addEventListener('click',()=>{ const s=STORIES.find(x=>x.id===b.dataset.story); $('#storyText').innerHTML=`<div class="story">${esc(s.levels[b.dataset.l])}</div>`; }));
+  }
 }
 
 /* ---------- practice sheets (paper) ---------- */
@@ -1815,13 +2057,16 @@ function enterResult(sheetId, idx, res){
   else { recordAnswer(q,false); rememberWrong(q); }
   renderSheets();
 }
+const storyCapHTML = () => '<h2>Settings</h2><p><label for="storyCap"><b>Pisolala stories may be up to:</b></label> <select id="storyCap">'+[1,2,3].map(l=>'<option value="'+l+'"'+(store.get('storyCap',2)===l?' selected':'')+'>'+EXCITE[l]+'</option>').join('')+'</select></p><p class="small">The child chooses how exciting a story should be, up to this limit. Every level stays kind: no horror, nobody gets hurt, all ends well.</p>';
+function bindStoryCap(){ const sc=$('#storyCap'); if(sc) sc.addEventListener('change',()=>store.set('storyCap',+sc.value)); }
 function renderSheets(){
   const all=store.get('sheets',[]).slice().reverse();
   const body=$('#aboutBody');
-  if(!all.length){ body.innerHTML='<h2>Practice sheets</h2><p>No sheet printed yet. Use “Print a practice sheet” on the start page.</p>'; return; }
-  body.innerHTML='<h2>Practice sheets</h2><p class="small">Tick each task once. “With help” and “Not yet” are fine – the app then offers easier steps and repeats the task later. Nothing of this is shown to the child.</p>'+
+  if(!all.length){ body.innerHTML=storyCapHTML()+'<h2>Practice sheets</h2><p>No sheet printed yet. Use “Print a practice sheet” on the start page.</p>'; bindStoryCap(); return; }
+  body.innerHTML=storyCapHTML()+'<h2>Practice sheets</h2><p class="small">Tick each task once. “With help” and “Not yet” are fine – the app then offers easier steps and repeats the task later. Nothing of this is shown to the child.</p>'+
     all.map(sh=>`<h3>Sheet of ${sh.day}</h3>`+sh.items.map((it,i)=>`<div class="sheetrow"><div class="q"><b>${i+1}.</b> ${esc(strip(it.q.prompt).slice(0,140))}</div><div class="row">${Object.keys(RES).map(r=>`<button type="button" class="btn small${it.res===r?' on':''}" data-sheet="${sh.id}" data-i="${i}" data-res="${r}"${it.res?' disabled':''}>${RES[r]}</button>`).join('')}</div></div>`).join('')).join('');
   body.querySelectorAll('button[data-res]').forEach(b=>b.addEventListener('click',()=>enterResult(b.dataset.sheet, +b.dataset.i, b.dataset.res)));
+  bindStoryCap();
 }
 
 /* ---------- about ---------- */
@@ -1965,6 +2210,7 @@ $('#againBtn').addEventListener('click',()=>startRound(state.world));
 $('#homeBtn').addEventListener('click',goBack);
 $('#sheetBtn').addEventListener('click',printSheet);
 $('#aboutBtn').addEventListener('click',()=>openAbout());
+$('#bdayBtn').addEventListener('click',birthdayForm);
 $('#aboutBack').addEventListener('click',()=>{ state.back='home'; goBack(); });
 $('#tabDe').addEventListener('click',()=>openAbout('de'));
 $('#tabEn').addEventListener('click',()=>openAbout('en'));
