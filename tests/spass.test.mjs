@@ -25,13 +25,20 @@ async function rundeSpielen(page, falsch = false) {
   }
 }
 
-test('nach einer Runde: Leckerli waehlen – Witz mit Aufloesung, Mystery Question einmal am Tag; Pisolala erst nach Freigabe', async () => {
+test('nach einer Runde: Leckerli waehlen – Witz mit Aufloesung, Mystery Question einmal am Tag, freigegebene Pisolala-Geschichte', async () => {
   const { ctx, page, fehler } = await app();
   await karteOeffnen(page, (await alleKarten(page)).find((k) => k.item === 'numbers'));
   await rundeSpielen(page);
   assert.ok(await page.isVisible('#results'));
   const knoepfe = await page.$$eval('#treat [data-treat]', (b) => b.map((x) => x.dataset.treat));
-  assert.deepEqual(knoepfe, ['joke', 'mystery'], 'ohne freigegebene Geschichte kein Pisolala-Knopf');
+  // Pisolala-Knopf nur, wenn eine Geschichte freigegeben ist (approved:true); Spannung bis zur Obergrenze (Voreinstellung 2)
+  assert.deepEqual(knoepfe, ['joke', 'mystery', 'story']);
+  await klick(page, '#treat [data-treat="story"]');
+  assert.deepEqual(await page.$$eval('#treatBody [data-story]', (b) => b.map((x) => x.dataset.l)), ['1', '2']);
+  await klick(page, '#treatBody [data-story][data-l="1"]');
+  const geschichte = await page.textContent('#storyText');
+  assert.ok(geschichte.includes('Pisolala'));
+  for (const w of ['Ohren', 'Augen', 'Fell', 'groß wie', 'aussah']) assert.ok(!geschichte.includes(w), 'Pisolala bleibt unsichtbar: ' + w);
   await klick(page, '#treat [data-treat="joke"]');
   await klick(page, '#jokeAnswer');
   assert.equal(await page.$$eval('#treatBody .story', (s) => s.length), 2, 'Frage und Aufloesung');
