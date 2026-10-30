@@ -17,6 +17,7 @@ import { chromium } from 'playwright';
 import { distBauen, quellenLesen, oeffentlichPruefen } from '../werkzeug/bauen.mjs';
 import { ohneTresor } from '../werkzeug/kern.mjs';
 import { TEST_PW } from './hilfen.mjs';
+import { elternOeffnen } from './app-hilfen.mjs';
 const PFAD = '/bis-school-app/';
 const SCHLUESSEL = 'bq_schluessel';
 const MIME = { '.html': 'text/html; charset=utf-8', '.webmanifest': 'application/manifest+json', '.png': 'image/png' };
@@ -186,4 +187,17 @@ test('gemerkter Schluessel passt nicht mehr (neues Passwort): vergessen und neu 
   await page.waitForSelector('#maske:not([hidden])');
   assert.deepEqual(fehler, [], 'kaputter Speicherwert darf keinen Fehler werfen');
   await ctx.close();
+});
+
+test('auto-login removes login CSS: long About and parent PIN stay reachable with real clicks',async()=>{
+  const {ctx,page,fehler}=await geraet();
+  await page.goto(basis);await anmelden(page,TEST_PW);await page.waitForSelector('#home h1');
+  await page.reload();await page.waitForSelector('#home h1');
+  assert.equal(await page.evaluate(()=>getComputedStyle(document.body).display),'block','login centering cannot persist');
+  assert.equal(await page.locator('#loginStyles').count(),0);
+  await elternOeffnen(page);
+  assert.ok(await page.isVisible('#focusForm'));
+  const box=await page.locator('#aboutBody').boundingBox();
+  assert.ok(box.y>=0,'long page is not centred into negative coordinates');
+  assert.deepEqual(fehler,[]);await ctx.close();
 });
