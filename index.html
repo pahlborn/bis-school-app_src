@@ -93,8 +93,20 @@ button{font:inherit;color:inherit}
 .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:.88rem}
 /* start page: name and stars in one row, Practise Today, subject tiles */
 .me{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:end}
-.me .field{gap:2px}
-.me .field input{padding:8px 12px;font-size:1rem;min-height:44px}
+.profile-btn{justify-content:flex-start;min-width:0;overflow:hidden;font-size:1rem}
+.profile-btn #profileName{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.profile-dlg{border:0;border-radius:22px;padding:18px;width:min(420px,calc(100vw - 24px));max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);overflow:auto;background:var(--surface);color:var(--ink);box-shadow:0 10px 40px rgba(15,22,38,.35)}
+.profile-dlg::backdrop{background:rgba(15,22,38,.45)}
+.profile-dlg form{display:flex;flex-direction:column;gap:12px}
+.pf-set{border:0;padding:0;margin:0;min-width:0}
+.pf-set legend{font-family:var(--display);font-weight:600;margin-bottom:6px;padding:0}
+.pf-bday{display:flex;gap:8px}
+.pf-bday select{font:inherit;font-size:1rem;min-height:44px;min-width:0;flex:1;border-radius:12px;border:2px solid var(--line);background:var(--surface);color:var(--ink);padding:6px 8px}
+.pf-emojis{display:grid;grid-template-columns:repeat(4,minmax(44px,1fr));gap:6px}
+@media (min-width:380px){.pf-emojis{grid-template-columns:repeat(6,minmax(44px,1fr))}}
+.pf-emojis button{min-height:44px;min-width:44px;font-size:1.4rem;border-radius:12px;border:2px solid var(--line);background:var(--surface);cursor:pointer;padding:0}
+.pf-emojis button[aria-pressed="true"]{border-color:var(--accent);background:var(--soft);box-shadow:inset 0 0 0 2px var(--accent)}
+.profile-dlg .row > .btn{flex:1 1 100px}
 .chipstat{display:flex;align-items:center;gap:6px;background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:6px 12px;font-family:var(--display);font-weight:600;white-space:nowrap;min-height:44px;font-variant-numeric:tabular-nums}
 .chipstat svg{width:20px;height:20px;fill:var(--sun)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
@@ -288,13 +300,11 @@ button{font:inherit;color:inherit}
       <div class="motto">Believe. Inspire. Succeed. <span id="themeIcon" aria-hidden="true"></span></div>
     </div>
     <div class="me">
-      <div class="field">
-        <label for="playerName" class="sr">Your name</label>
-        <input id="playerName" type="text" maxlength="20" placeholder="Your name" autocomplete="off">
-      </div>
+      <button class="btn small profile-btn" id="profileBtn" type="button" aria-haspopup="dialog"><span id="profileEmoji" aria-hidden="true">👤</span><span id="profileName">My profile</span></button>
       <div class="chipstat" title="Stars collected"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7.1L12 17.3 5.7 21l1.7-7.1L2 9.2l7.1-.6z"/></svg><span id="totalStars">0</span><span class="sr">stars</span></div>
       <div class="chipstat" id="rank">Explorer</div>
     </div>
+    <div id="savedNote" class="note-banner" role="status" hidden>Saved ✓</div>
     <button class="today" id="todayBtn" type="button"><span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7.1L12 17.3 5.7 21l1.7-7.1L2 9.2l7.1-.6z"/></svg></span><span><span class="name">Practise Today</span><br><span class="sub" id="todaySub">8 questions from your focus topics</span></span></button>
     <div id="homeNote" class="note-banner" hidden></div>
     <div id="advent" class="advent" hidden></div>
@@ -304,12 +314,26 @@ button{font:inherit;color:inherit}
     <div class="foot">
       <span>Topics from class, updated 30 October.</span>
       <span class="row" style="flex:0 0 auto">
-        <button class="btn small" id="bdayBtn" type="button" aria-label="My birthday">🎂</button>
         <button class="btn small" id="aboutBtn" type="button">About &amp; grown-ups</button>
         <button class="btn small" id="soundBtn" type="button">Sound: on</button>
       </span>
     </div>
   </section>
+
+  <!-- MY PROFILE: all personal details of the child in one place, stored on this device only -->
+  <dialog id="profileDlg" class="profile-dlg" aria-labelledby="profileTitle">
+    <form id="profileForm" method="dialog">
+      <h2 id="profileTitle">My profile</h2>
+      <div class="field"><label for="pfName">Your name or nickname</label><input id="pfName" type="text" maxlength="20" autocomplete="off"></div>
+      <fieldset class="pf-set"><legend>Your birthday</legend>
+        <div class="pf-bday"><select id="pfDay" aria-label="Day"></select><select id="pfMonth" aria-label="Month"></select></div>
+      </fieldset>
+      <fieldset class="pf-set"><legend>Pick your emoji</legend><div id="pfEmojis" class="pf-emojis"></div></fieldset>
+      <p class="small">This stays on this device.</p>
+      <p id="pfMessage" class="small" role="status"></p>
+      <div class="row"><button class="btn" id="pfClose" type="button">Close</button><button class="btn primary" id="pfSave" type="submit">Save</button></div>
+    </form>
+  </dialog>
 
   <!-- ABOUT & GROWN-UPS -->
   <section id="about" class="screen" hidden>
@@ -1730,7 +1754,7 @@ function show(name){
   confettiRun++; // stop confetti that is still falling from the last screen
   window.scrollTo(0,0);
 }
-function playerName(){ return ($('#playerName').value||'').trim(); }
+function playerName(){ return String(store.get('name','')||'').trim(); }
 /* One card for a quest or studio. back: where Back and "Choose a quest" return to. */
 function questCard(item, back){
   const isStudio=item.indexOf('studio:')===0, k=isStudio?item.slice(7):item, d=isStudio?STUDIOS[k]:WORLDS[k];
@@ -1746,7 +1770,7 @@ function questCard(item, back){
 function renderHome(){
   const total=store.get('total',0);
   $('#totalStars').textContent=total; $('#rank').textContent=rankFor(total);
-  $('#playerName').value=store.get('name','');
+  renderProfileBtn();
   const c=$('#subjects'); c.innerHTML='';
   SUBJECTS.forEach(s=>{
     const n=s.items.filter(k=>focusTopics().includes(k)).length;
@@ -2163,12 +2187,56 @@ function openDoor(n){
     renderAdvent(); $('#doorBody').innerHTML=`<p>${ok?'Yes!':'Good try! It is '+esc(m[1])+'.'}</p>`+treat();
   }));
 }
-function birthdayForm(){
-  const note=$('#homeNote'), b=(store.get('birthday','')||'-').split('-');
-  const months=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  note.hidden=false;
-  note.innerHTML=`<div class="bday">🎂 My birthday: <select id="bdDay" aria-label="Day">${Array.from({length:31},(_,i)=>`<option value="${pad(i+1)}"${pad(i+1)===b[1]?' selected':''}>${i+1}</option>`).join('')}</select><select id="bdMonth" aria-label="Month">${months.map((m,i)=>`<option value="${pad(i+1)}"${pad(i+1)===b[0]?' selected':''}>${m}</option>`).join('')}</select><button class="btn small primary" id="bdSave" type="button">Save</button></div>`;
-  $('#bdSave').addEventListener('click',()=>{ store.set('birthday',$('#bdMonth').value+'-'+$('#bdDay').value); renderHome(); });
+/* My profile: name, birthday (day + month, no year) and an emoji in one dialog.
+   Stored only on this device; formats of bq2_name and bq2_birthday ('MM-DD') are unchanged. */
+const PROFILE_EMOJIS=['🦊','🐼','🦁','🐬','🦉','🐢','🦄','🐉','🌻','🌈','🚀','🪐'];
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+let savedTimer=null;
+function renderProfileBtn(){
+  const n=playerName(), e=store.get('emoji','');
+  $('#profileEmoji').textContent=PROFILE_EMOJIS.includes(e)?e:'👤';
+  $('#profileName').textContent=n||'My profile';
+  $('#profileBtn').setAttribute('aria-label','My profile'+(n?': '+n:''));
+}
+function openProfile(){
+  const b=(store.get('birthday','')||'-').split('-'), e=store.get('emoji','');
+  $('#pfName').value=playerName();
+  $('#pfDay').innerHTML='<option value="">—</option>'+Array.from({length:31},(_,i)=>`<option value="${pad(i+1)}"${pad(i+1)===b[1]?' selected':''}>${i+1}</option>`).join('');
+  $('#pfMonth').innerHTML='<option value="">—</option>'+MONTHS.map((m,i)=>`<option value="${pad(i+1)}"${pad(i+1)===b[0]?' selected':''}>${m}</option>`).join('');
+  const box=$('#pfEmojis'); box.innerHTML='';
+  PROFILE_EMOJIS.forEach(x=>{ const btn=document.createElement('button'); btn.type='button'; btn.textContent=x; btn.setAttribute('aria-pressed',String(x===e)); btn.setAttribute('aria-label','Emoji '+x);
+    btn.addEventListener('click',()=>box.querySelectorAll('button').forEach(o=>o.setAttribute('aria-pressed',String(o===btn && o.getAttribute('aria-pressed')!=='true')))); box.appendChild(btn); });
+  $('#pfMessage').textContent='';
+  hideSaved();
+  const dlg=$('#profileDlg'); if(dlg.showModal) dlg.showModal(); else dlg.setAttribute('open','');
+  $('#pfName').focus();
+}
+function closeProfile(){ const dlg=$('#profileDlg'); if(dlg.close) dlg.close(); else dlg.removeAttribute('open'); }
+function saveProfile(){
+  const d=$('#pfDay').value, m=$('#pfMonth').value;
+  if((d&&!m)||(!d&&m)){ $('#pfMessage').textContent='Please choose a day and a month – or neither.'; return; }
+  if(d && new Date(2024,+m-1,+d).getMonth()!==+m-1){ $('#pfMessage').textContent='That day does not exist in '+MONTHS[+m-1]+'. Please choose another day.'; return; }
+  const name=$('#pfName').value.trim().slice(0,20);
+  if(name!==playerName()) store.set('name',name);
+  const bd=d?m+'-'+d:null;
+  if(bd!==store.get('birthday',null)){ if(bd) store.set('birthday',bd); else { try{ localStorage.removeItem('bq2_birthday'); }catch(e){} } }
+  const pick=$('#pfEmojis button[aria-pressed="true"]'), emoji=pick?pick.textContent:'';
+  if(emoji!==store.get('emoji','')){ if(emoji) store.set('emoji',emoji); else { try{ localStorage.removeItem('bq2_emoji'); }catch(e){} } }
+  closeProfile(); renderHome();
+  const s=$('#savedNote'); s.hidden=false;
+  if(savedTimer) clearTimeout(savedTimer); savedTimer=setTimeout(hideSaved,4000);
+}
+function hideSaved(){ if(savedTimer) clearTimeout(savedTimer); savedTimer=null; const s=$('#savedNote'); if(s) s.hidden=true; }
+/* Adults (parent area): see and delete the child's profile details; learning data stays. */
+function profileAdminHTML(){
+  const n=playerName(), b=store.get('birthday',''), e=store.get('emoji','');
+  const bd=b?b.split('-').reverse().join('.')+'.':'–';
+  return `<h2>Profilangaben / Profile details</h2><p>Name: <b>${esc(n||'–')}</b> · Geburtstag: <b>${esc(bd)}</b> · Emoji: <b>${esc(e||'–')}</b></p><p class="small">Nur auf diesem Gerät gespeichert. Löschen entfernt nur diese Angaben, keine Lerndaten.</p><p><button class="btn small" id="profileDelete" type="button">Angaben löschen / Delete details</button></p>`;
+}
+function bindProfileAdmin(){
+  const b=$('#profileDelete'); if(!b) return;
+  b.addEventListener('click',()=>{ if(!parentAccess) return; if(!confirm('Name, Geburtstag und Emoji auf diesem Gerät löschen? Lerndaten bleiben.')) return;
+    ['name','birthday','emoji'].forEach(k=>{ try{ localStorage.removeItem('bq2_'+k); }catch(e){} }); renderHome(); renderSheets(); });
 }
 
 /* challenge offer (Practise Today, last question) */
@@ -2298,8 +2366,8 @@ function renderSheets(){
   if(!parentAccess){ renderParentGate(); return; }
   const all=store.get('sheets',[]).slice().reverse();
   const body=$('#aboutBody');
-  if(!all.length){ body.innerHTML=parentHeaderHTML()+parentOverviewHTML()+focusSettingsHTML()+reminderHTML()+storyCapHTML()+parentGuidanceHTML()+'<h2>Practice sheets</h2><p>No sheet printed yet. Use “Print a practice sheet” on the start page.</p>'; bindParentSettings(); return; }
-  body.innerHTML=parentHeaderHTML()+parentOverviewHTML()+focusSettingsHTML()+reminderHTML()+storyCapHTML()+parentGuidanceHTML()+'<h2>Practice sheets</h2><p class="small">Tick each task once. “With help” and “Not yet” are fine – the app then offers easier steps and repeats the task later. Nothing of this is shown to the child.</p>'+
+  if(!all.length){ body.innerHTML=parentHeaderHTML()+parentOverviewHTML()+focusSettingsHTML()+reminderHTML()+storyCapHTML()+profileAdminHTML()+parentGuidanceHTML()+'<h2>Practice sheets</h2><p>No sheet printed yet. Use “Print a practice sheet” on the start page.</p>'; bindParentSettings(); return; }
+  body.innerHTML=parentHeaderHTML()+parentOverviewHTML()+focusSettingsHTML()+reminderHTML()+storyCapHTML()+profileAdminHTML()+parentGuidanceHTML()+'<h2>Practice sheets</h2><p class="small">Tick each task once. “With help” and “Not yet” are fine – the app then offers easier steps and repeats the task later. Nothing of this is shown to the child.</p>'+
     all.map(sh=>`<h3>Sheet of ${sh.day}</h3>`+sh.items.map((it,i)=>`<div class="sheetrow"><div class="q"><b>${i+1}.</b> ${esc(strip(sheetPrompt(it.q)).slice(0,140))}</div><div class="row">${Object.keys(RES).map(r=>`<button type="button" class="btn small${it.res===r?' on':''}" data-sheet="${sh.id}" data-i="${i}" data-res="${r}"${it.res?' disabled':''}>${RES[r]}</button>`).join('')}</div></div>`).join('')).join('');
   body.querySelectorAll('button[data-res]').forEach(b=>b.addEventListener('click',()=>enterResult(b.dataset.sheet, +b.dataset.i, b.dataset.res)));
   bindParentSettings();
@@ -2412,7 +2480,7 @@ function calendarText(days,time,text,now=new Date()){
   }).join('\r\n')+'\r\n';
 }
 function bindParentSettings(){
-  bindStoryCap();
+  bindStoryCap(); bindProfileAdmin();
   $('#parentClose').addEventListener('click',()=>{parentLock();renderParentGate();});
   $('#focusForm').addEventListener('submit',e=>{
     e.preventDefault();if(!parentAccess) return;
@@ -2643,7 +2711,10 @@ function confetti(){
 function snapshot(){ try{ const hot=window.claude&&window.claude.hot; hot&&hot.snapshot&&hot.snapshot(()=>state); }catch(e){} }
 
 /* ---------- wiring ---------- */
-$('#playerName').addEventListener('input',e=>store.set('name',e.target.value.trim()));
+$('#profileBtn').addEventListener('click',openProfile);
+$('#pfClose').addEventListener('click',closeProfile);
+$('#profileForm').addEventListener('submit',e=>{ e.preventDefault(); saveProfile(); });
+document.addEventListener('pointerdown',e=>{ if(savedTimer && !e.target.closest('#profileDlg')) hideSaved(); });
 $('#soundBtn').addEventListener('click',()=>{ muted=!muted; store.set('muted',muted); $('#soundBtn').textContent='Sound: '+(muted?'off':'on'); if(!muted) beep('good'); });
 $('#quitBtn').addEventListener('click',goBack);
 $('#studioBack').addEventListener('click',goBack);
@@ -2655,7 +2726,6 @@ $('#againBtn').addEventListener('click',()=>startRound(state.world));
 $('#homeBtn').addEventListener('click',goBack);
 $('#sheetBtn').addEventListener('click',printSheet);
 $('#aboutBtn').addEventListener('click',()=>openAbout());
-$('#bdayBtn').addEventListener('click',birthdayForm);
 $('#aboutBack').addEventListener('click',()=>{ state.back='home'; goBack(); });
 $('#tabDe').addEventListener('click',()=>openAbout('de'));
 $('#tabEn').addEventListener('click',()=>openAbout('en'));

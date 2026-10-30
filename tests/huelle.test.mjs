@@ -73,7 +73,7 @@ test('ohne Passwort: nur die Maske, kein Klartext im Quelltext', async () => {
   const quelltext = await antwort.text();
   const q = await quellenLesen();
   assert.deepEqual(oeffentlichPruefen(quelltext, '', q.woerter), []);
-  assert.ok(!ohneTresor(quelltext).includes('playerName'));
+  assert.ok(!ohneTresor(quelltext).includes('profileBtn'));
   assert.ok(await maskeSichtbar(page));
   assert.equal(await page.locator('#home').count(), 0);
   assert.deepEqual(fehler, []);
@@ -102,7 +102,7 @@ test('richtiges Passwort: App startet, alte Sterne bleiben, Quest spielbar, nach
   // S8 (30.10.): neutral title without class or school; "–" also checks non-ASCII after decryption
   assert.equal(await page.textContent('#home h1'), 'Grade 3 – Big Quest');
   assert.equal(await page.textContent('#totalStars'), '7', 'vorhandene Sterne muessen erhalten bleiben');
-  assert.equal(await page.inputValue('#playerName'), 'Probe');
+  assert.equal(await page.textContent('#profileName'), 'Probe');
   const start = await page.textContent('#home');
   assert.ok(start.includes('Grade 3 · International Baccalaureate'), 'Mittelpunkt kommt nach dem Entschluesseln richtig an');
   assert.ok(await page.evaluate(() => document.documentElement.outerHTML.includes('Ameisen aßen am Abend')), 'ß kommt nach dem Entschluesseln richtig an');
