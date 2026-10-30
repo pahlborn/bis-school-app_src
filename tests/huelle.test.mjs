@@ -99,11 +99,12 @@ test('richtiges Passwort: App startet, alte Sterne bleiben, Quest spielbar, nach
   await page.evaluate(() => { localStorage.setItem('bq2_total', '7'); localStorage.setItem('bq2_name', '"Probe"'); });
   await anmelden(page, TEST_PW);
   await page.waitForSelector('#home h1');
-  assert.equal(await page.textContent('#home h1'), '3B Big Quest');
+  // S8 (30.10.): neutral title without class or school; "–" also checks non-ASCII after decryption
+  assert.equal(await page.textContent('#home h1'), 'Grade 3 – Big Quest');
   assert.equal(await page.textContent('#totalStars'), '7', 'vorhandene Sterne muessen erhalten bleiben');
   assert.equal(await page.inputValue('#playerName'), 'Probe');
   const start = await page.textContent('#home');
-  assert.ok(start.includes('Grade 3B · Bavarian'), 'Mittelpunkt kommt nach dem Entschluesseln richtig an');
+  assert.ok(start.includes('Grade 3 · International Baccalaureate'), 'Mittelpunkt kommt nach dem Entschluesseln richtig an');
   assert.ok(await page.evaluate(() => document.documentElement.outerHTML.includes('Ameisen aßen am Abend')), 'ß kommt nach dem Entschluesseln richtig an');
   assert.ok(await page.evaluate((k) => localStorage.getItem(k), SCHLUESSEL), 'Schluessel gemerkt');
 

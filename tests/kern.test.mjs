@@ -60,9 +60,14 @@ test('Huelle: Platzhalter genau einmal, sonst Abbruch', () => {
   assert.throws(() => huelleBauen(PLATZHALTER + PLATZHALTER, {}), /genau einmal/);
 });
 
-test('jedes verbotene Wort steht tatsaechlich in der App (sonst schuetzt es nichts)', () => {
-  const fehlt = q.woerter.filter((w) => !appText.toLowerCase().includes(w.toLowerCase()));
+// S8 (30.10.): some words were removed from the app on purpose. The list keeps them so the
+// public shell stays protected; tests/neutral.test.mjs checks they are absent from visible text.
+const BEWUSST_ENTFERNT = ['International School', 'Grade 3B', '3B Big Quest', '3B Quest'];
+test('jedes verbotene Wort steht in der App oder ist bewusst entfernt (sonst schuetzt es nichts)', () => {
+  const fehlt = q.woerter.filter((w) => !appText.toLowerCase().includes(w.toLowerCase()) && !BEWUSST_ENTFERNT.includes(w));
   assert.deepEqual(fehlt, [], 'Diese Woerter stehen nicht in index.html - Liste nachziehen: ' + fehlt.join(', '));
+  const nichtEntfernt = BEWUSST_ENTFERNT.filter((w) => appText.includes(w));
+  assert.deepEqual(nichtEntfernt, [], 'als entfernt gefuehrt, steht aber noch in der App: ' + nichtEntfernt.join(', '));
 });
 
 test('Wortpruefung greift ausserhalb des Tresors und nicht innerhalb', () => {

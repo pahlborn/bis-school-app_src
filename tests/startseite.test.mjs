@@ -64,7 +64,7 @@ test('Focus: jedes Fokus-Thema traegt das Zeichen, die Kacheln zaehlen richtig',
   await ctx.close();
 });
 
-test('Archiv: nur der Legoland-Ausflug liegt im Archiv', async () => {
+test('Archiv: nur der Schulausflug (trip) liegt im Archiv', async () => {
   const { ctx, page } = await app();
   const archiv = (await alleKarten(page)).filter((k) => k.archiv).map((k) => k.item);
   assert.deepEqual(archiv, ['trip']);
