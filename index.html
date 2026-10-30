@@ -61,6 +61,7 @@ h2{font-size:1.35rem}
 h3{font-size:1.1rem}
 p{margin:0}
 .eyebrow{font-family:var(--display);font-size:.78rem;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.hero .eyebrow .short{display:none}
 .muted{color:var(--muted)}
 .center{display:flex;justify-content:center}
 button{font:inherit;color:inherit}
@@ -92,7 +93,9 @@ button{font:inherit;color:inherit}
 .world .best b{display:block;font-size:1.1rem;color:var(--c)}
 .foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;color:var(--muted);font-size:.88rem}
 /* start page: name and stars in one row, Practise Today, subject tiles */
-.me{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:end}
+.me{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
+.me .profile-btn{flex:1 1 120px}
+.me .chipstat{flex:0 0 auto}
 .profile-btn{justify-content:flex-start;min-width:0;overflow:hidden;font-size:1rem}
 .profile-btn #profileName{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .profile-dlg{border:0;border-radius:22px;padding:18px;width:min(420px,calc(100vw - 24px));max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);overflow:auto;background:var(--surface);color:var(--ink);box-shadow:0 10px 40px rgba(15,22,38,.35)}
@@ -107,6 +110,14 @@ button{font:inherit;color:inherit}
 .pf-emojis button{min-height:44px;min-width:44px;font-size:1.4rem;border-radius:12px;border:2px solid var(--line);background:var(--surface);cursor:pointer;padding:0}
 .pf-emojis button[aria-pressed="true"]{border-color:var(--accent);background:var(--soft);box-shadow:inset 0 0 0 2px var(--accent)}
 .profile-dlg .row > .btn{flex:1 1 100px}
+.chipstat.rank-chip{cursor:pointer;gap:6px;background:var(--rk-bg,var(--surface));color:var(--rk-fg,var(--ink));border-color:var(--rk-fg,var(--line));font-size:1rem}
+.note-banner.rank-note{border-left-color:var(--rk-fg,var(--sun));background:var(--rk-bg,var(--soft));color:var(--rk-fg,var(--ink))}
+.rank-path{list-style:none;margin:12px 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.rank-path li{display:flex;align-items:center;gap:10px;min-height:44px;padding:6px 12px;border-radius:14px;border:2px solid var(--line);font-family:var(--display);font-weight:600}
+.rank-path li .ico{font-size:1.3rem}
+.rank-path li .need{margin-left:auto;font-size:.88rem;color:var(--muted);white-space:nowrap}
+.rank-path li.now{background:var(--rk-bg);color:var(--rk-fg);border-color:var(--rk-fg)}
+.rank-path li.now .need{color:inherit}
 .chipstat{display:flex;align-items:center;gap:6px;background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:6px 12px;font-family:var(--display);font-weight:600;white-space:nowrap;min-height:44px;font-variant-numeric:tabular-nums}
 .chipstat svg{width:20px;height:20px;fill:var(--sun)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
@@ -286,7 +297,7 @@ button{font:inherit;color:inherit}
   .answers-page li{margin-bottom:2mm}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
-@media (max-width:380px){h1{font-size:2rem}.prompt{font-size:1.18rem}.chip{max-width:50%}.answers.grid3{grid-template-columns:1fr 1fr}}
+@media (max-width:380px){h1{font-size:2rem}#home .hero h1{font-size:1.6rem}.hero .eyebrow .long{display:none}.hero .eyebrow .short{display:inline}.prompt{font-size:1.18rem}.chip{max-width:50%}.answers.grid3{grid-template-columns:1fr 1fr}}
 </style>
 
 </head>
@@ -295,16 +306,17 @@ button{font:inherit;color:inherit}
   <!-- HOME -->
   <section id="home" class="screen">
     <div class="hero">
-      <div class="eyebrow">Grade 3 · International Baccalaureate Primary Years Programme</div>
+      <div class="eyebrow">Grade 3 · <span class="long">International Baccalaureate</span><span class="short">IB</span> Primary Years Programme</div>
       <h1>Grade 3 – Big Quest</h1>
       <div class="motto">Believe. Inspire. Succeed. <span id="themeIcon" aria-hidden="true"></span></div>
     </div>
     <div class="me">
       <button class="btn small profile-btn" id="profileBtn" type="button" aria-haspopup="dialog"><span id="profileEmoji" aria-hidden="true">👤</span><span id="profileName">My profile</span></button>
       <div class="chipstat" title="Stars collected"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7.1L12 17.3 5.7 21l1.7-7.1L2 9.2l7.1-.6z"/></svg><span id="totalStars">0</span><span class="sr">stars</span></div>
-      <div class="chipstat" id="rank">Explorer</div>
+      <button class="chipstat rank-chip" id="rank" type="button" aria-haspopup="dialog"><span id="rankIcon" aria-hidden="true">🧭</span><span id="rankName">Explorer</span></button>
     </div>
     <div id="savedNote" class="note-banner" role="status" hidden>Saved ✓</div>
+    <div id="rankNote" class="note-banner rank-note" role="status" hidden></div>
     <button class="today" id="todayBtn" type="button"><span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7.1L12 17.3 5.7 21l1.7-7.1L2 9.2l7.1-.6z"/></svg></span><span><span class="name">Practise Today</span><br><span class="sub" id="todaySub">8 questions from your focus topics</span></span></button>
     <div id="homeNote" class="note-banner" hidden></div>
     <div id="advent" class="advent" hidden></div>
@@ -333,6 +345,14 @@ button{font:inherit;color:inherit}
       <p id="pfMessage" class="small" role="status"></p>
       <div class="row"><button class="btn" id="pfClose" type="button">Close</button><button class="btn primary" id="pfSave" type="submit">Save</button></div>
     </form>
+  </dialog>
+
+  <!-- EXPLORER PATH: the five titles; they only grow with stars, never go down, no comparison -->
+  <dialog id="rankDlg" class="profile-dlg" aria-labelledby="rankTitle">
+    <h2 id="rankTitle">Your explorer path</h2>
+    <ol id="rankPath" class="rank-path"></ol>
+    <p id="rankNext"></p>
+    <div class="row"><button class="btn" id="rankClose" type="button">Close</button></div>
   </dialog>
 
   <!-- ABOUT & GROWN-UPS -->
@@ -1740,6 +1760,36 @@ const STUDIOS={
 };
 const RANKS=[[0,'Explorer'],[25,'Investigator'],[60,'Scientist'],[120,'Professor'],[250,'Legend']];
 const rankFor = s => RANKS.filter(r=>s>=r[0]).pop()[1];
+/* Titles grow with stars only: own symbol and colour, one small celebration per new title
+   (remembered in bq2_rankSeen), never lower, never compared, never tied to the learning stand.
+   Colours: dark text on a light tint, contrast above 4.5:1. */
+const RANK_META={Explorer:{icon:'🧭',bg:'#D5F5EF',fg:'#0A5C52'},Investigator:{icon:'🔍',bg:'#DDE6FF',fg:'#1E3A9E'},
+  Scientist:{icon:'🔬',bg:'#ECDFFF',fg:'#55259F'},Professor:{icon:'🎓',bg:'#FFE3CC',fg:'#833700'},Legend:{icon:'🌟',bg:'#FFF1B8',fg:'#634700'}};
+const rankIdx = n => RANKS.findIndex(r=>r[1]===n);
+function shownRank(total){ const r=rankFor(total), seen=store.get('rankSeen',null); return rankIdx(seen)>rankIdx(r)?seen:r; }
+function renderRank(total){
+  const r=rankFor(total), seen=store.get('rankSeen',null), note=$('#rankNote');
+  note.hidden=true;
+  if(rankIdx(seen)<0) store.set('rankSeen',r);                       // first start: remember quietly
+  else if(rankIdx(r)>rankIdx(seen)){                                   // new title: celebrate once
+    store.set('rankSeen',r);
+    note.textContent='New title: '+RANK_META[r].icon+' '+r+'!'; note.hidden=false;
+    setTimeout(confetti,300);
+  }
+  const show=shownRank(total), m=RANK_META[show], chip=$('#rank');
+  $('#rankIcon').textContent=m.icon; $('#rankName').textContent=show;
+  [chip,note].forEach(el=>{ el.style.setProperty('--rk-bg',m.bg); el.style.setProperty('--rk-fg',m.fg); });
+  chip.setAttribute('aria-label','Your title: '+show+'. Show your explorer path.');
+}
+function openRankPath(){
+  const total=store.get('total',0), show=shownRank(total), i=rankIdx(show), dlg=$('#rankDlg');
+  dlg.style.setProperty('--rk-bg',RANK_META[show].bg); dlg.style.setProperty('--rk-fg',RANK_META[show].fg);
+  $('#rankPath').innerHTML=RANKS.map((r,k)=>`<li class="${k<i?'done':k===i?'now':''}"><span class="ico" aria-hidden="true">${RANK_META[r[1]].icon}</span><span>${r[1]}</span><span class="need">${k<=i?'✓':r[0]+' ⭐'}</span></li>`).join('');
+  const next=RANKS[i+1], need=next?next[0]-total:0;
+  $('#rankNext').textContent=next?`${need} more star${need===1?'':'s'} to ${next[1]}`:'You are a Legend! Keep exploring.';
+  if(dlg.showModal) dlg.showModal(); else dlg.setAttribute('open','');
+  $('#rankClose').focus();
+}
 
 /* ======================= STATE & SCREENS ======================= */
 const state={screen:'home', world:null, round:[], idx:0, stars:0, streak:0, answered:false, typed:'', picked:[], results:[], studio:null, subject:null, back:'home'};
@@ -1769,7 +1819,7 @@ function questCard(item, back){
 }
 function renderHome(){
   const total=store.get('total',0);
-  $('#totalStars').textContent=total; $('#rank').textContent=rankFor(total);
+  $('#totalStars').textContent=total; renderRank(total);
   renderProfileBtn();
   const c=$('#subjects'); c.innerHTML='';
   SUBJECTS.forEach(s=>{
@@ -2694,6 +2744,7 @@ function confetti(){
   try{
     if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const run=++confettiRun;
+    $('#confetti').dataset.runs=(+$('#confetti').dataset.runs||0)+1; // counted by tests
     const c=$('#confetti'), ctx=c.getContext('2d'), dpr=Math.min(2,window.devicePixelRatio||1);
     const W=window.innerWidth, H=window.innerHeight; c.width=W*dpr; c.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
     const colors=['#FFB800','#3B5BDB','#12A594','#C2419A','#F5820D','#1FA971','#FF6B70','#7A4FD8'];
@@ -2712,6 +2763,8 @@ function snapshot(){ try{ const hot=window.claude&&window.claude.hot; hot&&hot.s
 
 /* ---------- wiring ---------- */
 $('#profileBtn').addEventListener('click',openProfile);
+$('#rank').addEventListener('click',openRankPath);
+$('#rankClose').addEventListener('click',()=>{ const d=$('#rankDlg'); if(d.close) d.close(); else d.removeAttribute('open'); });
 $('#pfClose').addEventListener('click',closeProfile);
 $('#profileForm').addEventListener('submit',e=>{ e.preventDefault(); saveProfile(); });
 document.addEventListener('pointerdown',e=>{ if(savedTimer && !e.target.closest('#profileDlg')) hideSaved(); });
