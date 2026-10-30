@@ -240,6 +240,13 @@ button{font:inherit;color:inherit}
 .about .note{background:var(--soft);border-left:5px solid var(--sun);border-radius:12px;padding:10px 14px;margin:10px 0}
 .about a{color:var(--accent);word-break:break-word}
 .about .small{font-size:.85rem;color:var(--muted)}
+.about fieldset{border:1px solid var(--line);border-radius:12px;margin:10px 0;padding:10px;min-width:0}
+.about legend{font-weight:700;padding:0 4px}
+.focus-choice{display:flex;align-items:center;gap:10px;min-height:44px;font-size:1rem}
+.focus-choice input{width:22px;height:22px;flex:none}
+.about select{font:inherit;max-width:100%;min-height:44px;background:var(--surface);color:var(--ink);border:2px solid var(--line);border-radius:10px}
+.parent-standard summary,.parent-method summary{cursor:pointer;min-height:44px;padding:8px 0;font-weight:600}
+#parentForm input{min-height:48px;font-size:18px}
 .sheetrow{display:flex;flex-direction:column;gap:6px;border-top:2px solid var(--line);padding:10px 0}
 .sheetrow .q{font-size:.95rem}
 .sheetrow .row .btn{flex:1 1 90px}
@@ -313,7 +320,7 @@ button{font:inherit;color:inherit}
     <div class="row" role="tablist">
       <button class="btn small" id="tabDe" type="button" role="tab">Deutsch</button>
       <button class="btn small" id="tabEn" type="button" role="tab">English</button>
-      <button class="btn small" id="tabSheets" type="button" role="tab">Practice sheets</button>
+      <button class="btn small" id="tabSheets" type="button" role="tab">Elternbereich</button>
     </div>
     <article class="about" id="aboutBody"></article>
   </section>
@@ -1545,7 +1552,7 @@ function reshuffled(q){
 
 /* Practise Today: warm-up, due repeats, focus topics at their level, and a challenge when a focus topic is ready for it. */
 function buildToday(){
-  const focus=FOCUS.filter(k=>WORLDS[k] && !isArchived(WORLDS[k]));
+  const focus=focusTopics();
   const topics=focus.length ? focus : SUBJECTS.flatMap(questsIn);
   const out=[];
   const solid=SUBJECTS.flatMap(questsIn).filter(k=>['M','E'].includes(standOf(k)) && topics.indexOf(k)<0);
@@ -1627,6 +1634,11 @@ const SUBJECTS=[
 ];
 /* FOCUS: the topics to practise right now. Chosen by a parent; this app shows no marks. "Practise Today" draws its questions from these. */
 const FOCUS=['wordprob','round','combos','units','graphs','sentences','examples','finish'];
+/* Parent choices stay on this device. The existing list is only the default. */
+function focusTopics(){
+  const saved=store.get('focus',null), list=Array.isArray(saved)?saved:FOCUS;
+  return uniq(list).filter(k=>WORLDS[k] && !k.startsWith('mix_') && k!=='today' && !isArchived(WORLDS[k]));
+}
 const todayISO=new Date().toISOString().slice(0,10);
 const isArchived = d => !!d && (d.archived===true || (!!d.until && todayISO>d.until));
 SUBJECTS.forEach(s=>{ if(questsIn(s).length>1) WORLDS['mix_'+s.key]={name:s.name+' Mix', sub:'A bit of everything in '+s.name, color:s.color, icon:'mix', build:()=>mixFrom(questsIn(s))}; });
@@ -1661,6 +1673,7 @@ const play=$('#play'), home=$('#home'), results=$('#results'), studioScreen=$('#
 let timerId=null, timerStart=0, timerElapsed=0;
 
 function show(name){
+  if(name!=='about') parentLock();
   state.screen=name;
   home.hidden=name!=='home'; play.hidden=name!=='play'; results.hidden=name!=='results'; studioScreen.hidden=name!=='studio'; subjectScreen.hidden=name!=='subject'; aboutScreen.hidden=name!=='about';
   if(name!=='studio') stopTimer();
@@ -1675,7 +1688,7 @@ function questCard(item, back){
   let right;
   if(isStudio){ const done=(store.get('chk_'+k,[])).filter(Boolean).length; right=done?'Done<b>'+done+' / '+d.checks.length+'</b>':'Open'; }
   else { const best=store.get('best_'+k,null); right=best===null?'New!':'Best<b>'+best+' / 8</b>'; }
-  const focus=(!isStudio && FOCUS.indexOf(k)>=0)?'<br><span class="focus">Focus</span>':'';
+  const focus=(!isStudio && focusTopics().includes(k))?'<br><span class="focus">Focus</span>':'';
   b.innerHTML=`<span class="icon">${ICONS[d.icon||k]}</span><span><span class="name">${d.name}</span><br><span class="sub">${d.sub}</span>${focus}</span><span class="best">${right}</span>`;
   b.addEventListener('click',()=>{ state.back=back; if(isStudio) openStudio(k); else startRound(k); });
   return b;
@@ -1686,7 +1699,7 @@ function renderHome(){
   $('#playerName').value=store.get('name','');
   const c=$('#subjects'); c.innerHTML='';
   SUBJECTS.forEach(s=>{
-    const n=s.items.filter(k=>FOCUS.indexOf(k)>=0 && !isArchived(WORLDS[k])).length;
+    const n=s.items.filter(k=>focusTopics().includes(k)).length;
     const b=document.createElement('button'); b.type='button'; b.className='subject'; b.style.setProperty('--c',s.color);
     b.innerHTML=`<span class="icon">${ICONS[s.icon]}</span><span class="name">${esc(s.name)}</span><span class="sub">${esc(s.sub)}</span>${n?`<span class="focus">${n} focus</span>`:''}`;
     b.addEventListener('click',()=>openSubject(s.key)); c.appendChild(b);
@@ -2169,7 +2182,7 @@ const MATHS=['numbers','round','combos','wordprob','detective','units','graphs']
 const strip = h => String(h||'').replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
 const LETTERS='ABCDEF';
 function buildSheet(){
-  const focus=FOCUS.filter(k=>WORLDS[k] && !isArchived(WORLDS[k]));
+  const focus=focusTopics();
   const topics=focus.length?focus:SUBJECTS.flatMap(questsIn);
   const pools=shuffle(topics).map(k=>adaptRound(k, WORLDS[k].build()).filter(q=>q.kind!=='order' || q.items.length<=5));
   const items=[]; let i=0;
@@ -2206,7 +2219,7 @@ function renderSheet(sheet){
     ${sheet.items.map((it,i)=>paperTask(it.q, i+1, i===mathsIdx)).join('')}${writing}
     <div class="task ticks">☐ I answered every question &nbsp; ☐ I checked my units &nbsp; ☐ I explained one task to a grown-up &nbsp; ☐ I worked with someone<br>
     Today I am proud of: ______________________________ &nbsp; Next I will practise: ______________________________</div></section>`;
-  const page2=`<section class="sheet answers-page"><h1>Answers – for grown-ups</h1><div class="meta"><span>Sheet of ${sheet.day}</span><span>Enter results in the app: About &amp; grown-ups → Practice sheets</span></div>
+  const page2=`<section class="sheet answers-page"><h1>Answers – for grown-ups</h1><div class="meta"><span>Sheet of ${sheet.day}</span><span>Enter results in the app: About &amp; grown-ups → Elternbereich</span></div>
     <ol>${sheet.items.map(it=>`<li>${keyFor(it.q)}<br><span class="small">${esc(it.q.explain||'')}</span></li>`).join('')}<li>Writing: look for order words, complete sentences, capitals and full stops.</li></ol>
     <p class="small">Working shown and units written = what the class rubric asks for. A second way to check = the next step up.</p></section>`;
   return page1+page2;
@@ -2221,6 +2234,7 @@ function printSheet(){
 /* grown-ups: enter the results of a printed sheet; they count like answers in the app (with help = support level) */
 const RES={ok:'✓ Right', help:'🤝 With help', no:'↻ Not yet'};
 function enterResult(sheetId, idx, res){
+  if(!parentAccess) return;
   const all=store.get('sheets',[]), sh=all.find(s=>s.id===sheetId); if(!sh || sh.items[idx].res) return;
   const q=sh.items[idx].q; sh.items[idx].res=res; store.set('sheets',all);
   if(res==='ok') recordAnswer(q,true);
@@ -2229,18 +2243,145 @@ function enterResult(sheetId, idx, res){
   renderSheets();
 }
 const storyCapHTML = () => '<h2>Settings</h2><p><label for="storyCap"><b>Pisolala stories may be up to:</b></label> <select id="storyCap">'+[1,2,3].map(l=>'<option value="'+l+'"'+(store.get('storyCap',2)===l?' selected':'')+'>'+EXCITE[l]+'</option>').join('')+'</select></p><p class="small">The child chooses how exciting a story should be, up to this limit. Every level stays kind: no horror, nobody gets hurt, all ends well.</p>';
-function bindStoryCap(){ const sc=$('#storyCap'); if(sc) sc.addEventListener('change',()=>store.set('storyCap',+sc.value)); }
+function bindStoryCap(){ const sc=$('#storyCap'); if(sc) sc.addEventListener('change',()=>{if(parentAccess) store.set('storyCap',+sc.value);}); }
 function renderSheets(){
+  if(!parentAccess){ renderParentGate(); return; }
   const all=store.get('sheets',[]).slice().reverse();
   const body=$('#aboutBody');
-  if(!all.length){ body.innerHTML=storyCapHTML()+parentGuidanceHTML()+'<h2>Practice sheets</h2><p>No sheet printed yet. Use “Print a practice sheet” on the start page.</p>'; bindStoryCap(); return; }
-  body.innerHTML=storyCapHTML()+parentGuidanceHTML()+'<h2>Practice sheets</h2><p class="small">Tick each task once. “With help” and “Not yet” are fine – the app then offers easier steps and repeats the task later. Nothing of this is shown to the child.</p>'+
+  if(!all.length){ body.innerHTML=parentHeaderHTML()+parentOverviewHTML()+focusSettingsHTML()+reminderHTML()+storyCapHTML()+parentGuidanceHTML()+'<h2>Practice sheets</h2><p>No sheet printed yet. Use “Print a practice sheet” on the start page.</p>'; bindParentSettings(); return; }
+  body.innerHTML=parentHeaderHTML()+parentOverviewHTML()+focusSettingsHTML()+reminderHTML()+storyCapHTML()+parentGuidanceHTML()+'<h2>Practice sheets</h2><p class="small">Tick each task once. “With help” and “Not yet” are fine – the app then offers easier steps and repeats the task later. Nothing of this is shown to the child.</p>'+
     all.map(sh=>`<h3>Sheet of ${sh.day}</h3>`+sh.items.map((it,i)=>`<div class="sheetrow"><div class="q"><b>${i+1}.</b> ${esc(strip(it.q.prompt).slice(0,140))}</div><div class="row">${Object.keys(RES).map(r=>`<button type="button" class="btn small${it.res===r?' on':''}" data-sheet="${sh.id}" data-i="${i}" data-res="${r}"${it.res?' disabled':''}>${RES[r]}</button>`).join('')}</div></div>`).join('')).join('');
   body.querySelectorAll('button[data-res]').forEach(b=>b.addEventListener('click',()=>enterResult(b.dataset.sheet, +b.dataset.i, b.dataset.res)));
-  bindStoryCap();
+  bindParentSettings();
 }
 
 /* ---------- about ---------- */
+/* A local parental UI lock, separate from the encryption password. This is
+   an accidental-access guard, not protection against someone editing code/storage. */
+let parentAccess=false, parentTimer=null, parentFailures=0, parentBlockedUntil=0, parentEpoch=0;
+function parentLock(){
+  parentEpoch++;
+  parentAccess=false;
+  if(parentTimer) clearTimeout(parentTimer);
+  parentTimer=null;
+  if(state.aboutTab==='sheets') $('#aboutBody').innerHTML='';
+}
+function parentTouch(){
+  if(!parentAccess) return;
+  if(parentTimer) clearTimeout(parentTimer);
+  parentTimer=setTimeout(()=>{parentLock();if(state.screen==='about'&&state.aboutTab==='sheets') renderParentGate();},5*60*1000);
+}
+function parentHeaderHTML(){return '<h2>Elternbereich</h2><p>Nur für Erwachsene: Übungsbeobachtungen auf diesem Gerät, keine schulische Bewertung. <button class="btn small" id="parentClose" type="button">Sperren</button></p><p class="small">Sperrt beim Verlassen, beim Wechsel in den Hintergrund und nach fünf Minuten ohne Bedienung. Die PIN ist ein lokaler Bedienungsschutz; sie ersetzt nicht das Passwort der verschlüsselten App.</p>';}
+function renderParentGate(){
+  const existing=store.get('parentPin',null), body=$('#aboutBody');
+  body.innerHTML=`<h2>Elternbereich</h2><p>${existing?'Bitte geben Sie Ihre Eltern-PIN ein.':'Ein Erwachsener richtet hier einmal eine eigene Eltern-PIN ein. Nicht das Passwort der App verwenden.'}</p><form id="parentForm" class="field"><label for="parentPin">${existing?'PIN':'Neue PIN (4 bis 8 Ziffern)'}</label><input id="parentPin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" minlength="4" maxlength="8" autocomplete="off" required>${existing?'':'<label for="parentPinAgain">PIN wiederholen</label><input id="parentPinAgain" type="password" inputmode="numeric" pattern="[0-9]{4,8}" minlength="4" maxlength="8" autocomplete="off" required>'}<button class="btn" type="submit">${existing?'Öffnen':'PIN einrichten'}</button><p id="parentMessage" role="status"></p></form><p class="small">Die PIN gilt nur auf diesem Gerät. Vergessen? Den lokalen PIN-Eintrag durch einen Erwachsenen zurücksetzen lassen; Lerndaten müssen dafür nicht gelöscht werden.</p>`;
+  $('#parentForm').addEventListener('submit',async e=>{
+    e.preventDefault(); const message=$('#parentMessage'), pin=$('#parentPin').value;
+    const epoch=parentEpoch;
+    if(Date.now()<parentBlockedUntil){message.textContent='Bitte kurz warten und dann erneut versuchen.';return;}
+    if(!/^\d{4,8}$/.test(pin)){message.textContent='Bitte 4 bis 8 Ziffern eingeben.';return;}
+    if(!existing&&pin!==$('#parentPinAgain').value){message.textContent='Die beiden PIN-Eingaben stimmen nicht überein.';return;}
+    const button=e.currentTarget.querySelector('button');button.disabled=true;
+    try{
+      const salt=existing?existing.salt:Array.from(crypto.getRandomValues(new Uint8Array(16)));
+      const material=await crypto.subtle.importKey('raw',new TextEncoder().encode(pin),'PBKDF2',false,['deriveBits']);
+      const bits=await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:new Uint8Array(salt),iterations:100000},material,256);
+      const hash=Array.from(new Uint8Array(bits)).map(b=>b.toString(16).padStart(2,'0')).join('');
+      if(epoch!==parentEpoch||state.screen!=='about'||state.aboutTab!=='sheets'||document.hidden) return;
+      if(existing&&hash!==existing.hash){
+        parentFailures++;if(parentFailures>=5){parentBlockedUntil=Date.now()+30000;parentFailures=0;}
+        message.textContent='Die PIN stimmt nicht.';button.disabled=false;return;
+      }
+      if(!existing){
+        store.set('parentPin',{salt,hash});
+        if(!store.get('parentPin',null)) throw new Error('storage unavailable');
+      }
+      if(state.screen!=='about'||state.aboutTab!=='sheets') return;
+      parentFailures=0; parentAccess=true;parentTouch();renderSheets();
+    }catch(err){message.textContent='Der geschützte Bereich konnte nicht geöffnet werden. Bitte im aktuellen Browser erneut versuchen.';button.disabled=false;}
+  });
+}
+const STANDARD_TEXT={
+  'M-N1':'Stellenwert, Zahlenschreibweise und Null als Platzhalter bis 9999',
+  'M-N2':'Zahlen vergleichen, sortieren und ordnen bis 9999',
+  'M-N3':'Runden auf Zehner, Hunderter und Tausender',
+  'M-N4':'Additionsstrategien und zweischrittige Sachaufgaben',
+  'M-N5':'Subtraktionsstrategien und zweischrittige Sachaufgaben',
+  'M-N6':'Überschlagen und Ergebnisse kontrollieren',
+  'M-D1':'Daten sammeln, Diagramme mit Skala und Beschriftung',
+  'M-M1':'Längen schätzen, vergleichen und messen in cm und m',
+  'S-F1':'Kräfte und Anwendung naturwissenschaftlichen Verständnisses',
+  'E-W1':'Schreiben: logische Reihenfolge und verständliche Darstellung',
+  'E-W2':'Informationen aus verlässlichen Quellen finden und darstellen',
+  'E-R1':'Wortbildung und Textverständnis (Übungszuordnung)',
+  'D-W1':'Anleitung schreiben (Lernziele aus der Unterrichtsaufgabe)'
+};
+const PARENT_STAND={NA:'Noch zu wenige Belege',RS:'Requires support',C:'Consolidating',M:'Meeting expectations',E:'Extending'};
+function parentOverviewHTML(){
+  const ev=store.get('ev',{}), attempts=store.get('attempts',[]);
+  const standards=uniq(Object.values(STANDARDS).flat());
+  return '<h2>Übungsbeobachtungen nach Lernziel</h2><p class="small">Der Schlüssel dient nur intern zur Aufgabenwahl. Die Beobachtungen werden noch pro Quest geführt, nicht pro einzelner BIS-Fähigkeit. Eine Quest kann mehrere Standards berühren: dieselben Beobachtungen werden daher nicht zu getrennten Schulnoten oder einem Gesamtwert verrechnet. Alte Daten enthalten nicht alle Hilfsschritte.</p>'+standards.map(id=>{
+    const keys=Object.keys(STANDARDS).filter(k=>STANDARDS[k].includes(id)&&WORLDS[k]);
+    return `<details class="parent-standard"><summary>${esc(STANDARD_TEXT[id]||id)}</summary>${keys.map(k=>{
+      const list=ev[k]||[], log=attempts.filter(a=>a.skill===k), days=new Set(list.map(e=>e[0])).size;
+      const supported=log.filter(a=>a.help).length, firstErrors=log.filter(a=>a.attempt===1&&!a.ok).length;
+      return `<div class="sheetrow"><b>${esc(WORLDS[k].name)}</b><span>${PARENT_STAND[standOf(k)]}</span><span>${list.length} Beobachtungen · ${days} verschiedene Tage · zuletzt ${list.length?esc(list[list.length-1][0]):'noch nicht geübt'}</span><span class="small">Protokollierte erste Fehler: ${firstErrors} · unterstützte Versuche/Hilfen: ${supported}</span></div>`;
+    }).join('')}</details>`;
+  }).join('');
+}
+function focusSettingsHTML(){
+  const chosen=focusTopics();
+  return '<h2>Fokus-Themen auswählen</h2><p>Diese Auswahl steuert „Practise Today“, Fokus-Zeichen und Übungsblätter auf diesem Gerät. Wiederholungen dürfen weiterhin aus früher geübten Themen kommen. Ohne Auswahl wird frei gemischt.</p><form id="focusForm">'+SUBJECTS.map(s=>`<fieldset><legend>${esc(s.name)}</legend>${questsIn(s).map(k=>`<label class="focus-choice"><input type="checkbox" name="focus" value="${k}"${chosen.includes(k)?' checked':''}> ${esc(WORLDS[k].name)}</label>`).join('')}</fieldset>`).join('')+'<button class="btn" type="submit">Auswahl speichern</button> <button class="btn small" id="focusDefault" type="button">Ausgangsauswahl</button><p id="focusMessage" role="status"></p></form>';
+}
+const REMINDER_DAYS=['MO','TU','WE','TH','FR','SA','SU'];
+function reminderHTML(){
+  return '<h2>Freiwillige Kalender-Erinnerung</h2><p>Nur wenn Sie es möchten: Wochentage und Uhrzeit auswählen und eine Kalenderdatei herunterladen. Keine Vorgabe für das Kind, kein Push-Dienst. Die importierten Termine verwalten und löschen Sie in Ihrem Kalender. Bitte beim Import prüfen, ob Erinnerungen aktiviert sind.</p><form id="reminderForm"><fieldset><legend>Tage</legend>'+['Mo','Di','Mi','Do','Fr','Sa','So'].map((d,i)=>`<label class="focus-choice"><input type="checkbox" name="reminderDay" value="${REMINDER_DAYS[i]}"> ${d}</label>`).join('')+'</fieldset><div class="field"><label for="reminderTime">Uhrzeit</label><input id="reminderTime" type="time" required><label for="reminderText">Erinnerungstext</label><input id="reminderText" type="text" maxlength="100" value="Lust auf ein Rätsel, einen Witz oder Big Quest?"></div><button class="btn" type="submit">Kalenderdatei herunterladen</button><p id="reminderMessage" role="status"></p></form>';
+}
+function calendarText(days,time,text,now=new Date()){
+  const selected=REMINDER_DAYS.filter(d=>days.includes(d));
+  if(!selected.length||!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) throw new Error('Choose days and a valid time');
+  const [hour,minute]=time.split(':').map(Number);let start=new Date(now);start.setHours(hour,minute,0,0);
+  for(let i=0;i<8;i++){
+    const day=REMINDER_DAYS[(start.getDay()+6)%7];
+    if(selected.includes(day)&&start>now) break;
+    start.setDate(start.getDate()+1);
+  }
+  const localStamp=d=>dayKey(d).replace(/-/g,'')+'T'+pad(d.getHours())+pad(d.getMinutes())+'00';
+  const escapeICS=s=>String(s).replace(/\\/g,'\\\\').replace(/\r?\n/g,'\\n').replace(/;/g,'\\;').replace(/,/g,'\\,');
+  const lines=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Big Quest//Optional Reminder//DE','CALSCALE:GREGORIAN','BEGIN:VEVENT',
+    'UID:'+crypto.randomUUID()+'@big-quest.local','DTSTAMP:'+now.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,''),
+    'DTSTART:'+localStamp(start),'TRANSP:TRANSPARENT',
+    'RRULE:FREQ=WEEKLY;BYDAY='+selected.join(','),'SUMMARY:'+escapeICS(text.trim()||'Lust auf Big Quest?'),
+    'DESCRIPTION:Freiwillige Einladung - kein Lernziel oder Pflichttermin. https://pahlborn.github.io/bis-school-app/',
+    'URL:https://pahlborn.github.io/bis-school-app/','BEGIN:VALARM','TRIGGER:-PT0M','ACTION:DISPLAY','DESCRIPTION:'+escapeICS(text.trim()||'Lust auf Big Quest?'),
+    'END:VALARM','END:VEVENT','END:VCALENDAR'];
+  // Fold at 75 UTF-8 octets (RFC 5545); floating local time travels with the calendar.
+  const encoder=new TextEncoder();
+  return lines.map(line=>{
+    let part='',out='';for(const char of line){if(encoder.encode(part+char).length>75){out+=part+'\r\n';part=' ';}part+=char;}return out+part;
+  }).join('\r\n')+'\r\n';
+}
+function bindParentSettings(){
+  bindStoryCap();
+  $('#parentClose').addEventListener('click',()=>{parentLock();renderParentGate();});
+  $('#focusForm').addEventListener('submit',e=>{
+    e.preventDefault();if(!parentAccess) return;
+    const chosen=Array.from(new FormData(e.currentTarget).getAll('focus'));
+    store.set('focus',chosen);renderHome();$('#focusMessage').textContent='Auswahl gespeichert.';
+  });
+  $('#focusDefault').addEventListener('click',()=>{if(!parentAccess) return;store.set('focus',FOCUS.slice());renderHome();renderSheets();});
+  $('#reminderForm').addEventListener('submit',e=>{
+    e.preventDefault();if(!parentAccess) return;
+    try{
+      const days=Array.from(new FormData(e.currentTarget).getAll('reminderDay'));
+      const content=calendarText(days,$('#reminderTime').value,$('#reminderText').value);
+      const objectURL=URL.createObjectURL(new Blob([content],{type:'text/calendar;charset=utf-8'}));
+      const link=document.createElement('a');link.href=objectURL;link.download='Big Quest Erinnerung.ics';link.click();setTimeout(()=>URL.revokeObjectURL(objectURL),1000);
+      $('#reminderMessage').textContent='Kalenderdatei erstellt. Import und Erinnerung bitte im Kalender prüfen.';
+    }catch(err){$('#reminderMessage').textContent='Bitte mindestens einen Tag und eine gültige Uhrzeit wählen.';}
+  });
+  parentTouch();
+}
 const PARENT_GUIDANCE=[
   {title:'Runden – wie in der Unterrichtsaufgabe',source:'BIS/Toddle: Lesson 4, Zahlenstrahl, Nachbar-Hunderter, Mitte und Abstände.',text:'Beispiel 120: Markieren Sie 100 und 200, dann die Mitte 150. Lassen Sie das Kind 120 eintragen und die Abstände vergleichen.',questions:['Welche beiden Hunderter liegen direkt davor und danach?','Wo liegt die Mitte?','Wie weit ist deine Zahl von beiden Enden entfernt?']},
   {title:'Fehlende Teile und Rechenwege',source:'BIS/Toddle: Travel for Work verlangt Zerlegungen, Zahlenstrahl und Gleichungen. Die konkreten Sprunggrößen unten sind eine passende Übungsdarstellung, keine bestätigte schulweite Methode.',text:'Beispiel 278 + ? = 503: erst klären, was Ganzes und Teil sind. Die Lücke lässt sich durch Sprünge 278 → 300 → 500 → 503 darstellen. Nicht ungefragt einen Spaltenalgorithmus danebenstellen.',questions:['Was ist das Ganze, was kennst du schon?','Wie habt ihr solche Aufgaben in der Klasse dargestellt?','Wie kannst du dein Ergebnis mit einer Gleichung prüfen?']},
@@ -2348,6 +2489,7 @@ const ABOUT_DE=()=>`
 <h3>Herkunft der Aufgaben</h3>
 <p>Themen und Erfolgskriterien folgen den Lerneinheiten der Klasse 3B im Schuljahr 2026/27, wie sie auf der Lernplattform der Schule veröffentlicht sind – darunter <i>Friction Frenzy</i> (How the World Works), <i>Persuade for the Park</i> (Who We Are), <i>Mastering Basic Numbers</i> mit <i>Travel for Work</i> und dem <i>Sticker Milestone</i>, das Runden auf Zehner und Hunderter, die <i>Anleitung</i> zur Traummaschine, die Leseaufnahme, die Bibliotheksstunden sowie die Primary Production <i>Pantastic</i>. Die Aufgaben selbst sind neu formuliert oder werden mit wechselnden Zahlen erzeugt; Arbeitsblätter der Schule werden nicht wiedergegeben. Die Geschichten um <i>Pisolala</i> sind eine Erfindung der Familie.</p>
 <h3>Datenschutz</h3>
+<p>Der Elternbereich verwendet eine separate, auf dem Gerät gespeicherte PIN. Sie schützt vor versehentlichem Zugriff, nicht vor gezielter Manipulation von Browserdaten. Er sperrt beim Verlassen und nach Inaktivität. Die dort angezeigten Beobachtungen sind weder Diagnosen noch Bewertungen der Schule. Eine optionale Kalenderdatei wird lokal erzeugt; erst der von den Eltern gewählte Kalender bestimmt Speicherung und Benachrichtigungen.</p>
 <p>Die Anwendung läuft vollständig im Browser und ist nur verschlüsselt veröffentlicht. Name, Sterne und Übungsstand werden ausschließlich auf dem jeweiligen Gerät gespeichert und nicht weitergegeben; es gibt keine Werbung und keine Auswertungsdienste. Nach dem Öffnen lädt die Anwendung Schriftarten von Google Fonts; dabei wird die IP-Adresse des Geräts an Google übermittelt.</p>
 <h3>Quellen</h3>${sourcesHTML()}
 <p class="small">Stand: 30. Oktober 2026.</p>`;
@@ -2370,11 +2512,13 @@ const ABOUT_EN=()=>`
 <h3>Origin of the tasks</h3>
 <p>Topics and success criteria follow the Grade 3B units of the 2026/27 school year as published on the school's learning platform. The tasks themselves are rewritten or generated with varying numbers; school worksheets are not reproduced. The stories about <i>Pisolala</i> are a family invention.</p>
 <h3>Privacy</h3>
+<p>The parental area has a separate, device-local PIN and locks when left or inactive. This is a UI guard against accidental access, not protection against someone manipulating browser data. Its observations are not school assessments. Optional calendar reminders are generated locally; the chosen calendar controls import, storage and notifications.</p>
 <p>The app runs entirely in the browser and is published only in encrypted form. Name, stars and practice status are stored solely on the device and never shared; there is no advertising and no analytics. After opening, the app loads fonts from Google Fonts, which transmits the device's IP address to Google.</p>
 <h3>Sources</h3>${sourcesHTML()}
 <p class="small">Last updated: 30 October 2026.</p>`;
 function openAbout(tab){
-  state.aboutTab=tab||state.aboutTab||'de';
+  if(tab!=='sheets') parentLock();
+  state.aboutTab=tab||'de';
   ['tabDe','tabEn','tabSheets'].forEach(id=>$('#'+id).classList.toggle('primary', {tabDe:'de',tabEn:'en',tabSheets:'sheets'}[id]===state.aboutTab));
   if(state.aboutTab==='sheets') renderSheets();
   else $('#aboutBody').innerHTML=state.aboutTab==='en'?ABOUT_EN():ABOUT_DE();
@@ -2461,6 +2605,10 @@ $('#aboutBack').addEventListener('click',()=>{ state.back='home'; goBack(); });
 $('#tabDe').addEventListener('click',()=>openAbout('de'));
 $('#tabEn').addEventListener('click',()=>openAbout('en'));
 $('#tabSheets').addEventListener('click',()=>openAbout('sheets'));
+document.addEventListener('visibilitychange',()=>{if(document.hidden){parentLock();if(state.screen==='about'&&state.aboutTab==='sheets') renderParentGate();}});
+$('#aboutBody').addEventListener('pointerdown',parentTouch);
+$('#aboutBody').addEventListener('keydown',parentTouch);
+window.addEventListener('hashchange',()=>{if(location.hash==='#eltern') openAbout('sheets');});
 
 function boot(data){
   renderHome();
@@ -2470,6 +2618,7 @@ function boot(data){
     show('play'); renderQuestion();
   } else if(data && data.screen==='studio' && STUDIOS[data.studio]){ openStudio(data.studio); }
   else if(data && data.screen==='subject' && SUBJECTS.some(s=>s.key===data.subject)){ openSubject(data.subject); }
+  else if(location.hash==='#eltern') openAbout('sheets');
   else show('home');
 }
 const hot=window.claude&&window.claude.hot;
