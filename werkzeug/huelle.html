@@ -18,7 +18,7 @@
   Gebaut von werkzeug/verschluesseln.mjs - nicht von Hand bearbeiten, sondern
   werkzeug/huelle.html aendern und neu bauen.
 -->
-<style>
+<style id="loginStyles">
 :root{--bg:#EEF4FB;--surface:#fff;--ink:#172033;--muted:#5D6B80;--line:#D3DEEC;--accent:#3B5BDB;--bad:#C92A2F}
 @media (prefers-color-scheme: dark){:root{--bg:#0F1626;--surface:#1A2338;--ink:#EEF3FA;--muted:#9DA9BE;--line:#2B3752;--accent:#7B93FF;--bad:#FF6B70}}
 *{box-sizing:border-box}
@@ -73,7 +73,14 @@ button:disabled{opacity:.6;cursor:default}
     return subtle.decrypt({ name: 'AES-GCM', iv: ausB64(tresor.iv) }, schluessel, ausB64(tresor.daten))
       .then(function (klar) { return new TextDecoder('utf-8').decode(klar); });
   }
-  function zeigen(html) { document.open(); document.write(html); document.close(); window.scrollTo(0, 0); }
+  function zeigen(html) {
+    // Chrome can retain this document's style rules when document.write is
+    // called while the original document is still loading. Remove the login
+    // styles explicitly so body/form rules cannot leak into the opened app.
+    var css = document.getElementById('loginStyles');
+    if (css) css.remove();
+    document.open(); document.write(html); document.close(); window.scrollTo(0, 0);
+  }
 
   function ableiten(passwort) {
     var roh = new TextEncoder().encode(String(passwort).normalize('NFC').trim());
