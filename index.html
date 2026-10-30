@@ -154,6 +154,7 @@ button{font:inherit;color:inherit}
 .opt.wrong{border-color:var(--bad);background:var(--bad-soft);opacity:1}
 .feedback{border-radius:14px;padding:12px 14px;font-weight:600;line-height:1.45;border-left:6px solid}
 .feedback.good{background:var(--good-soft);border-color:var(--good)}
+.feedback.hint{background:var(--soft);border-color:var(--sun)}
 .feedback.bad{background:var(--bad-soft);border-color:var(--bad)}
 .feedback ol{margin:6px 0 0;padding-left:22px;font-weight:400}
 #nextBtn{scroll-margin-bottom:20px}
@@ -341,6 +342,7 @@ button{font:inherit;color:inherit}
       <div class="visual" id="qVisual" hidden></div>
       <div id="qAnswers" class="answers"></div>
       <div id="feedback" class="feedback" hidden aria-live="polite"></div>
+      <button class="btn ghost" id="helpBtn" type="button">Show me how</button>
       <button class="btn primary" id="nextBtn" type="button" hidden>Next</button>
     </div>
   </section>
@@ -350,7 +352,7 @@ button{font:inherit;color:inherit}
     <div class="eyebrow" id="resWorld">Forces Lab</div>
     <div class="resultcard">
       <div class="bigstars" id="bigStars"></div>
-      <div class="score"><span id="resScore">0</span><small> / 8</small></div>
+      <div class="score"><span id="resScore">0</span><small> / <span id="resCount">8</span></small></div>
       <h2 id="resHead">Great job!</h2>
       <p class="muted" id="resMsg"></p>
       <div id="reflect" class="treat" hidden></div>
@@ -657,7 +659,7 @@ function placeValue(){
     const d=+s[pos], place=[1000,100,10,1][pos], right=d*place, names=['thousands','hundreds','tens','ones'];
     const wrongs=fill3(right,[d, d*place*10, d*place/10, place, d*1000, d*100, d*10].filter(Number.isInteger));
     return mc("What is the value of the <b>"+d+"</b> in <b>"+fmt(n)+"</b>?", fmt(right), wrongs.map(fmt),
-      "The "+d+" is in the "+names[pos]+" place, so it is worth "+fmt(right)+".", Object.assign({grid:true}, NUM));
+      "The "+d+" is in the "+names[pos]+" place, so it is worth "+fmt(right)+".", Object.assign({grid:true, coach:{family:'place-value', n:n, pos:pos}}, NUM));
   }
   if(v===1){
     const base=1500+rnd(7000);
@@ -684,10 +686,8 @@ function oddEven(){
   return two("Is <b>"+fmt(n)+"</b> odd or even?", ['Odd','Even'], n%2?0:1,
     "Only look at the last digit ("+(n%10)+"). 0, 2, 4, 6 and 8 are even. 1, 3, 5, 7 and 9 are odd.", NUM);
 }
-function subtraction(){
-  const a=300+rnd(700), b=100+rnd(a-100);
-  return typed("Solve the column subtraction. Type your answer.", a-b, a+" − "+b+" = "+(a-b)+". Start with the ones. If the top digit is too small, borrow from the next column.", Object.assign({visual:columnHTML(a,b)}, NUM));
-}
+/* Use a missing part instead of introducing an unconfirmed column algorithm. */
+function numberParts(){ return missingPartQuestion('numbers', 2); }
 function mental(){
   const a=pick([120,150,230,260,340,410,450,520,610,730])+rnd(5)*10, b=pick([110,150,200,250,300,340,380,420])+rnd(5)*10;
   const plus=rnd(2)===0; const right=plus?a+b:Math.abs(a-b), x=Math.max(a,b), y=Math.min(a,b);
@@ -695,7 +695,7 @@ function mental(){
   const wrongs=fill3(right,[right+10,right-10,right+100,right-100,right+20,right-1]);
   return mc(prompt, fmt(right), wrongs.map(fmt), (plus?a+" + "+b:x+" − "+y)+" = "+right+". Add or take away the hundreds first, then the tens.", Object.assign({grid:true}, NUM));
 }
-function buildNumbers(){ return shuffle([clockRead(), clockRead(), clockPick(), ampm(), numberLine(), placeValue(), oddEven(), subtraction(), pick([mental,placeValue])()]).slice(0,8); }
+function buildNumbers(){ return shuffle([clockRead(), clockRead(), clockPick(), ampm(), numberLine(), placeValue(), oddEven(), numberParts(), pick([mental,placeValue])()]).slice(0,8); }
 
 /* ======================= PAST · ROUNDING ROAD ======================= */
 const RND={label:'Rounding Road', world:'round'};
@@ -704,20 +704,20 @@ function nearestHundredQ(tag){
   const n=randNotMid(), lo=Math.floor(n/100)*100, hi=lo+100, near=(n-lo<50)?lo:hi;
   return two("Which hundred is <b>closest</b> to <b>"+n+"</b>?", [String(lo),String(hi)], near===lo?0:1,
     n+" sits between "+lo+" and "+hi+". It is "+(n-lo)+" away from "+lo+" and "+(hi-n)+" away from "+hi+", so the nearest hundred is "+near+".",
-    Object.assign({visual:benchLineSVG(n,lo,hi)}, tag||RND));
+    Object.assign({visual:benchLineSVG(n,lo,hi), coach:{family:'round', n:n, step:100}}, tag||RND));
 }
 function benchmarkQ(){
   const n=randNotMid(), lo=Math.floor(n/100)*100, hi=lo+100, less=rnd(2)===0;
   const right=less?lo:hi;
   const wrongs=fill3(right,[less?hi:lo, lo-100, hi+100, round10(n)]);
   return mc("Which benchmark hundred is just <b>"+(less?"less than":"greater than")+"</b> <b>"+n+"</b>?", String(right), wrongs.map(String),
-    "The hundreds around "+n+" are "+lo+" (less) and "+hi+" (greater).", Object.assign({grid:true}, RND));
+    "The hundreds around "+n+" are "+lo+" (less) and "+hi+" (greater).", Object.assign({grid:true, coach:{family:'benchmark', n:n, step:100, less:less}}, RND));
 }
 function roundWordQ(){
   const n=randNotMid(), lo=Math.floor(n/100)*100, hi=lo+100, near=(n-lo<50)?lo:hi;
   const wrongs=fill3(near,[near===lo?hi:lo, round10(n), near+100, near-100]);
   return mc("Round <b>"+n+"</b> to the nearest hundred.", String(near), wrongs.map(String),
-    "Look at the tens digit ("+Math.floor((n%100)/10)+"). 0 to 4 rounds down to "+lo+", 5 to 9 rounds up to "+hi+". So "+n+" rounds to "+near+".", Object.assign({grid:true}, RND));
+    n+" is between "+lo+" and "+hi+". Compare its distances from the two hundreds, or use the halfway point "+(lo+50)+".", Object.assign({grid:true, coach:{family:'round', n:n, step:100}}, RND));
 }
 function addendsQ(){
   const target=pick([100,100,200,500,500,1000,300]);
@@ -1084,7 +1084,7 @@ function distanceExplainQ(){
   const n=randNotMid(), lo=Math.floor(n/100)*100, hi=lo+100, d1=n-lo, d2=hi-n, near=d1<d2?lo:hi, far=near===lo?hi:lo;
   const right=n+" is "+d1+" away from "+lo+" and "+d2+" away from "+hi+". "+Math.min(d1,d2)+" is smaller, so "+near+" is closer.";
   const wrongs=[n+" is "+d2+" away from "+lo+" and "+d1+" away from "+hi+", so "+far+" is closer.", near+" is closer because I like that number more.", far+" is closer because it is the bigger number."];
-  return mc("Which explanation shows <b>how you know</b> which hundred is closest to "+n+"?", right, wrongs, "Explain with distances: count how far the number is from each hundred, then pick the smaller distance. The halfway point "+(lo+50)+" helps too.", Object.assign({visual:benchLineSVG(n,lo,hi)}, EXP));
+  return mc("Which explanation shows <b>how you know</b> which hundred is closest to "+n+"?", right, wrongs, "Explain with distances: count how far the number is from each hundred, then pick the smaller distance. The halfway point "+(lo+50)+" helps too.", Object.assign({visual:benchLineSVG(n,lo,hi), coach:{family:'round-explain', n:n, step:100}}, EXP));
 }
 function halfwayQ(){
   const lo=100*(1+rnd(8)), hi=lo+100;
@@ -1105,7 +1105,7 @@ function roundTenQ(){
   let n; do { n=randNotMid(); } while(n%10===0||n%10===5);
   const right=round10(n);
   return mc("Round <b>"+n+"</b> to the nearest <b>ten</b>.", String(right), fill3(right,[right+10,right-10,round100(n),n-n%10+(n%10<5?10:0)]).map(String),
-    "Look at the ones digit ("+(n%10)+"). "+(n%10<5?"It is less than 5, so round down to "+right+".":"It is 5 or more, so round up to "+right+"."), Object.assign({grid:true}, EXP));
+    "Compare the distances to the neighbouring tens. At halfway, choose the higher ten.", Object.assign({grid:true, coach:{family:'round', n:n, step:10}}, EXP));
 }
 const COMBO_SETS={
  900:[["400 + 400 + 100","500 + 200 + 200","300 + 300 + 300"],["450 + 250 + 200","600 + 200 + 100","350 + 350 + 200"]],
@@ -1124,7 +1124,7 @@ function combosQ(){
 }
 function missingAddendQ(tag){
   const total=pick([900,905,1000,750,620,905]), a=100+10*rnd((total-200)/10), ans=total-a;
-  return typed("<b>"+a+" + ? = "+total+"</b>. Type the missing addend.", ans, total+" − "+a+" = "+ans+". Check it: "+a+" + "+ans+" = "+total+".", Object.assign({visual:itemCard(a+" + ? = "+total)}, tag||EXP));
+  return typed("<b>"+a+" + ? = "+total+"</b>. Type the missing addend.", ans, total+" − "+a+" = "+ans+". Check it: "+a+" + "+ans+" = "+total+".", Object.assign({visual:itemCard(a+" + ? = "+total), coach:{family:'missing-part', total:total, parts:[a]}}, tag||EXP));
 }
 function anotherWayQ(){
   const sets=[[900,"300 + 300 + 300","450 + 250 + 200",["300 + 300 + 300","400 + 400 + 200","500 + 500 + 100"]],[600,"200 + 200 + 200","350 + 150 + 100",["200 + 200 + 200","300 + 300 + 300","400 + 200 + 200"]],[1000,"500 + 500","650 + 350",["500 + 500","600 + 500","450 + 450"]]];
@@ -1219,7 +1219,7 @@ function buildTeam(){ return fromBank(COOP_MC.concat(TEAM_MC), TEA, 8); }
 const STK={label:'Sticker Maths', world:'stickers'};
 function stickerMissingQ(){
   const total=pick([905,905,850,760,1000]), a=200+10*rnd(50), ans=total-a;
-  return typed("Nadia has <b>"+total+"</b> stickers. <b>"+a+"</b> of them are stars. How many are NOT stars? Type your answer.", ans, total+" − "+a+" = "+ans+". Check: "+a+" + "+ans+" = "+total+". Label it: "+ans+" stickers.", Object.assign({visual:itemCard(a+" + ? = "+total)}, STK));
+  return typed("Nadia has <b>"+total+"</b> stickers. <b>"+a+"</b> of them are stars. How many are NOT stars? Type your answer.", ans, total+" − "+a+" = "+ans+". Check: "+a+" + "+ans+" = "+total+". Label it: "+ans+" stickers.", Object.assign({visual:itemCard(a+" + ? = "+total), coach:{family:'missing-part', total:total, parts:[a]}}, STK));
 }
 function stickerComboQ(){
   const target=905, a=100+5*rnd(140), b=target-a, right=a+" + "+b;
@@ -1228,7 +1228,7 @@ function stickerComboQ(){
 }
 function funnyFaceQ(){
   const hearts=55+5*rnd(10), faces=120+rnd(80), total=hearts+faces;
-  return typed("There are <b>"+total+"</b> stickers. <b>"+hearts+"</b> are hearts, the rest are funny faces. How many funny faces? Type your answer.", faces, total+" − "+hearts+" = "+faces+" funny faces. Check: "+hearts+" + "+faces+" = "+total+".", Object.assign({visual:itemCard(total+" − "+hearts+" = ?")}, STK));
+  return typed("There are <b>"+total+"</b> stickers. <b>"+hearts+"</b> are hearts, the rest are funny faces. How many funny faces? Type your answer.", faces, total+" − "+hearts+" = "+faces+" funny faces. Check: "+hearts+" + "+faces+" = "+total+".", Object.assign({visual:itemCard(total+" − "+hearts+" = ?"), coach:{family:'missing-part', total:total, parts:[hearts]}}, STK));
 }
 function roundTenAddQ(){
   let nums; do { nums=[40+rnd(60), 60+rnd(80), 100+rnd(60)]; } while(nums.some(n=>n%10===5));
@@ -1240,7 +1240,7 @@ const STK_MC=[
  ["Which answer is correctly <b>labelled</b>?","305 stickers",["305","stickers","305 cm"],"Write the number and what it counts. 305 stickers."],
  ["A box holds 250 stickers. You have about 254. What is true?","Almost all fit, about 4 are left over",["None fit","All fit with lots of room","You need 10 boxes"],"254 is only a little more than 250. A few stay outside."],
  ["Why do we round to the nearest ten here instead of the nearest hundred?","Tens give a closer estimate for small numbers",["Hundreds are not allowed","Tens look nicer","It makes no difference"],"For small numbers like 48, tens are closer than hundreds."],
- ["You found ONE way to make 905. What would a 4 (Extending) answer do?","Show more than one correct way",["Stop there","Colour the page","Write it bigger"],"The top level shows more than one way."],
+ ["You found ONE way to make 905. How can you explore another idea?","Show more than one correct way",["Stop there","Colour the page","Write it bigger"],"Try a different combination and check that the total stays the same."],
  ["Before you hand in a maths problem, what should you check?","That the work is shown, labelled and the answer is reasonable",["That it is written in pen","That the page is full","That you finished first"],"Show your work. Write the label. Check the answer."]
 ];
 function buildStickers(){ return shuffle([stickerMissingQ(), stickerMissingQ(), missingAddendQ(STK), stickerComboQ(), funnyFaceQ(), roundTenAddQ(), roundTenAddQ()].concat(fromBank(STK_MC,STK,1))); }
@@ -1259,7 +1259,7 @@ function findTotalQ(){
 }
 function twoStepQ(){
   const s=wpSetup();
-  return typed("How many "+s.t[3]+" are there? Type your answer.", s.rest, s.total+" − "+s.a+" − "+s.b+" = "+s.rest+". Two steps: take away one part, then the other. Check: "+s.a+" + "+s.b+" + "+s.rest+" = "+s.total+".", Object.assign({visual:quote(s.text)}, WPR));
+  return typed("How many "+s.t[3]+" are there? Type your answer.", s.rest, s.total+" − "+s.a+" − "+s.b+" = "+s.rest+". Two steps: take away one part, then the other. Check: "+s.a+" + "+s.b+" + "+s.rest+" = "+s.total+".", Object.assign({visual:quote(s.text), coach:{family:'missing-part', total:s.total, parts:[s.a,s.b]}}, WPR));
 }
 function operationQ(){
   const n=pick(NAMES), start=300+10*rnd(30), plus=20+5*rnd(16), minus=10+5*rnd(10);
@@ -1358,6 +1358,102 @@ function mixFrom(keys){
 }
 const questsIn = s => s.items.filter(k=>k.indexOf('studio:')!==0 && !isArchived(WORLDS[k]));
 /* ======================= LEARNING LOGIC (hidden from the child) ======================= */
+/* Guidance follows the representations found in Toddle. Other subject hints
+   are supporting practice, not a claim about an unverified BIS teaching method. */
+function roundingModel(n, step, solved){
+  const lo=Math.floor(n/step)*step, hi=lo+step, mid=lo+step/2;
+  const x=v=>40+(v-lo)/step*440;
+  return `<svg viewBox="0 0 520 130" role="img" aria-label="Number line from ${lo} to ${hi}, halfway ${mid}, number ${n}">
+    <line x1="40" y1="60" x2="480" y2="60" stroke="var(--ink)" stroke-width="3"/>
+    ${[lo,mid,hi].map(v=>`<line x1="${x(v)}" y1="50" x2="${x(v)}" y2="70" stroke="var(--ink)" stroke-width="2"/><text x="${x(v)}" y="93" text-anchor="middle" fill="var(--ink)" font-size="18">${v}</text>`).join('')}
+    <circle cx="${x(n)}" cy="60" r="6" fill="var(--world)"/><text x="${x(n)}" y="35" text-anchor="middle" fill="var(--ink)" font-size="18">${n}</text>
+    ${solved?`<text x="260" y="122" text-anchor="middle" fill="var(--ink)" font-size="16">${n-lo} from ${lo} · ${hi-n} from ${hi}</text>`:''}</svg>`;
+}
+function numberHops(from, to){
+  const next=Math.min(to,Math.ceil((from+1)/10)*10), hundreds=Math.min(to,Math.ceil((next+1)/100)*100);
+  const stops=uniq([from,next,hundreds,to]).filter(n=>n>=from&&n<=to).sort((a,b)=>a-b);
+  return stops.slice(1).map((v,i)=>({from:stops[i],to:v,hop:v-stops[i]}));
+}
+function guidance(q, wrong, solved){
+  const c=q.coach, de=q.world==='anleitung';
+  if(c && ['round','round-explain','benchmark'].includes(c.family)){
+    const lo=Math.floor(c.n/c.step)*c.step, hi=lo+c.step, mid=lo+c.step/2;
+    const hint=c.family==='benchmark'
+      ? `Find the neighbouring multiples of ${c.step}. Which one is immediately ${c.less?'below':'above'} ${c.n}?`
+      : `Find ${c.n} between ${lo} and ${hi}. The halfway point is ${mid}. Which end is nearer?`;
+    let diagnose='';
+    const chosen=Number(String(wrong).replace(/,/g,''));
+    if(!solved && c.family==='round' && Number.isFinite(chosen) && chosen!==lo && chosen!==hi) diagnose=`We need a multiple of ${c.step}, not a different rounding place. `;
+    return {text:solved?(q.explain||hint):diagnose+hint, visual:roundingModel(c.n,c.step,solved)};
+  }
+  if(c && c.family==='missing-part'){
+    const known=c.parts.reduce((a,b)=>a+b,0), hops=numberHops(known,c.total);
+    const hint=`Keep the whole (${c.total}) separate from the known part${c.parts.length>1?'s':''} (${c.parts.join(' + ')}). Mark them on a number line. What needs to be added to reach the whole?`;
+    return {text:solved?`${c.parts.join(' + ')} = ${known}. Start at ${known}. ${hops.map(h=>`${h.from} → ${h.to}: +${h.hop}`).join('; ')}. The jumps add up to ${c.total-known}. Check: ${known} + ${c.total-known} = ${c.total}.`:hint,
+      visual:solved?itemCard(`${known} + ${c.total-known} = ${c.total}`):itemCard(`${c.parts.join(' + ')} + ? = ${c.total}`)};
+  }
+  if(c && c.family==='place-value'){
+    const ds=String(c.n).padStart(4,'0').split(''), names=['Thousands','Hundreds','Tens','Ones'];
+    return {text:solved?q.explain:'Match each digit with its column. A digit has a different value in each column. Start with the ones on the right.',visual:tableHTML(names,[ds])};
+  }
+  const hints={
+    round:'Locate the number between its neighbouring tens or hundreds. Mark the halfway point before choosing.',
+    numbers:/clock/i.test(q.prompt)?'Look at the short hand for the hour. Then count the long hand’s minutes in steps of five.':/odd|even/i.test(q.prompt)?'Try making pairs. Is anything left over?':'Check the place values and the direction of each jump. Work one step at a time.',
+    wordprob:/calculation/i.test(q.prompt)?'Read what happens to the collection. Getting more means adding; giving away means taking away. Keep the starting amount.':'Read the first sentence again. Find the whole and the parts. What does this question ask you to count?',
+    combos:'Add each combination carefully. Does it make the requested total, and is it different from the earlier combination?',
+    detective:'Read the row labels and values together. Compare the numbers before drawing a conclusion.',
+    units:'Choose the measurement tool first. Check whether its scale is in centimetres, metres or grams.',
+    graphs:'Read the title, labels and scale. Match one bar to its label and follow it to the numbered scale.',
+    sentences:/capital/i.test(q.prompt)?'Check the sentence beginning, names, places and days. Then check its ending.':'Does the sentence ask something, tell something, or show strong excitement?',
+    examples:'A specific example says who did what, where or when. Look for details that support the reason.',
+    opinion:'Use OREO: Opinion, Reason, Example, Opinion again. Ask whether this sentence says what someone thinks, why, or what happened.',
+    words:'Find the base word. Read the part added at the front or end, or look for a clue in the text.',
+    forces:'Think about one fair change at a time. Rougher surfaces rub more; compare distances to test your idea.',
+    anleitung:'Prüfe den Satz Schritt für Schritt: Wer handelt? Was wird gemacht? Bei einem trennbaren Verb steht die Vorsilbe am Ende.',
+    library:'Think about what you need: a book location, the language, or a reliable source for a fact.'
+  };
+  return {text:solved?(q.explain||'Read the worked answer and explain it in your own words.'):(hints[q.world]||(de?'Lies die Frage noch einmal. Welche Information hilft dir beim ersten Schritt?':'Read the question again. Which information helps you with the first step?')),visual:''};
+}
+function roundedQuestion(world, level, family, step, n, less){
+  const lo=Math.floor(n/step)*step, hi=lo+step, right=Math.round(n/step)*step;
+  let q;
+  if(family==='benchmark') q=mc(`Which neighbouring multiple of ${step} is just <b>${less?'below':'above'} ${n}</b>?`,String(less?lo:hi),[String(less?hi:lo),String(lo-step),String(hi+step)],`${n} lies between ${lo} and ${hi}.`,{grid:true});
+  else if(family==='round-explain') q=mc(`Which reason explains how to round <b>${n}</b> to the nearest ${step}?`,`${right} is nearer: compare ${n-lo} and ${hi-n}.`,[`${right===lo?hi:lo} is nearer: choose the larger distance.`,'Choose the number you like most.','Always choose the higher number.'],`Compare both distances; at halfway choose the higher multiple.`,{});
+  else q=mc(`Round <b>${n}</b> to the nearest <b>${step===10?'ten':'hundred'}</b>.`,String(right),[String(right===lo?hi:lo),String(lo-step),String(hi+step)],`${n} is ${n-lo} from ${lo} and ${hi-n} from ${hi}.`,{grid:true});
+  return Object.assign(q,{world:world,label:WORLDS[world].name,level:level,coach:{family:family,n:n,step:step,less:less},visual:level===1?roundingModel(n,step,false):''});
+}
+function missingPartQuestion(world, level, params){
+  const total=params?params.total:(level===1?40+rnd(5)*10:300+rnd(6)*100);
+  const parts=params?params.parts:[level===1?10+rnd(2)*10:100+rnd(Math.max(1,(total-150)/10))*10];
+  const answer=total-parts.reduce((a,b)=>a+b,0);
+  return typed(`There are <b>${total}</b> stickers altogether. <b>${parts.join(' and ')}</b> are already counted. How many are left?`,answer,`${parts.join(' + ')} + ${answer} = ${total}.`,{world:world,label:world==='numbers'?'Time & Numbers':WORLDS[world].name,level:level,coach:{family:'missing-part',total:total,parts:parts},visual:itemCard(`${parts.join(' + ')} + ? = ${total}`)});
+}
+/* A family, not a whole quest, defines similarity. These starter families
+   provide two genuinely simpler tasks and a new parallel task. Unmapped
+   questions retain hints and spaced review, without pretending to offer a bridge. */
+function bridgeFor(q){
+  const c=q.coach; if(!c) return [];
+  let bridge=[];
+  if(['round','round-explain','benchmark'].includes(c.family)){
+    const lo=Math.floor(c.n/c.step)*c.step;
+    let n=lo+pick([.4,.6])*c.step; if(n===c.n) n=lo+(n<lo+c.step/2?.6:.4)*c.step;
+    bridge=[roundedQuestion(q.world,1,'round',c.step,lo+.2*c.step),roundedQuestion(q.world,1,'round',c.step,lo+.8*c.step),roundedQuestion(q.world,levelOf(q),c.family,c.step,n,c.less)];
+  } else if(c.family==='missing-part'){
+    const parts=c.parts.map((p,i)=>p+10*(i+1)), total=c.total+10*(parts.length+1);
+    bridge=[missingPartQuestion(q.world,1,{total:50,parts:[20]}),missingPartQuestion(q.world,1,{total:70,parts:[30]}),missingPartQuestion(q.world,levelOf(q),{total:total,parts:parts})];
+  } else if(c.family==='place-value'){
+    const pos=c.pos, make=(n,p,level)=>mc(`What is the value of the <b>${String(n)[p]}</b> in <b>${fmt(n)}</b>?`,fmt(+String(n)[p]*10**(3-p)),fill3(+String(n)[p]*10**(3-p),[10,100,1000,2000]).map(fmt),'Match the digit to the column.',{world:q.world,label:q.label,level:level,coach:{family:'place-value',n:n,pos:p},grid:true,visual:level===1?tableHTML(['Thousands','Hundreds','Tens','Ones'],[String(n).split('')]):''});
+    bridge=[make(1234,3,1),make(1234,2,1),make(c.n===5678?6789:5678,pos,levelOf(q))];
+  }
+  return bridge.map((b,i)=>Object.assign(b,{bridge:true,assisted:true,bridgePart:i<2?'practice':'return',bridgeSource:qId(q)}));
+}
+function queueBridge(q){
+  if(q.bridge) return;
+  const tasks=bridgeFor(q); if(!tasks.length) return;
+  const slots=state.round.length-state.idx-1;
+  tasks.slice(0,slots).forEach((b,i)=>{ state.round[state.idx+1+i]=b; });
+  if(tasks.length>slots) store.set('bridgeNext',store.get('bridgeNext',[]).concat(tasks.slice(slots)).slice(-12));
+}
 /* School key (BIS standards legend): Not applicable, Requires support, Consolidating, Meeting expectations, Extending.
    It is used ONLY to choose the next questions. Nothing of it is ever shown to the child: no levels, no words, no percentages.
    Skill = the quest a question belongs to (q.world). Level: 1 = support (one step, a visual help), 2 = year level, 3 = extending (explain, second way, check). */
@@ -1382,7 +1478,7 @@ const EVIDENCE_MAX=60;
 function recordAnswer(q, ok){
   if(!q.world) return;
   const ev=store.get('ev',{}); const list=ev[q.world]||[];
-  list.push([dayKey(), levelOf(q), ok?1:0]);
+  list.push([dayKey(), q.assisted?1:levelOf(q), ok?1:0]);
   ev[q.world]=list.slice(-EVIDENCE_MAX); store.set('ev',ev);
 }
 /* Thresholds are starting values (not from the school) and can be tuned. */
@@ -1421,10 +1517,10 @@ function adaptRound(k, round){
 
 /* Spaced repetition: a wrong question comes back on the next practice day, then after 3 and 7 days. */
 const DUE_MAX=40, GAPS=[1,3,7];
-const qId = q => (q.prompt||'')+'|'+(q.options?q.options.join('/'):'')+'|'+(q.items?q.items.join('/'):'')+'|'+(q.answer||'');
+const qId = q => (q.prompt||'')+'|'+(q.visual||'')+'|'+(q.options?q.options.slice().sort().join('/'):'')+'|'+(q.items?q.items.slice().sort().join('/'):'')+'|'+(q.kind==='mc'?q.options[q.answer]:q.kind==='order'?q.correct.map(i=>q.items[i]).join('/'):q.answer);
 function rememberWrong(q){
   const due=store.get('due',[]), id=q.dueId||qId(q);
-  const copy=JSON.parse(JSON.stringify(q)); delete copy.retry; delete copy.warmup; copy.dueId=id;
+  const copy=JSON.parse(JSON.stringify(q)); ['retry','warmup','assisted','bridge','bridgePart','bridgeSource','challenge','accepted'].forEach(k=>delete copy[k]); copy.dueId=id;
   const old=due.findIndex(d=>d.id===id); if(old>=0) due.splice(old,1);
   due.push({id:id, box:0, at:addDays(dayKey(),GAPS[0]), q:copy});
   store.set('due', due.slice(-DUE_MAX));
@@ -1435,7 +1531,12 @@ function advanceDue(q){
   if(d.box>=GAPS.length) due.splice(i,1); else d.at=addDays(dayKey(),GAPS[d.box]);
   store.set('due',due);
 }
-const dueToday = () => store.get('due',[]).filter(d=>d.at<=dayKey()).map(d=>d.q);
+const dueToday = () => store.get('due',[]).filter(d=>d.at<=dayKey() && d.q && WORLDS[d.q.world]).map(d=>{
+  const parallel=bridgeFor(d.q).slice(-1)[0];
+  if(!parallel) return d.q;
+  ['bridge','bridgePart','bridgeSource','assisted'].forEach(k=>delete parallel[k]);
+  parallel.dueId=d.id; return parallel;
+});
 function reshuffled(q){
   const c=JSON.parse(JSON.stringify(q));
   if(c.kind==='mc' && !c.grid3 && c.options.length>2 && !c.fixedOrder){ const right=c.options[c.answer]; c.options=shuffle(c.options); c.answer=c.options.indexOf(right); }
@@ -1535,7 +1636,7 @@ const STUDIOS={
     checks:['I wrote the unit after every measurement (cm, m, g).','I finished my bar graph: title, labels and numbers on the side.','I answered EVERY question on the worksheet.','My hypothesis says what will happen AND why.','Every sentence starts with a capital letter.','Names, places, days and months have a capital letter.','Every sentence ends with . ? or !','My examples are specific and personal (who, when, where).','I explained HOW I know (distances, halfway point).','I tried more than one combination, not just the same number.','I checked that my answer is reasonable (estimate first).','I read the word problem twice and underlined the numbers.','In a two-step problem I wrote down the middle result.'],
     extraTitle:'How to use it',
     extra:['Choose one habit for this week and tell a grown-up which one.','After each piece of work, read the list and tick what you did.','When all are ticked, celebrate and pick a new focus!'],
-    tips:['Rubric tip: a 3 (Meets) shows correct, labelled work. A 4 (Extending) shows more than one way or a check.']},
+    tips:['Show your thinking, label your work and try a second way to check.']},
   read:{name:'Lese-Studio (Deutsch)', sub:'Leseaufnahme Herbst: üben, dann aufnehmen', color:'var(--w-read)', icon:'read',
     intro:'Suche dir eine Seite aus deinem Lesebuch aus. Lies den Text zwei- bis dreimal laut vor. Wenn du ihn flüssig lesen kannst, mach deine Leseaufnahme in Toddle. Die Aufgabe ist noch offen!',
     timer:true,
@@ -1622,6 +1723,12 @@ function goBack(){
 function startRound(k){
   state.world=k; state.round=(k==='today'||k.indexOf('mix_')===0)?WORLDS[k].build():adaptRound(k, WORLDS[k].build()); state.idx=0; state.stars=0; state.streak=0;
   state.results=state.round.map(()=>null);
+  const pending=store.get('bridgeNext',[]).filter(q=>q && WORLDS[q.world]);
+  if(pending.length){
+    const use=pending.slice(0,Math.min(3,state.round.length));
+    use.forEach((q,i)=>state.round[i]=q);
+    store.set('bridgeNext',pending.slice(use.length));
+  }
   state.noteShown=false; state.noteNow=null;
   if(WORLDS[k].build!==buildToday && k.indexOf('mix_')!==0 && store.get('best_'+k,null)===null && !store.get('tried',[]).includes(k)){ addBadge('inquirer'); store.set('tried', store.get('tried',[]).concat([k])); }
   state.pendingNote=maybeNote('start',.25);
@@ -1636,6 +1743,10 @@ function renderDots(){
 function renderQuestion(){
   const q=state.round[state.idx];
   state.answered=false; state.typed=''; state.picked=[];
+  state.attempts=0; state.evidenceRecorded=false; state.firstResponse=null; state.locked=[];
+  state.rejected=[];
+  state.challengeRewarded=false;
+  window.scrollTo(0,0);
   const pn=$('#playNote'); pn.hidden=!state.pendingNote; pn.textContent=state.pendingNote||''; state.pendingNote=null;
   if(q.challenge && !q.accepted){ renderChallengeOffer(); return; }
   play.style.setProperty('--world', (WORLDS[q.world]||WORLDS[state.world]).color); // repeats saved by an older version may name a quest that no longer exists
@@ -1645,6 +1756,7 @@ function renderQuestion(){
   const A=$('#qAnswers'); A.innerHTML=''; A.className='answers'+(q.grid?' grid':'')+(q.grid3?' grid3':'');
   const fb=$('#feedback'); fb.hidden=true; fb.innerHTML=''; fb.className='feedback';
   const nb=$('#nextBtn'); nb.hidden=true; nb.textContent=state.idx===state.round.length-1?'See my stars':'Next question';
+  const help=$('#helpBtn'); help.hidden=false; help.textContent=q.world==='anleitung'?'Zeig mir, wie':'Show me how';
   if(q.kind==='mc'){
     q.options.forEach((o,i)=>{
       const b=document.createElement('button'); b.type='button'; b.className='opt'+(q.vis?' vis':'');
@@ -1690,6 +1802,7 @@ function feedback(ok, q, wrongText){
     : `<span class="mark">Not quite.</span>${wrongText}${esc(q.explain)}`;
   if(state.noteNow){ fb.insertAdjacentHTML('beforeend', '<p class="note-banner" style="margin-top:8px">'+esc(state.noteNow)+'</p>'); state.noteNow=null; }
   $('#nextBtn').hidden=false;
+  $('#helpBtn').hidden=true;
   $('#nextBtn').focus({preventScroll:true});
   revealNext();
 }
@@ -1704,23 +1817,63 @@ function score(ok){
   state.answered=true; state.results[state.idx]=ok;
   if(ok){ state.stars++; state.streak++; } else state.streak=0;
   const q=state.round[state.idx];
-  recordAnswer(q, ok);
-  if(ok && q.dueId) advanceDue(q);
-  if(!ok){
-    rememberWrong(q);
-    // try a similar question again a little later in this round (after the explanation)
-    const j=state.idx+2;
-    if(!q.retry && j<state.round.length && state.results[j]===null) state.round[j]=Object.assign(reshuffled(q),{retry:true, warmup:false});
-  }
+  if(ok && q.dueId && state.attempts===1 && !q.assisted) advanceDue(q);
+  if(!ok) queueBridge(q);
   if(ok && levelOf(q)===3){ addBadge('thinker'); if(q.world==='combos') addBadge('openMinded'); }
-  if(q.challenge){ addBadge('riskTaker'); state.noteShown=true; state.noteNow=pick(NOTES.brave); }
+  if(q.challenge && !state.challengeRewarded){ addBadge('riskTaker'); state.challengeRewarded=true; state.noteNow=maybeNote('brave',1); }
   else if(!ok) state.noteNow=maybeNote('wrong',.4);
   $('#roundStars').textContent=state.stars;
   beep(ok?'good':'bad'); renderDots();
 }
+/* First response is a learning observation; a later correct guess is not a
+   second independent success. Keep attempt details separately from legacy evidence. */
+function observeAttempt(q, ok, response){
+  state.attempts++;
+  if(!state.evidenceRecorded){
+    state.firstResponse=response; recordAnswer(q,ok); state.evidenceRecorded=true;
+    if(!ok) rememberWrong(q);
+  }
+  const log=store.get('attempts',[]);
+  log.push({day:dayKey(),skill:q.world,family:q.coach?q.coach.family:null,level:levelOf(q),attempt:state.attempts,ok:ok,response:response,help:state.attempts>1||!!q.assisted});
+  store.set('attempts',log.slice(-200));
+}
+function hintFeedback(q, response){
+  const h=guidance(q,response,false), fb=$('#feedback');
+  fb.className='feedback hint'; fb.hidden=false;
+  fb.innerHTML=`<span class="mark">${q.world==='anleitung'?'Noch ein Versuch':'Try one more time'}</span><p>${esc(h.text)}</p>${h.visual?`<div class="visual">${h.visual}</div>`:''}`;
+  $('#nextBtn').hidden=true;
+  fb.scrollIntoView({block:'nearest',behavior:'auto'});
+  snapshot();
+}
+function showWorked(){
+  if(state.answered) return;
+  const q=state.round[state.idx];
+  if(!state.evidenceRecorded){ recordAnswer(Object.assign({},q,{assisted:true}),false); state.evidenceRecorded=true; rememberWrong(q); }
+  const log=store.get('attempts',[]); log.push({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,solutionShown:true}); store.set('attempts',log.slice(-200));
+  score(false);
+  if(q.kind==='mc') document.querySelectorAll('#qAnswers .opt').forEach(b=>{ b.disabled=true; b.classList.toggle('correct',+b.dataset.i===q.answer); });
+  else if(q.kind==='type') document.querySelectorAll('#qAnswers .key').forEach(b=>b.disabled=true);
+  else { document.querySelectorAll('#qAnswers .ord').forEach(b=>b.disabled=true); $('#checkOrder').hidden=true; }
+  const h=guidance(q,null,true);
+  const answer=q.kind==='mc'?(q.htmlOptions?'the highlighted answer':esc(q.options[q.answer])):q.kind==='type'?esc(q.answer):q.correct.map(i=>esc(q.items[i])).join(' → ');
+  feedback(false,q,`<div class="worked"><p>${esc(h.text)}</p>${h.visual?`<div class="visual">${h.visual}</div>`:''}<p><b>${q.world==='anleitung'?'So geht es':'Worked answer'}: ${answer}</b></p></div>`);
+  snapshot();
+}
 function answerMC(i){
   if(state.answered) return;
+  if(state.rejected.includes(i)) return;
   const q=state.round[state.idx], ok=i===q.answer;
+  observeAttempt(q,ok,q.options[i]);
+  if(!ok && state.attempts===1 && q.options.length>2){
+    state.rejected.push(i);
+    const selected=$(`#qAnswers .opt[data-i="${i}"]`); selected.disabled=true; selected.classList.add('wrong');
+    let brave=null;
+    if(q.challenge && !state.challengeRewarded){ addBadge('riskTaker'); state.challengeRewarded=true; brave=maybeNote('brave',1); }
+    hintFeedback(q,q.options[i]);
+    if(brave) $('#feedback').insertAdjacentHTML('beforeend',`<p>${esc(brave)}</p>`);
+    return;
+  }
+  if(!ok){ showWorked(); return; }
   score(ok);
   document.querySelectorAll('#qAnswers .opt').forEach(b=>{
     const k=+b.dataset.i; b.disabled=true;
@@ -1733,6 +1886,9 @@ function answerMC(i){
 function answerTyped(){
   if(state.answered) return;
   const q=state.round[state.idx], ok=String(+state.typed)===q.answer;
+  observeAttempt(q,ok,state.typed);
+  if(!ok && state.attempts===1){ hintFeedback(q,state.typed); return; }
+  if(!ok){ showWorked(); return; }
   score(ok);
   const out=$('#typedOut'); out.style.borderStyle='solid'; out.style.borderColor=ok?'var(--good)':'var(--bad)';
   document.querySelectorAll('#qAnswers .key').forEach(b=>b.disabled=true);
@@ -1741,6 +1897,7 @@ function answerTyped(){
 }
 function toggleOrder(i){
   if(state.answered) return;
+  if(state.locked.includes(i)) return;
   const at=state.picked.indexOf(i);
   if(at>=0) state.picked=state.picked.slice(0,at); else state.picked.push(i);
   document.querySelectorAll('#qAnswers .ord').forEach(b=>{
@@ -1753,6 +1910,18 @@ function checkOrder(){
   if(state.answered) return;
   const q=state.round[state.idx];
   const ok=state.picked.every((v,k)=>v===q.correct[k]);
+  observeAttempt(q,ok,state.picked.map(i=>q.items[i]));
+  if(!ok && state.attempts===1){
+    /* Keep the correct prefix fixed. Non-prefix matches are marked as clues,
+       not locked out of a sequence which still needs to be rebuilt. */
+    const before=state.picked.slice(); let prefix=0;
+    while(prefix<before.length && before[prefix]===q.correct[prefix]) prefix++;
+    state.picked=before.slice(0,prefix); state.locked=state.picked.slice();
+    document.querySelectorAll('#qAnswers .ord').forEach(b=>{ const i=+b.dataset.i, pos=before.indexOf(i); b.classList.toggle('correct',q.correct[pos]===i); b.classList.toggle('picked',state.locked.includes(i)); b.disabled=state.locked.includes(i); b.querySelector('.badge').textContent=state.locked.includes(i)?state.picked.indexOf(i)+1:'·'; });
+    $('#checkOrder').disabled=true;
+    hintFeedback(q,null); return;
+  }
+  if(!ok){ showWorked(); return; }
   score(ok);
   document.querySelectorAll('#qAnswers .ord').forEach(b=>{
     const k=+b.dataset.i, p=state.picked.indexOf(k); b.disabled=true;
@@ -1773,10 +1942,11 @@ function showResults(){
   const best=store.get('best_'+k,0); if(s>best) store.set('best_'+k,s);
   $('#resWorld').textContent=WORLDS[k].name;
   $('#resScore').textContent=s;
+  $('#resCount').textContent=n;
   $('#bigStars').innerHTML=state.round.map((_,i)=>STAR.replace('<svg', i<s?'<svg class="on"':'<svg')).join('');
   const who=name?', '+name:'';
   let head, msg;
-  if(s===n){ head='Perfect score'+who+'!'; msg='Every single answer right. You are a Grade 3 superstar!'; }
+  if(s===n){ head='Great exploring'+who+'!'; msg='You worked through every task. Keep your curiosity!'; }
   else if(s>=6){ head='Fantastic work'+who+'!'; msg='Nearly perfect. One more round and you will have them all.'; }
   else if(s>=4){ head='Good job'+who+'!'; msg='You are getting there. Read the explanations and try again.'; }
   else { head='Nice try'+who+'!'; msg='Every game makes your brain stronger. Have another go!'; }
@@ -1943,6 +2113,7 @@ function renderChallengeOffer(){
   $('#qLabel').textContent='Challenge';
   $('#qPrompt').textContent='Ready for a challenge? You choose!';
   $('#qVisual').hidden=true; $('#feedback').hidden=true; $('#nextBtn').hidden=true;
+  $('#helpBtn').hidden=true;
   const A=$('#qAnswers'); A.className='answers';
   A.innerHTML='<button class="btn primary" id="takeChallenge" type="button">⚡ Take the challenge</button><button class="btn" id="skipChallenge" type="button">Not today</button>';
   $('#takeChallenge').addEventListener('click',()=>{ state.round[state.idx].accepted=true; renderQuestion(); });
@@ -2014,7 +2185,7 @@ function paperTask(q, nr, checkBox){
   if(q.kind==='mc') body+=`<ul>${q.options.map((o,i)=>`<li><b>${LETTERS[i]}</b> ${q.htmlOptions?`<span class="vis" style="display:inline-block;width:28mm">${o}</span>`:esc(o)}</li>`).join('')}</ul>`;
   else if(q.kind==='type') body+=`<p>Answer: ____________</p>`;
   else body+=`<ul>${q.items.map(t=>`<li>☐ ${esc(t)}</li>`).join('')}</ul><p class="small">Write 1, 2, 3 … in the boxes.</p>`;
-  if(MATHS.indexOf(q.world)>=0) body+=`<div class="work">Show your work${q.world==='units'?' · write the unit (cm, m, g)':''}</div>`;
+  if(MATHS.indexOf(q.world)>=0) body+=`<div class="work">Show your work${q.world==='units'?' · write the unit (cm, m, g)':''}<svg viewBox="0 0 400 30" role="img" aria-label="Blank number line"><line x1="12" y1="17" x2="388" y2="17" stroke="#777"/><path d="M12 10v14 M200 10v14 M388 10v14" stroke="#777"/></svg></div>`;
   if(checkBox) body+=`<div class="work">Check it another way</div>`;
   return `<div class="task">${body}</div>`;
 }
@@ -2062,14 +2233,38 @@ function bindStoryCap(){ const sc=$('#storyCap'); if(sc) sc.addEventListener('ch
 function renderSheets(){
   const all=store.get('sheets',[]).slice().reverse();
   const body=$('#aboutBody');
-  if(!all.length){ body.innerHTML=storyCapHTML()+'<h2>Practice sheets</h2><p>No sheet printed yet. Use “Print a practice sheet” on the start page.</p>'; bindStoryCap(); return; }
-  body.innerHTML=storyCapHTML()+'<h2>Practice sheets</h2><p class="small">Tick each task once. “With help” and “Not yet” are fine – the app then offers easier steps and repeats the task later. Nothing of this is shown to the child.</p>'+
+  if(!all.length){ body.innerHTML=storyCapHTML()+parentGuidanceHTML()+'<h2>Practice sheets</h2><p>No sheet printed yet. Use “Print a practice sheet” on the start page.</p>'; bindStoryCap(); return; }
+  body.innerHTML=storyCapHTML()+parentGuidanceHTML()+'<h2>Practice sheets</h2><p class="small">Tick each task once. “With help” and “Not yet” are fine – the app then offers easier steps and repeats the task later. Nothing of this is shown to the child.</p>'+
     all.map(sh=>`<h3>Sheet of ${sh.day}</h3>`+sh.items.map((it,i)=>`<div class="sheetrow"><div class="q"><b>${i+1}.</b> ${esc(strip(it.q.prompt).slice(0,140))}</div><div class="row">${Object.keys(RES).map(r=>`<button type="button" class="btn small${it.res===r?' on':''}" data-sheet="${sh.id}" data-i="${i}" data-res="${r}"${it.res?' disabled':''}>${RES[r]}</button>`).join('')}</div></div>`).join('')).join('');
   body.querySelectorAll('button[data-res]').forEach(b=>b.addEventListener('click',()=>enterResult(b.dataset.sheet, +b.dataset.i, b.dataset.res)));
   bindStoryCap();
 }
 
 /* ---------- about ---------- */
+const PARENT_GUIDANCE=[
+  {title:'Runden – wie in der Unterrichtsaufgabe',source:'BIS/Toddle: Lesson 4, Zahlenstrahl, Nachbar-Hunderter, Mitte und Abstände.',text:'Beispiel 120: Markieren Sie 100 und 200, dann die Mitte 150. Lassen Sie das Kind 120 eintragen und die Abstände vergleichen.',questions:['Welche beiden Hunderter liegen direkt davor und danach?','Wo liegt die Mitte?','Wie weit ist deine Zahl von beiden Enden entfernt?']},
+  {title:'Fehlende Teile und Rechenwege',source:'BIS/Toddle: Travel for Work verlangt Zerlegungen, Zahlenstrahl und Gleichungen. Die konkreten Sprunggrößen unten sind eine passende Übungsdarstellung, keine bestätigte schulweite Methode.',text:'Beispiel 278 + ? = 503: erst klären, was Ganzes und Teil sind. Die Lücke lässt sich durch Sprünge 278 → 300 → 500 → 503 darstellen. Nicht ungefragt einen Spaltenalgorithmus danebenstellen.',questions:['Was ist das Ganze, was kennst du schon?','Wie habt ihr solche Aufgaben in der Klasse dargestellt?','Wie kannst du dein Ergebnis mit einer Gleichung prüfen?']},
+  {title:'OREO und Anleitung',source:'BIS/Toddle: Persuade for the Park und Vorgangsbeschreibung/Anleitung.',text:'OREO: Meinung, Grund, konkretes Beispiel, Meinung zum Schluss. Anleitung: vollständige Schritte, passende Satzanfänge, Man-Form und die Vorsilbe des trennbaren Verbs am Satzende.',questions:['Was möchtest du sagen – und warum?','Kannst du ein eigenes Beispiel nennen?','Könnte jemand die Anleitung ohne Rückfrage ausführen?']}
+];
+function parentGuidanceHTML(){
+  return '<h2>So unterstützen wir wie im Unterricht</h2><p>Erst den Weg des Kindes zeigen lassen. Einen kleinen Hinweis anbieten, dann wieder selbst probieren lassen. Die Lehrkraft kann andere Modelle verwenden: Die Quellenangabe unterscheidet belegte Unterrichtsaufgaben von allgemeinen Übungsdarstellungen.</p>'+PARENT_GUIDANCE.map(c=>`<details class="parent-method"><summary>${esc(c.title)}</summary><p>${esc(c.text)}</p><ul>${c.questions.map(t=>`<li>${esc(t)}</li>`).join('')}</ul><p class="small">${esc(c.source)}</p></details>`).join('')+curriculumHTML();
+}
+/* A planning inventory, not a claim that every international school has the
+   same programme. No entry creates a child-facing quest or joins Focus/Today. */
+const CURRICULUM_PLAN=[
+  ['Maths','Multiplication and division; arrays and groups','Common Core 3.OA; BIS year sequence not confirmed'],
+  ['Maths','Fractions on a number line, equal parts','Common Core 3.NF; BIS methods and timing not confirmed'],
+  ['Maths','Area and perimeter','Common Core 3.MD; supplementary planning source'],
+  ['Maths','Rounding to 1,000 and calculations to 9,999','BIS/Toddle standards; full-year sequence not available'],
+  ['Maths','Elapsed time, kilograms and litres','Common Core 3.MD; supplementary planning source'],
+  ['Maths','Line graphs and accurate scaled diagrams','BIS/Toddle standards; line plots are a different representation'],
+  ['English','Narratives, non-fiction, reading comprehension','Common Core ELA; supplementary, not a confirmed BIS programme'],
+  ['Science','Magnets, life cycles, weather and habitats','NGSS; examples for planning, not confirmed BIS Grade 3 units'],
+  ['Deutsch','Reading strategies and language conventions','LehrplanPLUS 3/4; depends on the child’s language level']
+];
+function curriculumHTML(){
+  return '<h2>Lernlandkarte – Vorbereitung für das Schuljahr</h2><p>Das IB PYP bietet einen gemeinsamen Rahmen, keinen weltweit identischen Jahreslehrplan. Die folgenden Themen sind eine Planungsübersicht. Sie sind noch keine neuen Aufgaben und erscheinen nicht beim Kind. Freischaltung und Unterrichtsmethode folgen erst nach einem Abgleich mit der Schule.</p><ul>'+CURRICULUM_PLAN.map(c=>`<li><b>${esc(c[0])}:</b> ${esc(c[1])}<br><span class="small">${esc(c[2])}</span></li>`).join('')+'</ul>';
+}
 const ABOUT_SOURCES=[
   ['Bavarian International School – Purpose (Trust, Belong, Engage, Innovate, Flourish)','https://www.bis-school.com/about/purpose'],
   ['Bavarian International School – Learning Principles','https://www.bis-school.com/fs/pages/1629'],
@@ -2079,9 +2274,57 @@ const ABOUT_SOURCES=[
   ['Education Endowment Foundation – Feedback','https://educationendowmentfoundation.org.uk/education-evidence/teaching-learning-toolkit/feedback'],
   ['IES Practice Guide – Organizing Instruction and Study to Improve Student Learning (spacing, retrieval)','https://ies.ed.gov/ncee/wwc/PracticeGuide/1'],
   ['The Learning Scientists – Interleaving','https://www.learningscientists.org/blog/2016/8/11-1'],
-  ['Deci, Koestner & Ryan (1999): extrinsic rewards and intrinsic motivation','https://pubmed.ncbi.nlm.nih.gov/10589297/']
+  ['Deci, Koestner & Ryan (1999): extrinsic rewards and intrinsic motivation','https://pubmed.ncbi.nlm.nih.gov/10589297/'],
+  ['Shute (2008) – Formative feedback','https://doi.org/10.3102/0034654307313795'],
+  ['Hattie & Timperley (2007) – The power of feedback','https://doi.org/10.3102/003465430298487'],
+  ['Van der Kleij et al. (2015) – Feedback meta-analysis','https://doi.org/10.3102/0034654314564881'],
+  ['Epstein et al. (2002) – Immediate feedback','https://doi.org/10.1007/BF03395423'],
+  ['Treagust (1988) – Diagnostic questions','https://doi.org/10.1080/0950069880100204'],
+  ['Wood & Middleton (1975) – Assisted problem-solving; bibliografisch geprüft','https://doi.org/10.1111/j.2044-8295.1975.tb01454.x'],
+  ['Van de Pol et al. (2010) – Scaffolding review; bibliografisch geprüft','https://doi.org/10.1007/s10648-010-9127-6'],
+  ['Kulik et al. (1990) – Mastery learning; bibliografisch geprüft','https://doi.org/10.3102/00346543060002265'],
+  ['Renkl & Atkinson (2003) – Worked examples; bibliografisch geprüft','https://doi.org/10.1207/S15326985EP3801_3'],
+  ['Patall et al. (2008) – Parent involvement','https://doi.org/10.3102/0034654308325185'],
+  ['Maloney et al. (2015) – Parents’ maths anxiety (association, not causal proof)','https://doi.org/10.1177/0956797615592630'],
+  ['Sisk et al. (2018) – Growth mindset','https://doi.org/10.1177/0956797617739704'],
+  ['Metcalfe et al. (2009) – Feedback timing, Grade 6 vocabulary','https://doi.org/10.3758/MC.37.8.1077'],
+  ['SFUSD Mathematics – current curriculum; old unit order unconfirmed','https://www.sfusd.edu/departments/mathematics'],
+  ['SFUSD – Family resources','https://www.sfusd.edu/departments/mathematics-department-page/math-family-resources'],
+  ['Common Core Grade 3 – unofficial mirror, supplementary curriculum map','https://www.thecorestandards.org/Math/Content/3/'],
+  ['Common Core English – unofficial mirror','https://www.thecorestandards.org/ELA-Literacy/'],
+  ['NGSS Science – supplementary; not confirmed BIS Grade 3 programme','https://www.nextgenscience.org/overview-dci'],
+  ['LehrplanPLUS Deutsch 3/4 – supplementary, not BIS curriculum','https://www.lehrplanplus.bayern.de/fachlehrplan/grundschule/3/deutsch'],
+  ['England Primary curriculum – comparison only','https://www.gov.uk/government/publications/national-curriculum-in-england-primary-curriculum'],
+  ['Cambridge Primary – comparison only','https://www.cambridgeinternational.org/programmes-and-qualifications/cambridge-primary/curriculum/'],
+  ['IB – Copyright and reuse','https://www.ibo.org/terms-and-conditions/intellectual-property/'],
+  ['Diagnostic Questions – practice example, not proof of effectiveness','https://diagnosticquestions.com/'],
+  ['youcubed – Parent resources','https://www.youcubed.org/resource/parent-resources/'],
+  ['BIS – Resources','https://www.bis-school.com/admissions/resources'],
+  ['California – Common Core mathematics standards','https://www.cde.ca.gov/be/st/ss/documents/ccssmathstandardaug2013.pdf'],
+  ['Common Core – archived licence; examples have separate rights','https://web.archive.org/web/20220304134704/http://www.corestandards.org/public-license/'],
+  ['IES/WWC – Foundational reading skills','https://ies.ed.gov/ncee/wwc/PracticeGuide/21'],
+  ['Grundschulkönig – Vorgangsbeschreibung, comparative resource','https://www.grundschulkoenig.de/deutsch/4-klasse/vorgangsbeschreibung/'],
+  ['Duolingo – Streak mechanics, comparison rather than a model for pressure','https://blog.duolingo.com/how-duolingo-streak-builds-habit/'],
+  ['Sofatutor – Practice product comparison','https://www.sofatutor.com/'],
+  ['Bettermarks – Practice product comparison','https://de.bettermarks.com/'],
+  ['Prodigy – Parent resources, comparison','https://www.prodigygame.com/main-en/parents/'],
+  ['BBC – Dance Mat Typing, not a confirmed BIS tool','https://www.bbc.co.uk/bitesize/articles/z3c6tfr'],
+  ['TypingClub – Product comparison, not a confirmed BIS tool','https://www.typingclub.com/'],
+  ['Typing.com – Product comparison, not a confirmed BIS tool','https://www.typing.com/'],
+  ['H5P Standalone – Evaluated technical alternative','https://github.com/tunapanda/h5p-standalone'],
+  ['ts-fsrs – Evaluated technical alternative','https://github.com/open-spaced-repetition/ts-fsrs'],
+  ['SurveyJS – Evaluated technical alternative and licensing','https://surveyjs.io/licensing'],
+  ['ICO – Children’s Code','https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/childrens-information/childrens-code-guidance-and-resources/age-appropriate-design-a-code-of-practice-for-online-services/code-standards/'],
+  ['MDN – Periodic Background Sync availability','https://developer.mozilla.org/en-US/docs/Web/API/Web_Periodic_Background_Synchronization_API'],
+  ['MDN – Service workers and offline operation','https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers'],
+  ['Attali (2015) – Multiple-try feedback; bibliografisch, nicht inhaltlich geprüft','https://doi.org/10.1016/j.compedu.2015.08.011'],
+  ['Fyfe et al. (2012) – Prior knowledge and feedback; bibliografisch, nicht inhaltlich geprüft','https://doi.org/10.1037/a0028389'],
+  ['Fyfe & Rittle-Johnson (2016) – Feedback; bibliografisch, nicht inhaltlich geprüft','https://doi.org/10.1016/j.jecp.2016.03.009'],
+  ['Kapur (2012) – Productive failure; bibliografisch, nicht inhaltlich geprüft','https://doi.org/10.1080/00461520.2012.683559'],
+  ['Roediger & Butler (2011) – Retrieval practice; bibliografisch, nicht inhaltlich geprüft','https://doi.org/10.1016/j.tics.2010.09.003'],
+  ['Kluger & DeNisi (1996) – Feedback interventions; bibliografisch, nicht inhaltlich geprüft','https://doi.org/10.1037/0033-2909.119.2.254']
 ];
-const sourcesHTML=()=>`<ol>${ABOUT_SOURCES.map(s=>`<li>${esc(s[0])}<br><a href="${s[1]}" target="_blank" rel="noopener">${s[1]}</a></li>`).join('')}</ol>`;
+const sourcesHTML=()=>`<p class="small">Research informs the design; it does not validate this app or its exact thresholds. Bibliographic references are identified separately from evaluated findings. Product comparisons are not evidence of educational effectiveness.</p><ol>${ABOUT_SOURCES.map(s=>`<li>${esc(s[0])}<br><a href="${s[1]}" target="_blank" rel="noopener">${s[1]}</a></li>`).join('')}</ol><p class="small">Private sources: Grade 3B tasks, rubrics, teacher instructions and standards read in Toddle on 29 October 2026; assessment legends supplied by the family. These account-only pages and the child’s records are not published as sources. Pisolala is a family creation. Historical references: Bloom (1968), Learning for Mastery; Wood, Bruner & Ross (1976), The role of tutoring in problem solving. Their original texts were not reviewed for this design.</p>`;
 const ABOUT_DE=()=>`
 <h2>Über diese Anwendung</h2>
 <p><b>3B Big Quest</b> ist ein privat entwickeltes, spielerisches Übungsangebot für ein Kind der Klasse 3B der Bavarian International School. Die Anwendung begleitet die Inhalte des laufenden Schuljahres und lädt dazu ein, zwischendurch und an jedem Ort freiwillig zu üben – ergänzend zum Unterricht und zu den eigentlichen Hausaufgaben, niemals an ihrer Stelle.</p>
@@ -2099,6 +2342,7 @@ const ABOUT_DE=()=>`
 <h3>Aufbau</h3>
 <p>Die Inhalte sind nach Fächern wie in der Schule gegliedert (Maths, Science, English, Deutsch, Library &amp; Reading, Me as a Learner, Events). „Practise Today“ stellt eine kurze, abwechslungsreiche Runde zusammen; die Eltern legen fest, welche Themen derzeit im Fokus stehen. Übungsblätter zum Ausdrucken ergänzen das Angebot um das, was nur auf Papier sinnvoll geübt werden kann: beschriftete Rechenwege, Einheiten, ein zweiter Lösungsweg und eigene Texte.</p>
 <h3>Lernlogik</h3>
+<p>Nach einer falschen Antwort bietet die Anwendung einen Hinweis und einen zweiten Versuch an. „Zeig mir, wie“ führt jederzeit zur erklärten Lösung. Bei nur zwei Antwortmöglichkeiten wird direkt erklärt. Für Runden, Stellenwert und fehlende Teile folgt bei Bedarf eine Brücke aus zwei leichteren Aufgaben und einer neuen vergleichbaren Aufgabe. Reicht der Platz in einer Runde nicht, geht die Brücke beim nächsten Start weiter. Wiederholungen und unterstützte Versuche zählen nicht als unabhängiger Nachweis. Die genaue Hilfe-Leiter ist ein begründeter Entwurf, kein wissenschaftlich nachgewiesenes Optimum für dieses Kind.</p>
 <p>Jede Aufgabe gehört zu einer Fähigkeit und zu einer von drei Stufen: <i>Grundlage</i> (ein Schritt, mit Hilfe), <i>Klassenniveau</i> und <i>Herausforderung</i> (erklären, prüfen, einen zweiten Weg finden). Die Anwendung merkt sich auf dem Gerät, wann welche Aufgaben gelöst wurden, und wählt danach die nächsten aus: Unsicheres wird mit Hilfen und kleineren Schritten geübt, Sicheres durch anspruchsvollere Aufgaben ergänzt. Fehler kehren nach dem Prinzip der Lernkartei (Leitner) am nächsten Übungstag sowie nach drei und sieben Tagen wieder.</p>
 <p>Zur Einordnung dient intern die vierstufige Skala, die die Schule für ihre Standards verwendet (<i>Requires support, Consolidating, Meeting expectations, Extending</i>). Sie wird ausschließlich zur Auswahl der Aufgaben genutzt und dem Kind an keiner Stelle angezeigt. Die zugrunde gelegten Schwellenwerte sind Annahmen der Eltern, keine Vorgaben der Schule.</p>
 <h3>Herkunft der Aufgaben</h3>
@@ -2121,6 +2365,7 @@ const ABOUT_EN=()=>`
 <li>The IB <i>Learner Profile</i> and <i>Approaches to Learning</i> – thinking, justifying, reflecting (“Glows and Grows”).</li>
 </ul>
 <h3>How it works</h3>
+<p>After a wrong answer, a hint supports a second attempt. “Show me how” always opens the worked explanation. Two-option tasks are explained directly. Rounding, place value and missing-part tasks can lead to two simpler practice tasks and a new parallel task. Unfinished bridges continue next time. Assisted successes are not independent evidence. This design is informed by research, not a proven optimum for this child.</p>
 <p>Every task belongs to a skill and to one of three levels: <i>foundation</i> (one step, with support), <i>year level</i> and <i>challenge</i> (explain, check, find a second way). The app remembers on the device which tasks were solved and when, and selects the next ones accordingly. Mistakes return on the next practice day and after three and seven days (Leitner principle). Internally, the four-level scale the school uses for its standards serves as orientation; it is used only to choose tasks and is never shown to the child. Thresholds are the parents' assumptions, not school requirements.</p>
 <h3>Origin of the tasks</h3>
 <p>Topics and success criteria follow the Grade 3B units of the 2026/27 school year as published on the school's learning platform. The tasks themselves are rewritten or generated with varying numbers; school worksheets are not reproduced. The stories about <i>Pisolala</i> are a family invention.</p>
@@ -2206,6 +2451,7 @@ $('#studioBack').addEventListener('click',goBack);
 $('#subjectBack').addEventListener('click',()=>{ state.back='home'; goBack(); });
 $('#todayBtn').addEventListener('click',()=>{ state.back='home'; startRound('today'); });
 $('#nextBtn').addEventListener('click',next);
+$('#helpBtn').addEventListener('click',showWorked);
 $('#againBtn').addEventListener('click',()=>startRound(state.world));
 $('#homeBtn').addEventListener('click',goBack);
 $('#sheetBtn').addEventListener('click',printSheet);

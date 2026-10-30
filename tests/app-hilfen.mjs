@@ -33,19 +33,20 @@ export function browserStarten() {
 
 export async function appOeffnen(browser, url, kontextMitZeit = {}) {
   // zeit: feste Uhrzeit fuer die Seite (Mottozeiten, Geburtstag, Adventskalender)
-  const { zeit, ...kontext } = kontextMitZeit;
+  const { zeit, fixture, ...kontext } = kontextMitZeit;
   const ctx = await browser.newContext(kontext);
   await ctx.route('**/*', (r) => (r.request().url().startsWith(url) ? r.continue() : r.abort()));
-  await ctx.addInitScript(() => {
+  await ctx.addInitScript((fixture) => {
     window.claude = { hot: { snapshot(fn) { try { window.__bq = JSON.parse(JSON.stringify(fn())); } catch (e) { /* egal */ } } } };
+    if(fixture) window.claude.hot.ready=fn=>fn({screen:'play',world:fixture.world,round:fixture.round,idx:0,stars:0,streak:0,results:fixture.round.map(()=>null)});
     window.AudioContext = undefined; window.webkitAudioContext = undefined; // kein Ton im Test
-  });
+  }, fixture);
   const page = await ctx.newPage();
   if (zeit) await page.clock.setFixedTime(new Date(zeit));
   const fehler = [];
   page.on('pageerror', (e) => fehler.push(e.message));
-  await page.goto(url);
-  await page.waitForSelector('#home h1');
+  await page.goto(url, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector(fixture?'#play:not([hidden])':'#home h1');
   return { ctx, page, fehler };
 }
 
@@ -113,6 +114,9 @@ export async function frageBeantworten(page, q) {
   if (await page.$('#takeChallenge')) await klick(page, '#takeChallenge');
   if (q.kind === 'mc') await klick(page, `#qAnswers .opt[data-i="${q.answer}"]`);
   else if (q.kind === 'type') {
+    // A second attempt keeps the child's previous entry visible.
+    const old = await page.textContent('#typedOut');
+    for (const z of old) await klick(page, '#qAnswers .key[aria-label="Delete"]');
     for (const z of q.answer) await klick(page, `#qAnswers .key[aria-label="${z}"]`);
     await klick(page, '#qAnswers .key.go');
   } else {
