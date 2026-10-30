@@ -1,6 +1,6 @@
-# 3B Big Quest – Quelle (privat)
+# Grade 3 – Big Quest – Quelle (privat)
 
-Learning game for Grade 3B (Bavarian International School), built from the class Toddle content.
+Learning game for a Grade 3 child at an IB school (Primary Years Programme), built from the class topics. The app names no class, school, teachers or places (S8, 30.10.2026).
 
 Dieses Repo ist **privat** und enthält die App im Klartext (`index.html`, Manifest, Icons). Öffentlich erscheint sie nur **verschlüsselt** im Repo `bis-school-app` unter https://pahlborn.github.io/bis-school-app/. Wer die Seite aufruft, sieht zuerst eine Passwortabfrage.
 

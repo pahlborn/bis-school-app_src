@@ -6,13 +6,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="3B Quest">
+<meta name="apple-mobile-web-app-title" content="Big Quest">
 <meta name="theme-color" content="#3B5BDB">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" href="icon-192.png">
 <style>[hidden]{display:none!important}html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}</style>
-<title>3B Big Quest</title>
+<title>Grade 3 – Big Quest</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap">
 <style>
@@ -115,7 +115,7 @@ button{font:inherit;color:inherit}
 .archive{margin-top:14px}
 .archive summary{cursor:pointer;color:var(--muted);font-family:var(--display);font-weight:600;padding:10px 0;min-height:44px}
 /* wide screens: more on one view; questions stay at reading width */
-@media (max-width:480px){.hero .eyebrow{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.today{padding:10px 12px;grid-template-columns:40px 1fr}.today .icon{width:40px;height:40px}.subject{flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:10px}.subject .icon{width:32px;height:32px;margin:0}.subject .icon svg{width:20px;height:20px}.subject .name{font-size:1rem;flex:1 1 60%}.subject .sub{display:none}.subject .focus{margin-top:0}}
+@media (max-width:480px){.hero .eyebrow{white-space:normal;overflow-wrap:anywhere}.today{padding:10px 12px;grid-template-columns:40px 1fr}.today .icon{width:40px;height:40px}.subject{flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px 8px;padding:10px}.subject .icon{width:32px;height:32px;margin:0}.subject .icon svg{width:20px;height:20px}.subject .name{font-size:1rem;flex:1 1 60%}.subject .sub{display:none}.subject .focus{margin-top:0}}
 @media (min-width:900px){#app{max-width:860px}#play,#results,#studioScreen{max-width:560px;width:100%;margin-inline:auto}.subjects{grid-template-columns:repeat(3,1fr)}#subject .worlds{display:grid;grid-template-columns:1fr 1fr}}
 
 /* play */
@@ -283,8 +283,8 @@ button{font:inherit;color:inherit}
   <!-- HOME -->
   <section id="home" class="screen">
     <div class="hero">
-      <div class="eyebrow">Grade 3B · Bavarian International School</div>
-      <h1>3B Big Quest</h1>
+      <div class="eyebrow">Grade 3 · International Baccalaureate Primary Years Programme</div>
+      <h1>Grade 3 – Big Quest</h1>
       <div class="motto">Believe. Inspire. Succeed. <span id="themeIcon" aria-hidden="true"></span></div>
     </div>
     <div class="me">
@@ -557,7 +557,7 @@ const SCI=[
  ["Which of these is a PULL?","Opening a drawer",["Kicking a ball","Pressing a doorbell","Pushing a shopping trolley"],"You pull the drawer towards you."],
  ["In the Friction Roll experiment, what is the only thing that changes?","The surface on the ramp",["The car","The slope of the ramp","Where the ramp stands"],"You only change the surface. Everything else stays the same. That makes the test fair."],
  ["In a fair test, how many things should you change at a time?","Just one",["Two","Three","As many as you like"],"Change only one thing. Then you know what made the difference."],
- ["Which tool did 3B use to measure how far the car rolled?","A metre stick",["A thermometer","A stopwatch","A magnifying glass"],"A metre stick shows centimetres and metres."],
+ ["Which tool did your class use to measure how far the car rolled?","A metre stick",["A thermometer","A stopwatch","A magnifying glass"],"A metre stick shows centimetres and metres."],
  ["How do you attach a new surface to the ramp?","With the velcro strip (hook and loop)",["With glue","With tape","You just lay it on top"],"Each surface has a velcro strip. Press it on the ramp so it stays."],
  ["How should you start the car at the top of the ramp?","Gently let it go, don’t push",["Give it a big push","Throw it","Blow on it"],"Pushing adds extra force. Then the test is not fair."],
  ["From which part of the car do you measure the distance?","From the back of the car",["From the front wheels","From the middle","From the ramp"],"Always measure from the same spot. We use the back of the car."],
@@ -766,12 +766,12 @@ const OREO_MC=[
  ["In the OREO writing plan, what does the last <b>O</b> stand for?","Opinion restated",["Opposite","Over","Out"],"The last O says your opinion again. Like ‘That is why…’."],
  ["Which words are a good start for a <b>reason</b> sentence?","One reason is…",["For example…","The end.","Once upon a time…"],"A reason often starts with ‘One reason is…’."],
  ["Which words are a good start for an <b>example</b> sentence?","For example…",["I think…","In conclusion…","Dear diary…"],"An example often starts with ‘For example…’."],
- ["Which words are a good start for <b>restating your opinion</b>?","That is why…",["For example…","One reason is…","Dear Ms. Bhan…"],"‘That is why…’ tells the reader: I am finishing now."],
+ ["Which words are a good start for <b>restating your opinion</b>?","That is why…",["For example…","One reason is…","Dear Sir or Madam…"],"‘That is why…’ tells the reader: I am finishing now."],
  ["What is persuasive writing for?","To convince the reader to agree with you",["To tell a funny joke","To list the days of the week","To describe a clock"],"Persuade means: make someone agree with you."],
  ["In ‘Persuade for the Park’, who needs to hear why the park should stay open?","The local council",["The fire brigade","A football team","The zoo keeper"],"The council decides about the park. Your words must convince them."],
  ["How many reasons should you brainstorm on your OREO planning sheet for the park?","At least three",["One","Ten","None"],"Three reasons with three examples make a strong letter."],
  ["Which is a REASON why the park is valuable?","It is a place where the community can meet.",["I went there on Tuesday.","The council is closing it.","My shoes are red."],"A reason says WHY."],
- ["What should you do FIRST before writing your persuasive text?","Fill in the OREO planning sheet",["Take photos","Upload to Toddle","Draw a map"],"Plan first. Then write."],
+ ["What should you do FIRST before writing your persuasive text?","Fill in the OREO planning sheet",["Take photos","Upload it online","Draw a map"],"Plan first. Then write."],
  ["Which words make your writing more persuasive?","must, important, everyone",["maybe, sort of, perhaps","the, and, a","blue, green, red"],"Strong words convince people."],
  ["How do you finish an OREO text?","Restate your opinion in a powerful way",["Write your phone number","Start a new topic","Draw a picture"],"Say your opinion again at the end. Then the reader remembers it."]
 ];
@@ -792,7 +792,7 @@ const SENT=[
 const OPFACT=[
  {op:["Chocolate is the best ice cream flavour.","Ice cream tastes better in a cone.","Everyone should eat ice cream every day."],fact:["Ice cream is cold.","Ice cream melts in the sun.","Ice cream is made with milk or cream."]},
  {op:["Our park is the best place in town.","Parks are more fun than cinemas.","Every town needs a bigger park."],fact:["The park has a pond.","Trees grow in the park.","The park has swings and a slide."]},
- {op:["Munich is the best city in Germany.","Pretzels taste better than bread rolls.","Winter is the nicest season."],fact:["Munich is the capital of Bavaria.","Bavaria is in the south of Germany.","Pretzels are made from dough."]}
+ {op:["Paris is the most beautiful city in the world.","Pretzels taste better than bread rolls.","Winter is the nicest season."],fact:["Paris is the capital of France.","France is a country in Europe.","Pretzels are made from dough."]}
 ];
 const PREFIX=[
  ["Add a prefix to make the opposite of <b>happy</b>.","unhappy",["rehappy","prehappy","dishappy"],"‘un-’ means not. Unhappy = not happy."],
@@ -819,7 +819,7 @@ const INFER=[
  ["Max put on his goggles, checked his notes and placed the car at the top of the ramp.","What is Max about to do?","Start a science experiment",["Go swimming","Eat lunch","Read a story"],"Goggles, notes, a car and a ramp. That is the friction experiment!"],
  ["The floor was covered in flour and there was a bowl of sticky dough on the table.","What was someone doing?","Baking",["Painting","Sleeping","Gardening"],"Flour and dough mean baking."],
  ["Omar shivered, pulled his scarf tighter and watched his breath make little clouds.","What is the weather like?","Very cold",["Very hot","Rainy","Windy but warm"],"Shivering and a scarf mean cold."],
- ["Emma packed two snacks, a labelled water bottle and her emergency contact card into a light backpack.","Where is Emma probably going?","On the Legoland school trip",["To bed","To the dentist","To a swimming lesson"],"Snacks, water bottle, contact card. That is the Legoland list!"]
+ ["Emma packed two snacks, a labelled water bottle and her emergency contact card into a light backpack.","Where is Emma probably going?","On a school trip",["To bed","To the dentist","To a swimming lesson"],"Snacks, water bottle, contact card. That is the school trip list!"]
 ];
 function oreoMC(){ return bankMC(OREO_MC,WRD)(pick(OREO_MC)); }
 function oreoOrder(){
@@ -853,12 +853,12 @@ const LIB_MC=[
  ["What does the <b>call number</b> on a book’s spine help you do?","Find where the book lives on the shelf",["Count the pages","Know the price","Phone the author"],"The call number is the book’s address on the shelf."],
  ["You want a book in a language you speak at home. What do you look at?","The language code on the call number",["The colour of the cover","The number of pages","The author’s age"],"The call number has a code for the language."],
  ["Which of these is a <b>researchable</b> question?","Which surface has the most friction?",["Is pizza yummy?","What is my favourite colour?","Do you like Mondays?"],"You can find the answer by testing or reading. Not just by liking something."],
- ["On Bavarian Day the library celebrated stories from our host country. Which country is that?","Germany",["Spain","Japan","Brazil"],"Our school is in Bavaria. Bavaria is in Germany."],
+ ["The library celebrated fairy tales collected by the Brothers Grimm. Which country do they come from?","Germany",["Spain","Japan","Brazil"],"The Brothers Grimm collected their fairy tales in Germany."],
  ["Which fairy tale comes from Germany?","The Bremen Town Musicians",["Aladdin","The Little Mermaid","Pinocchio"],"The Brothers Grimm wrote down this German fairy tale."],
  ["Who collected famous German fairy tales like Hansel and Gretel?","The Brothers Grimm",["The Beatles","Roald Dahl","Dr. Seuss"],"Jacob and Wilhelm Grimm collected German fairy tales long ago."],
  ["When you use facts from a website in your work, what should you do?","Say where you found them",["Keep it secret","Change the numbers","Copy the whole page"],"Say where you found the facts. Then others can check."],
  ["Which source would you use to <b>watch</b> how forces work?","A BrainPop video",["A dictionary","A map","A calculator"],"Videos show things moving."],
- ["3B looked up force words with Ms. Zeckser using books, Britannica and…","iPads",["telescopes","microwaves","typewriters"],"Books, iPads and Britannica."],
+ ["Your class looked up force words using books, Britannica and…","iPads",["telescopes","microwaves","typewriters"],"Books, iPads and Britannica."],
  ["Which is the best FIRST step when researching a new word like ‘friction’?","Look it up in Britannica or a book",["Make up a meaning","Ask a stranger","Skip it"],"Look it up first. Then write it in your own words."],
  ["On 8 October the whole class read online at the same time. Why?","To try to set a Guinness World Record for the most people reading online together",["To test the Wi-Fi","Because it was raining","To win a pumpkin"],"The class tried to set a world record for reading online together."]
 ];
@@ -876,8 +876,8 @@ function sourceQ(){
 }
 function buildLibrary(){ return shuffle(fromBank(LIB_MC,LIB,6).concat([sourceQ(), sourceQ()])); }
 
-/* ======================= PAST · LEGOLAND TRIP ======================= */
-const TRIP={label:'Legoland Trip', world:'trip'};
+/* ======================= PAST · SCHOOL TRIP ======================= */
+const TRIP={label:'Theme Park Trip', world:'trip'};
 const PACK=[
  ["Your phone","Leave","Phones and electronic devices stay at home so nothing gets lost."],
  ["A favourite toy","Leave","Toys stay at home. We don’t want anything special to get lost!"],
@@ -892,13 +892,13 @@ const PACK=[
  ["Your Emergency Contact Card","Bring","Your teacher gives you this card. Keep it safe all day."],
  ["A tablet","Leave","Electronic devices stay at home."]
 ];
-function packQ(r){ return two("Legoland trip! Do you <b>bring</b> this or <b>leave it at home</b>?", ['Bring it','Leave at home'], r[1]==='Bring'?0:1, r[2], Object.assign({visual:itemCard(r[0])}, TRIP)); }
+function packQ(r){ return two("School trip to the theme park! Do you <b>bring</b> this or <b>leave it at home</b>?", ['Bring it','Leave at home'], r[1]==='Bring'?0:1, r[2], Object.assign({visual:itemCard(r[0])}, TRIP)); }
 const TRIP_MC=[
- ["You can’t see your teacher at Legoland. What do you do?","Stay with your group and look for your teacher",["Run to the biggest ride","Go to the car park","Hide"],"Stay with your group and teacher, always."],
- ["Who gives you your Emergency Contact Card?","Your teacher",["The bus driver","A Legoland robot","Your pet"],"Your teacher hands it out. Keep it safe."],
- ["Why do we leave toys and jewellery at home?","So nothing special gets lost",["Because toys are not allowed on buses","Because Legoland has enough toys","No reason"],"We don’t want anything special to get lost!"],
+ ["You can’t see your teacher at the theme park. What do you do?","Stay with your group and look for your teacher",["Run to the biggest ride","Go to the car park","Hide"],"Stay with your group and teacher, always."],
+ ["Who gives you your Emergency Contact Card?","Your teacher",["The bus driver","A theme park robot","Your pet"],"Your teacher hands it out. Keep it safe."],
+ ["Why do we leave toys and jewellery at home?","So nothing special gets lost",["Because toys are not allowed on buses","Because the theme park has enough toys","No reason"],"We don’t want anything special to get lost!"],
  ["How many snacks should you pack?","2",["0","5","10"],"A packed lunch plus 2 snacks."],
- ["What is the most important Legoland rule?","Be safe, be responsible and have fun",["Buy a souvenir","Ride everything twice","Eat all snacks on the bus"],"Safe, responsible and FUN!"],
+ ["What is the most important trip rule?","Be safe, be responsible and have fun",["Buy a souvenir","Ride everything twice","Eat all snacks on the bus"],"Safe, responsible and FUN!"],
  ["Your friend looks sad and tired on the trip. What do you do?","Look after them and tell the teacher",["Ignore them","Laugh","Run ahead"],"We look after ourselves and each other."]
 ];
 function buildTrip(){ return shuffle(takeFrom(PACK,5).map(packQ).concat(fromBank(TRIP_MC,TRIP,3))); }
@@ -907,16 +907,16 @@ function buildTrip(){ return shuffle(takeFrom(PACK,5).map(packQ).concat(fromBank
 const MUS={label:'Music & Pantastic', world:'music'};
 const MUS_MC=[
  ["Which of these is a <b>percussion</b> instrument?","Drum",["Flute","Violin","Trumpet"],"Percussion means you hit it or shake it. Drums, shakers, triangles."],
- ["In music 3B composed a rhythm. What is a <b>rhythm</b>?","A pattern of long and short sounds",["A kind of paint","One very loud note","A dance costume"],"Rhythm is a pattern of long and short sounds. Like ta ta ti-ti ta."],
+ ["In music your class composed a rhythm. What is a <b>rhythm</b>?","A pattern of long and short sounds",["A kind of paint","One very loud note","A dance costume"],"Rhythm is a pattern of long and short sounds. Like ta ta ti-ti ta."],
  ["‘Composing’ means…","making up your own music",["copying a song","sleeping in music class","cleaning the instruments"],"Composing means making up your own music."],
  ["How do you play percussion well in a group?","Listen to each other and keep the beat",["Play as loud as possible","Ignore the others","Stop when you feel like it"],"Listen to each other. Keep the beat together."],
  ["Hitting a drum with your hand is which kind of force?","A push",["A pull","Gravity","Magnetism"],"Your hand pushes the drum. That makes the sound."],
  ["The Primary Production ‘Pantastic’ is based on which story?","Peter Pan",["Cinderella","The Jungle Book","Frozen"],"Pantastic is a Peter Pan story."],
- ["Where does Peter Pan live?","Neverland",["Legoland","Munich","Atlantis"],"Neverland is the magical island where Peter Pan lives."],
+ ["Where does Peter Pan live?","Neverland",["Wonderland","London","Atlantis"],"Neverland is the magical island where Peter Pan lives."],
  ["What can you hear inside the crocodile in Peter Pan?","A ticking clock",["A radio","A school bell","Nothing"],"The crocodile swallowed a clock, so it goes tick-tock!"],
  ["Who is the pirate captain in Peter Pan?","Captain Hook",["Captain Jack","Captain America","Captain Haddock"],"Captain Hook has a hook for a hand. He is scared of the crocodile."],
  ["Which song did EVERY student learn for the Pantastic audition?","Nobody Wants To Grow Old",["Higher and Higher","Happy Birthday","Twinkle Twinkle"],"Audition Song 1 was for everyone."],
- ["Which two songs did Ms. Schlüer ask you to learn?","Tick-Tock Crocodile and Here In Neverland",["Happy Birthday and Jingle Bells","Let It Go and Hakuna Matata","Only Higher and Higher"],"Learn the words and the melody of both songs."],
+ ["Which two songs did your music teacher ask you to learn?","Tick-Tock Crocodile and Here In Neverland",["Happy Birthday and Jingle Bells","Let It Go and Hakuna Matata","Only Higher and Higher"],"Learn the words and the melody of both songs."],
  ["To join the Pantastic show, what do you need to be ready to learn?","Lines, songs and dances",["Only the dances","Only the songs","Nothing at all"],"Everyone learns their lines, songs and dances and follows the production rules."],
  ["What is the best way to learn a new song?","Sing it a little bit every day",["Listen once and forget it","Only read the title","Sing it as fast as you can"],"A little practice every day works best."],
  ["In Peter Pan, who is the tiny fairy?","Tinker Bell",["Wendy","Smee","Nana"],"Tinker Bell is Peter Pan’s fairy friend."]
@@ -998,7 +998,7 @@ const COMPLETE_MC=[
 ];
 const RESP_MC=[
  ["Your group finished the experiment. What is YOUR job before you leave the table?","Check the sheet: every measurement has its unit, every question is answered",["Nothing, the teacher checks","Only pack the car away","Take a selfie"],"Your job is only done when your sheet is complete."],
- ["What do you upload to Toddle at the end of Friction Frenzy?","The finished experiment sheet with all data AND photos of the setup",["Only one photo","A drawing","Nothing"],"The sheet and the photos. Both show your work."],
+ ["What do you upload to your class learning platform at the end of Friction Frenzy?","The finished experiment sheet with all data AND photos of the setup",["Only one photo","A drawing","Nothing"],"The sheet and the photos. Both show your work."],
  ["You forgot to weigh the car. What is the responsible thing to do?","Weigh it now and write the mass in grams",["Make up a number","Leave the box empty","Write ‘heavy’"],"Every number counts. Go back and get it."],
  ["Your bar graph is half finished and the bell rings. What do you do?","Tell the teacher and finish it as soon as possible",["Throw it away","Hand it in half done","Hide it"],"Finish the job. That is being responsible."],
  ["Before you hand in a worksheet, what is the last thing to do?","Read it through once and check nothing is missing",["Draw on the back","Fold it","Hand it in fast"],"One last look finds missing answers and units."],
@@ -1012,18 +1012,18 @@ function buildFinish(){ return fromBank(COMPLETE_MC.concat(RESP_MC), FIN, 8); }
 const SEN={label:'Capital Letters & Full Stops', world:'sentences'};
 const EXA={label:'Specific Examples', world:'examples'};
 const SENTS=[
- ["On Monday we went to Legoland.",["Monday","Legoland"]],
- ["My teacher is Ms. Bhan.",["Ms","Bhan"]],
- ["We live in Bavaria, in the south of Germany.",["Bavaria","Germany"]],
- ["The park in Haimhausen has a big pond.",["Haimhausen"]],
+ ["On Monday we went to the theme park.",["Monday"]],
+ ["In the story, the teacher Mr. Puddle wears a funny hat.",["Mr","Puddle"]],
+ ["Paris is a big city in France.",["Paris","France"]],
+ ["The park in Greenfield has a big pond.",["Greenfield"]],
  ["In October we decorated pumpkins for the library.",["October"]],
  ["Peter Pan flies to Neverland with Tinker Bell.",["Peter","Pan","Neverland","Tinker","Bell"]],
- ["Ms. Zeckser showed us Britannica on the tablets.",["Ms","Zeckser","Britannica"]],
+ ["Ms. Marmalade showed us Britannica on the tablets.",["Ms","Marmalade","Britannica"]],
  ["Did you read Matilda by Roald Dahl?",["Matilda","Roald","Dahl"]],
  ["Captain Hook is afraid of the crocodile.",["Captain","Hook"]],
  ["Our park must stay open!",[]],
  ["Where is the metre stick?",[]],
- ["Every Friday we have music with Ms. Schlüer.",["Friday","Ms","Schlüer"]]
+ ["Every Friday we have music with Mr. Puddle.",["Friday","Mr","Puddle"]]
 ];
 const stripP = w => w.replace(/[.,!?]/g,'');
 function capitalFixQ(){
@@ -1043,7 +1043,7 @@ function properNounQ(){
   return mc("Which word MUST have a capital letter, even in the middle of a sentence?", pn.toLowerCase(), others.map(w=>w.toLowerCase()),
     "‘"+pn+"’ is a name, place, day or title. Those always get a capital letter.", Object.assign({visual:quote(s.toLowerCase()), grid:true}, SEN));
 }
-const ENDS=[["What time does school start","?"],["Watch out for the crocodile","!"],["The park has a pond","."],["Can we go to Legoland again","?"],["Please pass the metre stick","."],["How far did your car roll","?"],["Hooray, we won the pumpkin contest","!"],["Peter Pan can fly","."],["Who wrote Matilda","?"],["Stop pushing the car","!"]];
+const ENDS=[["What time does school start","?"],["Watch out for the crocodile","!"],["The park has a pond","."],["Can we go to the theme park again","?"],["Please pass the metre stick","."],["How far did your car roll","?"],["Hooray, we won the pumpkin contest","!"],["Peter Pan can fly","."],["Who wrote Matilda","?"],["Stop pushing the car","!"]];
 function endMarkQ(){
   const r=pick(ENDS);
   return Object.assign({kind:'mc', prompt:"Which end mark does this sentence need?", visual:quote(r[0]+" ___"), options:['.','?','!'], answer:['.','?','!'].indexOf(r[1]), grid3:true,
@@ -1071,7 +1071,7 @@ const HYPO=[
 const SEQ_SETS=[
  ["Put the recount in a logical order.",["First we put the velcro surface on the ramp.","Next we set up the metre sticks.","Then we let the car go without pushing.","Finally we wrote the distance in our table."]],
  ["Put the instructions in a logical order.",["First, spread butter on two slices of bread.","Next, put cheese on one slice.","Then, place the other slice on top.","Finally, cut the sandwich in half."]],
- ["Put the trip day in a logical order.",["In the morning we got on the bus with our backpacks.","Then we stayed with our group at Legoland.","After lunch we went on more rides.","At the end we came back to school tired and happy."]],
+ ["Put the trip day in a logical order.",["In the morning we got on the bus with our backpacks.","Then we stayed with our group at the theme park.","After lunch we went on more rides.","At the end we came back to school tired and happy."]],
  ["Put the pumpkin project in a logical order.",["First, choose a book character.","Next, collect boxes, paper and paint.","Then, decorate the pumpkin (don’t carve it!).","Finally, bring it to school by 28 October."]]
 ];
 function sequenceOrderQ(){ const r=pick(SEQ_SETS); return orderQ(r[0], r[1], null, r[2]||"Use order words like first, next, then and finally to keep ideas in a logical sequence.", SEN); }
@@ -1538,12 +1538,62 @@ function advanceDue(q){
   if(d.box>=GAPS.length) due.splice(i,1); else d.at=addDays(dayKey(),GAPS[d.box]);
   store.set('due',due);
 }
+/* Stored copies of older questions (reviews, bridges, sheets) may still name the class,
+   school, teachers or places. They are rewritten when shown, never in storage. If an old
+   copy cannot be rewritten exactly (e.g. capital-letter variants), a fresh question of the
+   same quest and kind takes its place; the review keeps its id and runs out as usual. */
+const PRIVATE_RE=/\b3B\b|Bavaria|Zeckser|Bhan|Schl(?:ü|u)er|Haimhausen|Munich|Toddle|Legoland/i;
+const LEGACY_TEXT=[
+  ['3B looked up force words with Ms. Zeckser using books','Your class looked up force words using books'],
+  ['Which tool did 3B use','Which tool did your class use'],
+  ['In music 3B composed','In music your class composed'],
+  ['Dear Ms. Bhan…','Dear Sir or Madam…'],
+  ['Upload to Toddle','Upload it online'],
+  ['upload to Toddle at the end','upload to your class learning platform at the end'],
+  ['Which two songs did Ms. Schlüer ask','Which two songs did your music teacher ask'],
+  ['On Bavarian Day the library celebrated stories from our host country. Which country is that?','The library celebrated fairy tales collected by the Brothers Grimm. Which country do they come from?'],
+  ['Our school is in Bavaria. Bavaria is in Germany.','The Brothers Grimm collected their fairy tales in Germany.'],
+  ['Munich is the best city in Germany.','Paris is the most beautiful city in the world.'],
+  ['Munich is the capital of Bavaria.','Paris is the capital of France.'],
+  ['Bavaria is in the south of Germany.','France is a country in Europe.'],
+  ['On the Legoland school trip','On a school trip'],
+  ['That is the Legoland list!','That is the school trip list!'],
+  ['Legoland trip! Do you','School trip to the theme park! Do you'],
+  ['at Legoland. What do you do?','at the theme park. What do you do?'],
+  ['A Legoland robot','A theme park robot'],
+  ['Because Legoland has enough toys','Because the theme park has enough toys'],
+  ['most important Legoland rule','most important trip rule'],
+  ['Legoland Trip','Theme Park Trip'],
+  ['Then we stayed with our group at Legoland.','Then we stayed with our group at the theme park.'],
+  ['Can we go to Legoland again','Can we go to the theme park again'],
+  ['"Legoland","Munich","Atlantis"','"Wonderland","London","Atlantis"']
+];
+const isPrivate = q => PRIVATE_RE.test(JSON.stringify(q));
+function sheetPrompt(q){
+  let p=String(q.prompt||''); LEGACY_TEXT.forEach(([a,b])=>{ p=p.split(a).join(b); });
+  return PRIVATE_RE.test(p) ? 'Task from '+((WORLDS[q.world]&&WORLDS[q.world].name)||'practice') : p;
+}
+function neutralQ(q){
+  if(!q || !isPrivate(q)) return q;
+  let s=JSON.stringify(q);
+  LEGACY_TEXT.forEach(([a,b])=>{ s=s.split(a).join(b); });
+  const fixed=JSON.parse(s);
+  if(!isPrivate(fixed)) return fixed;
+  const w=WORLDS[q.world];
+  for(let i=0;w && w.build && i<6;i++){
+    const fresh=w.build().find(x=>x.kind===q.kind && !isPrivate(x)) || null;
+    if(fresh){ ['dueId','bridge','bridgePart','bridgeSource','assisted'].forEach(k=>{ if(q[k]!==undefined) fresh[k]=q[k]; }); return fresh; }
+  }
+  return null;
+}
 const dueToday = () => store.get('due',[]).filter(d=>d.at<=dayKey() && d.q && WORLDS[d.q.world]).map(d=>{
-  const parallel=bridgeFor(d.q).slice(-1)[0];
-  if(!parallel) return d.q;
+  const q=neutralQ(Object.assign({},d.q,{dueId:d.id}));
+  if(!q) return null;
+  const parallel=bridgeFor(q).slice(-1)[0];
+  if(!parallel) return q;
   ['bridge','bridgePart','bridgeSource','assisted'].forEach(k=>delete parallel[k]);
   parallel.dueId=d.id; return parallel;
-});
+}).filter(Boolean);
 function reshuffled(q){
   const c=JSON.parse(JSON.stringify(q));
   if(c.kind==='mc' && !c.grid3 && c.options.length>2 && !c.fixedOrder){ const right=c.options[c.answer]; c.options=shuffle(c.options); c.answer=c.options.indexOf(right); }
@@ -1618,7 +1668,7 @@ const WORLDS={
   school:{name:'Glows, Grows & School Life', sub:'Self-assessment, learning skills, pumpkin contest', color:'var(--w-now)', icon:'now', build:buildSchool},
   /* Events */
   music:{name:'Music & Pantastic', sub:'Rhythm, percussion & Peter Pan', color:'var(--w-music)', build:buildMusic},
-  trip:{name:'Legoland Trip', sub:'Pack your bag & know the rules', color:'var(--w-trip)', archived:true, build:buildTrip},
+  trip:{name:'Theme Park Trip', sub:'Pack your bag & know the rules', color:'var(--w-trip)', archived:true, build:buildTrip},
   /* Start page */
   today:{name:'Practise Today', sub:'8 questions from your focus topics', color:'var(--w-mix)', icon:'mix', build:buildToday}
 };
@@ -1650,9 +1700,9 @@ const STUDIOS={
     extra:['Choose one habit for this week and tell a grown-up which one.','After each piece of work, read the list and tick what you did.','When all are ticked, celebrate and pick a new focus!'],
     tips:['Show your thinking, label your work and try a second way to check.']},
   read:{name:'Lese-Studio (Deutsch)', sub:'Leseaufnahme Herbst: üben, dann aufnehmen', color:'var(--w-read)', icon:'read',
-    intro:'Suche dir eine Seite aus deinem Lesebuch aus. Lies den Text zwei- bis dreimal laut vor. Wenn du ihn flüssig lesen kannst, mach deine Leseaufnahme in Toddle. Die Aufgabe ist noch offen!',
+    intro:'Suche dir eine Seite aus deinem Lesebuch aus. Lies den Text zwei- bis dreimal laut vor. Wenn du ihn flüssig lesen kannst, mach deine Leseaufnahme auf der Lernplattform deiner Klasse. Die Aufgabe ist noch offen!',
     timer:true,
-    checks:['Eine Seite aus meinem Lesebuch ausgesucht','1. Mal laut gelesen','2. Mal laut gelesen','3. Mal laut gelesen, jetzt flüssig!','Leseaufnahme gemacht und in Toddle hochgeladen'],
+    checks:['Eine Seite aus meinem Lesebuch ausgesucht','1. Mal laut gelesen','2. Mal laut gelesen','3. Mal laut gelesen, jetzt flüssig!','Leseaufnahme gemacht und auf die Lernplattform hochgeladen'],
     extraTitle:'Aufwärmen: Zungenbrecher',
     extra:['Fischers Fritz fischt frische Fische, frische Fische fischt Fischers Fritz.','Blaukraut bleibt Blaukraut und Brautkleid bleibt Brautkleid.','Zwischen zwei Zwetschgenzweigen zwitschern zwei Schwalben.','Acht alte Ameisen aßen am Abend Ananas.'],
     tips:['Lies langsam und deutlich, nicht schnell.','Mach bei Punkten eine kleine Pause.','Stolperst du über ein Wort? Lies den Satz noch einmal.']},
@@ -1739,7 +1789,7 @@ function startRound(k){
   const pending=store.get('bridgeNext',[]).filter(q=>q && WORLDS[q.world]);
   if(pending.length){
     const use=pending.slice(0,Math.min(3,state.round.length));
-    use.forEach((q,i)=>state.round[i]=q);
+    use.map(neutralQ).filter(Boolean).forEach((q,i)=>state.round[i]=q);
     store.set('bridgeNext',pending.slice(use.length));
   }
   state.noteShown=false; state.noteNow=null;
@@ -2250,7 +2300,7 @@ function renderSheets(){
   const body=$('#aboutBody');
   if(!all.length){ body.innerHTML=parentHeaderHTML()+parentOverviewHTML()+focusSettingsHTML()+reminderHTML()+storyCapHTML()+parentGuidanceHTML()+'<h2>Practice sheets</h2><p>No sheet printed yet. Use “Print a practice sheet” on the start page.</p>'; bindParentSettings(); return; }
   body.innerHTML=parentHeaderHTML()+parentOverviewHTML()+focusSettingsHTML()+reminderHTML()+storyCapHTML()+parentGuidanceHTML()+'<h2>Practice sheets</h2><p class="small">Tick each task once. “With help” and “Not yet” are fine – the app then offers easier steps and repeats the task later. Nothing of this is shown to the child.</p>'+
-    all.map(sh=>`<h3>Sheet of ${sh.day}</h3>`+sh.items.map((it,i)=>`<div class="sheetrow"><div class="q"><b>${i+1}.</b> ${esc(strip(it.q.prompt).slice(0,140))}</div><div class="row">${Object.keys(RES).map(r=>`<button type="button" class="btn small${it.res===r?' on':''}" data-sheet="${sh.id}" data-i="${i}" data-res="${r}"${it.res?' disabled':''}>${RES[r]}</button>`).join('')}</div></div>`).join('')).join('');
+    all.map(sh=>`<h3>Sheet of ${sh.day}</h3>`+sh.items.map((it,i)=>`<div class="sheetrow"><div class="q"><b>${i+1}.</b> ${esc(strip(sheetPrompt(it.q)).slice(0,140))}</div><div class="row">${Object.keys(RES).map(r=>`<button type="button" class="btn small${it.res===r?' on':''}" data-sheet="${sh.id}" data-i="${i}" data-res="${r}"${it.res?' disabled':''}>${RES[r]}</button>`).join('')}</div></div>`).join('')).join('');
   body.querySelectorAll('button[data-res]').forEach(b=>b.addEventListener('click',()=>enterResult(b.dataset.sheet, +b.dataset.i, b.dataset.res)));
   bindParentSettings();
 }
@@ -2320,7 +2370,7 @@ const PARENT_STAND={NA:'Noch zu wenige Belege',RS:'Requires support',C:'Consolid
 function parentOverviewHTML(){
   const ev=store.get('ev',{}), attempts=store.get('attempts',[]);
   const standards=uniq(Object.values(STANDARDS).flat());
-  return '<h2>Übungsbeobachtungen nach Lernziel</h2><p class="small">Der Schlüssel dient nur intern zur Aufgabenwahl. Die Beobachtungen werden noch pro Quest geführt, nicht pro einzelner BIS-Fähigkeit. Eine Quest kann mehrere Standards berühren: dieselben Beobachtungen werden daher nicht zu getrennten Schulnoten oder einem Gesamtwert verrechnet. Alte Daten enthalten nicht alle Hilfsschritte.</p>'+standards.map(id=>{
+  return '<h2>Übungsbeobachtungen nach Lernziel</h2><p class="small">Der Schlüssel dient nur intern zur Aufgabenwahl. Die Beobachtungen werden noch pro Quest geführt, nicht pro einzelner Fähigkeit der Schule. Eine Quest kann mehrere Standards berühren: dieselben Beobachtungen werden daher nicht zu getrennten Schulnoten oder einem Gesamtwert verrechnet. Alte Daten enthalten nicht alle Hilfsschritte.</p>'+standards.map(id=>{
     const keys=Object.keys(STANDARDS).filter(k=>STANDARDS[k].includes(id)&&WORLDS[k]);
     return `<details class="parent-standard"><summary>${esc(STANDARD_TEXT[id]||id)}</summary>${keys.map(k=>{
       const list=ev[k]||[], log=attempts.filter(a=>a.skill===k), days=new Set(list.map(e=>e[0])).size;
@@ -2383,33 +2433,39 @@ function bindParentSettings(){
   parentTouch();
 }
 const PARENT_GUIDANCE=[
-  {title:'Runden – wie in der Unterrichtsaufgabe',source:'BIS/Toddle: Lesson 4, Zahlenstrahl, Nachbar-Hunderter, Mitte und Abstände.',text:'Beispiel 120: Markieren Sie 100 und 200, dann die Mitte 150. Lassen Sie das Kind 120 eintragen und die Abstände vergleichen.',questions:['Welche beiden Hunderter liegen direkt davor und danach?','Wo liegt die Mitte?','Wie weit ist deine Zahl von beiden Enden entfernt?']},
-  {title:'Fehlende Teile und Rechenwege',source:'BIS/Toddle: Travel for Work verlangt Zerlegungen, Zahlenstrahl und Gleichungen. Die konkreten Sprunggrößen unten sind eine passende Übungsdarstellung, keine bestätigte schulweite Methode.',text:'Beispiel 278 + ? = 503: erst klären, was Ganzes und Teil sind. Die Lücke lässt sich durch Sprünge 278 → 300 → 500 → 503 darstellen. Nicht ungefragt einen Spaltenalgorithmus danebenstellen.',questions:['Was ist das Ganze, was kennst du schon?','Wie habt ihr solche Aufgaben in der Klasse dargestellt?','Wie kannst du dein Ergebnis mit einer Gleichung prüfen?']},
-  {title:'OREO und Anleitung',source:'BIS/Toddle: Persuade for the Park und Vorgangsbeschreibung/Anleitung.',text:'OREO: Meinung, Grund, konkretes Beispiel, Meinung zum Schluss. Anleitung: vollständige Schritte, passende Satzanfänge, Man-Form und die Vorsilbe des trennbaren Verbs am Satzende.',questions:['Was möchtest du sagen – und warum?','Kannst du ein eigenes Beispiel nennen?','Könnte jemand die Anleitung ohne Rückfrage ausführen?']}
+  {title:'Runden – wie in der Unterrichtsaufgabe',source:'Unterrichtsaufgabe der Schule (Lernplattform): Lesson 4, Zahlenstrahl, Nachbar-Hunderter, Mitte und Abstände.',text:'Beispiel 120: Markieren Sie 100 und 200, dann die Mitte 150. Lassen Sie das Kind 120 eintragen und die Abstände vergleichen.',questions:['Welche beiden Hunderter liegen direkt davor und danach?','Wo liegt die Mitte?','Wie weit ist deine Zahl von beiden Enden entfernt?']},
+  {title:'Fehlende Teile und Rechenwege',source:'Unterrichtsaufgabe der Schule (Lernplattform): Travel for Work verlangt Zerlegungen, Zahlenstrahl und Gleichungen. Die konkreten Sprunggrößen unten sind eine passende Übungsdarstellung, keine bestätigte schulweite Methode.',text:'Beispiel 278 + ? = 503: erst klären, was Ganzes und Teil sind. Die Lücke lässt sich durch Sprünge 278 → 300 → 500 → 503 darstellen. Nicht ungefragt einen Spaltenalgorithmus danebenstellen.',questions:['Was ist das Ganze, was kennst du schon?','Wie habt ihr solche Aufgaben in der Klasse dargestellt?','Wie kannst du dein Ergebnis mit einer Gleichung prüfen?']},
+  {title:'OREO und Anleitung',source:'Unterrichtsaufgaben der Schule (Lernplattform): Persuade for the Park und Vorgangsbeschreibung/Anleitung.',text:'OREO: Meinung, Grund, konkretes Beispiel, Meinung zum Schluss. Anleitung: vollständige Schritte, passende Satzanfänge, Man-Form und die Vorsilbe des trennbaren Verbs am Satzende.',questions:['Was möchtest du sagen – und warum?','Kannst du ein eigenes Beispiel nennen?','Könnte jemand die Anleitung ohne Rückfrage ausführen?']}
 ];
 function parentGuidanceHTML(){
-  return '<h2>So unterstützen wir wie im Unterricht</h2><p>Erst den Weg des Kindes zeigen lassen. Einen kleinen Hinweis anbieten, dann wieder selbst probieren lassen. Die Lehrkraft kann andere Modelle verwenden: Die Quellenangabe unterscheidet belegte Unterrichtsaufgaben von allgemeinen Übungsdarstellungen.</p>'+PARENT_GUIDANCE.map(c=>`<details class="parent-method"><summary>${esc(c.title)}</summary><p>${esc(c.text)}</p><ul>${c.questions.map(t=>`<li>${esc(t)}</li>`).join('')}</ul><p class="small">${esc(c.source)}</p></details>`).join('')+curriculumHTML();
+  return '<h2>So unterstützen wir wie im Unterricht</h2><p>Erst den Weg des Kindes zeigen lassen. Einen kleinen Hinweis anbieten, dann wieder selbst probieren lassen. Die Lehrkraft kann andere Modelle verwenden: Die Quellenangabe unterscheidet belegte Unterrichtsaufgaben von allgemeinen Übungsdarstellungen.</p>'+PARENT_GUIDANCE.map(c=>`<details class="parent-method"><summary>${esc(c.title)}</summary><p>${esc(c.text)}</p><ul>${c.questions.map(t=>`<li>${esc(t)}</li>`).join('')}</ul><p class="small">${esc(c.source)}</p></details>`).join('')+curriculumHTML()+schoolSourcesHTML();
 }
 /* A planning inventory, not a claim that every international school has the
    same programme. No entry creates a child-facing quest or joins Focus/Today. */
 const CURRICULUM_PLAN=[
-  ['Maths','Multiplication and division; arrays and groups','Common Core 3.OA; BIS year sequence not confirmed'],
-  ['Maths','Fractions on a number line, equal parts','Common Core 3.NF; BIS methods and timing not confirmed'],
+  ['Maths','Multiplication and division; arrays and groups','Common Core 3.OA; school year sequence not confirmed'],
+  ['Maths','Fractions on a number line, equal parts','Common Core 3.NF; school methods and timing not confirmed'],
   ['Maths','Area and perimeter','Common Core 3.MD; supplementary planning source'],
-  ['Maths','Rounding to 1,000 and calculations to 9,999','BIS/Toddle standards; full-year sequence not available'],
+  ['Maths','Rounding to 1,000 and calculations to 9,999','School standards; full-year sequence not available'],
   ['Maths','Elapsed time, kilograms and litres','Common Core 3.MD; supplementary planning source'],
-  ['Maths','Line graphs and accurate scaled diagrams','BIS/Toddle standards; line plots are a different representation'],
-  ['English','Narratives, non-fiction, reading comprehension','Common Core ELA; supplementary, not a confirmed BIS programme'],
-  ['Science','Magnets, life cycles, weather and habitats','NGSS; examples for planning, not confirmed BIS Grade 3 units'],
+  ['Maths','Line graphs and accurate scaled diagrams','School standards; line plots are a different representation'],
+  ['English','Narratives, non-fiction, reading comprehension','Common Core ELA; supplementary, not confirmed by the school'],
+  ['Science','Magnets, life cycles, weather and habitats','NGSS; examples for planning, not confirmed Grade 3 units of the school'],
   ['Deutsch','Reading strategies and language conventions','LehrplanPLUS 3/4; depends on the child’s language level']
 ];
 function curriculumHTML(){
   return '<h2>Lernlandkarte – Vorbereitung für das Schuljahr</h2><p>Das IB PYP bietet einen gemeinsamen Rahmen, keinen weltweit identischen Jahreslehrplan. Die folgenden Themen sind eine Planungsübersicht. Sie sind noch keine neuen Aufgaben und erscheinen nicht beim Kind. Freischaltung und Unterrichtsmethode folgen erst nach einem Abgleich mit der Schule.</p><ul>'+CURRICULUM_PLAN.map(c=>`<li><b>${esc(c[0])}:</b> ${esc(c[1])}<br><span class="small">${esc(c[2])}</span></li>`).join('')+'</ul>';
 }
+/* School website links: adults only (parent area), neutral labels. The child-facing
+   About page never names or links the school. */
+const SCHOOL_SOURCES=[
+  ['Website der Schule – Leitbild / School website – purpose','https://www.bis-school.com/about/purpose'],
+  ['Website der Schule – Lernprinzipien / School website – learning principles','https://www.bis-school.com/fs/pages/1629'],
+  ['Website der Schule – Grundschule / School website – primary school','https://www.bis-school.com/academic-life/primary-school-haimhausen'],
+  ['Website der Schule – Elternmaterial / School website – resources','https://www.bis-school.com/admissions/resources']
+];
+const schoolSourcesHTML=()=>'<h2>Website der Schule</h2><p class="small">Belege für die Leitgedanken der App. Nur in der Erwachsenenansicht.</p><ol>'+SCHOOL_SOURCES.map(s=>`<li>${esc(s[0])}<br><a href="${s[1]}" target="_blank" rel="noopener">${esc(s[0].split(' / ')[0])}</a></li>`).join('')+'</ol>';
 const ABOUT_SOURCES=[
-  ['Bavarian International School – Purpose (Trust, Belong, Engage, Innovate, Flourish)','https://www.bis-school.com/about/purpose'],
-  ['Bavarian International School – Learning Principles','https://www.bis-school.com/fs/pages/1629'],
-  ['Bavarian International School – Primary School Haimhausen','https://www.bis-school.com/academic-life/primary-school-haimhausen'],
   ['International Baccalaureate – PYP curriculum framework','https://www.ibo.org/programmes/primary-years-programme/curriculum/'],
   ['International Baccalaureate – PYP learning and teaching (ATL, assessment)','https://www.ibo.org/programmes/primary-years-programme/curriculum/learning-and-teaching/'],
   ['Education Endowment Foundation – Feedback','https://educationendowmentfoundation.org.uk/education-evidence/teaching-learning-toolkit/feedback'],
@@ -2433,14 +2489,13 @@ const ABOUT_SOURCES=[
   ['SFUSD – Family resources','https://www.sfusd.edu/departments/mathematics-department-page/math-family-resources'],
   ['Common Core Grade 3 – unofficial mirror, supplementary curriculum map','https://www.thecorestandards.org/Math/Content/3/'],
   ['Common Core English – unofficial mirror','https://www.thecorestandards.org/ELA-Literacy/'],
-  ['NGSS Science – supplementary; not confirmed BIS Grade 3 programme','https://www.nextgenscience.org/overview-dci'],
-  ['LehrplanPLUS Deutsch 3/4 – supplementary, not BIS curriculum','https://www.lehrplanplus.bayern.de/fachlehrplan/grundschule/3/deutsch'],
+  ['NGSS Science – supplementary; not confirmed by the school','https://www.nextgenscience.org/overview-dci'],
+  ['LehrplanPLUS Deutsch 3/4 – supplementary, not the school curriculum','https://www.lehrplanplus.bayern.de/fachlehrplan/grundschule/3/deutsch'],
   ['England Primary curriculum – comparison only','https://www.gov.uk/government/publications/national-curriculum-in-england-primary-curriculum'],
   ['Cambridge Primary – comparison only','https://www.cambridgeinternational.org/programmes-and-qualifications/cambridge-primary/curriculum/'],
   ['IB – Copyright and reuse','https://www.ibo.org/terms-and-conditions/intellectual-property/'],
   ['Diagnostic Questions – practice example, not proof of effectiveness','https://diagnosticquestions.com/'],
   ['youcubed – Parent resources','https://www.youcubed.org/resource/parent-resources/'],
-  ['BIS – Resources','https://www.bis-school.com/admissions/resources'],
   ['California – Common Core mathematics standards','https://www.cde.ca.gov/be/st/ss/documents/ccssmathstandardaug2013.pdf'],
   ['Common Core – archived licence; examples have separate rights','https://web.archive.org/web/20220304134704/http://www.corestandards.org/public-license/'],
   ['IES/WWC – Foundational reading skills','https://ies.ed.gov/ncee/wwc/PracticeGuide/21'],
@@ -2449,9 +2504,9 @@ const ABOUT_SOURCES=[
   ['Sofatutor – Practice product comparison','https://www.sofatutor.com/'],
   ['Bettermarks – Practice product comparison','https://de.bettermarks.com/'],
   ['Prodigy – Parent resources, comparison','https://www.prodigygame.com/main-en/parents/'],
-  ['BBC – Dance Mat Typing, not a confirmed BIS tool','https://www.bbc.co.uk/bitesize/articles/z3c6tfr'],
-  ['TypingClub – Product comparison, not a confirmed BIS tool','https://www.typingclub.com/'],
-  ['Typing.com – Product comparison, not a confirmed BIS tool','https://www.typing.com/'],
+  ['BBC – Dance Mat Typing, not confirmed as a school tool','https://www.bbc.co.uk/bitesize/articles/z3c6tfr'],
+  ['TypingClub – Product comparison, not confirmed as a school tool','https://www.typingclub.com/'],
+  ['Typing.com – Product comparison, not confirmed as a school tool','https://www.typing.com/'],
   ['H5P Standalone – Evaluated technical alternative','https://github.com/tunapanda/h5p-standalone'],
   ['ts-fsrs – Evaluated technical alternative','https://github.com/open-spaced-repetition/ts-fsrs'],
   ['SurveyJS – Evaluated technical alternative and licensing','https://surveyjs.io/licensing'],
@@ -2465,10 +2520,10 @@ const ABOUT_SOURCES=[
   ['Roediger & Butler (2011) – Retrieval practice; bibliografisch, nicht inhaltlich geprüft','https://doi.org/10.1016/j.tics.2010.09.003'],
   ['Kluger & DeNisi (1996) – Feedback interventions; bibliografisch, nicht inhaltlich geprüft','https://doi.org/10.1037/0033-2909.119.2.254']
 ];
-const sourcesHTML=()=>`<p class="small">Research informs the design; it does not validate this app or its exact thresholds. Bibliographic references are identified separately from evaluated findings. Product comparisons are not evidence of educational effectiveness.</p><ol>${ABOUT_SOURCES.map(s=>`<li>${esc(s[0])}<br><a href="${s[1]}" target="_blank" rel="noopener">${s[1]}</a></li>`).join('')}</ol><p class="small">Private sources: Grade 3B tasks, rubrics, teacher instructions and standards read in Toddle on 29 October 2026; assessment legends supplied by the family. These account-only pages and the child’s records are not published as sources. Pisolala is a family creation. Historical references: Bloom (1968), Learning for Mastery; Wood, Bruner & Ross (1976), The role of tutoring in problem solving. Their original texts were not reviewed for this design.</p>`;
+const sourcesHTML=()=>`<p class="small">Research informs the design; it does not validate this app or its exact thresholds. Bibliographic references are identified separately from evaluated findings. Product comparisons are not evidence of educational effectiveness.</p><ol>${ABOUT_SOURCES.map(s=>`<li>${esc(s[0])}<br><a href="${s[1]}" target="_blank" rel="noopener">${s[1]}</a></li>`).join('')}</ol><p class="small">Private sources: Grade 3 class materials, rubrics, teacher instructions and standards read by the family on the school's learning platform on 29 October 2026; assessment legends supplied by the family. These account-only pages and the child’s records are not published as sources. Pisolala is a family creation. Historical references: Bloom (1968), Learning for Mastery; Wood, Bruner & Ross (1976), The role of tutoring in problem solving. Their original texts were not reviewed for this design.</p>`;
 const ABOUT_DE=()=>`
 <h2>Über diese Anwendung</h2>
-<p><b>3B Big Quest</b> ist ein privat entwickeltes, spielerisches Übungsangebot für ein Kind der Klasse 3B der Bavarian International School. Die Anwendung begleitet die Inhalte des laufenden Schuljahres und lädt dazu ein, zwischendurch und an jedem Ort freiwillig zu üben – ergänzend zum Unterricht und zu den eigentlichen Hausaufgaben, niemals an ihrer Stelle.</p>
+<p><b>Grade 3 – Big Quest</b> ist ein privat entwickeltes, spielerisches Übungsangebot für ein Kind der 3. Klasse an einer IB-Schule (Primary Years Programme). Die Anwendung begleitet die Inhalte des laufenden Schuljahres und lädt dazu ein, zwischendurch und an jedem Ort freiwillig zu üben – ergänzend zum Unterricht und zu den eigentlichen Hausaufgaben, niemals an ihrer Stelle.</p>
 <div class="note"><b>Wichtiger Hinweis.</b> Es handelt sich um eine Spaß- und Lernanwendung ohne pädagogische Herkunft und ohne fachliche Beratung. Sie wurde weder von der Schule noch vom International Baccalaureate beauftragt, geprüft oder unterstützt. Aufgaben und Programmierung sind mit Unterstützung eines KI-Assistenten entstanden und von den Eltern durchgesehen; Fehler sind dennoch möglich. Ein in der Anwendung ermittelter Übungsstand ist keine Bewertung und lässt keine Rückschlüsse auf schulische Beurteilungen zu.</div>
 <h3>Grundidee</h3>
 <p>Üben soll Freude bereiten, Neugier wecken und Selbstvertrauen stärken. Die Anwendung kennt deshalb weder Zeitvorgaben noch Ranglisten, Punktabzüge oder verfallende Belohnungen. Gewürdigt werden Ausdauer, Mut und Wachstum – nicht das Ergebnis einer einzelnen Runde.</p>
@@ -2485,9 +2540,9 @@ const ABOUT_DE=()=>`
 <h3>Lernlogik</h3>
 <p>Nach einer falschen Antwort bietet die Anwendung einen Hinweis und einen zweiten Versuch an. „Zeig mir, wie“ führt jederzeit zur erklärten Lösung. Bei nur zwei Antwortmöglichkeiten wird direkt erklärt. Für Runden, Stellenwert und fehlende Teile folgt bei Bedarf eine Brücke aus zwei leichteren Aufgaben und einer neuen vergleichbaren Aufgabe. Reicht der Platz in einer Runde nicht, geht die Brücke beim nächsten Start weiter. Wiederholungen und unterstützte Versuche zählen nicht als unabhängiger Nachweis. Die genaue Hilfe-Leiter ist ein begründeter Entwurf, kein wissenschaftlich nachgewiesenes Optimum für dieses Kind.</p>
 <p>Jede Aufgabe gehört zu einer Fähigkeit und zu einer von drei Stufen: <i>Grundlage</i> (ein Schritt, mit Hilfe), <i>Klassenniveau</i> und <i>Herausforderung</i> (erklären, prüfen, einen zweiten Weg finden). Die Anwendung merkt sich auf dem Gerät, wann welche Aufgaben gelöst wurden, und wählt danach die nächsten aus: Unsicheres wird mit Hilfen und kleineren Schritten geübt, Sicheres durch anspruchsvollere Aufgaben ergänzt. Fehler kehren nach dem Prinzip der Lernkartei (Leitner) am nächsten Übungstag sowie nach drei und sieben Tagen wieder.</p>
-<p>Zur Einordnung dient intern die vierstufige Skala, die die Schule für ihre Standards verwendet (<i>Requires support, Consolidating, Meeting expectations, Extending</i>). Sie wird ausschließlich zur Auswahl der Aufgaben genutzt und dem Kind an keiner Stelle angezeigt. Die zugrunde gelegten Schwellenwerte sind Annahmen der Eltern, keine Vorgaben der Schule.</p>
+<p>Zur Einordnung dient intern der Bewertungsschlüssel, den die Schule für ihre Standards verwendet. Er wird ausschließlich zur Auswahl der Aufgaben genutzt und dem Kind an keiner Stelle angezeigt; Einzelheiten stehen im Elternbereich. Die zugrunde gelegten Schwellenwerte sind Annahmen der Eltern, keine Vorgaben der Schule.</p>
 <h3>Herkunft der Aufgaben</h3>
-<p>Themen und Erfolgskriterien folgen den Lerneinheiten der Klasse 3B im Schuljahr 2026/27, wie sie auf der Lernplattform der Schule veröffentlicht sind – darunter <i>Friction Frenzy</i> (How the World Works), <i>Persuade for the Park</i> (Who We Are), <i>Mastering Basic Numbers</i> mit <i>Travel for Work</i> und dem <i>Sticker Milestone</i>, das Runden auf Zehner und Hunderter, die <i>Anleitung</i> zur Traummaschine, die Leseaufnahme, die Bibliotheksstunden sowie die Primary Production <i>Pantastic</i>. Die Aufgaben selbst sind neu formuliert oder werden mit wechselnden Zahlen erzeugt; Arbeitsblätter der Schule werden nicht wiedergegeben. Die Geschichten um <i>Pisolala</i> sind eine Erfindung der Familie.</p>
+<p>Themen und Erfolgskriterien folgen den Lerneinheiten der 3. Klasse im Schuljahr 2026/27, wie sie auf der Lernplattform der Schule veröffentlicht sind – darunter <i>Friction Frenzy</i> (How the World Works), <i>Persuade for the Park</i> (Who We Are), <i>Mastering Basic Numbers</i> mit <i>Travel for Work</i> und dem <i>Sticker Milestone</i>, das Runden auf Zehner und Hunderter, die <i>Anleitung</i> zur Traummaschine, die Leseaufnahme, die Bibliotheksstunden sowie die Primary Production <i>Pantastic</i>. Die Aufgaben selbst sind neu formuliert oder werden mit wechselnden Zahlen erzeugt; Arbeitsblätter der Schule werden nicht wiedergegeben. Die Geschichten um <i>Pisolala</i> sind eine Erfindung der Familie.</p>
 <h3>Datenschutz</h3>
 <p>Der Elternbereich verwendet eine separate, auf dem Gerät gespeicherte PIN. Sie schützt vor versehentlichem Zugriff, nicht vor gezielter Manipulation von Browserdaten. Er sperrt beim Verlassen und nach Inaktivität. Die dort angezeigten Beobachtungen sind weder Diagnosen noch Bewertungen der Schule. Eine optionale Kalenderdatei wird lokal erzeugt; erst der von den Eltern gewählte Kalender bestimmt Speicherung und Benachrichtigungen.</p>
 <p>Die Anwendung läuft vollständig im Browser und ist nur verschlüsselt veröffentlicht. Name, Sterne und Übungsstand werden ausschließlich auf dem jeweiligen Gerät gespeichert und nicht weitergegeben; es gibt keine Werbung und keine Auswertungsdienste. Nach dem Öffnen lädt die Anwendung Schriftarten von Google Fonts; dabei wird die IP-Adresse des Geräts an Google übermittelt.</p>
@@ -2495,7 +2550,7 @@ const ABOUT_DE=()=>`
 <p class="small">Stand: 30. Oktober 2026.</p>`;
 const ABOUT_EN=()=>`
 <h2>About this app</h2>
-<p><b>3B Big Quest</b> is a privately developed, playful practice companion for a child in Grade 3B at the Bavarian International School. It follows the topics of the current school year and invites voluntary practice anywhere and at any time – as a supplement to lessons and homework, never as a replacement.</p>
+<p><b>Grade 3 – Big Quest</b> is a privately developed, playful practice companion for a child in Grade 3 at an IB school (Primary Years Programme). It follows the topics of the current school year and invites voluntary practice anywhere and at any time – as a supplement to lessons and homework, never as a replacement.</p>
 <div class="note"><b>Please note.</b> This is a fun learning app without any pedagogical origin or professional advice. It has not been commissioned, reviewed or endorsed by the school or by the International Baccalaureate. Tasks and code were created with the help of an AI assistant and reviewed by the parents; errors remain possible. Any practice status kept by the app is not an assessment and permits no conclusions about school grades.</div>
 <h3>Idea</h3>
 <p>Practice should be enjoyable, spark curiosity and build confidence. There are therefore no time targets, leaderboards, penalties or expiring rewards. Persistence, courage and growth are celebrated – not the result of a single round.</p>
@@ -2508,9 +2563,9 @@ const ABOUT_EN=()=>`
 </ul>
 <h3>How it works</h3>
 <p>After a wrong answer, a hint supports a second attempt. “Show me how” always opens the worked explanation. Two-option tasks are explained directly. Rounding, place value and missing-part tasks can lead to two simpler practice tasks and a new parallel task. Unfinished bridges continue next time. Assisted successes are not independent evidence. This design is informed by research, not a proven optimum for this child.</p>
-<p>Every task belongs to a skill and to one of three levels: <i>foundation</i> (one step, with support), <i>year level</i> and <i>challenge</i> (explain, check, find a second way). The app remembers on the device which tasks were solved and when, and selects the next ones accordingly. Mistakes return on the next practice day and after three and seven days (Leitner principle). Internally, the four-level scale the school uses for its standards serves as orientation; it is used only to choose tasks and is never shown to the child. Thresholds are the parents' assumptions, not school requirements.</p>
+<p>Every task belongs to a skill and to one of three levels: <i>foundation</i> (one step, with support), <i>year level</i> and <i>challenge</i> (explain, check, find a second way). The app remembers on the device which tasks were solved and when, and selects the next ones accordingly. Mistakes return on the next practice day and after three and seven days (Leitner principle). Internally, the assessment key the school uses for its standards serves as orientation; it is used only to choose tasks and is never shown to the child. Details are in the parent area. Thresholds are the parents' assumptions, not school requirements.</p>
 <h3>Origin of the tasks</h3>
-<p>Topics and success criteria follow the Grade 3B units of the 2026/27 school year as published on the school's learning platform. The tasks themselves are rewritten or generated with varying numbers; school worksheets are not reproduced. The stories about <i>Pisolala</i> are a family invention.</p>
+<p>Topics and success criteria follow the Grade 3 units of the 2026/27 school year as published on the school's learning platform. The tasks themselves are rewritten or generated with varying numbers; school worksheets are not reproduced. The stories about <i>Pisolala</i> are a family invention.</p>
 <h3>Privacy</h3>
 <p>The parental area has a separate, device-local PIN and locks when left or inactive. This is a UI guard against accidental access, not protection against someone manipulating browser data. Its observations are not school assessments. Optional calendar reminders are generated locally; the chosen calendar controls import, storage and notifications.</p>
 <p>The app runs entirely in the browser and is published only in encrypted form. Name, stars and practice status are stored solely on the device and never shared; there is no advertising and no analytics. After opening, the app loads fonts from Google Fonts, which transmits the device's IP address to Google.</p>
