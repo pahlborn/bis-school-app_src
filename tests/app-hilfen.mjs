@@ -64,9 +64,9 @@ export const textAus = (html) => html.replace(/<[^>]+>/g, '').replace(/&lt;/g, '
 /** Zurueck zur Startseite, egal wo die App gerade steht. */
 export async function zurStart(page) {
   for (let i = 0; i < 4; i++) {
-    const wo = await page.evaluate(() => ['home', 'subject', 'play', 'results', 'studioScreen'].find((id) => !document.getElementById(id).hidden));
+    const wo = await page.evaluate(() => ['home', 'subject', 'play', 'results', 'studioScreen', 'about'].find((id) => !document.getElementById(id).hidden));
     if (wo === 'home') return;
-    await klick(page, { subject: '#subjectBack', play: '#quitBtn', results: '#homeBtn', studioScreen: '#studioBack' }[wo]);
+    await klick(page, { subject: '#subjectBack', play: '#quitBtn', results: '#homeBtn', studioScreen: '#studioBack', about: '#aboutBack' }[wo]);
   }
   throw new Error('Startseite nicht erreicht');
 }

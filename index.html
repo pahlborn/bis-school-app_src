@@ -210,6 +210,42 @@ button{font:inherit;color:inherit}
 .progress i{display:block;height:100%;background:var(--world);width:0;transition:width .3s}
 
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:9}
+/* about page */
+#sheetBtn{width:100%}
+.about{background:var(--surface);border:2px solid var(--line);border-radius:22px;padding:20px 18px;line-height:1.55}
+.about h2{margin:18px 0 6px}.about h2:first-child{margin-top:0}
+.about h3{margin:14px 0 4px}
+.about p,.about li{font-size:.98rem}
+.about ul,.about ol{padding-left:22px;margin:6px 0}
+.about .note{background:var(--soft);border-left:5px solid var(--sun);border-radius:12px;padding:10px 14px;margin:10px 0}
+.about a{color:var(--accent);word-break:break-word}
+.about .small{font-size:.85rem;color:var(--muted)}
+.sheetrow{display:flex;flex-direction:column;gap:6px;border-top:2px solid var(--line);padding:10px 0}
+.sheetrow .q{font-size:.95rem}
+.sheetrow .row .btn{flex:1 1 90px}
+.sheetrow .btn.on{background:var(--soft);border-color:var(--accent)}
+/* printing: only the practice sheet goes on paper, always in light colours */
+#printArea{display:none}
+@media print{
+  :root{--bg:#fff;--surface:#fff;--ink:#000;--muted:#333;--line:#999;--soft:#eee;--world:#333;--accent:#333;color-scheme:light}
+  body{background:#fff}
+  #app,#confetti{display:none!important}
+  #printArea{display:block;color:#000;font-family:var(--body);font-size:12pt}
+  .sheet{page-break-after:always}
+  .sheet:last-child{page-break-after:auto}
+  .sheet h1{font-size:20pt;margin:0 0 2mm}
+  .sheet .meta{display:flex;justify-content:space-between;border-bottom:1.5pt solid #000;padding-bottom:2mm;margin-bottom:4mm;font-size:11pt}
+  .task{break-inside:avoid;border:1pt solid #999;border-radius:3mm;padding:3mm 4mm;margin-bottom:3.5mm}
+  .task .nr{font-weight:700;margin-right:2mm}
+  .task .vis{margin:1mm 0;max-width:85mm}
+  .task .vis svg{max-width:85mm;max-height:55mm;height:auto}
+  .task ul{list-style:none;padding:0;margin:2mm 0;display:flex;flex-wrap:wrap;gap:2mm 8mm}
+  .task li::before{content:'◯ ';font-size:13pt}
+  .work{border:1pt dashed #777;height:17mm;margin-top:2mm;padding:1mm 2mm;font-size:9pt;color:#555}
+  .lines div{border-bottom:1pt solid #999;height:8mm}
+  .ticks{font-size:11pt;line-height:1.9}
+  .answers-page li{margin-bottom:2mm}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 @media (max-width:380px){h1{font-size:2rem}.prompt{font-size:1.18rem}.chip{max-width:50%}.answers.grid3{grid-template-columns:1fr 1fr}}
 </style>
@@ -233,10 +269,28 @@ button{font:inherit;color:inherit}
     </div>
     <button class="today" id="todayBtn" type="button"><span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7.1L12 17.3 5.7 21l1.7-7.1L2 9.2l7.1-.6z"/></svg></span><span><span class="name">Practise Today</span><br><span class="sub" id="todaySub">8 questions from your focus topics</span></span></button>
     <div id="subjects" class="subjects"></div>
+    <button class="btn" id="sheetBtn" type="button">🖨️ Print a practice sheet</button>
     <div class="foot">
-      <span>Topics from class, updated 29 October.</span>
-      <button class="btn small" id="soundBtn" type="button">Sound: on</button>
+      <span>Topics from class, updated 30 October.</span>
+      <span class="row" style="flex:0 0 auto">
+        <button class="btn small" id="aboutBtn" type="button">About &amp; grown-ups</button>
+        <button class="btn small" id="soundBtn" type="button">Sound: on</button>
+      </span>
     </div>
+  </section>
+
+  <!-- ABOUT & GROWN-UPS -->
+  <section id="about" class="screen" hidden>
+    <div class="topbar">
+      <button class="iconbtn" id="aboutBack" type="button" aria-label="Back to home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <span class="chip" id="aboutChip">About this app</span>
+    </div>
+    <div class="row" role="tablist">
+      <button class="btn small" id="tabDe" type="button" role="tab">Deutsch</button>
+      <button class="btn small" id="tabEn" type="button" role="tab">English</button>
+      <button class="btn small" id="tabSheets" type="button" role="tab">Practice sheets</button>
+    </div>
+    <article class="about" id="aboutBody"></article>
   </section>
 
   <!-- SUBJECT -->
@@ -290,6 +344,8 @@ button{font:inherit;color:inherit}
     <div class="studio" id="studioBody"></div>
   </section>
 </div>
+<!-- PRINT: filled right before printing, only visible on paper -->
+<div id="printArea" aria-hidden="true"></div>
 <canvas id="confetti" aria-hidden="true"></canvas>
 
 <script>
@@ -1473,12 +1529,12 @@ const rankFor = s => RANKS.filter(r=>s>=r[0]).pop()[1];
 
 /* ======================= STATE & SCREENS ======================= */
 const state={screen:'home', world:null, round:[], idx:0, stars:0, streak:0, answered:false, typed:'', picked:[], results:[], studio:null, subject:null, back:'home'};
-const play=$('#play'), home=$('#home'), results=$('#results'), studioScreen=$('#studioScreen'), subjectScreen=$('#subject');
+const play=$('#play'), home=$('#home'), results=$('#results'), studioScreen=$('#studioScreen'), subjectScreen=$('#subject'), aboutScreen=$('#about');
 let timerId=null, timerStart=0, timerElapsed=0;
 
 function show(name){
   state.screen=name;
-  home.hidden=name!=='home'; play.hidden=name!=='play'; results.hidden=name!=='results'; studioScreen.hidden=name!=='studio'; subjectScreen.hidden=name!=='subject';
+  home.hidden=name!=='home'; play.hidden=name!=='play'; results.hidden=name!=='results'; studioScreen.hidden=name!=='studio'; subjectScreen.hidden=name!=='subject'; aboutScreen.hidden=name!=='about';
   if(name!=='studio') stopTimer();
   confettiRun++; // stop confetti that is still falling from the last screen
   window.scrollTo(0,0);
@@ -1693,6 +1749,148 @@ function showResults(){
   if(s>=6){ beep('win'); confetti(); }
 }
 
+/* ---------- practice sheets (paper) ---------- */
+/* Why paper: the school rubric asks for labelled working, units and a second way to check (Meets/Extending). That is practised on paper, not in a quiz.
+   A sheet uses the same questions and hidden levels as the app; grown-ups can enter the results afterwards (About & grown-ups -> Practice sheets). */
+const MATHS=['numbers','round','combos','wordprob','detective','units','graphs'];
+const strip = h => String(h||'').replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
+const LETTERS='ABCDEF';
+function buildSheet(){
+  const focus=FOCUS.filter(k=>WORLDS[k] && !isArchived(WORLDS[k]));
+  const topics=focus.length?focus:SUBJECTS.flatMap(questsIn);
+  const pools=shuffle(topics).map(k=>adaptRound(k, WORLDS[k].build()).filter(q=>q.kind!=='order' || q.items.length<=5));
+  const items=[]; let i=0;
+  while(items.length<6 && pools.some(p=>p.length)){ const p=pools[i%pools.length]; if(p.length) items.push(p.shift()); i++; }
+  const german=topics.indexOf('anleitung')>=0 || (!topics.some(k=>['opinion','sentences','examples'].includes(k)) && Math.random()<.5);
+  const sheet={id:dayKey()+'-'+Date.now().toString(36), day:dayKey(), items:items.map(q=>({q:q, res:null})), writing:german?'de':'en'};
+  const all=store.get('sheets',[]); all.push(sheet); store.set('sheets', all.slice(-8));
+  return sheet;
+}
+function paperTask(q, nr, checkBox){
+  let body=`<div class="q"><span class="nr">${nr}.</span>${String(q.prompt).replace(/\bType\b/g,'Write').replace(/\btype\b/g,'write')}</div>`;
+  if(q.visual) body+=`<div class="vis">${q.visual}</div>`;
+  if(q.kind==='mc') body+=`<ul>${q.options.map((o,i)=>`<li><b>${LETTERS[i]}</b> ${q.htmlOptions?`<span class="vis" style="display:inline-block;width:28mm">${o}</span>`:esc(o)}</li>`).join('')}</ul>`;
+  else if(q.kind==='type') body+=`<p>Answer: ____________</p>`;
+  else body+=`<ul>${q.items.map(t=>`<li>☐ ${esc(t)}</li>`).join('')}</ul><p class="small">Write 1, 2, 3 … in the boxes.</p>`;
+  if(MATHS.indexOf(q.world)>=0) body+=`<div class="work">Show your work${q.world==='units'?' · write the unit (cm, m, g)':''}</div>`;
+  if(checkBox) body+=`<div class="work">Check it another way</div>`;
+  return `<div class="task">${body}</div>`;
+}
+function keyFor(q){
+  if(q.kind==='mc') return `<b>${LETTERS[q.answer]}</b>${q.htmlOptions?'':' – '+esc(strip(q.options[q.answer]))}`;
+  if(q.kind==='type') return `<b>${esc(q.answer)}</b>`;
+  return q.correct.map((k,i)=>`${i+1}. ${esc(q.items[k])}`).join(' · ');
+}
+function renderSheet(sheet){
+  const name=esc(store.get('name','')||'________________');
+  // 'check it another way' on a maths task without a big picture, so the page stays short
+  let mathsIdx=sheet.items.findIndex(it=>MATHS.indexOf(it.q.world)>=0 && !it.q.visual);
+  if(mathsIdx<0) mathsIdx=sheet.items.findIndex(it=>MATHS.indexOf(it.q.world)>=0);
+  const writing=sheet.writing==='de'
+    ? `<div class="task"><span class="nr">${sheet.items.length+1}.</span><b>Schreibe eine Anleitung für deine Traummaschine</b> in 4 Schritten. Benutze die Man-Form und die Satzanfänge <i>Als Erstes, Als Nächstes, Danach, Zum Schluss</i>.<div class="lines"><div></div><div></div><div></div><div></div></div></div>`
+    : `<div class="task"><span class="nr">${sheet.items.length+1}.</span><b>Write an OREO paragraph:</b> Should our class have a reading corner? <i>I think… One reason is… For example… That is why…</i> Capital letters and full stops!<div class="lines"><div></div><div></div><div></div><div></div></div></div>`;
+  const page1=`<section class="sheet"><h1>My Practice Sheet</h1><div class="meta"><span>Name: ${name}</span><span>Date: ${sheet.day}</span><span>Believe. Inspire. Succeed.</span></div>
+    ${sheet.items.map((it,i)=>paperTask(it.q, i+1, i===mathsIdx)).join('')}${writing}
+    <div class="task ticks">☐ I answered every question &nbsp; ☐ I checked my units &nbsp; ☐ I explained one task to a grown-up &nbsp; ☐ I worked with someone<br>
+    Today I am proud of: ______________________________ &nbsp; Next I will practise: ______________________________</div></section>`;
+  const page2=`<section class="sheet answers-page"><h1>Answers – for grown-ups</h1><div class="meta"><span>Sheet of ${sheet.day}</span><span>Enter results in the app: About &amp; grown-ups → Practice sheets</span></div>
+    <ol>${sheet.items.map(it=>`<li>${keyFor(it.q)}<br><span class="small">${esc(it.q.explain||'')}</span></li>`).join('')}<li>Writing: look for order words, complete sentences, capitals and full stops.</li></ol>
+    <p class="small">Working shown and units written = what the class rubric asks for. A second way to check = the next step up.</p></section>`;
+  return page1+page2;
+}
+function printSheet(){
+  const sheet=buildSheet();
+  $('#printArea').innerHTML=renderSheet(sheet);
+  snapshot();
+  setTimeout(()=>window.print(), 50);
+}
+
+/* grown-ups: enter the results of a printed sheet; they count like answers in the app (with help = support level) */
+const RES={ok:'✓ Right', help:'🤝 With help', no:'↻ Not yet'};
+function enterResult(sheetId, idx, res){
+  const all=store.get('sheets',[]), sh=all.find(s=>s.id===sheetId); if(!sh || sh.items[idx].res) return;
+  const q=sh.items[idx].q; sh.items[idx].res=res; store.set('sheets',all);
+  if(res==='ok') recordAnswer(q,true);
+  else if(res==='help') recordAnswer(Object.assign({},q,{level:1}),true);
+  else { recordAnswer(q,false); rememberWrong(q); }
+  renderSheets();
+}
+function renderSheets(){
+  const all=store.get('sheets',[]).slice().reverse();
+  const body=$('#aboutBody');
+  if(!all.length){ body.innerHTML='<h2>Practice sheets</h2><p>No sheet printed yet. Use “Print a practice sheet” on the start page.</p>'; return; }
+  body.innerHTML='<h2>Practice sheets</h2><p class="small">Tick each task once. “With help” and “Not yet” are fine – the app then offers easier steps and repeats the task later. Nothing of this is shown to the child.</p>'+
+    all.map(sh=>`<h3>Sheet of ${sh.day}</h3>`+sh.items.map((it,i)=>`<div class="sheetrow"><div class="q"><b>${i+1}.</b> ${esc(strip(it.q.prompt).slice(0,140))}</div><div class="row">${Object.keys(RES).map(r=>`<button type="button" class="btn small${it.res===r?' on':''}" data-sheet="${sh.id}" data-i="${i}" data-res="${r}"${it.res?' disabled':''}>${RES[r]}</button>`).join('')}</div></div>`).join('')).join('');
+  body.querySelectorAll('button[data-res]').forEach(b=>b.addEventListener('click',()=>enterResult(b.dataset.sheet, +b.dataset.i, b.dataset.res)));
+}
+
+/* ---------- about ---------- */
+const ABOUT_SOURCES=[
+  ['Bavarian International School – Purpose (Trust, Belong, Engage, Innovate, Flourish)','https://www.bis-school.com/about/purpose'],
+  ['Bavarian International School – Learning Principles','https://www.bis-school.com/fs/pages/1629'],
+  ['Bavarian International School – Primary School Haimhausen','https://www.bis-school.com/academic-life/primary-school-haimhausen'],
+  ['International Baccalaureate – PYP curriculum framework','https://www.ibo.org/programmes/primary-years-programme/curriculum/'],
+  ['International Baccalaureate – PYP learning and teaching (ATL, assessment)','https://www.ibo.org/programmes/primary-years-programme/curriculum/learning-and-teaching/'],
+  ['Education Endowment Foundation – Feedback','https://educationendowmentfoundation.org.uk/education-evidence/teaching-learning-toolkit/feedback'],
+  ['IES Practice Guide – Organizing Instruction and Study to Improve Student Learning (spacing, retrieval)','https://ies.ed.gov/ncee/wwc/PracticeGuide/1'],
+  ['The Learning Scientists – Interleaving','https://www.learningscientists.org/blog/2016/8/11-1'],
+  ['Deci, Koestner & Ryan (1999): extrinsic rewards and intrinsic motivation','https://pubmed.ncbi.nlm.nih.gov/10589297/']
+];
+const sourcesHTML=()=>`<ol>${ABOUT_SOURCES.map(s=>`<li>${esc(s[0])}<br><a href="${s[1]}" target="_blank" rel="noopener">${s[1]}</a></li>`).join('')}</ol>`;
+const ABOUT_DE=()=>`
+<h2>Über diese Anwendung</h2>
+<p><b>3B Big Quest</b> ist ein privat entwickeltes, spielerisches Übungsangebot für ein Kind der Klasse 3B der Bavarian International School. Die Anwendung begleitet die Inhalte des laufenden Schuljahres und lädt dazu ein, zwischendurch und an jedem Ort freiwillig zu üben – ergänzend zum Unterricht und zu den eigentlichen Hausaufgaben, niemals an ihrer Stelle.</p>
+<div class="note"><b>Wichtiger Hinweis.</b> Es handelt sich um eine Spaß- und Lernanwendung ohne pädagogische Herkunft und ohne fachliche Beratung. Sie wurde weder von der Schule noch vom International Baccalaureate beauftragt, geprüft oder unterstützt. Aufgaben und Programmierung sind mit Unterstützung eines KI-Assistenten entstanden und von den Eltern durchgesehen; Fehler sind dennoch möglich. Ein in der Anwendung ermittelter Übungsstand ist keine Bewertung und lässt keine Rückschlüsse auf schulische Beurteilungen zu.</div>
+<h3>Grundidee</h3>
+<p>Üben soll Freude bereiten, Neugier wecken und Selbstvertrauen stärken. Die Anwendung kennt deshalb weder Zeitvorgaben noch Ranglisten, Punktabzüge oder verfallende Belohnungen. Gewürdigt werden Ausdauer, Mut und Wachstum – nicht das Ergebnis einer einzelnen Runde.</p>
+<h3>Leitgedanken</h3>
+<p>Die Gestaltung orientiert sich an den veröffentlichten Leitsätzen der Schule und am Primary Years Programme des International Baccalaureate:</p>
+<ul>
+<li><i>„A place for everyone to grow and flourish“</i> – Fortschritt wird sichtbar gemacht und gefeiert, ohne zu vergleichen.</li>
+<li><i>„Voice, choice and ownership“</i> – das Kind wählt Fach, Thema und Herausforderung selbst.</li>
+<li><i>„We are challenged, inspired, empowered“</i> und <i>„We take risks in a supportive culture“</i> – Fehler gelten als Teil des Lernens; der Versuch einer Herausforderung wird gewürdigt, gleich wie er ausgeht.</li>
+<li>Das <i>IB Learner Profile</i> und die <i>Approaches to Learning</i> – Denken, Begründen, Reflektieren („Glows and Grows“).</li>
+</ul>
+<h3>Aufbau</h3>
+<p>Die Inhalte sind nach Fächern wie in der Schule gegliedert (Maths, Science, English, Deutsch, Library &amp; Reading, Me as a Learner, Events). „Practise Today“ stellt eine kurze, abwechslungsreiche Runde zusammen; die Eltern legen fest, welche Themen derzeit im Fokus stehen. Übungsblätter zum Ausdrucken ergänzen das Angebot um das, was nur auf Papier sinnvoll geübt werden kann: beschriftete Rechenwege, Einheiten, ein zweiter Lösungsweg und eigene Texte.</p>
+<h3>Lernlogik</h3>
+<p>Jede Aufgabe gehört zu einer Fähigkeit und zu einer von drei Stufen: <i>Grundlage</i> (ein Schritt, mit Hilfe), <i>Klassenniveau</i> und <i>Herausforderung</i> (erklären, prüfen, einen zweiten Weg finden). Die Anwendung merkt sich auf dem Gerät, wann welche Aufgaben gelöst wurden, und wählt danach die nächsten aus: Unsicheres wird mit Hilfen und kleineren Schritten geübt, Sicheres durch anspruchsvollere Aufgaben ergänzt. Fehler kehren nach dem Prinzip der Lernkartei (Leitner) am nächsten Übungstag sowie nach drei und sieben Tagen wieder.</p>
+<p>Zur Einordnung dient intern die vierstufige Skala, die die Schule für ihre Standards verwendet (<i>Requires support, Consolidating, Meeting expectations, Extending</i>). Sie wird ausschließlich zur Auswahl der Aufgaben genutzt und dem Kind an keiner Stelle angezeigt. Die zugrunde gelegten Schwellenwerte sind Annahmen der Eltern, keine Vorgaben der Schule.</p>
+<h3>Herkunft der Aufgaben</h3>
+<p>Themen und Erfolgskriterien folgen den Lerneinheiten der Klasse 3B im Schuljahr 2026/27, wie sie auf der Lernplattform der Schule veröffentlicht sind – darunter <i>Friction Frenzy</i> (How the World Works), <i>Persuade for the Park</i> (Who We Are), <i>Mastering Basic Numbers</i> mit <i>Travel for Work</i> und dem <i>Sticker Milestone</i>, das Runden auf Zehner und Hunderter, die <i>Anleitung</i> zur Traummaschine, die Leseaufnahme, die Bibliotheksstunden sowie die Primary Production <i>Pantastic</i>. Die Aufgaben selbst sind neu formuliert oder werden mit wechselnden Zahlen erzeugt; Arbeitsblätter der Schule werden nicht wiedergegeben. Die Geschichten um <i>Pisolala</i> sind eine Erfindung der Familie.</p>
+<h3>Datenschutz</h3>
+<p>Die Anwendung läuft vollständig im Browser und ist nur verschlüsselt veröffentlicht. Name, Sterne und Übungsstand werden ausschließlich auf dem jeweiligen Gerät gespeichert und nicht weitergegeben; es gibt keine Werbung und keine Auswertungsdienste. Nach dem Öffnen lädt die Anwendung Schriftarten von Google Fonts; dabei wird die IP-Adresse des Geräts an Google übermittelt.</p>
+<h3>Quellen</h3>${sourcesHTML()}
+<p class="small">Stand: 30. Oktober 2026.</p>`;
+const ABOUT_EN=()=>`
+<h2>About this app</h2>
+<p><b>3B Big Quest</b> is a privately developed, playful practice companion for a child in Grade 3B at the Bavarian International School. It follows the topics of the current school year and invites voluntary practice anywhere and at any time – as a supplement to lessons and homework, never as a replacement.</p>
+<div class="note"><b>Please note.</b> This is a fun learning app without any pedagogical origin or professional advice. It has not been commissioned, reviewed or endorsed by the school or by the International Baccalaureate. Tasks and code were created with the help of an AI assistant and reviewed by the parents; errors remain possible. Any practice status kept by the app is not an assessment and permits no conclusions about school grades.</div>
+<h3>Idea</h3>
+<p>Practice should be enjoyable, spark curiosity and build confidence. There are therefore no time targets, leaderboards, penalties or expiring rewards. Persistence, courage and growth are celebrated – not the result of a single round.</p>
+<h3>Guiding principles</h3>
+<ul>
+<li><i>“A place for everyone to grow and flourish”</i> – progress is made visible and celebrated without comparison.</li>
+<li><i>“Voice, choice and ownership”</i> – the child chooses subject, topic and challenge.</li>
+<li><i>“We are challenged, inspired, empowered”</i> and <i>“We take risks in a supportive culture”</i> – mistakes are part of learning; attempting a challenge is valued regardless of the outcome.</li>
+<li>The IB <i>Learner Profile</i> and <i>Approaches to Learning</i> – thinking, justifying, reflecting (“Glows and Grows”).</li>
+</ul>
+<h3>How it works</h3>
+<p>Every task belongs to a skill and to one of three levels: <i>foundation</i> (one step, with support), <i>year level</i> and <i>challenge</i> (explain, check, find a second way). The app remembers on the device which tasks were solved and when, and selects the next ones accordingly. Mistakes return on the next practice day and after three and seven days (Leitner principle). Internally, the four-level scale the school uses for its standards serves as orientation; it is used only to choose tasks and is never shown to the child. Thresholds are the parents' assumptions, not school requirements.</p>
+<h3>Origin of the tasks</h3>
+<p>Topics and success criteria follow the Grade 3B units of the 2026/27 school year as published on the school's learning platform. The tasks themselves are rewritten or generated with varying numbers; school worksheets are not reproduced. The stories about <i>Pisolala</i> are a family invention.</p>
+<h3>Privacy</h3>
+<p>The app runs entirely in the browser and is published only in encrypted form. Name, stars and practice status are stored solely on the device and never shared; there is no advertising and no analytics. After opening, the app loads fonts from Google Fonts, which transmits the device's IP address to Google.</p>
+<h3>Sources</h3>${sourcesHTML()}
+<p class="small">Last updated: 30 October 2026.</p>`;
+function openAbout(tab){
+  state.aboutTab=tab||state.aboutTab||'de';
+  ['tabDe','tabEn','tabSheets'].forEach(id=>$('#'+id).classList.toggle('primary', {tabDe:'de',tabEn:'en',tabSheets:'sheets'}[id]===state.aboutTab));
+  if(state.aboutTab==='sheets') renderSheets();
+  else $('#aboutBody').innerHTML=state.aboutTab==='en'?ABOUT_EN():ABOUT_DE();
+  show('about'); snapshot();
+}
+
 /* ---------- studios ---------- */
 function fmtTime(ms){ const s=Math.floor(ms/1000); return pad(Math.floor(s/60))+':'+pad(s%60); }
 function stopTimer(){ if(timerId){ clearInterval(timerId); timerId=null; } }
@@ -1765,6 +1963,12 @@ $('#todayBtn').addEventListener('click',()=>{ state.back='home'; startRound('tod
 $('#nextBtn').addEventListener('click',next);
 $('#againBtn').addEventListener('click',()=>startRound(state.world));
 $('#homeBtn').addEventListener('click',goBack);
+$('#sheetBtn').addEventListener('click',printSheet);
+$('#aboutBtn').addEventListener('click',()=>openAbout());
+$('#aboutBack').addEventListener('click',()=>{ state.back='home'; goBack(); });
+$('#tabDe').addEventListener('click',()=>openAbout('de'));
+$('#tabEn').addEventListener('click',()=>openAbout('en'));
+$('#tabSheets').addEventListener('click',()=>openAbout('sheets'));
 
 function boot(data){
   renderHome();
