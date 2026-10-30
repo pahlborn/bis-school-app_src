@@ -110,6 +110,11 @@ button{font:inherit;color:inherit}
 .pf-emojis button{min-height:44px;min-width:44px;font-size:1.4rem;border-radius:12px;border:2px solid var(--line);background:var(--surface);cursor:pointer;padding:0}
 .pf-emojis button[aria-pressed="true"]{border-color:var(--accent);background:var(--soft);box-shadow:inset 0 0 0 2px var(--accent)}
 .profile-dlg .row > .btn{flex:1 1 100px}
+.about-menu{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+.about-item{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:52px;padding:10px 16px;border-radius:16px;border:2px solid var(--line);background:var(--surface);color:var(--ink);font-family:var(--display);font-size:1.05rem;font-weight:600;text-align:left;cursor:pointer;box-shadow:var(--shadow)}
+.about-item span:last-child{font-size:1.4rem;color:var(--muted)}
+.about-sub-title{margin:12px 0 8px}
+ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 .chipstat.rank-chip{cursor:pointer;gap:6px;background:var(--rk-bg,var(--surface));color:var(--rk-fg,var(--ink));border-color:var(--rk-fg,var(--line));font-size:1rem}
 .note-banner.rank-note{border-left-color:var(--rk-fg,var(--sun));background:var(--rk-bg,var(--soft));color:var(--rk-fg,var(--ink))}
 .rank-path{list-style:none;margin:12px 0;padding:0;display:flex;flex-direction:column;gap:6px}
@@ -2699,13 +2704,21 @@ const ABOUT_DE=()=>`
 <p>Nach einer falschen Antwort bietet die Anwendung einen Hinweis und einen zweiten Versuch an. „Zeig mir, wie“ führt jederzeit zur erklärten Lösung. Bei nur zwei Antwortmöglichkeiten wird direkt erklärt. Für Runden, Stellenwert und fehlende Teile folgt bei Bedarf eine Brücke aus zwei leichteren Aufgaben und einer neuen vergleichbaren Aufgabe. Reicht der Platz in einer Runde nicht, geht die Brücke beim nächsten Start weiter. Wiederholungen und unterstützte Versuche zählen nicht als unabhängiger Nachweis. Die genaue Hilfe-Leiter ist ein begründeter Entwurf, kein wissenschaftlich nachgewiesenes Optimum für dieses Kind.</p>
 <p>Jede Aufgabe gehört zu einer Fähigkeit und zu einer von drei Stufen: <i>Grundlage</i> (ein Schritt, mit Hilfe), <i>Klassenniveau</i> und <i>Herausforderung</i> (erklären, prüfen, einen zweiten Weg finden). Die Anwendung merkt sich auf dem Gerät, wann welche Aufgaben gelöst wurden, und wählt danach die nächsten aus: Unsicheres wird mit Hilfen und kleineren Schritten geübt, Sicheres durch anspruchsvollere Aufgaben ergänzt. Fehler kehren nach dem Prinzip der Lernkartei (Leitner) am nächsten Übungstag sowie nach drei und sieben Tagen wieder.</p>
 <p>Zur Einordnung dient intern der Bewertungsschlüssel, den die Schule für ihre Standards verwendet. Er wird ausschließlich zur Auswahl der Aufgaben genutzt und dem Kind an keiner Stelle angezeigt; Einzelheiten stehen im Elternbereich. Die zugrunde gelegten Schwellenwerte sind Annahmen der Eltern, keine Vorgaben der Schule.</p>
+<h3>Exkurs: Was passiert bei einer falschen Antwort?</h3>
+<ol class="steps">
+<li><b>Erster Fehler:</b> Die gewählte Antwort bleibt markiert. Ein kurzer Hinweis stellt eine Frage im Modell der Schule – zum Beispiel „Liegt 470 vor oder nach der Mitte 450?“ – und verrät die Lösung nicht. Dann folgt ein zweiter Versuch.</li>
+<li><b>Zweiter Versuch richtig:</b> Es gibt einen Stern und eine kurze Erklärung. Intern gilt die Aufgabe noch nicht als selbstständig gekonnt; sie kommt später wieder.</li>
+<li><b>Zweiter Versuch falsch:</b> Der Lösungsweg wird Schritt für Schritt gezeigt. Danach folgt eine Brücke: zwei leichtere Aufgaben und eine ähnliche Aufgabe mit neuen Zahlen (bisher beim Runden, beim Stellenwert und bei fehlenden Teilen). Passt sie nicht mehr in die Runde, geht sie beim nächsten Start weiter.</li>
+<li><b>Wiederholung:</b> Die Aufgabe kommt am nächsten Übungstag wieder, dann nach drei und nach sieben Tagen – wo möglich mit neuen Zahlen.</li>
+</ol>
+<p><b>Ausnahmen:</b> Bei nur zwei Antwortmöglichkeiten (etwa AM/PM) erklärt die App sofort. Bei Eintipp-Aufgaben bleibt die Eingabe stehen, dazu kommt ein Hinweis. Beim Ordnen werden die richtigen Plätze markiert.</p>
+<p>„Zeig mir, wie“ ist jederzeit möglich und führt direkt zum Lösungsweg. Eine Note oder Stufe sieht das Kind dabei nie.</p>
 <h3>Herkunft der Aufgaben</h3>
 <p>Themen und Erfolgskriterien folgen den Lerneinheiten der 3. Klasse im Schuljahr 2026/27, wie sie auf der Lernplattform der Schule veröffentlicht sind – darunter <i>Friction Frenzy</i> (How the World Works), <i>Persuade for the Park</i> (Who We Are), <i>Mastering Basic Numbers</i> mit <i>Travel for Work</i> und dem <i>Sticker Milestone</i>, das Runden auf Zehner und Hunderter, die <i>Anleitung</i> zur Traummaschine, die Leseaufnahme, die Bibliotheksstunden sowie die Primary Production <i>Pantastic</i>. Die Aufgaben selbst sind neu formuliert oder werden mit wechselnden Zahlen erzeugt; Arbeitsblätter der Schule werden nicht wiedergegeben. Die Geschichten um <i>Pisolala</i> sind eine Erfindung der Familie.</p>
 <h3>Datenschutz</h3>
 <p>Der Elternbereich verwendet eine separate, auf dem Gerät gespeicherte PIN. Sie schützt vor versehentlichem Zugriff, nicht vor gezielter Manipulation von Browserdaten. Er sperrt beim Verlassen und nach Inaktivität. Die dort angezeigten Beobachtungen sind weder Diagnosen noch Bewertungen der Schule. Eine optionale Kalenderdatei wird lokal erzeugt; erst der von den Eltern gewählte Kalender bestimmt Speicherung und Benachrichtigungen.</p>
 <p>Die Anwendung läuft vollständig im Browser und ist nur verschlüsselt veröffentlicht. Name, Sterne und Übungsstand werden ausschließlich auf dem jeweiligen Gerät gespeichert und nicht weitergegeben; es gibt keine Werbung und keine Auswertungsdienste. Nach dem Öffnen lädt die Anwendung Schriftarten von Google Fonts; dabei wird die IP-Adresse des Geräts an Google übermittelt.</p>
-<h3>Quellen</h3>${sourcesHTML()}
-<p class="small">Stand: 30. Oktober 2026.</p>${appVersionLine()}`;
+<h3>Quellen</h3>${sourcesHTML()}`;
 const ABOUT_EN=()=>`
 <h2>About this app</h2>
 <p><b>Grade 3 – Big Quest</b> is a privately developed, playful practice companion for a child in Grade 3 at an IB school (Primary Years Programme). It follows the topics of the current school year and invites voluntary practice anywhere and at any time – as a supplement to lessons and homework, never as a replacement.</p>
@@ -2722,19 +2735,46 @@ const ABOUT_EN=()=>`
 <h3>How it works</h3>
 <p>After a wrong answer, a hint supports a second attempt. “Show me how” always opens the worked explanation. Two-option tasks are explained directly. Rounding, place value and missing-part tasks can lead to two simpler practice tasks and a new parallel task. Unfinished bridges continue next time. Assisted successes are not independent evidence. This design is informed by research, not a proven optimum for this child.</p>
 <p>Every task belongs to a skill and to one of three levels: <i>foundation</i> (one step, with support), <i>year level</i> and <i>challenge</i> (explain, check, find a second way). The app remembers on the device which tasks were solved and when, and selects the next ones accordingly. Mistakes return on the next practice day and after three and seven days (Leitner principle). Internally, the assessment key the school uses for its standards serves as orientation; it is used only to choose tasks and is never shown to the child. Details are in the parent area. Thresholds are the parents' assumptions, not school requirements.</p>
+<h3>Side note: what happens after a wrong answer?</h3>
+<ol class="steps">
+<li><b>First mistake:</b> the chosen answer stays marked. A short hint asks a question in the school's model – for example “Is 470 before or after the halfway point 450?” – without giving the answer away. Then comes a second try.</li>
+<li><b>Second try right:</b> a star and a short explanation. Internally the task does not yet count as mastered independently; it comes back later.</li>
+<li><b>Second try wrong:</b> the worked solution is shown step by step. Then a bridge follows: two simpler tasks and a similar one with new numbers (so far for rounding, place value and missing parts). If it no longer fits into the round, it continues at the next start.</li>
+<li><b>Review:</b> the task returns on the next practice day, then after three and seven days – with new numbers where possible.</li>
+</ol>
+<p><b>Exceptions:</b> with only two options (such as AM/PM) the app explains at once. In typing tasks the entry stays and a hint is added. In ordering tasks the correct places are marked.</p>
+<p>“Show me how” is always available and leads straight to the worked solution. The child never sees a grade or level.</p>
 <h3>Origin of the tasks</h3>
 <p>Topics and success criteria follow the Grade 3 units of the 2026/27 school year as published on the school's learning platform. The tasks themselves are rewritten or generated with varying numbers; school worksheets are not reproduced. The stories about <i>Pisolala</i> are a family invention.</p>
 <h3>Privacy</h3>
 <p>The parental area has a separate, device-local PIN and locks when left or inactive. This is a UI guard against accidental access, not protection against someone manipulating browser data. Its observations are not school assessments. Optional calendar reminders are generated locally; the chosen calendar controls import, storage and notifications.</p>
 <p>The app runs entirely in the browser and is published only in encrypted form. Name, stars and practice status are stored solely on the device and never shared; there is no advertising and no analytics. After opening, the app loads fonts from Google Fonts, which transmits the device's IP address to Google.</p>
 <h3>Sources</h3>${sourcesHTML()}
-<p class="small">Last updated: 30 October 2026.</p>${appVersionLine()}`;
+`;
+/* About as a menu with sub-pages (Peter, 30.10.): the overview keeps intro, the important note
+   and the version; every topic (incl. side notes, privacy and sources) opens as its own page. */
+const ABOUT_UI={de:{menu:'Themen',back:'← Übersicht',stand:'Stand: 30. Oktober 2026.'},en:{menu:'Topics',back:'← Overview',stand:'Last updated: 30 October 2026.'}};
+function aboutParts(lang){
+  const html=lang==='en'?ABOUT_EN():ABOUT_DE(), parts=html.split('<h3>');
+  return {main:parts[0], sections:parts.slice(1).map(p=>{ const i=p.indexOf('</h3>'); return {title:p.slice(0,i), body:p.slice(i+5)}; })};
+}
+function renderAboutPage(){
+  const lang=state.aboutTab==='en'?'en':'de', ui=ABOUT_UI[lang], {main,sections}=aboutParts(lang), body=$('#aboutBody'), sub=state.aboutSub;
+  if(sub!=null && sections[sub]){
+    body.innerHTML=`<button class="btn small" id="aboutUp" type="button">${ui.back}</button><h2 class="about-sub-title">${sections[sub].title}</h2>${sections[sub].body}`;
+    $('#aboutUp').addEventListener('click',()=>{ state.aboutSub=null; renderAboutPage(); });
+  } else {
+    body.innerHTML=main+`<nav class="about-menu" aria-label="${ui.menu}">`+sections.map((s,i)=>`<button type="button" class="about-item" data-sec="${i}"><span>${s.title}</span><span aria-hidden="true">›</span></button>`).join('')+`</nav><p class="small">${ui.stand}</p>${appVersionLine()}`;
+    body.querySelectorAll('[data-sec]').forEach(b=>b.addEventListener('click',()=>{ state.aboutSub=+b.dataset.sec; renderAboutPage(); }));
+  }
+  window.scrollTo(0,0);
+}
 function openAbout(tab){
   if(tab!=='sheets') parentLock();
-  state.aboutTab=tab||'de';
+  state.aboutTab=tab||'de'; state.aboutSub=null;
   ['tabDe','tabEn','tabSheets'].forEach(id=>$('#'+id).classList.toggle('primary', {tabDe:'de',tabEn:'en',tabSheets:'sheets'}[id]===state.aboutTab));
   if(state.aboutTab==='sheets') renderSheets();
-  else $('#aboutBody').innerHTML=state.aboutTab==='en'?ABOUT_EN():ABOUT_DE();
+  else renderAboutPage();
   show('about'); snapshot();
 }
 

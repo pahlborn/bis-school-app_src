@@ -95,7 +95,11 @@ test('About: Hinweis, Leitgedanken, Lernlogik, Herkunft, Datenschutz und Quellen
   await klick(page, '#aboutBtn');
   const de = await page.textContent('#aboutBody');
   for (const t of ['Wichtiger Hinweis', 'ohne pädagogische Herkunft', 'Leitgedanken', 'Lernlogik', 'Herkunft der Aufgaben', 'Datenschutz', 'Quellen', 'KI-Assistenten']) assert.ok(de.includes(t), t);
+  // Peter 30.10.: menu with sub-pages – the sources are their own page, not on the overview
+  assert.equal(await page.$$eval('#aboutBody a[href^="https://"]', (a) => a.length), 0, 'overview without source list');
+  await page.locator('#aboutBody .about-item', { hasText: 'Quellen' }).click();
   assert.ok(await page.$$eval('#aboutBody a[href^="https://"]', (a) => a.length) >= 8);
+  await page.locator('#aboutUp').click();
   await klick(page, '#tabEn');
   const en = await page.textContent('#aboutBody');
   for (const t of ['Please note', 'without any pedagogical origin', 'Sources']) assert.ok(en.includes(t), t);

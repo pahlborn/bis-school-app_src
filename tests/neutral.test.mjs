@@ -83,15 +83,23 @@ test('title, eyebrow and home screen are neutral; eyebrow fully visible on a 320
 test('About (DE/EN) names no school, class or place and links no school website; adults see 4 neutral school links', async () => {
   const { ctx, page, fehler } = await appOeffnen(browser, server.url);
   await page.locator('#aboutBtn').click();
-  const de = await page.textContent('#aboutBody');
-  assert.deepEqual(treffer(de), []);
-  assert.ok(!/Requires support|Consolidating|Meeting expectations|Extending/.test(de), 'child-reachable About must not list the internal levels');
-  assert.equal(await page.locator('#aboutBody a[href*="bis-school.com"]').count(), 0);
-  await page.locator('#tabEn').click();
-  const en = await page.textContent('#aboutBody');
-  assert.deepEqual(treffer(en), []);
-  assert.ok(!/Requires support|Consolidating|Meeting expectations|Extending/.test(en));
-  assert.equal(await page.locator('#aboutBody a[href*="bis-school.com"]').count(), 0);
+  // overview and every sub-page of the About menu, German and English
+  for (const tab of ['#tabDe', '#tabEn']) {
+    await page.locator(tab).click();
+    const n = await page.locator('#aboutBody .about-item').count();
+    assert.ok(n >= 7, 'menu items: ' + n);
+    const seiten = [await page.textContent('#aboutBody')];
+    for (let i = 0; i < n; i++) {
+      await page.locator('#aboutBody .about-item').nth(i).click();
+      seiten.push(await page.textContent('#aboutBody'));
+      assert.equal(await page.locator('#aboutBody a[href*="bis-school.com"]').count(), 0);
+      await page.locator('#aboutUp').click();
+    }
+    for (const s of seiten) {
+      assert.deepEqual(treffer(s), []);
+      assert.ok(!/Requires support|Consolidating|Meeting expectations|Extending/.test(s), 'child-reachable About must not list the internal levels');
+    }
+  }
   await page.locator('#aboutBack').click();
   await elternOeffnen(page);
   const links = page.locator('#aboutBody a[href*="bis-school.com"]');
