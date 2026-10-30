@@ -65,6 +65,16 @@ export const sichtbar = (page, sel) => page.evaluate((s) => {
 
 export const textAus = (html) => html.replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
 
+/** Set up/unlock the parental UI with a deliberately non-secret test PIN. */
+export async function elternOeffnen(page){
+  await klick(page,'#aboutBtn');
+  await klick(page,'#tabSheets');
+  await page.fill('#parentPin','4826');
+  if(await page.$('#parentPinAgain')) await page.fill('#parentPinAgain','4826');
+  await page.locator('#parentForm button[type="submit"]').click();
+  await page.waitForSelector('#parentClose');
+}
+
 /** Zurueck zur Startseite, egal wo die App gerade steht. */
 export async function zurStart(page) {
   for (let i = 0; i < 4; i++) {

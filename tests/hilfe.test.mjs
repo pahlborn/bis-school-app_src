@@ -1,6 +1,6 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { appServer, browserStarten, appOeffnen, zustand, klick, frageBeantworten, alleKarten, karteOeffnen } from './app-hilfen.mjs';
+import { appServer, browserStarten, appOeffnen, zustand, klick, frageBeantworten, alleKarten, karteOeffnen, elternOeffnen } from './app-hilfen.mjs';
 
 let server, browser;
 before(async()=>{ server=await appServer(); browser=await browserStarten(); });
@@ -158,7 +158,7 @@ test('parent guidance and new research sources are included; unconfirmed methods
   await klick(page,'#aboutBtn');
   assert.ok((await page.textContent('#aboutBody')).includes('begründeter Entwurf'));
   assert.ok(await page.locator('#aboutBody a[href="https://doi.org/10.3102/0034654314564881"]').count());
-  await klick(page,'#tabSheets');
+  await elternOeffnen(page);
   assert.ok((await page.textContent('#aboutBody')).includes('keine bestätigte schulweite Methode'));
   assert.equal(await page.locator('#aboutBody details.parent-method').count(),3);
   assert.ok((await page.textContent('#aboutBody')).includes('noch keine neuen Aufgaben'));

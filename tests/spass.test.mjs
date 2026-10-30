@@ -4,7 +4,7 @@
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { appServer, browserStarten, appOeffnen, zustand, klick, alleKarten, karteOeffnen, zurStart, frageBeantworten } from './app-hilfen.mjs';
+import { appServer, browserStarten, appOeffnen, zustand, klick, alleKarten, karteOeffnen, zurStart, frageBeantworten, elternOeffnen } from './app-hilfen.mjs';
 
 let browser, server;
 before(async () => { server = await appServer(); browser = await browserStarten(); });
@@ -180,8 +180,7 @@ test('Geburtstag: das Kind traegt ihn selbst ein; zwei Tage vorher Vorfreude, am
 
 test('Elternbereich: Spannungsgrenze fuer Pisolala einstellbar (Voreinstellung: ein bisschen spannend)', async () => {
   const { ctx, page } = await app();
-  await klick(page, '#aboutBtn');
-  await klick(page, '#tabSheets');
+  await elternOeffnen(page);
   assert.equal(await page.inputValue('#storyCap'), '2');
   await page.selectOption('#storyCap', '1');
   assert.equal(await lies(page, 'storyCap'), 1);
