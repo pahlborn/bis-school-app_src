@@ -13,6 +13,7 @@ import {
 } from '../werkzeug/kern.mjs';
 import { WURZEL, QUELLEN, ICONS, quellenLesen, oeffentlichPruefen, distBauen } from '../werkzeug/bauen.mjs';
 import { TEST_PW } from './hilfen.mjs';
+import { versionEinsetzen } from '../werkzeug/version.mjs';
 
 const q = await quellenLesen();
 const appText = q.app.toString('utf8');
@@ -95,7 +96,8 @@ test('dist: alle Dateien da, oeffentlicher Teil sauber, Tresor ergibt die App', 
   const html = await fs.readFile(path.join(ziel, 'index.html'), 'utf8');
   assert.deepEqual(oeffentlichPruefen(html, await fs.readFile(path.join(ziel, 'manifest.webmanifest'), 'utf8'), q.woerter), []);
   assert.ok(!html.includes('profileBtn'), 'App-Code darf nicht im Klartext in der Huelle stehen');
-  assert.ok(Buffer.from(await entschluesseln(tresorAusHuelle(html), TEST_PW)).equals(q.app));
+  // S7: the vault holds the app with the build version inserted
+  assert.ok(Buffer.from(await entschluesseln(tresorAusHuelle(html), TEST_PW)).equals(versionEinsetzen(q.app, r.version)));
   for (const icon of ICONS) {
     assert.ok((await fs.readFile(path.join(ziel, icon))).equals(await fs.readFile(path.join(WURZEL, icon))), icon);
   }

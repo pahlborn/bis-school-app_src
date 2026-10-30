@@ -431,6 +431,8 @@ button{font:inherit;color:inherit}
 <script>
 (function(){
 'use strict';
+/* Set by the build (werkzeug/version.mjs) inside the encrypted vault; null when opened unbuilt. */
+const APP_VERSION=/*BQ_VERSION*/null;
 const $ = s => document.querySelector(s);
 const rnd = n => Math.floor(Math.random()*n);
 const pick = a => a[rnd(a.length)];
@@ -2277,6 +2279,35 @@ function saveProfile(){
   if(savedTimer) clearTimeout(savedTimer); savedTimer=setTimeout(hideSaved,4000);
 }
 function hideSaved(){ if(savedTimer) clearTimeout(savedTimer); savedTimer=null; const s=$('#savedNote'); if(s) s.hidden=true; }
+/* Version (S7): the child sees only a small "v17" at the end of About; adults see number,
+   build time and commit, and can check on request whether a newer version is published. */
+const versionLabel = () => APP_VERSION ? 'v'+APP_VERSION.n+(APP_VERSION.draft?'-entwurf':'') : 'Entwicklungsstand';
+const appVersionLine = () => `<p class="small app-version">${esc(versionLabel())}</p>`;
+function versionAdminHTML(){
+  const v=APP_VERSION;
+  return `<h2>App-Version</h2><p id="versionInfo">${v?`<b>${esc(versionLabel())}</b> · gebaut ${esc(v.date)} · ${esc(v.hash)}`:'Entwicklungsstand (nicht gebaut)'}</p><p><button class="btn small" id="checkUpdate" type="button">Nach neuer Version suchen</button></p><p id="updateMessage" class="small" role="status"></p>`;
+}
+async function publishedVersion(){
+  const key=localStorage.getItem('bq_schluessel'); if(!key) throw new Error('no key');
+  const res=await fetch(location.href.split('#')[0].split('?')[0]+'?t='+Date.now(),{cache:'no-store'});
+  const m=(await res.text()).match(/<script type="application\/json" id="tresor">([\s\S]*?)<\/script>/); if(!m) throw new Error('no vault');
+  const t=JSON.parse(m[1]), b=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+  const k=await crypto.subtle.importKey('raw',b(key),{name:'AES-GCM'},false,['decrypt']);
+  const html=new TextDecoder('utf-8').decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:b(t.iv)},k,b(t.daten)));
+  const v=html.match(/const APP_VERSION=(\{[^}]*\});/); return v?JSON.parse(v[1]):null;
+}
+function bindVersionAdmin(){
+  const b=$('#checkUpdate'); if(!b) return;
+  b.addEventListener('click',async()=>{
+    const msg=$('#updateMessage'); msg.textContent='Prüfe …';
+    try{
+      const p=await publishedVersion(), v=APP_VERSION;
+      if(p && v && p.n===v.n && p.hash===v.hash && p.date===v.date) msg.textContent='Aktuell – auf diesem Gerät läuft die neueste Version.';
+      else if(p) msg.textContent='Neuer Stand v'+p.n+' verfügbar – App schließen und neu öffnen.';
+      else msg.textContent='Die veröffentlichte Seite nennt keine Version.';
+    }catch(e){ msg.textContent='Prüfung nicht möglich (keine Verbindung oder auf diesem Gerät nicht angemeldet).'; }
+  });
+}
 /* Adults (parent area): see and delete the child's profile details; learning data stays. */
 function profileAdminHTML(){
   const n=playerName(), b=store.get('birthday',''), e=store.get('emoji','');
@@ -2416,8 +2447,8 @@ function renderSheets(){
   if(!parentAccess){ renderParentGate(); return; }
   const all=store.get('sheets',[]).slice().reverse();
   const body=$('#aboutBody');
-  if(!all.length){ body.innerHTML=parentHeaderHTML()+parentOverviewHTML()+focusSettingsHTML()+reminderHTML()+storyCapHTML()+profileAdminHTML()+parentGuidanceHTML()+'<h2>Practice sheets</h2><p>No sheet printed yet. Use “Print a practice sheet” on the start page.</p>'; bindParentSettings(); return; }
-  body.innerHTML=parentHeaderHTML()+parentOverviewHTML()+focusSettingsHTML()+reminderHTML()+storyCapHTML()+profileAdminHTML()+parentGuidanceHTML()+'<h2>Practice sheets</h2><p class="small">Tick each task once. “With help” and “Not yet” are fine – the app then offers easier steps and repeats the task later. Nothing of this is shown to the child.</p>'+
+  if(!all.length){ body.innerHTML=parentHeaderHTML()+parentOverviewHTML()+focusSettingsHTML()+reminderHTML()+storyCapHTML()+profileAdminHTML()+versionAdminHTML()+parentGuidanceHTML()+'<h2>Practice sheets</h2><p>No sheet printed yet. Use “Print a practice sheet” on the start page.</p>'; bindParentSettings(); return; }
+  body.innerHTML=parentHeaderHTML()+parentOverviewHTML()+focusSettingsHTML()+reminderHTML()+storyCapHTML()+profileAdminHTML()+versionAdminHTML()+parentGuidanceHTML()+'<h2>Practice sheets</h2><p class="small">Tick each task once. “With help” and “Not yet” are fine – the app then offers easier steps and repeats the task later. Nothing of this is shown to the child.</p>'+
     all.map(sh=>`<h3>Sheet of ${sh.day}</h3>`+sh.items.map((it,i)=>`<div class="sheetrow"><div class="q"><b>${i+1}.</b> ${esc(strip(sheetPrompt(it.q)).slice(0,140))}</div><div class="row">${Object.keys(RES).map(r=>`<button type="button" class="btn small${it.res===r?' on':''}" data-sheet="${sh.id}" data-i="${i}" data-res="${r}"${it.res?' disabled':''}>${RES[r]}</button>`).join('')}</div></div>`).join('')).join('');
   body.querySelectorAll('button[data-res]').forEach(b=>b.addEventListener('click',()=>enterResult(b.dataset.sheet, +b.dataset.i, b.dataset.res)));
   bindParentSettings();
@@ -2530,7 +2561,7 @@ function calendarText(days,time,text,now=new Date()){
   }).join('\r\n')+'\r\n';
 }
 function bindParentSettings(){
-  bindStoryCap(); bindProfileAdmin();
+  bindStoryCap(); bindProfileAdmin(); bindVersionAdmin();
   $('#parentClose').addEventListener('click',()=>{parentLock();renderParentGate();});
   $('#focusForm').addEventListener('submit',e=>{
     e.preventDefault();if(!parentAccess) return;
@@ -2665,7 +2696,7 @@ const ABOUT_DE=()=>`
 <p>Der Elternbereich verwendet eine separate, auf dem Gerät gespeicherte PIN. Sie schützt vor versehentlichem Zugriff, nicht vor gezielter Manipulation von Browserdaten. Er sperrt beim Verlassen und nach Inaktivität. Die dort angezeigten Beobachtungen sind weder Diagnosen noch Bewertungen der Schule. Eine optionale Kalenderdatei wird lokal erzeugt; erst der von den Eltern gewählte Kalender bestimmt Speicherung und Benachrichtigungen.</p>
 <p>Die Anwendung läuft vollständig im Browser und ist nur verschlüsselt veröffentlicht. Name, Sterne und Übungsstand werden ausschließlich auf dem jeweiligen Gerät gespeichert und nicht weitergegeben; es gibt keine Werbung und keine Auswertungsdienste. Nach dem Öffnen lädt die Anwendung Schriftarten von Google Fonts; dabei wird die IP-Adresse des Geräts an Google übermittelt.</p>
 <h3>Quellen</h3>${sourcesHTML()}
-<p class="small">Stand: 30. Oktober 2026.</p>`;
+<p class="small">Stand: 30. Oktober 2026.</p>${appVersionLine()}`;
 const ABOUT_EN=()=>`
 <h2>About this app</h2>
 <p><b>Grade 3 – Big Quest</b> is a privately developed, playful practice companion for a child in Grade 3 at an IB school (Primary Years Programme). It follows the topics of the current school year and invites voluntary practice anywhere and at any time – as a supplement to lessons and homework, never as a replacement.</p>
@@ -2688,7 +2719,7 @@ const ABOUT_EN=()=>`
 <p>The parental area has a separate, device-local PIN and locks when left or inactive. This is a UI guard against accidental access, not protection against someone manipulating browser data. Its observations are not school assessments. Optional calendar reminders are generated locally; the chosen calendar controls import, storage and notifications.</p>
 <p>The app runs entirely in the browser and is published only in encrypted form. Name, stars and practice status are stored solely on the device and never shared; there is no advertising and no analytics. After opening, the app loads fonts from Google Fonts, which transmits the device's IP address to Google.</p>
 <h3>Sources</h3>${sourcesHTML()}
-<p class="small">Last updated: 30 October 2026.</p>`;
+<p class="small">Last updated: 30 October 2026.</p>${appVersionLine()}`;
 function openAbout(tab){
   if(tab!=='sheets') parentLock();
   state.aboutTab=tab||'de';

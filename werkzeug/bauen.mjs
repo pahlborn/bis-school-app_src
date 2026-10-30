@@ -5,7 +5,11 @@
 // Bricht ab, bevor etwas geschrieben wird, wenn
 //  - das Passwort zu kurz ist,
 //  - ausserhalb des verschluesselten Blocks ein verbotenes Wort steht,
-//  - die Probe-Entschluesselung nicht Byte fuer Byte die App ergibt.
+//  - die Probe-Entschluesselung nicht Byte fuer Byte die App ergibt,
+//  - die Version nicht ermittelbar ist oder im oeffentlichen Teil auftauchen wuerde.
+//
+// Die Version (S7) wird vor dem Verschluesseln in die App eingesetzt, steht also nur im
+// Tresor. Ohne Angabe wird sie aus dem Git-Stand dieses Repos ermittelt.
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -15,6 +19,7 @@ import {
   entschluesseln, entschluesselnMitSchluessel, huelleBauen, tresorAusHuelle,
   ohneTresor, woerterLesen, verboteneTreffer, unb64
 } from './kern.mjs';
+import { versionErmitteln, versionEinsetzen, versionAuslesen, versionText } from './version.mjs';
 
 export const WURZEL = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -58,28 +63,35 @@ export function oeffentlichPruefen(html, manifest, woerter) {
  * Schluessel-Bytes (schluesselablage.mjs). Mit Passwort wird zusaetzlich
  * mit dem Passwort probe-entschluesselt, also genau so, wie die Huelle es tut.
  */
-export async function distBauen(zugang, { wurzel = WURZEL, ziel = path.join(wurzel, 'dist') } = {}) {
+export async function distBauen(zugang, { wurzel = WURZEL, ziel = path.join(wurzel, 'dist'), version = null } = {}) {
   const passwort = typeof zugang === 'string' ? zugang : null;
   if (passwort === null && !(zugang && zugang.schluesselRoh)) throw new Error('distBauen braucht ein Passwort oder einen gemerkten Schluessel.');
   if (passwort !== null) passwortPruefen(passwort);
   const q = await quellenLesen(wurzel);
   if (q.woerter.length === 0) throw new Error(`${QUELLEN.woerter} ist leer - ohne Liste prueft der Lauf nichts.`);
 
+  const v = version || versionErmitteln(WURZEL);
+  const app = versionEinsetzen(q.app, v);
+
   const schluessel = passwort !== null
     ? await schluesselAusPasswort(passwort, q.salt)
     : await schluesselAusRoh(zugang.schluesselRoh);
-  const tresor = await verschluesselnMitSchluessel(q.app, schluessel, q.salt);
+  const tresor = await verschluesselnMitSchluessel(app, schluessel, q.salt);
   const html = huelleBauen(q.vorlage, tresor);
 
   const treffer = oeffentlichPruefen(html, q.manifest, q.woerter);
   if (treffer.length) {
     throw new Error('Verbotene Woerter im oeffentlichen Teil, nichts geschrieben: ' + treffer.join(', '));
   }
+  const offen = ohneTresor(html) + q.manifest;
+  if ([v.hash, v.date].some((x) => offen.includes(x))) {
+    throw new Error('Version wuerde im oeffentlichen Teil stehen, nichts geschrieben.');
+  }
 
   const zurueck = passwort !== null
     ? await entschluesseln(tresorAusHuelle(html), passwort)
     : await entschluesselnMitSchluessel(tresorAusHuelle(html), schluessel);
-  if (!Buffer.from(zurueck).equals(q.app)) {
+  if (!Buffer.from(zurueck).equals(app)) {
     throw new Error('Probe-Entschluesselung ergibt nicht die App, nichts geschrieben.');
   }
 
@@ -89,7 +101,7 @@ export async function distBauen(zugang, { wurzel = WURZEL, ziel = path.join(wurz
   for (const icon of ICONS) await fs.copyFile(path.join(wurzel, icon), path.join(ziel, icon));
 
   return {
-    ziel, dateien: ['index.html', 'manifest.webmanifest', ...ICONS], appBytes: q.app.length, huelleBytes: Buffer.byteLength(html),
+    ziel, dateien: ['index.html', 'manifest.webmanifest', ...ICONS], appBytes: app.length, version: v, huelleBytes: Buffer.byteLength(html),
     schluesselRoh: await schluesselRoh(schluessel), salt: q.salt
   };
 }
@@ -115,6 +127,31 @@ export async function mitVeroeffentlichterPruefen(schluesselBytes, url = VEROEFF
   } catch {
     return { ergebnis: 'passt-nicht' };
   }
+}
+
+/**
+ * Liest die Version der veroeffentlichten Seite (mit dem gemerkten Schluessel entschluesselt)
+ * und vergleicht sie mit dem gebauten Stand. Ergebnis: 'gleich', 'anders' (mit Text der
+ * veroeffentlichten Version) oder 'nicht erreichbar'. Ein Aufruf, keine Wiederholung.
+ */
+export async function liveVergleichen(gebaut, schluesselBytes, url = VEROEFFENTLICHT) {
+  let html;
+  try {
+    const antwort = await fetch(url + '?t=' + Date.now(), { cache: 'no-store', signal: AbortSignal.timeout(15000) });
+    if (!antwort.ok) return { ergebnis: 'nicht erreichbar', grund: `HTTP ${antwort.status}` };
+    html = await antwort.text();
+  } catch (e) {
+    return { ergebnis: 'nicht erreichbar', grund: e.message };
+  }
+  let v;
+  try {
+    const klar = await entschluesselnMitSchluessel(tresorAusHuelle(html), await schluesselAusRoh(schluesselBytes));
+    v = versionAuslesen(Buffer.from(klar).toString('utf8'));
+  } catch {
+    return { ergebnis: 'nicht erreichbar', grund: 'Schluessel oeffnet die Seite nicht' };
+  }
+  const gleich = v && v.n === gebaut.n && v.hash === gebaut.hash && v.date === gebaut.date && !!v.draft === !!gebaut.draft;
+  return gleich ? { ergebnis: 'gleich', veroeffentlicht: v } : { ergebnis: 'anders', veroeffentlicht: v, text: v ? versionText(v) : 'ohne Version' };
 }
 
 // Fuer Tests mit BQ_VEROEFFENTLICHT auf einen lokalen Server umlenkbar.

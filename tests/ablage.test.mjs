@@ -13,6 +13,9 @@ import { spawn } from 'node:child_process';
 import { schluesselAusPasswort, schluesselRoh, entschluesseln, tresorAusHuelle, ITERATIONEN, b64 } from '../werkzeug/kern.mjs';
 import { WURZEL, quellenLesen, distBauen } from '../werkzeug/bauen.mjs';
 import { TEST_PW } from './hilfen.mjs';
+import { versionEinsetzen, versionAuslesen } from '../werkzeug/version.mjs';
+// S7: the vault holds the app with the build version inserted
+const istApp = (klar) => Buffer.from(klar).equals(versionEinsetzen(q.app, versionAuslesen(Buffer.from(klar).toString('utf8'))));
 
 const tmp = () => fs.mkdtemp(path.join(os.tmpdir(), 'bq-ablage-'));
 const gibtEs = (p) => fs.access(p).then(() => true, () => false);
@@ -82,7 +85,7 @@ test('Ablage liegt ausserhalb des Repos', () => {
 test('dist mit gemerktem Schluessel laesst sich mit dem Passwort oeffnen', async () => {
   const r = await distBauen({ schluesselRoh: await rohAus(TEST_PW) }, { ziel: await tmp() });
   const html = await fs.readFile(path.join(r.ziel, 'index.html'), 'utf8');
-  assert.ok(Buffer.from(await entschluesseln(tresorAusHuelle(html), TEST_PW)).equals(q.app));
+  assert.ok(istApp(await entschluesseln(tresorAusHuelle(html), TEST_PW)));
 });
 
 test('Skript: mit gemerktem Schluessel ohne Passwort, Abgleich passt', async () => {
@@ -96,7 +99,7 @@ test('Skript: mit gemerktem Schluessel ohne Passwort, Abgleich passt', async () 
   assert.match(r.aus, /kein Passwort noetig/);
   assert.match(r.aus, /Abgleich: Der Schluessel oeffnet die veroeffentlichte Seite/);
   const html = await fs.readFile(path.join(ziel, 'index.html'), 'utf8');
-  assert.ok(Buffer.from(await entschluesseln(tresorAusHuelle(html), TEST_PW)).equals(q.app));
+  assert.ok(istApp(await entschluesseln(tresorAusHuelle(html), TEST_PW)));
 });
 
 test('Skript: gemerkter Schluessel passt nicht zur veroeffentlichten Seite -> Abbruch, nichts geschrieben', async () => {
