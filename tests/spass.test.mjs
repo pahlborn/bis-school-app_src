@@ -38,7 +38,10 @@ test('nach einer Runde: Leckerli waehlen – Witz mit Aufloesung, Mystery Questi
   await klick(page, '#treatBody [data-story][data-l="1"]');
   const geschichte = await page.textContent('#storyText');
   assert.ok(geschichte.includes('Pisolala'));
-  for (const w of ['Ohren', 'Augen', 'Fell', 'groß wie', 'aussah']) assert.ok(!geschichte.includes(w), 'Pisolala bleibt unsichtbar: ' + w);
+  // Peter 30.10.: stories in English, German only in the Deutsch subject (here: Maths round)
+  assert.ok(geschichte.includes('Nobody can see Pisolala'), 'English after a Maths round');
+  assert.equal(await page.textContent('#treatBody p b'), 'Pisolala and the Giggling Pumpkins');
+  for (const w of ['Ohren', 'Augen', 'Fell', 'groß wie', 'aussah', 'ears', 'eyes', 'fur', 'as big as', 'looked like']) assert.ok(!geschichte.includes(w), 'Pisolala bleibt unsichtbar: ' + w);
   await klick(page, '#treat [data-treat="joke"]');
   await klick(page, '#jokeAnswer');
   assert.equal(await page.$$eval('#treatBody .story', (s) => s.length), 2, 'Frage und Aufloesung');
@@ -47,6 +50,36 @@ test('nach einer Runde: Leckerli waehlen – Witz mit Aufloesung, Mystery Questi
   assert.equal(await lies(page, 'mysteryDone'), tag(0));
   await klick(page, '#treat [data-treat="mystery"]');
   assert.ok((await page.textContent('#treatBody')).includes('A new one comes tomorrow'));
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
+
+test('Pisolala auf Deutsch nur nach einer Runde im Fach Deutsch (Anleitung)', async () => {
+  const { ctx, page, fehler } = await app();
+  await karteOeffnen(page, (await alleKarten(page)).find((k) => k.item === 'anleitung'));
+  await rundeSpielen(page);
+  await page.locator('#treat [data-treat="story"]').click();
+  assert.equal(await page.textContent('#treatBody p b'), 'Pisolala und die kichernden Kürbisse');
+  await page.locator('#treatBody [data-story][data-l="1"]').click();
+  const geschichte = await page.textContent('#storyText');
+  assert.ok(geschichte.includes('Sehen kann Pisolala niemand'));
+  assert.equal(await page.getAttribute('#storyText .story', 'lang'), 'de');
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
+
+test('Lese-Studio: nur eine Stoppuhr, klar beschriftet; die App greift nie auf das Mikrofon zu', async () => {
+  const { ctx, page, fehler } = await app();
+  await page.evaluate(() => { window.__mic = 0; if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = () => { window.__mic++; return Promise.reject(new Error('no')); }; });
+  await karteOeffnen(page, (await alleKarten(page)).find((k) => k.item === 'studio:read'));
+  assert.equal(await page.textContent('#tStart'), '⏱ Stoppuhr starten');
+  assert.match(await page.textContent('#tNote'), /nimmt nichts auf/);
+  await page.locator('#tStart').click();
+  assert.equal(await page.textContent('#tStart'), 'Pause');
+  await page.locator('#tStart').click();
+  assert.equal(await page.textContent('#tStart'), '⏱ Stoppuhr starten');
+  assert.equal(await page.evaluate(() => window.__mic), 0);
+  assert.ok(!(await import('node:fs')).readFileSync(new URL('../index.html', import.meta.url), 'utf8').match(/getUserMedia|MediaRecorder/), 'no recording code in the app');
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
