@@ -87,7 +87,8 @@ test('Challenge: freiwillig; annehmen gibt Risk-taker (auch bei Fehler), danach 
   await klick(page, '#takeChallenge');
   const s = await zustand(page); const q = s.round[s.idx];
   if (q.kind === 'mc') await klick(page, `#qAnswers .opt[data-i="${(q.answer + 1) % q.options.length}"]`); else await frageBeantworten(page, q);
-  assert.ok((await page.textContent('#feedback')).includes('Risk-taker'));
+  assert.equal((await lies(page,'badges')).riskTaker,1,'attempt earns the badge even if the one-per-round message was already used');
+  if (!(await page.isVisible('#nextBtn'))) await klick(page, '#helpBtn');
   await klick(page, '#nextBtn');
   assert.ok(await page.isVisible('#reflect'));
   await klick(page, '#reflect [data-glow]');
@@ -126,6 +127,7 @@ test('Leitsatz-Botschaften: hoechstens eine pro Runde, auch bei vielen Fehlern',
       if (await page.isVisible('#playNote')) zaehler++;
       const q = s.round[s.idx];
       if (q.kind === 'mc') await klick(page, `#qAnswers .opt[data-i="${(q.answer + 1) % q.options.length}"]`); else await frageBeantworten(page, q);
+      if (!(await page.isVisible('#nextBtn'))) await klick(page, '#helpBtn');
       zaehler += await page.$$eval('#feedback .note-banner', (n) => n.length);
       await klick(page, '#nextBtn');
     }

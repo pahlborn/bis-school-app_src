@@ -31,6 +31,7 @@ async function falschBeantworten(page, q) {
   if (q.kind === 'mc') await klick(page, `#qAnswers .opt[data-i="${(q.answer + 1) % q.options.length}"]`);
   else if (q.kind === 'type') { for (const z of String(+q.answer + 1)) await klick(page, `#qAnswers .key[aria-label="${z}"]`); await klick(page, '#qAnswers .key.go'); }
   else { for (const k of [...q.correct].reverse()) await klick(page, `#qAnswers .ord[data-i="${k}"]`); await klick(page, '#checkOrder'); }
+  if (!(await page.isVisible('#nextBtn'))) await klick(page, '#helpBtn');
 }
 
 test('jede Antwort wird mit Tag, Stufe und Ergebnis gemerkt', async () => {
@@ -49,14 +50,13 @@ test('jede Antwort wird mit Tag, Stufe und Ergebnis gemerkt', async () => {
   await ctx.close();
 });
 
-test('ein Fehler kommt in derselben Runde zwei Fragen spaeter noch einmal und morgen wieder', async () => {
+test('eine schwierige Aufgabe bleibt nach der Hilfe zur späteren Wiederholung gespeichert', async () => {
   const { ctx, page, fehler } = await app();
   const s = await quest(page, 'numbers');
   const q = s.round[0];
   await falschBeantworten(page, q);
   const nach = await zustand(page);
-  assert.equal(nach.round[2].prompt, q.prompt, 'Wiederholung an Stelle 3');
-  assert.equal(nach.round[2].retry, true);
+  assert.equal(nach.round.length, 8, 'Hilfen verlängern die Runde nicht');
   const due = await lies(page, 'due');
   assert.equal(due.length, 1);
   assert.equal(due[0].at, tag(-1), 'faellig am naechsten Tag');
