@@ -110,6 +110,10 @@ button{font:inherit;color:inherit}
 .pf-emojis button{min-height:44px;min-width:44px;font-size:1.4rem;border-radius:12px;border:2px solid var(--line);background:var(--surface);cursor:pointer;padding:0}
 .pf-emojis button[aria-pressed="true"]{border-color:var(--accent);background:var(--soft);box-shadow:inset 0 0 0 2px var(--accent)}
 .profile-dlg .row > .btn{flex:1 1 100px}
+.login-body{display:flex;flex-direction:column;gap:14px;background:var(--surface);border:2px solid var(--line);border-radius:22px;padding:20px;margin-top:8px}
+.login-roles{display:flex;flex-direction:column;gap:12px}
+.login-roles .btn{min-height:64px;font-size:1.2rem}
+.login-form{display:flex;flex-direction:column;gap:12px}
 .about-menu{display:flex;flex-direction:column;gap:8px;margin:14px 0}
 .about-item{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:52px;padding:10px 16px;border-radius:16px;border:2px solid var(--line);background:var(--surface);color:var(--ink);font-family:var(--display);font-size:1.05rem;font-weight:600;text-align:left;cursor:pointer;box-shadow:var(--shadow)}
 .about-item span:last-child{font-size:1.4rem;color:var(--muted)}
@@ -340,6 +344,8 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
       <span>Topics from class, updated 30 October.</span>
       <span class="row" style="flex:0 0 auto">
         <button class="btn small" id="aboutBtn" type="button">About &amp; grown-ups</button>
+        <button class="btn small" id="adultBtn" type="button" hidden>👪 Grown-ups</button>
+        <button class="btn small" id="logoutBtn" type="button" hidden>Log out</button>
         <button class="btn small" id="soundBtn" type="button">Sound: on</button>
       </span>
     </div>
@@ -377,6 +383,15 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
     <p id="sheetMsg" class="small" role="status"></p>
     <div class="row"><button class="btn" id="sheetClose" type="button">Close</button></div>
   </dialog>
+
+  <!-- LOGIN (S3): role, then user name and password - like the school platform -->
+  <section id="login" class="screen" hidden>
+    <div class="hero">
+      <div class="eyebrow">Grade 3 · <span class="long">International Baccalaureate</span><span class="short">IB</span> Primary Years Programme</div>
+      <h1>Grade 3 – Big Quest</h1>
+    </div>
+    <div id="loginBody" class="login-body"></div>
+  </section>
 
   <!-- ABOUT & GROWN-UPS -->
   <section id="about" class="screen" hidden>
@@ -456,6 +471,8 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 'use strict';
 /* Set by the build (werkzeug/version.mjs) inside the encrypted vault; null when opened unbuilt. */
 const APP_VERSION=/*BQ_VERSION*/null;
+/* Set by the build from werkzeug/konten.json (S3 login); null = no accounts, app runs without login. */
+const APP_ACCOUNTS=/*BQ_KONTEN*/null;
 const $ = s => document.querySelector(s);
 const rnd = n => Math.floor(Math.random()*n);
 const pick = a => a[rnd(a.length)];
@@ -1823,7 +1840,11 @@ let timerId=null, timerStart=0, timerElapsed=0;
 
 function show(name){
   if(name!=='about') parentLock();
+  // With accounts, every screen needs a login: children their own, grown-ups only the grown-ups area.
+  if(accountsOn() && name!=='login' && !(name==='about' ? (adultUser || studentSession()) : studentSession())) name='login';
   state.screen=name;
+  $('#login').hidden=name!=='login';
+  if(name==='login' && !$('#loginBody').innerHTML) renderLogin();
   home.hidden=name!=='home'; play.hidden=name!=='play'; results.hidden=name!=='results'; studioScreen.hidden=name!=='studio'; subjectScreen.hidden=name!=='subject'; aboutScreen.hidden=name!=='about';
   if(name!=='studio'){ stopTimer(); recStop(); }
   confettiRun++; // stop confetti that is still falling from the last screen
@@ -1845,6 +1866,7 @@ function questCard(item, back){
 function renderHome(){
   const total=store.get('total',0);
   $('#totalStars').textContent=total; renderRank(total);
+  const acc=accountsOn(); $('#adultBtn').hidden=!acc; $('#logoutBtn').hidden=!acc; $('#aboutBtn').textContent=acc?'About':'About & grown-ups';
   renderProfileBtn();
   const c=$('#subjects'); c.innerHTML='';
   SUBJECTS.forEach(s=>{
@@ -2614,6 +2636,12 @@ const storyCapHTML = () => '<h2>Settings</h2><p><label for="storyCap"><b>Pisolal
 function bindStoryCap(){ const sc=$('#storyCap'); if(sc) sc.addEventListener('change',()=>{if(parentAccess) store.set('storyCap',+sc.value);}); }
 function renderSheets(){
   if(!parentAccess){ renderParentGate(); return; }
+  if(accountsOn() && adultUser && adultUser.role==='teacher'){
+    // Teacher: read only - observations, how we support like the school, version. No settings.
+    $('#aboutBody').innerHTML=parentHeaderHTML()+parentOverviewHTML()+versionAdminHTML()+parentGuidanceHTML();
+    $('#parentClose').addEventListener('click',()=>{parentLock();renderParentGate();});
+    bindVersionAdmin(); parentTouch(); return;
+  }
   const all=store.get('sheets',[]).slice().reverse();
   const body=$('#aboutBody');
   if(!all.length){ body.innerHTML=parentHeaderHTML()+parentOverviewHTML()+focusSettingsHTML()+reminderHTML()+storyCapHTML()+profileAdminHTML()+versionAdminHTML()+parentGuidanceHTML()+'<h2>Practice sheets</h2><p>No sheet made yet. Use “Practice sheet (PDF / print)” on the start page.</p>'; bindParentSettings(); return; }
@@ -2630,6 +2658,7 @@ let parentAccess=false, parentTimer=null, parentFailures=0, parentBlockedUntil=0
 function parentLock(){
   parentEpoch++;
   parentAccess=false;
+  if(accountsOn()) adultUser=null;
   if(parentTimer) clearTimeout(parentTimer);
   parentTimer=null;
   if(state.aboutTab==='sheets') $('#aboutBody').innerHTML='';
@@ -2639,8 +2668,89 @@ function parentTouch(){
   if(parentTimer) clearTimeout(parentTimer);
   parentTimer=setTimeout(()=>{parentLock();if(state.screen==='about'&&state.aboutTab==='sheets') renderParentGate();},5*60*1000);
 }
-function parentHeaderHTML(){return '<h2>Elternbereich</h2><p>Nur für Erwachsene: Übungsbeobachtungen auf diesem Gerät, keine schulische Bewertung. <button class="btn small" id="parentClose" type="button">Sperren</button></p><p class="small">Sperrt beim Verlassen, beim Wechsel in den Hintergrund und nach fünf Minuten ohne Bedienung. Die PIN ist ein lokaler Bedienungsschutz; sie ersetzt nicht das Passwort der verschlüsselten App.</p>';}
+function parentHeaderHTML(){
+  if(accountsOn() && adultUser) return `<h2>${adultUser.role==='teacher'?'Lehrkraft-Ansicht':'Elternbereich'}</h2><p>Angemeldet als <b>${esc(adultUser.user)}</b> (${adultUser.role==='teacher'?'Lehrkraft':'Eltern'}). Übungsbeobachtungen auf diesem Gerät, keine schulische Bewertung. <button class="btn small" id="parentClose" type="button">Abmelden</button></p><p class="small">Abmeldung beim Verlassen, beim Wechsel in den Hintergrund und nach fünf Minuten ohne Bedienung.</p>`;
+  return '<h2>Elternbereich</h2><p>Nur für Erwachsene: Übungsbeobachtungen auf diesem Gerät, keine schulische Bewertung. <button class="btn small" id="parentClose" type="button">Sperren</button></p><p class="small">Sperrt beim Verlassen, beim Wechsel in den Hintergrund und nach fünf Minuten ohne Bedienung. Die PIN ist ein lokaler Bedienungsschutz; sie ersetzt nicht das Passwort der verschlüsselten App.</p>';}
+/* ---------- login (S3, Peter 30.10.) ----------
+   Role first (like the school platform), then user name + password. Accounts come from the admin
+   (build, werkzeug/konten.json). First login on a device uses the start code, then everyone chooses
+   an own password, stored only on this device as a salted PBKDF2 hash. The start code keeps working
+   as a fallback. Children stay logged in on the device until "Log out"; grown-ups are logged out when
+   they leave the grown-ups area, the app goes to the background or after 5 minutes without use.
+   Like the former PIN this is a UI guard on the device; the published file stays protected by the
+   long family password, so short children's passwords never protect the app itself. */
+let adultUser=null, loginFails=0, loginBlockedUntil=0;
+const accountsOn = () => !!(APP_ACCOUNTS && APP_ACCOUNTS.users && APP_ACCOUNTS.users.length);
+const studentSession = () => { const s=store.get('session',null); return s && APP_ACCOUNTS && APP_ACCOUNTS.users.some(u=>u.user===s.user && u.role==='student') ? s : null; };
+const accountOf = (name, adult) => APP_ACCOUNTS.users.find(u=>u.user===String(name||'').trim().toLowerCase() && (adult ? u.role!=='student' : u.role==='student'));
+async function pbkdf2Hex(text, salt){
+  const m=await crypto.subtle.importKey('raw',new TextEncoder().encode(text),'PBKDF2',false,['deriveBits']);
+  const bits=await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:new Uint8Array(salt),iterations:100000},m,256);
+  return Array.from(new Uint8Array(bits)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+const LOGIN_TXT={
+  who:'Who is logging in?', student:'🎒 Student', adult:'👪 Parent / Teacher',
+  user:'User name', pw:'Password or start code', go:'Log in', back:'← Back',
+  wrong:'User name or password is not right.', wait:'Please wait a moment and try again.',
+  setTitle:'Choose your own password', setInfo:'You logged in with your start code. Choose a password you can remember. It works on this device.',
+  pw1:'New password', pw2:'Repeat password', save:'Save password', short:n=>`Please use at least ${n} characters.`, diff:'The two passwords are not the same.'
+};
+function showLogin(role){ $('#loginBody').innerHTML=''; renderLogin(role); show('login'); }
+function renderLogin(role){
+  const b=$('#loginBody'), T=LOGIN_TXT;
+  if(!role){
+    b.innerHTML=`<h2>${T.who}</h2><div class="login-roles"><button class="btn primary" id="roleStudent" type="button">${T.student}</button><button class="btn" id="roleAdult" type="button">${T.adult}</button></div>`;
+    $('#roleStudent').addEventListener('click',()=>renderLogin('student'));
+    $('#roleAdult').addEventListener('click',()=>renderLogin('adult'));
+    return;
+  }
+  b.innerHTML=`<h2>${role==='student'?T.student:T.adult}</h2><form id="loginForm" class="login-form"><div class="field"><label for="loginUser">${T.user}</label><input id="loginUser" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><div class="field"><label for="loginPw">${T.pw}</label><input id="loginPw" type="password" autocomplete="current-password" required></div><button class="btn primary" id="loginGo" type="submit">${T.go}</button><p id="loginMsg" class="small" role="status"></p></form><button class="btn small" id="loginBack" type="button">${T.back}</button>`;
+  $('#loginBack').addEventListener('click',()=>{ if(studentSession()){ $('#loginBody').innerHTML=''; renderHome(); show('home'); } else renderLogin(); });
+  $('#loginForm').addEventListener('submit',async e=>{
+    e.preventDefault();
+    const msg=$('#loginMsg'), btn=$('#loginGo'), name=$('#loginUser').value, pw=$('#loginPw').value;
+    if(Date.now()<loginBlockedUntil){ msg.textContent=T.wait; return; }
+    btn.disabled=true;
+    try{
+      const u=accountOf(name, role==='adult'); let ok=false, viaCode=false;
+      if(u){
+        const own=store.get('pw_'+u.user,null);
+        if(own && await pbkdf2Hex(pw, own.salt)===own.hash) ok=true;
+        else if(await pbkdf2Hex(pw.toUpperCase().replace(/[^A-Z0-9]/g,''), u.start.salt)===u.start.hash){ ok=true; viaCode=true; }
+      } else await pbkdf2Hex(pw,[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]); // same effort for unknown names
+      if(!ok){ loginFails++; if(loginFails>=5){ loginBlockedUntil=Date.now()+30000; loginFails=0; } msg.textContent=T.wrong; btn.disabled=false; return; }
+      loginFails=0;
+      if(viaCode && !store.get('pw_'+u.user,null)) return renderSetPassword(u);
+      loginDone(u);
+    }catch(err){ msg.textContent='Login is not possible in this browser.'; btn.disabled=false; }
+  });
+  $('#loginUser').focus();
+}
+function renderSetPassword(u){
+  const T=LOGIN_TXT, min=u.role==='student'?4:8;
+  $('#loginBody').innerHTML=`<h2>${T.setTitle}</h2><p class="small">${T.setInfo}</p><form id="setPwForm" class="login-form"><div class="field"><label for="newPw1">${T.pw1}</label><input id="newPw1" type="password" autocomplete="new-password" required></div><div class="field"><label for="newPw2">${T.pw2}</label><input id="newPw2" type="password" autocomplete="new-password" required></div><button class="btn primary" id="setPwGo" type="submit">${T.save}</button><p id="setPwMsg" class="small" role="status"></p></form>`;
+  $('#setPwForm').addEventListener('submit',async e=>{
+    e.preventDefault(); const p1=$('#newPw1').value, p2=$('#newPw2').value, msg=$('#setPwMsg');
+    if(p1.length<min){ msg.textContent=T.short(min); return; }
+    if(p1!==p2){ msg.textContent=T.diff; return; }
+    const salt=Array.from(crypto.getRandomValues(new Uint8Array(16)));
+    store.set('pw_'+u.user,{salt, hash:await pbkdf2Hex(p1,salt)});
+    loginDone(u);
+  });
+  $('#newPw1').focus();
+}
+function loginDone(u){
+  $('#loginBody').innerHTML='';
+  if(u.role==='student'){ store.set('session',{user:u.user}); adultUser=null; renderHome(); show('home'); }
+  else { adultUser={user:u.user, role:u.role}; parentAccess=true; parentTouch(); openAbout('sheets'); }
+}
+function logout(){
+  if(adultUser){ adultUser=null; parentLock(); }
+  try{ localStorage.removeItem('bq2_session'); }catch(e){}
+  showLogin();
+}
 function renderParentGate(){
+  if(accountsOn()){ adultUser=null; if(studentSession()){ renderHome(); show('home'); } else showLogin(); return; }
   const existing=store.get('parentPin',null), body=$('#aboutBody');
   body.innerHTML=`<h2>Elternbereich</h2><p>${existing?'Bitte geben Sie Ihre Eltern-PIN ein.':'Ein Erwachsener richtet hier einmal eine eigene Eltern-PIN ein. Nicht das Passwort der App verwenden.'}</p><form id="parentForm" class="field"><label for="parentPin">${existing?'PIN':'Neue PIN (4 bis 8 Ziffern)'}</label><input id="parentPin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" minlength="4" maxlength="8" autocomplete="off" required>${existing?'':'<label for="parentPinAgain">PIN wiederholen</label><input id="parentPinAgain" type="password" inputmode="numeric" pattern="[0-9]{4,8}" minlength="4" maxlength="8" autocomplete="off" required>'}<button class="btn" type="submit">${existing?'Öffnen':'PIN einrichten'}</button><p id="parentMessage" role="status"></p></form><p class="small">Die PIN gilt nur auf diesem Gerät. Vergessen? Den lokalen PIN-Eintrag durch einen Erwachsenen zurücksetzen lassen; Lerndaten müssen dafür nicht gelöscht werden.</p>`;
   $('#parentForm').addEventListener('submit',async e=>{
@@ -2929,6 +3039,9 @@ function renderAboutPage(){
 function openAbout(tab){
   if(tab!=='sheets') parentLock();
   state.aboutTab=tab||'de'; state.aboutSub=null;
+  // With accounts there is no grown-ups tab for children: grown-ups log in openly instead.
+  $('#tabSheets').hidden=accountsOn() && !adultUser;
+  if(state.aboutTab==='sheets' && accountsOn() && !adultUser){ showLogin('adult'); return; }
   ['tabDe','tabEn','tabSheets'].forEach(id=>$('#'+id).classList.toggle('primary', {tabDe:'de',tabEn:'en',tabSheets:'sheets'}[id]===state.aboutTab));
   if(state.aboutTab==='sheets') renderSheets();
   else renderAboutPage();
@@ -3090,6 +3203,8 @@ $('#sheetPdf').addEventListener('click',sharePdf);
 $('#sheetPrint').addEventListener('click',()=>{ closeSheetDlg(); setTimeout(()=>window.print(),50); });
 $('#sheetClose').addEventListener('click',closeSheetDlg);
 $('#aboutBtn').addEventListener('click',()=>openAbout());
+$('#adultBtn').addEventListener('click',()=>showLogin('adult'));
+$('#logoutBtn').addEventListener('click',logout);
 $('#aboutBack').addEventListener('click',()=>{ state.back='home'; goBack(); });
 $('#tabDe').addEventListener('click',()=>openAbout('de'));
 $('#tabEn').addEventListener('click',()=>openAbout('en'));
@@ -3108,7 +3223,7 @@ function boot(data){
   } else if(data && data.screen==='studio' && STUDIOS[data.studio]){ openStudio(data.studio); }
   else if(data && data.screen==='subject' && SUBJECTS.some(s=>s.key===data.subject)){ openSubject(data.subject); }
   else if(location.hash==='#eltern') openAbout('sheets');
-  else show('home');
+  else show('home');   // with accounts and no login, show() leads to the login screen
 }
 const hot=window.claude&&window.claude.hot;
 if(hot&&hot.ready) hot.ready(boot); else boot((hot&&hot.data)||{});

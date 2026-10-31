@@ -14,8 +14,10 @@ import { schluesselAusPasswort, schluesselRoh, entschluesseln, tresorAusHuelle, 
 import { WURZEL, quellenLesen, distBauen } from '../werkzeug/bauen.mjs';
 import { TEST_PW } from './hilfen.mjs';
 import { versionEinsetzen, versionAuslesen } from '../werkzeug/version.mjs';
+import { kontenEinsetzen, kontenLesen } from '../werkzeug/konten.mjs';
+const KONTEN_JETZT = await kontenLesen();
 // S7: the vault holds the app with the build version inserted
-const istApp = (klar) => Buffer.from(klar).equals(versionEinsetzen(q.app, versionAuslesen(Buffer.from(klar).toString('utf8'))));
+const istApp = (klar) => Buffer.from(klar).equals(kontenEinsetzen(versionEinsetzen(q.app, versionAuslesen(Buffer.from(klar).toString('utf8'))), KONTEN_JETZT));
 
 const tmp = () => fs.mkdtemp(path.join(os.tmpdir(), 'bq-ablage-'));
 const gibtEs = (p) => fs.access(p).then(() => true, () => false);

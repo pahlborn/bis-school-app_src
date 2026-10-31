@@ -32,6 +32,8 @@ async function aufnehmen(page, ms = 1300) {
   await page.waitForFunction(() => document.querySelector('#recBtn').textContent.includes('Stopp'));
   await page.waitForTimeout(ms);
   await page.locator('#recBtn').click();
+  // "Gespeichert" is shown only after saving and pruning to the newest three have finished
+  await page.waitForFunction(() => document.querySelector('#recMsg').textContent.includes('Gespeichert'));
 }
 const anzahl = (page) => page.locator('#recList .rec-item').count();
 const gespeichert = (page) => page.evaluate(() => new Promise((res) => { const r = indexedDB.open('bq2_audio', 1); r.onsuccess = () => { const q = r.result.transaction('rec').objectStore('rec').getAll(); q.onsuccess = () => { res(q.result.map((x) => ({ size: x.blob.size, ms: x.durationMs, mime: x.mime }))); r.result.close(); }; }; }));

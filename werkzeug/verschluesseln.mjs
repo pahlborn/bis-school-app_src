@@ -158,6 +158,7 @@ async function main() {
   for (const d of r.dateien) console.log(`  ${d}`);
   console.log(`\nApp ${r.appBytes} Bytes, verschluesselte Seite ${r.huelleBytes} Bytes.`);
   console.log(`\nVersion ${versionText(r.version)} - ${r.version.hash} - ${r.version.date}`);
+  console.log(r.konten ? `Anmeldung: an (${r.konten} Konten aus werkzeug/konten.json)` : 'Anmeldung: aus (keine werkzeug/konten.json)');
   if (r.version.draft) {
     console.log('ACHTUNG: Es gibt nicht eingecheckte Aenderungen (Version mit "-entwurf"). Diesen Stand NICHT veroeffentlichen.');
   }
