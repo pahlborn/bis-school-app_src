@@ -124,7 +124,7 @@ test('child view has no grown-ups tab; "Grown-ups" opens the grown-ups login ope
   await passwortSetzen(page, 'langes-passwort');
   await page.waitForSelector('#parentClose');
   assert.ok((await page.textContent('#aboutBody')).includes('Angemeldet als papa'));
-  assert.ok(await page.locator('#focusForm').count());
+  assert.ok(await page.locator('.psubject').count());
   await page.locator('#aboutBack').click();
   await page.waitForSelector('#home:not([hidden])');
   assert.equal(await page.locator('#focusForm').count(), 0);
@@ -148,7 +148,7 @@ test('grown-up can read "About" (both languages) and return without being logged
   await page.locator('#tabEn').click();
   await page.locator('#tabSheets').click();
   await page.waitForSelector('#parentClose');
-  assert.ok(await page.locator('#focusForm').count(), 'still logged in');
+  assert.ok(await page.locator('.psubject').count(), 'still logged in');
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
@@ -204,7 +204,7 @@ test('teacher sees observations read-only: no focus, settings, profile or sheet 
   await anmelden(page, 'adult', 'frau', CODES.frau); await passwortSetzen(page, 'lehrkraft-123');
   await page.waitForSelector('#parentClose');
   const t = await page.textContent('#aboutBody');
-  assert.ok(t.includes('Lehrkraft-Ansicht') && t.includes('Übungsbeobachtungen'));
+  assert.ok(t.includes('Lehrkraft-Ansicht') && t.includes('Einschätzung'));
   assert.ok(t.includes('Anleitung für Erwachsene'), 'grown-ups guide in the grown-ups area');
   for (const sel of ['#focusForm', '#storyCap', '#profileDelete', '#reminderForm', 'button[data-res]']) assert.equal(await page.locator(sel).count(), 0, sel);
   await ctx.close();

@@ -75,6 +75,12 @@ export async function elternOeffnen(page){
   await page.waitForSelector('#parentClose');
 }
 
+/** Grown-ups view v2: switch to a sub-page (home, sheets, settings, help) with a real click. */
+export async function elternSeite(page, seite) {
+  await page.locator(`#aboutBody [data-ppage="${seite}"]`).click();
+  await page.waitForSelector(`#aboutBody [data-ppage="${seite}"].primary`);
+}
+
 /** Zurueck zur Startseite, egal wo die App gerade steht. */
 export async function zurStart(page) {
   for (let i = 0; i < 4; i++) {

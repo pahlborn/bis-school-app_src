@@ -197,7 +197,7 @@ test('auto-login removes login CSS: long About and parent PIN stay reachable wit
   assert.equal(await page.evaluate(()=>getComputedStyle(document.body).display),'block','login centering cannot persist');
   assert.equal(await page.locator('#loginStyles').count(),0);
   await elternOeffnen(page);
-  assert.ok(await page.isVisible('#focusForm'));
+  assert.ok(await page.locator('.psubject').first().isVisible());
   const box=await page.locator('#aboutBody').boundingBox();
   assert.ok(box.y>=0,'long page is not centred into negative coordinates');
   assert.deepEqual(fehler,[]);await ctx.close();
