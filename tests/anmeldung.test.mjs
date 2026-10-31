@@ -137,6 +137,22 @@ test('child view has no grown-ups tab; "Grown-ups" opens the grown-ups login ope
   await ctx.close();
 });
 
+test('grown-up can read "About" (both languages) and return without being logged out', async () => {
+  const { ctx, page, fehler } = await oeffnen();
+  await anmelden(page, 'adult', 'papa', CODES.papa); await passwortSetzen(page, 'langes-passwort');
+  await page.waitForSelector('#parentClose');
+  assert.equal(await page.textContent('#tabDe'), 'ℹ️ Über die App');
+  assert.equal(await page.textContent('#tabEn'), 'ℹ️ About the app');
+  await page.locator('#tabDe').click();
+  assert.ok(await page.locator('#aboutBody .about-item').count() >= 7);
+  await page.locator('#tabEn').click();
+  await page.locator('#tabSheets').click();
+  await page.waitForSelector('#parentClose');
+  assert.ok(await page.locator('#focusForm').count(), 'still logged in');
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
+
 test('grown-up is logged out when the app goes to the background', async () => {
   const { ctx, page } = await oeffnen();
   await anmelden(page, 'adult', 'papa', CODES.papa); await passwortSetzen(page, 'langes-passwort');
