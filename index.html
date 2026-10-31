@@ -116,6 +116,7 @@ button{font:inherit;color:inherit}
 .login-form{display:flex;flex-direction:column;gap:12px}
 .info-btn{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:0;margin:-10px -6px -10px 2px;border:0;background:transparent;color:var(--accent);font-size:1.25rem;line-height:1;cursor:pointer;vertical-align:middle;font-family:inherit;text-transform:none;letter-spacing:0}
 .topbar .info-btn{margin:0}
+.test-bar{border-left-color:#7A4FD8;background:#F1EEFF}
 .welcome{display:flex;flex-direction:column;gap:10px;padding-left:0;list-style:none;margin:0}
 .welcome li{background:var(--soft);border-radius:14px;padding:10px 12px}
 .parent-guide{background:var(--soft);border-radius:14px;padding:10px 14px;margin-bottom:12px}
@@ -341,6 +342,7 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
       <div class="chipstat" title="Stars collected"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7.1L12 17.3 5.7 21l1.7-7.1L2 9.2l7.1-.6z"/></svg><span id="totalStars">0</span><span class="sr">stars</span></div>
       <button class="chipstat rank-chip" id="rank" type="button" aria-haspopup="dialog"><span id="rankIcon" aria-hidden="true">🧭</span><span id="rankName">Explorer</span></button>
     </div>
+    <div id="testBar" class="note-banner test-bar" hidden></div>
     <div id="savedNote" class="note-banner" role="status" hidden>Saved ✓</div>
     <div id="rankNote" class="note-banner rank-note" role="status" hidden></div>
     <button class="today" id="todayBtn" type="button"><span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7.1L12 17.3 5.7 21l1.7-7.1L2 9.2l7.1-.6z"/></svg></span><span><span class="name">Practise Today</span><br><span class="sub" id="todaySub">8 questions from your focus topics</span></span></button>
@@ -503,9 +505,21 @@ const round10 = n => Math.round(n/10)*10, round100 = n => Math.round(n/100)*100;
 const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7.1L12 17.3 5.7 21l1.7-7.1L2 9.2l7.1-.6z"/></svg>';
 const TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 
+/* Data per child (Peter, 31.10.: own test account). The FIRST student account keeps the existing
+   keys bq2_<key> (no migration). Every other logged-in student gets bq2_<user>__<key>, so a test
+   account never mixes with the child's data. Device-wide keys stay shared. */
+const GLOBAL_KEYS=/^(session|pw_.+|parentPin|muted)$/;
+function childNs(){
+  if(!APP_ACCOUNTS || !APP_ACCOUNTS.users) return '';
+  let s=null; try{ s=JSON.parse(localStorage.getItem('bq2_session')||'null'); }catch(e){}
+  const first=APP_ACCOUNTS.users.find(u=>u.role==='student');
+  return s && s.user && first && s.user!==first.user && APP_ACCOUNTS.users.some(u=>u.user===s.user && u.role==='student') ? s.user : '';
+}
+const storeKey = k => { const ns=GLOBAL_KEYS.test(k)?'':childNs(); return 'bq2_'+(ns?ns+'__':'')+k; };
 const store = {
-  get(k,d){ try{ const v=localStorage.getItem('bq2_'+k); return v===null?d:JSON.parse(v); }catch(e){ return d; } },
-  set(k,v){ try{ localStorage.setItem('bq2_'+k, JSON.stringify(v)); }catch(e){} }
+get(k,d){ try{ const v=localStorage.getItem(storeKey(k)); return v===null?d:JSON.parse(v); }catch(e){ return d; } },
+set(k,v){ try{ localStorage.setItem(storeKey(k), JSON.stringify(v)); }catch(e){} },
+del(k){ try{ localStorage.removeItem(storeKey(k)); }catch(e){} }
 };
 
 /* ---------- sound ---------- */
@@ -1581,7 +1595,10 @@ const STANDARDS={
   anleitung:['D-W1'], library:['E-W2']
 };
 
-const dayKey = (d=new Date()) => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+/* Test accounts (konten.json "test": true) can jump ahead in days to see reviews come back. */
+const isTestAccount = () => { const s=studentSession(); return !!(s && APP_ACCOUNTS.users.some(u=>u.user===s.user && u.test)); };
+function nowDate(){ const off=isTestAccount()?(+store.get('dayOffset',0)||0):0; return off?new Date(Date.now()+off*864e5):new Date(); }
+const dayKey = (d=nowDate()) => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 const addDays = (k, n) => { const d=new Date(k+'T12:00:00'); d.setDate(d.getDate()+n); return dayKey(d); };
 
 /* Evidence: per skill the last answers as [day, level, ok]. */
@@ -1884,6 +1901,7 @@ function questCard(item, back){
 function renderHome(){
   const total=store.get('total',0);
   $('#totalStars').textContent=total; renderRank(total);
+  renderTestBar();
   const acc=accountsOn(); $('#adultBtn').hidden=!acc; $('#logoutBtn').hidden=!acc; $('#aboutBtn').textContent=acc?'About':'About & grown-ups';
   renderProfileBtn();
   const c=$('#subjects'); c.innerHTML='';
@@ -2351,9 +2369,9 @@ function saveProfile(){
   const name=$('#pfName').value.trim().slice(0,20);
   if(name!==playerName()) store.set('name',name);
   const bd=d?m+'-'+d:null;
-  if(bd!==store.get('birthday',null)){ if(bd) store.set('birthday',bd); else { try{ localStorage.removeItem('bq2_birthday'); }catch(e){} } }
+  if(bd!==store.get('birthday',null)){ if(bd) store.set('birthday',bd); else store.del('birthday'); }
   const pick=$('#pfEmojis button[aria-pressed="true"]'), emoji=pick?pick.textContent:'';
-  if(emoji!==store.get('emoji','')){ if(emoji) store.set('emoji',emoji); else { try{ localStorage.removeItem('bq2_emoji'); }catch(e){} } }
+  if(emoji!==store.get('emoji','')){ if(emoji) store.set('emoji',emoji); else store.del('emoji'); }
   closeProfile(); renderHome();
   const s=$('#savedNote'); s.hidden=false;
   if(savedTimer) clearTimeout(savedTimer); savedTimer=setTimeout(hideSaved,4000);
@@ -2397,7 +2415,7 @@ function profileAdminHTML(){
 function bindProfileAdmin(){
   const b=$('#profileDelete'); if(!b) return;
   b.addEventListener('click',()=>{ if(!parentAccess) return; if(!confirm('Name, Geburtstag und Emoji auf diesem Gerät löschen? Lerndaten bleiben.')) return;
-    ['name','birthday','emoji'].forEach(k=>{ try{ localStorage.removeItem('bq2_'+k); }catch(e){} }); renderHome(); renderSheets(); });
+    ['name','birthday','emoji'].forEach(k=>store.del(k)); renderHome(); renderSheets(); });
 }
 
 /* challenge offer (Practise Today, last question) */
@@ -2811,6 +2829,22 @@ function loginDone(u){
   if(u.role==='student'){ store.set('session',{user:u.user}); adultUser=null; renderHome(); show('home'); }
   else { adultUser={user:u.user, role:u.role, admin:!!u.admin}; parentAccess=true; parentTouch(); openAbout('sheets'); }
 }
+/* Test account bar: clearly marked, separate data, jump ahead one day, reset everything. */
+function renderTestBar(){
+  const bar=$('#testBar'); if(!bar) return;
+  if(!isTestAccount()){ bar.hidden=true; bar.innerHTML=''; return; }
+  const off=+store.get('dayOffset',0)||0;
+  bar.hidden=false;
+  bar.innerHTML=`🧪 <b>Test account</b> – separate test data. Day: ${off?'+'+off:'today'} (${dayKey()}) <span class="row" style="gap:6px;margin-top:6px"><button class="btn small" id="testDay" type="button">+1 day</button><button class="btn small" id="testReset" type="button">Reset test data</button></span>`;
+  $('#testDay').addEventListener('click',()=>{ store.set('dayOffset',off+1); renderHome(); });
+  $('#testReset').addEventListener('click',()=>{
+    if(!confirm('Delete all data of this test account on this device?')) return;
+    const ns=childNs(); if(!ns) return;
+    Object.keys(localStorage).filter(k=>k.startsWith('bq2_'+ns+'__')).forEach(k=>localStorage.removeItem(k));
+    try{ indexedDB.deleteDatabase('bq2_audio__'+ns); }catch(e){}
+    renderHome();
+  });
+}
 function logout(){
   if(adultUser){ adultUser=null; parentLock(); }
   try{ localStorage.removeItem('bq2_session'); }catch(e){}
@@ -3214,7 +3248,7 @@ const recMime = () => { for(const m of ['audio/mp4','audio/webm;codecs=opus','au
 const recExt = m => /mp4|aac|m4a/.test(m)?'m4a':/ogg/.test(m)?'ogg':'webm';
 const recLabel = ts => new Date(ts).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
 const recFileDate = ts => { const d=new Date(ts); return dayKey(d)+' '+pad(d.getHours())+'-'+pad(d.getMinutes()); };
-function recDb(){ return new Promise((res,rej)=>{ const r=indexedDB.open('bq2_audio',1); r.onupgradeneeded=()=>r.result.createObjectStore('rec',{keyPath:'id'}); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+function recDb(){ return new Promise((res,rej)=>{ const ns=childNs(), r=indexedDB.open('bq2_audio'+(ns?'__'+ns:''),1); r.onupgradeneeded=()=>r.result.createObjectStore('rec',{keyPath:'id'}); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
 function recTx(mode, fn){ return recDb().then(db=>new Promise((res,rej)=>{ const t=db.transaction('rec',mode), out=fn(t.objectStore('rec')); t.oncomplete=()=>{ db.close(); res(out&&out.result); }; t.onerror=()=>{ db.close(); rej(t.error); }; })); }
 const recAll = () => recTx('readonly', s=>s.getAll()).then(a=>(a||[]).sort((x,y)=>y.created-x.created));
 const recDel = id => recTx('readwrite', s=>s.delete(id));

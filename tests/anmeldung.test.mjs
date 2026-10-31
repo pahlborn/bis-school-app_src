@@ -14,12 +14,12 @@ import { kontenEinsetzen, kontenPruefen, pbkdf2Hex, normCode, codeErzeugen } fro
 import { TEST_PW } from './hilfen.mjs';
 import { browserStarten, appOeffnen } from './app-hilfen.mjs';
 
-const CODES = { mia: 'ABCD-EFGH', papa: 'PAPA-2345', frau: 'TEAC-HER2' };
+const CODES = { mia: 'ABCD-EFGH', papa: 'PAPA-2345', frau: 'TEAC-HER2', probe: 'TEST-2345' };
 async function konto(user, role, kinder) {
   const salt = Array.from({ length: 16 }, (_, i) => i + user.length);
   return { user, role, ...(kinder ? { kinder } : {}), start: { salt, hash: await pbkdf2Hex(normCode(CODES[user]), salt) } };
 }
-const KONTEN = { users: [await konto('mia', 'student'), await konto('papa', 'parent', ['mia']), await konto('frau', 'teacher', ['mia'])] };
+const KONTEN = { users: [await konto('mia', 'student'), await konto('papa', 'parent', ['mia']), await konto('frau', 'teacher', ['mia']), { ...(await konto('probe', 'student')), test: true }] };
 const app = kontenEinsetzen(await fs.readFile(path.join(WURZEL, QUELLEN.app)), KONTEN);
 
 let browser, server;
@@ -149,6 +149,42 @@ test('grown-up can read "About" (both languages) and return without being logged
   await page.locator('#tabSheets').click();
   await page.waitForSelector('#parentClose');
   assert.ok(await page.locator('#focusForm').count(), 'still logged in');
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
+
+test('test account: own data apart from the child, "+1 day" brings reviews back, reset clears only test data', async () => {
+  const { ctx, page, fehler } = await oeffnen();
+  // the real child practises first
+  await anmelden(page, 'student', 'mia', CODES.mia); await passwortSetzen(page, 'mond');
+  await page.waitForSelector('#home:not([hidden])');
+  assert.equal(await page.isVisible('#testBar'), false, 'no test bar for the real child');
+  await page.evaluate(() => localStorage.setItem('bq2_total', '7'));
+  await page.locator('#logoutBtn').click();
+  // test account
+  await anmelden(page, 'student', 'probe', CODES.probe); await passwortSetzen(page, 'probe1');
+  await page.waitForSelector('#testBar:not([hidden])');
+  assert.match(await page.textContent('#testBar'), /Test account/);
+  assert.equal(await page.textContent('#totalStars'), '0', 'test account starts empty');
+  await page.locator('#todayBtn').click();
+  const q = await page.evaluate(() => window.__bq && window.__bq.round && window.__bq.round[0]);
+  // answer the first question wrongly (any wrong option) to create a review
+  await page.locator('#qAnswers .opt:not(.correct)').first().click().catch(() => {});
+  await page.locator('#quitBtn').click();
+  const keys = await page.evaluate(() => Object.keys(localStorage));
+  assert.ok(keys.some((k) => k.startsWith('bq2_probe__')), 'test data under its own keys');
+  assert.equal(await page.evaluate(() => localStorage.getItem('bq2_total')), '7', 'child data untouched');
+  const tag1 = await page.textContent('#testBar');
+  await page.locator('#testDay').click();
+  assert.notEqual(await page.textContent('#testBar'), tag1);
+  assert.match(await page.textContent('#testBar'), /\+1/);
+  page.once('dialog', (d) => d.accept());
+  await page.locator('#testReset').click();
+  // after the reset the start page begins fresh (it quietly notes the current title again)
+  const nachher = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('bq2_probe__')));
+  assert.deepEqual(nachher.filter((k) => k !== 'bq2_probe__rankSeen'), []);
+  assert.equal(await page.evaluate(() => localStorage.getItem('bq2_total')), '7', 'child data still untouched');
+  assert.ok(await page.evaluate(() => localStorage.getItem('bq2_pw_probe')), 'own password survives the reset');
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
