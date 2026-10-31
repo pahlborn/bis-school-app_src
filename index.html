@@ -1926,6 +1926,7 @@ function show(name){
   if(name!=='studio'){ stopTimer(); recStop(); }
   confettiRun++; // stop confetti that is still falling from the last screen
   window.scrollTo(0,0);
+  if(pendingUpdate && ['home','login','subject'].includes(name)) applyUpdate();
 }
 function playerName(){ return String(store.get('name','')||'').trim(); }
 /* One card for a quest or studio. back: where Back and "Choose a quest" return to. */
@@ -2435,6 +2436,31 @@ async function publishedVersion(){
   const k=await crypto.subtle.importKey('raw',b(key),{name:'AES-GCM'},false,['decrypt']);
   const html=new TextDecoder('utf-8').decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:b(t.iv)},k,b(t.daten)));
   const v=html.match(/const APP_VERSION=(\{[^}]*\});/); return v?JSON.parse(v[1]):null;
+}
+/* Automatic update (Peter, 31.10.: "wird sie nicht aktualisiert wie die anderen Apps?").
+   Home-screen apps on iPad are often only resumed, not reloaded, so a new version never arrives.
+   The app checks the published page when it starts and whenever it comes back to the foreground
+   (at most every 5 minutes). If a newer version is there, it reloads under a fresh address – but
+   never in the middle of a round or a recording: then it waits until the start page. */
+let updateCheckedAt=0, pendingUpdate=null;
+async function checkForUpdate(){
+  if(!APP_VERSION || Date.now()-updateCheckedAt<5*60*1000) return;
+  updateCheckedAt=Date.now();
+  try{
+    const p=await publishedVersion();
+    if(!p || p.n<=APP_VERSION.n) return;
+    let tried=null; try{ tried=sessionStorage.getItem('bqUpdateTo'); }catch(e){}
+    if(tried && +tried>=p.n) return;                     // already tried this session: no reload loop
+    pendingUpdate=p.n;
+    if(['home','login','subject'].includes(state.screen)) applyUpdate();
+  }catch(e){ /* offline or not logged in: try again later */ }
+}
+function applyUpdate(){
+  if(!pendingUpdate) return;
+  const n=pendingUpdate; pendingUpdate=null;
+  try{ sessionStorage.setItem('bqUpdateTo',String(n)); }catch(e){}
+  const note=$('#homeNote'); if(note && state.screen==='home'){ note.hidden=false; note.textContent='✨ New version – updating …'; }
+  setTimeout(()=>location.replace(location.pathname+'?v='+n),400);
 }
 function bindVersionAdmin(){
   const b=$('#checkUpdate'); if(!b) return;
@@ -3543,7 +3569,7 @@ $('#aboutBack').addEventListener('click',()=>{ state.back='home'; goBack(); });
 $('#tabDe').addEventListener('click',()=>openAbout('de'));
 $('#tabEn').addEventListener('click',()=>openAbout('en'));
 $('#tabSheets').addEventListener('click',()=>openAbout('sheets'));
-document.addEventListener('visibilitychange',()=>{if(document.hidden){recStop();parentLock();if(state.screen==='about'&&state.aboutTab==='sheets') renderParentGate();}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden) checkForUpdate(); if(document.hidden){recStop();parentLock();if(state.screen==='about'&&state.aboutTab==='sheets') renderParentGate();}});
 $('#aboutBody').addEventListener('pointerdown',parentTouch);
 $('#aboutBody').addEventListener('keydown',parentTouch);
 window.addEventListener('hashchange',()=>{if(location.hash==='#eltern') openAbout('sheets');});
@@ -3558,6 +3584,7 @@ function boot(data){
   else if(data && data.screen==='subject' && SUBJECTS.some(s=>s.key===data.subject)){ openSubject(data.subject); }
   else if(location.hash==='#eltern') openAbout('sheets');
   else show('home');   // with accounts and no login, show() leads to the login screen
+  setTimeout(checkForUpdate,3000);
 }
 const hot=window.claude&&window.claude.hot;
 if(hot&&hot.ready) hot.ready(boot); else boot((hot&&hot.data)||{});
