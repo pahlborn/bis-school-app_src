@@ -130,6 +130,46 @@ test('published shell: "check for new version" says current, then reports a newe
   await ctx.close();
 });
 
+async function huelleOeffnen(pfad, version) {
+  const ziel = await tmp();
+  const r = await distBauen(TEST_PW, { ziel, version, konten: null });
+  inhalt[pfad] = await fs.readFile(path.join(ziel, 'index.html'), 'utf8');
+  const ctx = await browser.newContext();
+  await ctx.route('**/*', (rt) => (rt.request().url().startsWith(server.url) ? rt.continue() : rt.abort()));
+  await ctx.addInitScript((k) => localStorage.setItem('bq_schluessel', k), Buffer.from(r.schluesselRoh).toString('base64'));
+  const page = await ctx.newPage(); const fehler = []; page.on('pageerror', (e) => fehler.push(e.message));
+  await page.goto(server.url + pfad); await page.waitForSelector('#home h1');
+  return { ctx, page, fehler };
+}
+async function neuBauen(pfad, version) {
+  const ziel = await tmp();
+  await distBauen(TEST_PW, { ziel, version, konten: null });
+  inhalt[pfad] = await fs.readFile(path.join(ziel, 'index.html'), 'utf8');
+}
+
+test('automatic update: a newer published version is loaded by itself (no manual reinstall)', async () => {
+  const { ctx, page, fehler } = await huelleOeffnen('/auto/', V);
+  await neuBauen('/auto/', { ...V, n: 14, hash: 'b2c3d4e', date: '31.10.2026 09:00' });
+  await page.waitForURL(/\?v=14$/, { timeout: 10000 });
+  await page.waitForSelector('#home h1');
+  await page.locator('#aboutBtn').click();
+  assert.equal(await page.textContent('#aboutBody .app-version'), 'v14');
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
+
+test('automatic update waits while the child is in a round and updates back on the start page', async () => {
+  const { ctx, page } = await huelleOeffnen('/auto2/', V);
+  await page.locator('#todayBtn').click();
+  await neuBauen('/auto2/', { ...V, n: 15, hash: 'c3d4e5f', date: '31.10.2026 10:00' });
+  await page.waitForTimeout(4500);
+  assert.ok(await page.isVisible('#play'), 'no reload in the middle of a round');
+  assert.ok(!page.url().includes('?v='));
+  await page.locator('#quitBtn').click();
+  await page.waitForURL(/\?v=15$/, { timeout: 10000 });
+  await ctx.close();
+});
+
 test('live check: same version, other version, unreachable', async () => {
   const ziel = await tmp();
   const r = await distBauen(TEST_PW, { ziel, version: V });
