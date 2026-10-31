@@ -46,6 +46,10 @@ async function anmelden(page, rolle, name, pw) {
 async function passwortSetzen(page, pw) {
   await page.waitForSelector('#setPwForm');
   await page.locator('#newPw1').fill(pw); await page.locator('#newPw2').fill(pw); await page.locator('#setPwGo').click();
+  // first login on a device: a short welcome with the most helpful information, then on
+  await page.waitForSelector('#welcomeGo');
+  assert.ok((await page.locator('.welcome li').count()) >= 4);
+  await page.locator('#welcomeGo').click();
 }
 const sichtbar = (page, sel) => page.locator(sel).isVisible();
 const lies = (page, k) => page.evaluate((key) => JSON.parse(localStorage.getItem('bq2_' + key) || 'null'), k);
@@ -56,6 +60,8 @@ test('with accounts the app starts with the login: role choice, no list of names
   assert.ok(await sichtbar(page, '#roleStudent')); assert.ok(await sichtbar(page, '#roleAdult'));
   const text = await page.evaluate(() => document.body.innerText.toLowerCase());
   for (const n of ['mia', 'papa', 'frau']) assert.ok(!text.includes(n), 'no user names shown: ' + n);
+  await page.locator('.login-help summary').click();
+  assert.match(await page.textContent('.login-help'), /Startcode funktioniert immer/);
   await page.evaluate(() => { location.hash = '#eltern'; });
   await page.waitForTimeout(200);
   assert.equal(await page.locator('#focusForm').count(), 0, 'no grown-ups area without login');
@@ -106,6 +112,9 @@ test('child view has no grown-ups tab; "Grown-ups" opens the grown-ups login ope
   await page.waitForSelector('#home:not([hidden])');
   await page.locator('#aboutBtn').click();
   assert.equal(await sichtbar(page, '#tabSheets'), false);
+  const menue = await page.locator('#aboutBody .about-item span:first-child').allTextContents();
+  assert.ok(menue.some((x) => x.startsWith('How to use Big Quest')), 'child guide for the child');
+  assert.ok(!menue.includes('Anleitung für Erwachsene'), 'no grown-ups guide for the child');
   await page.locator('#aboutBack').click();
   await page.locator('#adultBtn').click();
   assert.ok(await sichtbar(page, '#loginUser'));
@@ -144,6 +153,7 @@ test('teacher sees observations read-only: no focus, settings, profile or sheet 
   await page.waitForSelector('#parentClose');
   const t = await page.textContent('#aboutBody');
   assert.ok(t.includes('Lehrkraft-Ansicht') && t.includes('Übungsbeobachtungen'));
+  assert.ok(t.includes('Anleitung für Erwachsene'), 'grown-ups guide in the grown-ups area');
   for (const sel of ['#focusForm', '#storyCap', '#profileDelete', '#reminderForm', 'button[data-res]']) assert.equal(await page.locator(sel).count(), 0, sel);
   await ctx.close();
 });

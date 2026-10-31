@@ -114,6 +114,14 @@ button{font:inherit;color:inherit}
 .login-roles{display:flex;flex-direction:column;gap:12px}
 .login-roles .btn{min-height:64px;font-size:1.2rem}
 .login-form{display:flex;flex-direction:column;gap:12px}
+.info-btn{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:0;margin:-10px -6px -10px 2px;border:0;background:transparent;color:var(--accent);font-size:1.25rem;line-height:1;cursor:pointer;vertical-align:middle;font-family:inherit;text-transform:none;letter-spacing:0}
+.topbar .info-btn{margin:0}
+.welcome{display:flex;flex-direction:column;gap:10px;padding-left:0;list-style:none;margin:0}
+.welcome li{background:var(--soft);border-radius:14px;padding:10px 12px}
+.parent-guide{background:var(--soft);border-radius:14px;padding:10px 14px;margin-bottom:12px}
+.parent-guide summary{cursor:pointer;font-family:var(--display);font-weight:600;min-height:44px;display:flex;align-items:center}
+.login-help summary{cursor:pointer;font-family:var(--display);font-weight:600;min-height:44px;display:flex;align-items:center}
+.login-help p{margin:6px 0;font-size:.95rem}
 .about-menu{display:flex;flex-direction:column;gap:8px;margin:14px 0}
 .about-item{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:52px;padding:10px 16px;border-radius:16px;border:2px solid var(--line);background:var(--surface);color:var(--ink);font-family:var(--display);font-size:1.05rem;font-weight:600;text-align:left;cursor:pointer;box-shadow:var(--shadow)}
 .about-item span:last-child{font-size:1.4rem;color:var(--muted)}
@@ -253,6 +261,7 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 #confetti{position:fixed;inset:0;pointer-events:none;z-index:9}
 /* fun: motto, notes, tree, badges, treats, advent */
 .foot .row > .btn{flex:0 0 auto}
+.foot .foot-buttons{flex:1 1 auto;flex-wrap:wrap;justify-content:flex-end;gap:8px;min-width:0}
 .motto{font-family:var(--display);font-size:.85rem;color:var(--muted);letter-spacing:.04em}
 .note-banner{background:var(--soft);border-left:5px solid var(--sun);border-radius:14px;padding:10px 14px;font-family:var(--display);font-weight:600}
 .growrow{display:grid;grid-template-columns:84px 1fr;gap:12px;align-items:center;background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:10px 12px}
@@ -338,12 +347,13 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
     <div id="homeNote" class="note-banner" hidden></div>
     <div id="advent" class="advent" hidden></div>
     <div id="subjects" class="subjects"></div>
-    <div class="growrow"><div id="tree" class="tree"></div><div><div class="eyebrow">My learning tree</div><div id="treeText" class="muted"></div><div id="badges" class="badges"></div></div></div>
+    <div class="growrow"><div id="tree" class="tree"></div><div><div class="eyebrow">My learning tree <button type="button" class="info-btn" data-help="tree" aria-label="Help: learning tree">ⓘ</button></div><div id="treeText" class="muted"></div><div id="badges" class="badges"></div></div></div>
     <button class="btn" id="sheetBtn" type="button">📄 Practice sheet (PDF / print)</button>
     <div class="foot">
       <span>Topics from class, updated 30 October.</span>
-      <span class="row" style="flex:0 0 auto">
+      <span class="row foot-buttons">
         <button class="btn small" id="aboutBtn" type="button">About &amp; grown-ups</button>
+        <button class="btn small" id="guideBtn" type="button">❓ Help</button>
         <button class="btn small" id="adultBtn" type="button" hidden>👪 Grown-ups</button>
         <button class="btn small" id="logoutBtn" type="button" hidden>Log out</button>
         <button class="btn small" id="soundBtn" type="button">Sound: on</button>
@@ -374,10 +384,17 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
     <div class="row"><button class="btn" id="rankClose" type="button">Close</button></div>
   </dialog>
 
+  <!-- HELP: one dialog for all ⓘ buttons; texts in HELP (child: English, grown-ups: German) -->
+  <dialog id="helpDlg" class="profile-dlg" aria-labelledby="helpTitle">
+    <h2 id="helpTitle"></h2>
+    <div id="helpText"></div>
+    <div class="row"><button class="btn" id="helpGuide" type="button">📖 Guide</button><button class="btn primary" id="helpClose" type="button">OK</button></div>
+  </dialog>
+
   <!-- PRACTICE SHEET: PDF first (on the go, no printer), print where the browser supports it -->
   <dialog id="sheetDlg" class="profile-dlg" aria-labelledby="sheetTitle">
     <h2 id="sheetTitle">Your practice sheet is ready ✓</h2>
-    <p class="small">Task page and answer page for grown-ups.</p>
+    <p class="small">Task page and answer page for grown-ups. <button type="button" class="info-btn" data-help="sheet" aria-label="Help: practice sheet">ⓘ</button></p>
     <div class="row"><button class="btn primary" id="sheetPdf" type="button">📄 Share / save as PDF</button></div>
     <div class="row"><button class="btn" id="sheetPrint" type="button">🖨️ Print</button></div>
     <p id="sheetMsg" class="small" role="status"></p>
@@ -422,6 +439,7 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
       <button class="iconbtn" id="quitBtn" type="button" aria-label="Back to home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
       <span class="chip" id="worldChip">Forces Lab</span>
       <span class="roundstars"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7.1L12 17.3 5.7 21l1.7-7.1L2 9.2l7.1-.6z"/></svg><span id="roundStars">0</span></span>
+      <button type="button" class="info-btn" data-help="play" aria-label="Help">ⓘ</button>
     </div>
     <div class="dots" id="dots" aria-hidden="true"></div>
     <div class="qcard">
@@ -2640,7 +2658,7 @@ function renderSheets(){
     // Teacher: read only - observations, how we support like the school, version. No settings.
     $('#aboutBody').innerHTML=parentHeaderHTML()+parentOverviewHTML()+versionAdminHTML()+parentGuidanceHTML();
     $('#parentClose').addEventListener('click',()=>{parentLock();renderParentGate();});
-    bindVersionAdmin(); parentTouch(); return;
+    bindVersionAdmin(); addAdultInfo($('#aboutBody')); parentTouch(); return;
   }
   const all=store.get('sheets',[]).slice().reverse();
   const body=$('#aboutBody');
@@ -2668,8 +2686,9 @@ function parentTouch(){
   if(parentTimer) clearTimeout(parentTimer);
   parentTimer=setTimeout(()=>{parentLock();if(state.screen==='about'&&state.aboutTab==='sheets') renderParentGate();},5*60*1000);
 }
+const parentGuideHTML = () => `<details class="parent-guide"><summary>📖 Anleitung für Erwachsene</summary>${GUIDE_ADULT_DE}</details>`;
 function parentHeaderHTML(){
-  if(accountsOn() && adultUser) return `<h2>${adultUser.role==='teacher'?'Lehrkraft-Ansicht':'Elternbereich'}</h2><p>Angemeldet als <b>${esc(adultUser.user)}</b> (${adultUser.admin?'Admin':adultUser.role==='teacher'?'Lehrkraft':'Eltern'}). Übungsbeobachtungen auf diesem Gerät, keine schulische Bewertung. <button class="btn small" id="parentClose" type="button">Abmelden</button></p><p class="small">Abmeldung beim Verlassen, beim Wechsel in den Hintergrund und nach fünf Minuten ohne Bedienung.</p>`;
+  if(accountsOn() && adultUser) return `<h2>${adultUser.role==='teacher'?'Lehrkraft-Ansicht':'Elternbereich'}</h2><p>Angemeldet als <b>${esc(adultUser.user)}</b> (${adultUser.admin?'Admin':adultUser.role==='teacher'?'Lehrkraft':'Eltern'}). Übungsbeobachtungen auf diesem Gerät, keine schulische Bewertung. <button class="btn small" id="parentClose" type="button">Abmelden</button></p><p class="small">Abmeldung beim Verlassen, beim Wechsel in den Hintergrund und nach fünf Minuten ohne Bedienung.</p>${parentGuideHTML()}`;
   return '<h2>Elternbereich</h2><p>Nur für Erwachsene: Übungsbeobachtungen auf diesem Gerät, keine schulische Bewertung. <button class="btn small" id="parentClose" type="button">Sperren</button></p><p class="small">Sperrt beim Verlassen, beim Wechsel in den Hintergrund und nach fünf Minuten ohne Bedienung. Die PIN ist ein lokaler Bedienungsschutz; sie ersetzt nicht das Passwort der verschlüsselten App.</p>';}
 /* ---------- login (S3, Peter 30.10.) ----------
    Role first (like the school platform), then user name + password. Accounts come from the admin
@@ -2696,15 +2715,54 @@ const LOGIN_TXT={
   pw1:'New password', pw2:'Repeat password', save:'Save password', short:n=>`Please use at least ${n} characters.`, diff:'The two passwords are not the same.'
 };
 function showLogin(role){ $('#loginBody').innerHTML=''; renderLogin(role); show('login'); }
+/* ---------- help and info buttons (Peter, 31.10.) ----------
+   One ⓘ component, one dialog, all texts here. Child texts English, grown-up texts German.
+   "📖 Guide" opens the matching user guide in About (not offered inside the grown-ups area,
+   because leaving it logs the grown-up out). */
+const HELP={
+  play:{kid:true,title:'How a question works',text:'<p>Choose or type your answer. Not right yet? You get a hint and can try again. After two tries you see how it works.</p><p>“Show me how” is always OK – it is not a mistake. A wrong first try is fine too: the question comes back later so you can practise it.</p>'},
+  tree:{kid:true,title:'Your learning tree',text:'<p>Your tree grows on every day you practise – in the app or on a practice sheet. It never wilts, even if you take a break.</p><p>Your badges show how you learn: trying a challenge, thinking hard, finishing a sheet.</p>'},
+  record:{kid:true,title:'Recording yourself',text:'<p>Tap “● Aufnahme starten”, read aloud, tap “■ Stopp”. Then listen to yourself!</p><p>The last three recordings stay on this iPad. To hand one in, tap “Teilen / Sichern” together with a grown-up.</p>'},
+  sheet:{kid:true,title:'Practice sheet',text:'<p>A sheet with 6 tasks and a writing task, plus an answer page for grown-ups.</p><p>Share it as a PDF (by mail, message or into Files) or print it. Afterwards a grown-up can enter how it went.</p>'},
+  overview:{title:'Übungsbeobachtungen',text:'<p>Was das Kind geübt hat, nach Lernzielen der Schule sortiert: Anzahl, Übungstage, erste Fehler und Hilfen. Intern ordnet die App das nach dem Bewertungsschlüssel der Schule ein, nur um passende Aufgaben auszuwählen.</p><p>Das ist <b>keine schulische Bewertung</b> und wird dem Kind nie gezeigt.</p>'},
+  focus:{title:'Fokus-Themen',text:'<p>Aus diesen Themen stellt „Practise Today“ die 8 Fragen zusammen; auch die Übungsblätter nutzen sie. Auf der Startseite tragen sie das Zeichen „Focus“.</p><p>Am besten die Themen wählen, die gerade in der Schule dran sind.</p>'},
+  calendar:{title:'Kalender-Erinnerung',text:'<p>Freiwillig: erzeugt eine Kalenderdatei mit einer wiederkehrenden, freundlichen Einladung zum Üben. Die App selbst schickt keine Nachrichten.</p>'},
+  storycap:{title:'Pisolala-Geschichten',text:'<p>Hier legen Sie fest, wie spannend eine Geschichte höchstens sein darf. Das Kind wählt selbst bis zu dieser Grenze. Jede Stufe bleibt freundlich.</p>'},
+  profile:{title:'Profilangaben',text:'<p>Name, Geburtstag (ohne Jahr) und Emoji, die das Kind unter „My profile“ eingetragen hat. Sie liegen nur auf diesem Gerät. Löschen entfernt nur diese Angaben, keine Lerndaten.</p>'},
+  version:{title:'App-Version',text:'<p>Zeigt den Stand der App auf diesem Gerät. „Nach neuer Version suchen“ vergleicht mit der veröffentlichten Seite. Neue Versionen kommen beim nächsten Öffnen; sonst die App ganz schließen und neu öffnen.</p>'},
+  sheets:{title:'Übungsblätter eintragen',text:'<p>Pro Aufgabe „Right“, „With help“ oder „Not yet“ antippen. „With help“ und „Not yet“ sind gut so: Die App bietet dann leichtere Schritte an und wiederholt die Aufgabe später.</p>'},
+  guidance:{title:'Unterstützen wie die Schule',text:'<p>Kurze Hinweise, wie die Schule ein Thema zeigt, und drei Fragen statt einer Erklärung. Bitte keinen zweiten Rechenweg danebenstellen.</p>'}
+};
+const ADULT_H2=[['Übungsbeobachtungen','overview'],['Fokus-Themen','focus'],['Freiwillige Kalender','calendar'],['Settings','storycap'],['Profilangaben','profile'],['App-Version','version'],['Practice sheets','sheets'],['So unterstützen','guidance']];
+function addAdultInfo(root){ root.querySelectorAll('h2').forEach(h=>{ const m=ADULT_H2.find(([t])=>h.textContent.trim().startsWith(t)); if(m && !h.querySelector('.info-btn')) h.insertAdjacentHTML('beforeend',` <button type="button" class="info-btn" data-help="${m[1]}" aria-label="Info">ⓘ</button>`); }); }
+function openHelp(key){
+  const h=HELP[key]; if(!h) return;
+  $('#helpTitle').textContent=h.title; $('#helpText').innerHTML=h.text;
+  const inAdultArea=state.screen==='about' && state.aboutTab==='sheets';
+  $('#helpGuide').hidden=inAdultArea; $('#helpGuide').textContent=h.kid?'📖 Guide':'📖 Anleitung'; $('#helpGuide').dataset.kind=h.kid?'kid':'adult';
+  const d=$('#helpDlg'); if(d.showModal) d.showModal(); else d.setAttribute('open','');
+}
+function closeHelp(){ const d=$('#helpDlg'); if(d.close) d.close(); else d.removeAttribute('open'); }
+function openGuide(kind){
+  const tab=kind==='kid'?'en':'de', title=kind==='kid'?'How to use Big Quest':'Anleitung für Erwachsene';
+  openAbout(tab);
+  const i=aboutParts(tab).sections.findIndex(s=>s.title===title);
+  if(i>=0){ state.aboutSub=i; renderAboutPage(); }
+}
+/* Short help on the login screen: the app (and its guides in "About") is not open yet here. */
+const LOGIN_HELP=`<details class="login-help"><summary>❓ Help / Hilfe</summary>
+<p><b>Students:</b> tap 🎒 Student, type your user name and password. The first time, use the start code from your grown-up and then choose your own password.</p>
+<p><b>Erwachsene:</b> „👪 Parent / Teacher“, Benutzername und Startcode beim ersten Mal, dann ein eigenes Passwort (mindestens 8 Zeichen). Das Passwort gilt nur auf diesem Gerät.</p>
+<p>Passwort vergessen? / Forgot your password? Der Startcode funktioniert immer. Nach 5 Fehlversuchen 30 Sekunden warten. Die ausführlichen Anleitungen stehen nach der Anmeldung unter „About“.</p></details>`;
 function renderLogin(role){
   const b=$('#loginBody'), T=LOGIN_TXT;
   if(!role){
-    b.innerHTML=`<h2>${T.who}</h2><div class="login-roles"><button class="btn primary" id="roleStudent" type="button">${T.student}</button><button class="btn" id="roleAdult" type="button">${T.adult}</button></div>`;
+    b.innerHTML=`<h2>${T.who}</h2><div class="login-roles"><button class="btn primary" id="roleStudent" type="button">${T.student}</button><button class="btn" id="roleAdult" type="button">${T.adult}</button></div>${LOGIN_HELP}`;
     $('#roleStudent').addEventListener('click',()=>renderLogin('student'));
     $('#roleAdult').addEventListener('click',()=>renderLogin('adult'));
     return;
   }
-  b.innerHTML=`<h2>${role==='student'?T.student:T.adult}</h2><form id="loginForm" class="login-form"><div class="field"><label for="loginUser">${T.user}</label><input id="loginUser" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><div class="field"><label for="loginPw">${T.pw}</label><input id="loginPw" type="password" autocomplete="current-password" required></div><button class="btn primary" id="loginGo" type="submit">${T.go}</button><p id="loginMsg" class="small" role="status"></p></form><button class="btn small" id="loginBack" type="button">${T.back}</button>`;
+  b.innerHTML=`<h2>${role==='student'?T.student:T.adult}</h2><form id="loginForm" class="login-form"><div class="field"><label for="loginUser">${T.user}</label><input id="loginUser" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><div class="field"><label for="loginPw">${T.pw}</label><input id="loginPw" type="password" autocomplete="current-password" required></div><button class="btn primary" id="loginGo" type="submit">${T.go}</button><p id="loginMsg" class="small" role="status"></p></form><button class="btn small" id="loginBack" type="button">${T.back}</button>${LOGIN_HELP}`;
   $('#loginBack').addEventListener('click',()=>{ if(studentSession()){ $('#loginBody').innerHTML=''; renderHome(); show('home'); } else renderLogin(); });
   $('#loginForm').addEventListener('submit',async e=>{
     e.preventDefault();
@@ -2735,9 +2793,18 @@ function renderSetPassword(u){
     if(p1!==p2){ msg.textContent=T.diff; return; }
     const salt=Array.from(crypto.getRandomValues(new Uint8Array(16)));
     store.set('pw_'+u.user,{salt, hash:await pbkdf2Hex(p1,salt)});
-    loginDone(u);
+    renderWelcome(u);
   });
   $('#newPw1').focus();
+}
+/* First login on a device (Peter, 31.10.): a short welcome with the most helpful things, once. */
+function renderWelcome(u){
+  const kid=u.role==='student';
+  $('#loginBody').innerHTML=kid
+    ? `<h2>Welcome to Big Quest! 🎉</h2><ul class="welcome"><li>🎯 <b>Practise Today</b> gives you 8 questions. Or pick a subject.</li><li>💡 <b>A mistake?</b> You get a hint and try again. “Show me how” is always OK.</li><li>⭐ Every solved task gives a star. Your <b>learning tree</b> grows on every practice day.</li><li>❓ <b>Help</b> is at the bottom of the start page. ⓘ explains things.</li><li>🔒 You stay logged in on this iPad. Tap <b>Log out</b> if someone else wants to use it.</li></ul><button class="btn primary" id="welcomeGo" type="button">Let’s go!</button>`
+    : `<h2>Willkommen, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 <b>Daten nur auf diesem Gerät:</b> Den Lernstand des Kindes sehen Sie auf dem Gerät, auf dem es übt.</li><li>🔑 Ihr Passwort gilt nur auf diesem Gerät. Auf einem weiteren Gerät einmal mit dem Startcode anmelden.</li><li>🚪 Abmeldung automatisch beim Verlassen, im Hintergrund und nach 5 Minuten.</li><li>📖 Die <b>Anleitung für Erwachsene</b> steht oben im Elternbereich, ⓘ erklärt jeden Abschnitt.</li></ul><button class="btn primary" id="welcomeGo" type="button">Los geht’s</button>`;
+  $('#welcomeGo').addEventListener('click',()=>loginDone(u));
+  $('#welcomeGo').focus();
 }
 function loginDone(u){
   $('#loginBody').innerHTML='';
@@ -2840,7 +2907,7 @@ function calendarText(days,time,text,now=new Date()){
   }).join('\r\n')+'\r\n';
 }
 function bindParentSettings(){
-  bindStoryCap(); bindProfileAdmin(); bindVersionAdmin();
+  bindStoryCap(); bindProfileAdmin(); bindVersionAdmin(); addAdultInfo($('#aboutBody'));
   $('#parentClose').addEventListener('click',()=>{parentLock();renderParentGate();});
   $('#focusForm').addEventListener('submit',e=>{
     e.preventDefault();if(!parentAccess) return;
@@ -2949,10 +3016,45 @@ const ABOUT_SOURCES=[
   ['Kluger & DeNisi (1996) – Feedback interventions; bibliografisch, nicht inhaltlich geprüft','https://doi.org/10.1037/0033-2909.119.2.254']
 ];
 const sourcesHTML=()=>`<p class="small">Research informs the design; it does not validate this app or its exact thresholds. Bibliographic references are identified separately from evaluated findings. Product comparisons are not evidence of educational effectiveness.</p><ol>${ABOUT_SOURCES.map(s=>`<li>${esc(s[0])}<br><a href="${s[1]}" target="_blank" rel="noopener">${s[1]}</a></li>`).join('')}</ol><p class="small">Private sources: Grade 3 class materials, rubrics, teacher instructions and standards read by the family on the school's learning platform on 29 October 2026; assessment legends supplied by the family. These account-only pages and the child’s records are not published as sources. Pisolala is a family creation. Historical references: Bloom (1968), Learning for Mastery; Wood, Bruner & Ross (1976), The role of tutoring in problem solving. Their original texts were not reviewed for this design.</p>`;
+/* Two guides (Peter, 31.10.): one for grown-ups (DE/EN), one simple one for the child (English).
+   No separate info buttons elsewhere; the login screen has a short help because the app is not open yet. */
+const GUIDE_KID=`<p class="small">Hello, explorer! Here is how Big Quest works.</p>
+<ol class="steps">
+<li><b>Log in:</b> tap 🎒 Student, type your user name and your password. The very first time you use the start code from your grown-up and then choose your own password. Keep it a secret!</li>
+<li><b>Practise Today:</b> 8 questions from your focus topics. Or tap a subject and choose a quest.</li>
+<li><b>Oops, a mistake?</b> No problem! You get a hint and try again. Tap “Show me how” whenever you want – that is not a mistake.</li>
+<li><b>Stars and titles:</b> every solved task gives a star. With more stars you reach a new title – tap your title to see your explorer path. Your learning tree grows on every day you practise.</li>
+<li><b>After a round:</b> choose a joke, the Mystery Question or a Pisolala story.</li>
+<li><b>Lese-Studio:</b> read aloud, record yourself and listen. Your grown-up can help you share the best recording with your class.</li>
+<li><b>Practice sheet:</b> make a sheet with a grown-up and work on paper.</li>
+<li><b>My profile:</b> tap your name at the top to change your name, birthday or emoji.</li>
+<li><b>Grown-ups</b> can look at what you practised. There are no grades in Big Quest – only learning.</li>
+<li><b>Log out</b> when someone else wants to use this iPad.</li>
+</ol>`;
+const GUIDE_ADULT_DE=`<p><b>Das Wichtigste vorab:</b> Die App hat keinen Server. Alles, was das Kind übt (Sterne, Lernstand, Wiederholungen, Leseaufnahmen, Übungsblätter), liegt <b>nur auf dem Gerät, auf dem es übt</b>. Deshalb übt das Kind am besten immer auf demselben Gerät, über das App-Symbol auf dem Home-Bildschirm. Den Lernstand sehen Erwachsene auf diesem Gerät.</p>
+<ol class="steps">
+<li><b>Einrichten (einmalig):</b> Seite in Safari öffnen und das Familienpasswort eingeben („angemeldet bleiben“ angehakt lassen). Dann Teilen-Symbol → „Zum Home-Bildschirm“ → „Hinzufügen“ und künftig nur noch über das Symbol öffnen. Die Home-Bildschirm-App hat einen eigenen Speicher und fragt beim ersten Öffnen noch einmal nach dem Familienpasswort.</li>
+<li><b>Kind anmelden (einmalig je Gerät):</b> „🎒 Student“, Benutzername und Startcode eingeben, dann ein eigenes Passwort wählen (mindestens 4 Zeichen). Das Kind bleibt angemeldet, bis jemand „Log out“ tippt.</li>
+<li><b>Als Erwachsener anmelden:</b> auf dem Gerät des Kindes unten „👪 Grown-ups“ (das Kind bleibt angemeldet), Benutzername und Startcode, dann ein eigenes Passwort (mindestens 8 Zeichen). Abmeldung automatisch beim Verlassen, im Hintergrund und nach 5 Minuten.</li>
+<li><b>Im Elternbereich:</b> Übungsbeobachtungen nach Lernzielen (kein Schulurteil), Fokus-Themen für „Practise Today“, Ergebnisse von Übungsblättern eintragen, Spannung der Pisolala-Geschichten, Profilangaben, Kalender-Erinnerung, App-Version, Hinweise „So unterstützen wir wie die Schule“.</li>
+<li><b>Für das Kind:</b> Practise Today oder ein Fach; bei Fehlern Hinweis, zweiter Versuch, dann Lösungsweg; Lese-Studio mit Aufnahme (Teilen/Sichern zum Hochladen auf die Lernplattform der Klasse); Übungsblatt als PDF; nach jeder Runde Witz, Rätsel oder Geschichte.</li>
+</ol>
+<p><b>Gut zu wissen:</b> Eigene Passwörter gelten nur auf dem Gerät, auf dem sie festgelegt wurden; auf einem weiteren Gerät einmal mit dem Startcode anmelden. Passwort vergessen? Der Startcode funktioniert immer. Nach 5 Fehlversuchen 30 Sekunden warten. Neue Versionen kommen beim nächsten Öffnen; sonst die App ganz schließen und neu öffnen. Familienpasswort und Startcodes bitte nicht weitergeben.</p>`;
+const GUIDE_ADULT_EN=`<p><b>Most important first:</b> the app has no server. Everything the child practises (stars, progress, reviews, reading recordings, practice sheets) stays <b>only on the device where the child practises</b>. So the child should always use the same device, via the icon on the home screen. Grown-ups see the progress on that device.</p>
+<ol class="steps">
+<li><b>Set up (once):</b> open the page in Safari and enter the family password (keep “stay signed in”). Then Share → “Add to Home Screen” → “Add”, and from now on open it via the icon. The home-screen app has its own storage and asks for the family password once more.</li>
+<li><b>Log in the child (once per device):</b> “🎒 Student”, user name and start code, then choose an own password (at least 4 characters). The child stays logged in until someone taps “Log out”.</li>
+<li><b>Log in as a grown-up:</b> on the child's device tap “👪 Grown-ups” (the child stays logged in), user name and start code, then an own password (at least 8 characters). Automatic log-out when leaving, in the background and after 5 minutes.</li>
+<li><b>In the grown-ups area:</b> practice observations by learning goal (not a school assessment), focus topics, results of practice sheets, Pisolala story level, profile details, calendar reminder, app version, tips on supporting like the school.</li>
+<li><b>For the child:</b> Practise Today or a subject; after a mistake a hint, a second try, then the worked solution; reading studio with recording (share/save to upload to the class learning platform); practice sheet as PDF; a joke, riddle or story after each round.</li>
+</ol>
+<p><b>Good to know:</b> own passwords work only on the device where they were set; on another device log in once with the start code. Forgot the password? The start code always works. After 5 wrong tries wait 30 seconds. New versions arrive the next time the app opens; otherwise close the app completely and reopen it. Please keep the family password and start codes private.</p>`;
 const ABOUT_DE=()=>`
 <h2>Über diese Anwendung</h2>
 <p><b>Grade 3 – Big Quest</b> ist ein privat entwickeltes, spielerisches Übungsangebot für ein Kind der 3. Klasse an einer IB-Schule (Primary Years Programme). Die Anwendung begleitet die Inhalte des laufenden Schuljahres und lädt dazu ein, zwischendurch und an jedem Ort freiwillig zu üben – ergänzend zum Unterricht und zu den eigentlichen Hausaufgaben, niemals an ihrer Stelle.</p>
 <div class="note"><b>Wichtiger Hinweis.</b> Es handelt sich um eine Spaß- und Lernanwendung ohne pädagogische Herkunft und ohne fachliche Beratung. Sie wurde weder von der Schule noch vom International Baccalaureate beauftragt, geprüft oder unterstützt. Aufgaben und Programmierung sind mit Unterstützung eines KI-Assistenten entstanden und von den Eltern durchgesehen; Fehler sind dennoch möglich. Ein in der Anwendung ermittelter Übungsstand ist keine Bewertung und lässt keine Rückschlüsse auf schulische Beurteilungen zu.</div>
+<h3>Anleitung für Erwachsene</h3>${GUIDE_ADULT_DE}
+<h3>How to use Big Quest (für Kinder)</h3>${GUIDE_KID}
 <h3>Grundidee</h3>
 <p>Üben soll Freude bereiten, Neugier wecken und Selbstvertrauen stärken. Die Anwendung kennt deshalb weder Zeitvorgaben noch Ranglisten, Punktabzüge oder verfallende Belohnungen. Gewürdigt werden Ausdauer, Mut und Wachstum – nicht das Ergebnis einer einzelnen Runde.</p>
 <h3>Leitgedanken</h3>
@@ -2989,6 +3091,8 @@ const ABOUT_EN=()=>`
 <h2>About this app</h2>
 <p><b>Grade 3 – Big Quest</b> is a privately developed, playful practice companion for a child in Grade 3 at an IB school (Primary Years Programme). It follows the topics of the current school year and invites voluntary practice anywhere and at any time – as a supplement to lessons and homework, never as a replacement.</p>
 <div class="note"><b>Please note.</b> This is a fun learning app without any pedagogical origin or professional advice. It has not been commissioned, reviewed or endorsed by the school or by the International Baccalaureate. Tasks and code were created with the help of an AI assistant and reviewed by the parents; errors remain possible. Any practice status kept by the app is not an assessment and permits no conclusions about school grades.</div>
+<h3>Guide for grown-ups</h3>${GUIDE_ADULT_EN}
+<h3>How to use Big Quest</h3>${GUIDE_KID}
 <h3>Idea</h3>
 <p>Practice should be enjoyable, spark curiosity and build confidence. There are therefore no time targets, leaderboards, penalties or expiring rewards. Persistence, courage and growth are celebrated – not the result of a single round.</p>
 <h3>Guiding principles</h3>
@@ -3021,9 +3125,14 @@ const ABOUT_EN=()=>`
 /* About as a menu with sub-pages (Peter, 30.10.): the overview keeps intro, the important note
    and the version; every topic (incl. side notes, privacy and sources) opens as its own page. */
 const ABOUT_UI={de:{menu:'Themen',back:'← Übersicht',stand:'Stand: 30. Oktober 2026.'},en:{menu:'Topics',back:'← Overview',stand:'Last updated: 30 October 2026.'}};
+/* The user guide depends on the login (Peter, 31.10.): a logged-in child sees the child guide, not the
+   grown-ups guide; grown-ups find theirs at the top of the grown-ups area. Without accounts: both. */
+const ADULT_GUIDE_TITLES=['Anleitung für Erwachsene','Guide for grown-ups'];
 function aboutParts(lang){
   const html=lang==='en'?ABOUT_EN():ABOUT_DE(), parts=html.split('<h3>');
-  return {main:parts[0], sections:parts.slice(1).map(p=>{ const i=p.indexOf('</h3>'); return {title:p.slice(0,i), body:p.slice(i+5)}; })};
+  let sections=parts.slice(1).map(p=>{ const i=p.indexOf('</h3>'); return {title:p.slice(0,i), body:p.slice(i+5)}; });
+  if(accountsOn() && studentSession()) sections=sections.filter(s=>!ADULT_GUIDE_TITLES.includes(s.title));
+  return {main:parts[0], sections};
 }
 function renderAboutPage(){
   const lang=state.aboutTab==='en'?'en':'de', ui=ABOUT_UI[lang], {main,sections}=aboutParts(lang), body=$('#aboutBody'), sub=state.aboutSub;
@@ -3111,7 +3220,7 @@ const recDel = id => recTx('readwrite', s=>s.delete(id));
 async function recPut(item){ await recTx('readwrite', s=>s.put(item)); for(const old of (await recAll()).slice(REC_MAX)) await recDel(old.id); }
 function recorderHTML(){
   if(!recSupported()) return `<div class="recorder"><h3>🎙️ Meine Leseaufnahme</h3><p class="small">Auf diesem Gerät kann die App nicht aufnehmen. Nimm dich direkt auf der Lernplattform deiner Klasse auf.</p></div>`;
-  return `<div class="recorder" id="recorder"><h3>🎙️ Meine Leseaufnahme</h3><div class="row rec-row"><button class="btn primary" id="recBtn" type="button">● Aufnahme starten</button><span class="clock" id="recClock">00:00</span></div><p class="small" id="recMsg" role="status">Die Aufnahme bleibt nur auf diesem Gerät. Die App schickt nichts weg – hochladen kannst du selbst über „Teilen / Sichern“.</p><div id="recList"></div></div>`;
+  return `<div class="recorder" id="recorder"><h3>🎙️ Meine Leseaufnahme <button type="button" class="info-btn" data-help="record" aria-label="Hilfe: Aufnahme">ⓘ</button></h3><div class="row rec-row"><button class="btn primary" id="recBtn" type="button">● Aufnahme starten</button><span class="clock" id="recClock">00:00</span></div><p class="small" id="recMsg" role="status">Die Aufnahme bleibt nur auf diesem Gerät. Die App schickt nichts weg – hochladen kannst du selbst über „Teilen / Sichern“.</p><div id="recList"></div></div>`;
 }
 async function recToggle(){
   if(rec) return recStop();
@@ -3204,6 +3313,10 @@ $('#sheetPrint').addEventListener('click',()=>{ closeSheetDlg(); setTimeout(()=>
 $('#sheetClose').addEventListener('click',closeSheetDlg);
 $('#aboutBtn').addEventListener('click',()=>openAbout());
 $('#adultBtn').addEventListener('click',()=>showLogin('adult'));
+$('#guideBtn').addEventListener('click',()=>openGuide('kid'));
+document.addEventListener('click',e=>{ const b=e.target.closest && e.target.closest('.info-btn'); if(b){ e.preventDefault(); e.stopPropagation(); openHelp(b.dataset.help); } },true);
+$('#helpClose').addEventListener('click',closeHelp);
+$('#helpGuide').addEventListener('click',()=>{ const k=$('#helpGuide').dataset.kind; closeHelp(); closeSheetDlg(); openGuide(k); });
 $('#logoutBtn').addEventListener('click',logout);
 $('#aboutBack').addEventListener('click',()=>{ state.back='home'; goBack(); });
 $('#tabDe').addEventListener('click',()=>openAbout('de'));
