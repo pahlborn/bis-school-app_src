@@ -20,6 +20,7 @@ import {
   ohneTresor, woerterLesen, verboteneTreffer, unb64
 } from './kern.mjs';
 import { versionErmitteln, versionEinsetzen, versionAuslesen, versionText } from './version.mjs';
+import { kontenLesen, kontenEinsetzen } from './konten.mjs';
 
 export const WURZEL = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -63,7 +64,7 @@ export function oeffentlichPruefen(html, manifest, woerter) {
  * Schluessel-Bytes (schluesselablage.mjs). Mit Passwort wird zusaetzlich
  * mit dem Passwort probe-entschluesselt, also genau so, wie die Huelle es tut.
  */
-export async function distBauen(zugang, { wurzel = WURZEL, ziel = path.join(wurzel, 'dist'), version = null } = {}) {
+export async function distBauen(zugang, { wurzel = WURZEL, ziel = path.join(wurzel, 'dist'), version = null, konten } = {}) {
   const passwort = typeof zugang === 'string' ? zugang : null;
   if (passwort === null && !(zugang && zugang.schluesselRoh)) throw new Error('distBauen braucht ein Passwort oder einen gemerkten Schluessel.');
   if (passwort !== null) passwortPruefen(passwort);
@@ -71,7 +72,9 @@ export async function distBauen(zugang, { wurzel = WURZEL, ziel = path.join(wurz
   if (q.woerter.length === 0) throw new Error(`${QUELLEN.woerter} ist leer - ohne Liste prueft der Lauf nichts.`);
 
   const v = version || versionErmitteln(WURZEL);
-  const app = versionEinsetzen(q.app, v);
+  // Accounts (S3): from werkzeug/konten.json if present; without the file the app runs without login.
+  const k = konten !== undefined ? konten : await kontenLesen(wurzel);
+  const app = kontenEinsetzen(versionEinsetzen(q.app, v), k);
 
   const schluessel = passwort !== null
     ? await schluesselAusPasswort(passwort, q.salt)
@@ -101,7 +104,7 @@ export async function distBauen(zugang, { wurzel = WURZEL, ziel = path.join(wurz
   for (const icon of ICONS) await fs.copyFile(path.join(wurzel, icon), path.join(ziel, icon));
 
   return {
-    ziel, dateien: ['index.html', 'manifest.webmanifest', ...ICONS], appBytes: app.length, version: v, huelleBytes: Buffer.byteLength(html),
+    ziel, dateien: ['index.html', 'manifest.webmanifest', ...ICONS], appBytes: app.length, version: v, konten: k ? k.users.length : 0, huelleBytes: Buffer.byteLength(html),
     schluesselRoh: await schluesselRoh(schluessel), salt: q.salt
   };
 }
