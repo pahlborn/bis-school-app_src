@@ -26,7 +26,7 @@ let browser, server, basis, ziel;
 
 before(async () => {
   ziel = await fs.mkdtemp(path.join(os.tmpdir(), 'bq-browser-'));
-  await distBauen(TEST_PW, { ziel });
+  await distBauen(TEST_PW, { ziel, konten: null }); // shell tests without login (login: anmeldung.test.mjs)
   server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://x');
     if (!url.pathname.startsWith(PFAD)) { res.writeHead(404); return res.end(); }

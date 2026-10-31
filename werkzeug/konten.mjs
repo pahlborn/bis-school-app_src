@@ -91,7 +91,10 @@ async function mitNeuemCode(u) {
 }
 
 async function main() {
-  const [befehl, name, rolle, ...rest] = process.argv.slice(2);
+  // --still: do not print start codes (e.g. when run by an assistant whose output is logged)
+  const still = process.argv.includes('--still');
+  const [befehl, name, rolle, ...rest] = process.argv.slice(2).filter((a) => a !== '--still');
+  const zeige = (text, code) => console.log(still ? text : `${text} Startcode: ${code}`);
   const datei = kontenDatei();
   const k = (await kontenLesen()) || { users: [] };
   const speichern = async () => { await fs.writeFile(datei, JSON.stringify(k, null, 2) + '\n', 'utf8'); };
@@ -111,14 +114,14 @@ async function main() {
     k.users.push(u);
     if (k.users.some((x) => x.role === 'student') && k.users.some((x) => x.role === 'parent')) kontenPruefen(k);
     await speichern();
-    console.log(`Konto angelegt: ${n} (${rolle}). Startcode: ${code}`);
+    zeige(`Konto angelegt: ${n} (${rolle}${u.admin ? ', admin' : ''}).`, code);
     console.log(`Der Startcode steht auch in: ${await codeMerken(n, code)}`);
     return;
   }
   if (befehl === 'code-neu') {
     const u = finde(name); if (!u) throw new Error(`Konto "${name}" fehlt.`);
     const code = await mitNeuemCode(u); await speichern();
-    console.log(`Neuer Startcode fuer ${u.user}: ${code} (der alte gilt nach dem naechsten Veroeffentlichen nicht mehr)`);
+    zeige(`Neuer Startcode fuer ${u.user} (der alte gilt nach dem naechsten Veroeffentlichen nicht mehr).`, code);
     console.log(`Steht auch in: ${await codeMerken(u.user, code)}`);
     return;
   }
