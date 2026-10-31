@@ -101,12 +101,12 @@ test('DE/EN switch changes the whole grown-ups view and is remembered', async ()
   await elternOeffnen(page);
   await page.locator('[data-plang="en"]').click();
   const s = await page.textContent('#aboutBody');
-  assert.match(s, /Overview/); assert.match(s, /How to read this page/); assert.match(s, /Going well/); assert.match(s, /not a school assessment/);
+  assert.match(s, /Grown-ups area/); assert.match(s, /How to read this page/); assert.match(s, /Going well/); assert.match(s, /not a school assessment/);
   await page.locator('[data-psubj="science"]').click();
   assert.match(await page.textContent('#aboutBody'), /What is this based on\?.*Needs support/s);
   await page.reload(); await page.waitForSelector('#aboutBtn');
   await elternOeffnen(page);
-  assert.match(await page.textContent('#aboutBody'), /Overview/);
+  assert.match(await page.textContent('#aboutBody'), /Grown-ups area/);
   await ctx.close();
 });
 

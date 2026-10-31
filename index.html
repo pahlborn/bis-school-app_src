@@ -166,9 +166,26 @@ button{font:inherit;color:inherit}
 .login-help summary{cursor:pointer;font-family:var(--display);font-weight:600;min-height:44px;display:flex;align-items:center}
 .login-help p{margin:6px 0;font-size:.95rem}
 .about-menu{display:flex;flex-direction:column;gap:8px;margin:14px 0}
-.about-item{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:52px;padding:10px 16px;border-radius:16px;border:2px solid var(--line);background:var(--surface);color:var(--ink);font-family:var(--display);font-size:1.05rem;font-weight:600;text-align:left;cursor:pointer;box-shadow:var(--shadow)}
-.about-item span:last-child{font-size:1.4rem;color:var(--muted)}
-.about-sub-title{margin:12px 0 8px}
+.about-sec,.psec{border-radius:16px;border:2px solid var(--line);background:var(--surface);box-shadow:var(--shadow)}
+.about-sec>summary,.psec>summary{cursor:pointer;min-height:52px;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:var(--display);font-size:1.05rem;font-weight:600;list-style:none}
+.about-sec>summary::-webkit-details-marker,.psec>summary::-webkit-details-marker{display:none}
+.about-sec>summary::after,.psec>summary::after{content:"›";font-size:1.4rem;color:var(--muted);transition:transform .15s}
+.about-sec[open]>summary::after,.psec[open]>summary::after{transform:rotate(90deg)}
+.about-sec-body,.psec-body{padding:0 16px 12px}
+.psecs{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+.flags{display:inline-flex;gap:4px;margin-left:auto}
+.flag{min-width:48px;min-height:44px;border-radius:12px;border:2px solid var(--line);background:var(--surface);line-height:0;cursor:pointer;padding:0 8px;opacity:.5;display:inline-flex;align-items:center;justify-content:center}
+.flagsvg{width:28px;height:17px;border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
+.flag.on{opacity:1;border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.phdr{position:sticky;top:0;z-index:5;background:var(--bg,#F6F8FC);border-bottom:2px solid var(--line);padding:8px 0;margin:0 0 8px;display:flex;flex-direction:column;gap:6px}
+.phdr-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.phdr-who{font-family:var(--display);font-weight:700}
+.phdr-ver{font-size:.8rem;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:999px;padding:2px 8px}
+.phdr-act{display:flex;align-items:center;gap:6px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
+.phdr .flags{margin-left:0}
+.phdr-test{background:#F1EEFF;border-radius:12px;padding:6px 10px}
+.psub{margin:16px 0 4px}
+.test-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center}
 ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 .recorder{display:flex;flex-direction:column;gap:10px;background:var(--soft);border-radius:16px;padding:14px;border:2px solid var(--line)}
 .recorder .rec-row{align-items:center;gap:12px}
@@ -396,7 +413,7 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
     <div class="foot">
       <span>Topics from class, updated 30 October.</span>
       <span class="row foot-buttons">
-        <button class="btn small" id="aboutBtn" type="button">About &amp; grown-ups</button>
+        <button class="btn small" id="aboutBtn" type="button">📖 How it works &amp; grown-ups</button>
         <button class="btn small" id="guideBtn" type="button">❓ Help</button>
         <button class="btn small" id="adultBtn" type="button" hidden>👪 Grown-ups</button>
         <button class="btn small" id="logoutBtn" type="button" hidden>Log out</button>
@@ -456,13 +473,13 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 
   <!-- ABOUT & GROWN-UPS -->
   <section id="about" class="screen" hidden>
-    <div class="topbar">
+    <div class="topbar" id="aboutTop">
       <button class="iconbtn" id="aboutBack" type="button" aria-label="Back to home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
-      <span class="chip" id="aboutChip">About this app</span>
+      <span class="chip" id="aboutChip">📖 So funktioniert Big Quest</span>
+      <span class="flags" role="group" aria-label="Sprache / Language"><button class="flag" id="tabDe" type="button" aria-label="Deutsch"><svg class="flagsvg" viewBox="0 0 30 18" aria-hidden="true"><rect width="30" height="6" fill="#000"/><rect y="6" width="30" height="6" fill="#DD0000"/><rect y="12" width="30" height="6" fill="#FFCE00"/></svg></button><button class="flag" id="tabEn" type="button" aria-label="English"><svg class="flagsvg" viewBox="0 0 38 20" aria-hidden="true"><rect width="38" height="20" fill="#fff"/><rect y="0.00" width="38" height="1.54" fill="#B22234"/><rect y="3.08" width="38" height="1.54" fill="#B22234"/><rect y="6.15" width="38" height="1.54" fill="#B22234"/><rect y="9.23" width="38" height="1.54" fill="#B22234"/><rect y="12.31" width="38" height="1.54" fill="#B22234"/><rect y="15.38" width="38" height="1.54" fill="#B22234"/><rect y="18.46" width="38" height="1.54" fill="#B22234"/><rect width="15.2" height="10.77" fill="#3C3B6E"/><circle cx="1.6" cy="1.5" r=".6" fill="#fff"/><circle cx="4.6" cy="1.5" r=".6" fill="#fff"/><circle cx="7.6" cy="1.5" r=".6" fill="#fff"/><circle cx="10.6" cy="1.5" r=".6" fill="#fff"/><circle cx="13.6" cy="1.5" r=".6" fill="#fff"/><circle cx="1.6" cy="4.1" r=".6" fill="#fff"/><circle cx="4.6" cy="4.1" r=".6" fill="#fff"/><circle cx="7.6" cy="4.1" r=".6" fill="#fff"/><circle cx="10.6" cy="4.1" r=".6" fill="#fff"/><circle cx="13.6" cy="4.1" r=".6" fill="#fff"/><circle cx="1.6" cy="6.7" r=".6" fill="#fff"/><circle cx="4.6" cy="6.7" r=".6" fill="#fff"/><circle cx="7.6" cy="6.7" r=".6" fill="#fff"/><circle cx="10.6" cy="6.7" r=".6" fill="#fff"/><circle cx="13.6" cy="6.7" r=".6" fill="#fff"/><circle cx="1.6" cy="9.3" r=".6" fill="#fff"/><circle cx="4.6" cy="9.3" r=".6" fill="#fff"/><circle cx="7.6" cy="9.3" r=".6" fill="#fff"/><circle cx="10.6" cy="9.3" r=".6" fill="#fff"/><circle cx="13.6" cy="9.3" r=".6" fill="#fff"/></svg></button></span>
     </div>
-    <div class="row" role="tablist">
-      <button class="btn small" id="tabDe" type="button" role="tab">ℹ️ Über die App</button>
-      <button class="btn small" id="tabEn" type="button" role="tab">ℹ️ About the app</button>
+    <div class="row" role="tablist" id="aboutTabs">
+      <button class="btn small" id="tabInfo" type="button" role="tab">📖 So funktioniert Big Quest</button>
       <button class="btn small" id="tabSheets" type="button" role="tab">Elternbereich</button>
     </div>
     <article class="about" id="aboutBody"></article>
@@ -550,7 +567,7 @@ const TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4
 /* Data per child (Peter, 31.10.: own test account). The FIRST student account keeps the existing
    keys bq2_<key> (no migration). Every other logged-in student gets bq2_<user>__<key>, so a test
    account never mixes with the child's data. Device-wide keys stay shared. */
-const GLOBAL_KEYS=/^(session|pw_.+|parentPin|muted|parentLang)$/;
+const GLOBAL_KEYS=/^(session|sessionPrev|pw_.+|parentPin|muted|parentLang)$/;
 function childNs(){
   if(!APP_ACCOUNTS || !APP_ACCOUNTS.users) return '';
   let s=null; try{ s=JSON.parse(localStorage.getItem('bq2_session')||'null'); }catch(e){}
@@ -1945,7 +1962,7 @@ function renderHome(){
   const total=store.get('total',0);
   $('#totalStars').textContent=total; renderRank(total);
   renderTestBar();
-  const acc=accountsOn(); $('#adultBtn').hidden=!acc; $('#logoutBtn').hidden=!acc; $('#aboutBtn').textContent=acc?'About':'About & grown-ups';
+  const acc=accountsOn(); $('#adultBtn').hidden=!acc; $('#logoutBtn').hidden=!acc; $('#aboutBtn').textContent=acc?'📖 How Big Quest works':'📖 How it works & grown-ups';
   renderProfileBtn();
   const c=$('#subjects'); c.innerHTML='';
   SUBJECTS.forEach(s=>{
@@ -2745,7 +2762,10 @@ function bindStoryCap(){ const sc=$('#storyCap'); if(sc) sc.addEventListener('ch
    (little evidence / provisional / confirmed: ≥20 first tries, ≥5 days over ≥14 days), a trend only
    when two comparable periods exist, and how recent it is (breaks are not a drop in ability).
    DE/EN for the whole grown-ups branch. Sources: see "Einstufung – vorsichtig und nachvollziehbar". */
-const PL = () => store.get('parentLang','de')==='en'?'en':'de';
+/* Language of the info pages and the grown-ups area (flags). A logged-in child has an own choice
+   (default English); grown-ups share one per device (default German). */
+const langKey = () => accountsOn() && studentSession() && !adultUser ? 'kidLang' : 'parentLang';
+const PL = () => store.get(langKey(), langKey()==='kidLang'?'en':'de')==='en'?'en':'de';
 const PT={
   de:{home:'🏠 Übersicht',sheets:'📄 Übungsblätter',settings:'⚙️ Einstellungen',help:'💡 Helfen wie die Schule',
     howHome:'<b>So lesen Sie diese Seite:</b> Links sehen Sie dieselben Fächer wie das Kind; jedes Kästchen ist eine Quest. Rechts steht die Einschätzung in Worten. Tippen Sie auf ein Fach, um zu sehen, was geübt wird, worauf die Einschätzung beruht und wie Sie helfen können.',
@@ -2847,10 +2867,6 @@ function summaryHTML(list, scope){
   return h+`<div class="pdisc">${T.disc}</div>`;
 }
 const isTeacher = () => !!(accountsOn() && adultUser && adultUser.role==='teacher');
-function parentNavHTML(){
-  const T=PT[PL()], pages=isTeacher()?['home','help']:['home','sheets','settings','help'], cur=state.ppage||'home';
-  return `<div class="pnav"><div class="plang" role="group" aria-label="Sprache / Language"><button type="button" data-plang="de" class="${PL()==='de'?'on':''}">DE</button><button type="button" data-plang="en" class="${PL()==='en'?'on':''}">EN</button></div>${pages.map(p=>`<button type="button" class="btn small${p===cur?' primary':''}" data-ppage="${p}">${T[p]}</button>`).join('')}</div>`;
-}
 function parentHomeHTML(){
   const T=PT[PL()], focus=focusTopics(), all=[];
   const tiles=SUBJECTS.map(s=>{ const qs=questsIn(s), list=qs.map(assessQuest); all.push(...list); const f=qs.filter(k=>focus.includes(k)).length;
@@ -2879,18 +2895,24 @@ function sheetsPageHTML(){
   const T=PT[PL()], all=store.get('sheets',[]).slice().reverse();
   return `<h2>Practice sheets</h2><p class="phow">${T.howSheets}</p>`+(all.length?all.map(sh=>`<h3>Sheet of ${sh.day}</h3>`+sh.items.map((it,i)=>`<div class="sheetrow"><div class="q"><b>${i+1}.</b> ${esc(strip(sheetPrompt(it.q)).slice(0,140))}</div><div class="row">${Object.keys(RES).map(r=>`<button type="button" class="btn small${it.res===r?' on':''}" data-sheet="${sh.id}" data-i="${i}" data-res="${r}"${it.res?' disabled':''}>${RES[r]}</button>`).join('')}</div></div>`).join('')).join(''):'<p>No sheet made yet. Use “Practice sheet (PDF / print)” on the start page.</p>');
 }
+/* Grown-ups area (Peter, 31.10.): fixed header (language flags, version, log out, whose data);
+   overview on top, all other chapters open in place (accordions) instead of extra pages. */
 function renderSheets(){
   if(!parentAccess){ renderParentGate(); return; }
-  const body=$('#aboutBody'), T=PT[PL()];
-  let page=state.ppage||'home'; if(isTeacher() && (page==='sheets'||page==='settings')) page='home';
-  let html=parentHeaderHTML()+parentNavHTML();
-  if(page==='home') html+= state.psubj ? parentSubjectHTML(state.psubj) : parentHomeHTML();
-  else if(page==='sheets') html+=sheetsPageHTML();
-  else if(page==='settings') html+=`<p class="phow">${T.howSettings}</p>`+focusSettingsHTML()+storyCapHTML()+reminderHTML()+profileAdminHTML()+versionAdminHTML();
-  else html+=`<p class="phow">${T.howHelp}</p>`+parentGuidanceHTML();
+  aboutChrome();
+  const body=$('#aboutBody'), lang=PL(), T=PT[lang], de=lang==='de', teacher=isTeacher(), open=state.popen||(state.popen=[]);
+  let html=parentHeaderHTML()+(state.psubj ? parentSubjectHTML(state.psubj) : parentHomeHTML());
+  const secs=[];
+  if(!teacher) secs.push(['sheets', T.sheets, sheetsPageHTML()]);
+  if(!teacher) secs.push(['settings', T.settings, `<p class="phow">${T.howSettings}</p>`+focusSettingsHTML()+storyCapHTML()+reminderHTML()+profileAdminHTML()+versionAdminHTML()]);
+  secs.push(['help', T.help, `<p class="phow">${T.howHelp}</p>`+parentGuidanceHTML()]);
+  secs.push(['guide', de?'📖 Anleitung & Hintergrund':'📖 Guide & background', (de?GUIDE_ADULT_DE:GUIDE_ADULT_EN)+`<h3 class="psub">${ABOUT_UI[lang].title}</h3>`+aboutParts(lang).main+`<div class="about-menu">${aboutSectionsHTML(lang,null,true)}</div>`]);
+  html+='<div class="psecs">'+secs.map(([id,title,b])=>`<details class="psec" data-psec="${id}"${open.includes(id)?' open':''}><summary>${title}</summary><div class="psec-body">${b}</div></details>`).join('')+'</div>';
   body.innerHTML=html;
-  body.querySelectorAll('[data-plang]').forEach(b=>b.addEventListener('click',()=>{ store.set('parentLang',b.dataset.plang); renderSheets(); }));
-  body.querySelectorAll('[data-ppage]').forEach(b=>b.addEventListener('click',()=>{ state.ppage=b.dataset.ppage; state.psubj=null; renderSheets(); window.scrollTo(0,0); }));
+  body.querySelectorAll('details.psec').forEach(d=>d.addEventListener('toggle',()=>{ const id=d.dataset.psec, i=open.indexOf(id); if(d.open && i<0) open.push(id); if(!d.open && i>=0) open.splice(i,1); }));
+  body.querySelectorAll('[data-plang]').forEach(b=>b.addEventListener('click',()=>setLang(b.dataset.plang)));
+  const real=$('#pRealData'); if(real) real.addEventListener('click',()=>{ if(!parentAccess) return; restoreRealChild(); renderSheets(); });
+  const play=$('#pPlayTest'); if(play) play.addEventListener('click',playTest);
   body.querySelectorAll('[data-psubj]').forEach(b=>b.addEventListener('click',()=>{ state.psubj=b.dataset.psubj; renderSheets(); window.scrollTo(0,0); }));
   const back=$('#pBack'); if(back) back.addEventListener('click',()=>{ state.psubj=null; renderSheets(); window.scrollTo(0,0); });
   body.querySelectorAll('[data-pfocus]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; const k=b.dataset.pfocus, f=focusTopics().slice(), i=f.indexOf(k); if(i>=0) f.splice(i,1); else f.push(k); store.set('focus',f); renderHome(); renderSheets(); }));
@@ -2916,10 +2938,60 @@ function parentTouch(){
   if(parentTimer) clearTimeout(parentTimer);
   parentTimer=setTimeout(()=>{parentLock();if(state.screen==='about'&&state.aboutTab==='sheets') renderParentGate();},5*60*1000);
 }
-const parentGuideHTML = () => `<details class="parent-guide"><summary>📖 Anleitung für Erwachsene</summary>${GUIDE_ADULT_DE}</details>`;
+const FLAG_DE='<svg class="flagsvg" viewBox="0 0 30 18" aria-hidden="true"><rect width="30" height="6" fill="#000"/><rect y="6" width="30" height="6" fill="#DD0000"/><rect y="12" width="30" height="6" fill="#FFCE00"/></svg>', FLAG_US='<svg class="flagsvg" viewBox="0 0 38 20" aria-hidden="true"><rect width="38" height="20" fill="#fff"/><rect y="0.00" width="38" height="1.54" fill="#B22234"/><rect y="3.08" width="38" height="1.54" fill="#B22234"/><rect y="6.15" width="38" height="1.54" fill="#B22234"/><rect y="9.23" width="38" height="1.54" fill="#B22234"/><rect y="12.31" width="38" height="1.54" fill="#B22234"/><rect y="15.38" width="38" height="1.54" fill="#B22234"/><rect y="18.46" width="38" height="1.54" fill="#B22234"/><rect width="15.2" height="10.77" fill="#3C3B6E"/><circle cx="1.6" cy="1.5" r=".6" fill="#fff"/><circle cx="4.6" cy="1.5" r=".6" fill="#fff"/><circle cx="7.6" cy="1.5" r=".6" fill="#fff"/><circle cx="10.6" cy="1.5" r=".6" fill="#fff"/><circle cx="13.6" cy="1.5" r=".6" fill="#fff"/><circle cx="1.6" cy="4.1" r=".6" fill="#fff"/><circle cx="4.6" cy="4.1" r=".6" fill="#fff"/><circle cx="7.6" cy="4.1" r=".6" fill="#fff"/><circle cx="10.6" cy="4.1" r=".6" fill="#fff"/><circle cx="13.6" cy="4.1" r=".6" fill="#fff"/><circle cx="1.6" cy="6.7" r=".6" fill="#fff"/><circle cx="4.6" cy="6.7" r=".6" fill="#fff"/><circle cx="7.6" cy="6.7" r=".6" fill="#fff"/><circle cx="10.6" cy="6.7" r=".6" fill="#fff"/><circle cx="13.6" cy="6.7" r=".6" fill="#fff"/><circle cx="1.6" cy="9.3" r=".6" fill="#fff"/><circle cx="4.6" cy="9.3" r=".6" fill="#fff"/><circle cx="7.6" cy="9.3" r=".6" fill="#fff"/><circle cx="10.6" cy="9.3" r=".6" fill="#fff"/><circle cx="13.6" cy="9.3" r=".6" fill="#fff"/></svg>';
+const flagsHTML = () => `<span class="flags" role="group" aria-label="Sprache / Language"><button type="button" class="flag${PL()==='de'?' on':''}" data-plang="de" aria-label="Deutsch" aria-pressed="${PL()==='de'}">${FLAG_DE}</button><button type="button" class="flag${PL()==='en'?' on':''}" data-plang="en" aria-label="English" aria-pressed="${PL()==='en'}">${FLAG_US}</button></span>`;
+/* The test account is for the admin only (Peter, 31.10.): one way in, no extra choice for other grown-ups. */
+const testUserFor = () => accountsOn() && adultUser && adultUser.admin ? APP_ACCOUNTS.users.find(u=>u.role==='student' && u.test) || null : null;
+const isTestUser = user => !!(APP_ACCOUNTS && APP_ACCOUNTS.users.some(u=>u.user===user && u.test));
+function switchChild(user){
+  if(!APP_ACCOUNTS.users.some(u=>u.user===user && u.role==='student')) return;
+  const cur=studentSession();
+  // remember who was there before (also "nobody"), so leaving the test account restores exactly that
+  if(isTestUser(user)){ if(!cur || !isTestUser(cur.user)) store.set('sessionPrev',{user:cur?cur.user:null}); }
+  else store.del('sessionPrev');
+  store.set('session',{user}); renderHome();
+}
+/* Back from the test account to the real child (log out of the grown-ups area, return ticket gone). */
+function restoreRealChild(){
+  const prev=store.get('sessionPrev',null);
+  if(prev && isTestAccount()){ if(prev.user) store.set('session',{user:prev.user}); else store.del('session'); }
+  store.del('sessionPrev'); renderHome();
+}
+/* "Try as test child" (Peter, 31.10.): play the test account without a new login and come back to the
+   grown-ups area with one tap. The return ticket lives only in memory and expires with the usual
+   grown-up rules (app in the background, log out). */
+let testReturn=null, testReturnTimer=null;
+function dropTestReturn(){ testReturn=null; if(testReturnTimer) clearTimeout(testReturnTimer); testReturnTimer=null; }
+function playTest(){
+  if(!parentAccess || !accountsOn() || !adultUser) return;
+  const t=testUserFor(); if(!t) return;
+  if((studentSession()||{}).user!==t.user) switchChild(t.user);
+  const back={...adultUser};
+  parentLock(); testReturn=back;
+  testReturnTimer=setTimeout(()=>{ dropTestReturn(); renderTestBar(); },30*60*1000);
+  renderHome(); show('home'); window.scrollTo(0,0);
+}
+function backFromTest(){
+  const u=testReturn; dropTestReturn(); if(!u || !isTestAccount()){ renderHome(); return; }
+  loginDone(APP_ACCOUNTS.users.find(x=>x.user===u.user)||u);
+}
 function parentHeaderHTML(){
-  if(accountsOn() && adultUser) return `<h2>${adultUser.role==='teacher'?'Lehrkraft-Ansicht':'Elternbereich'}</h2><p>Angemeldet als <b>${esc(adultUser.user)}</b> (${adultUser.admin?'Admin':adultUser.role==='teacher'?'Lehrkraft':'Eltern'}). Übungsbeobachtungen auf diesem Gerät, keine schulische Bewertung. <button class="btn small" id="parentClose" type="button">Abmelden</button></p><p class="small">Abmeldung beim Verlassen, beim Wechsel in den Hintergrund und nach fünf Minuten ohne Bedienung.</p>${parentGuideHTML()}`;
-  return '<h2>Elternbereich</h2><p>Nur für Erwachsene: Übungsbeobachtungen auf diesem Gerät, keine schulische Bewertung. <button class="btn small" id="parentClose" type="button">Sperren</button></p><p class="small">Sperrt beim Verlassen, beim Wechsel in den Hintergrund und nach fünf Minuten ohne Bedienung. Die PIN ist ein lokaler Bedienungsschutz; sie ersetzt nicht das Passwort der verschlüsselten App.</p>';}
+  const de=PL()==='de', v=APP_VERSION?versionLabel():'';
+  let who, close, note;
+  if(accountsOn() && adultUser){
+    who=`${adultUser.role==='teacher'?(de?'Lehrkraft-Ansicht':'Teacher view'):(de?'Elternbereich':'Grown-ups area')} · <b>${esc(adultUser.user)}</b>`;
+    close=de?'Abmelden':'Log out';
+    const role=adultUser.admin?'Admin':adultUser.role==='teacher'?(de?'Lehrkraft':'teacher'):(de?'Eltern':'parent');
+    note=(de?`Angemeldet als <b>${esc(adultUser.user)}</b> (${role}). `:`Logged in as <b>${esc(adultUser.user)}</b> (${role}). `)+(de?'Übungsbeobachtungen auf diesem Gerät, keine schulische Bewertung. Abmeldung beim Verlassen, im Hintergrund und nach fünf Minuten ohne Bedienung.':'Practice observations on this device, not a school assessment. You are logged out when you leave, when the app goes to the background and after five minutes without use.');
+  } else {
+    who=de?'Elternbereich':'Grown-ups area'; close=de?'Sperren':'Lock';
+    note=de?'Nur für Erwachsene: Übungsbeobachtungen auf diesem Gerät, keine schulische Bewertung. Sperrt beim Verlassen, beim Wechsel in den Hintergrund und nach fünf Minuten ohne Bedienung. Die PIN ist ein lokaler Bedienungsschutz; sie ersetzt nicht das Passwort der verschlüsselten App.':'Grown-ups only: practice observations on this device, not a school assessment. Locks when you leave, when the app goes to the background and after five minutes without use. The PIN is a local guard; it does not replace the password of the encrypted app.';
+  }
+  const test=testUserFor();
+  let h=`<header class="phdr"><div class="phdr-row"><span class="phdr-who">👪 ${who}</span><span class="phdr-act">${v?`<span class="phdr-ver" id="pVersion">${esc(v)}</span>`:''}${flagsHTML()}${test?`<button type="button" class="btn small" id="pPlayTest">🧪 ${de?'Testkind':'Test child'}</button>`:''}<button class="btn small" id="parentClose" type="button">${close}</button></span></div>`;
+  if(accountsOn() && isTestAccount()) h+=`<div class="phdr-row phdr-test">🧪 <b>${de?'Hier stehen Testdaten.':'You are looking at test data.'}</b>${store.get('sessionPrev',null)?`<button type="button" class="btn small" id="pRealData">${de?'Zurück zu echten Daten':'Back to real data'}</button>`:''}</div>`;
+  return h+`</header><p class="small">${note}</p>`;
+}
 /* ---------- login (S3, Peter 30.10.) ----------
    Role first (like the school platform), then user name + password. Accounts come from the admin
    (build, werkzeug/konten.json). First login on a device uses the start code, then everyone chooses
@@ -2961,6 +3033,7 @@ const HELP={
   profile:{title:'Profilangaben',text:'<p>Name, Geburtstag (ohne Jahr) und Emoji, die das Kind unter „My profile“ eingetragen hat. Sie liegen nur auf diesem Gerät. Löschen entfernt nur diese Angaben, keine Lerndaten.</p>'},
   version:{title:'App-Version',text:'<p>Zeigt den Stand der App auf diesem Gerät. „Nach neuer Version suchen“ vergleicht mit der veröffentlichten Seite. Neue Versionen kommen beim nächsten Öffnen; sonst die App ganz schließen und neu öffnen.</p>'},
   sheets:{title:'Übungsblätter eintragen',text:'<p>Pro Aufgabe „Right“, „With help“ oder „Not yet“ antippen. „With help“ und „Not yet“ sind gut so: Die App bietet dann leichtere Schritte an und wiederholt die Aufgabe später.</p>'},
+  testday:{noGuide:true,title:'Testkonto: +1 Tag',text:'<p><b>+1 Tag</b> stellt die Uhr der App nur für dieses Testkonto einen Tag vor. So sehen Sie sofort, was sonst erst morgen passiert: Fehler kommen als Wiederholung zurück, der Lernbaum wächst, die Einschätzung im Elternbereich sammelt Übungstage.</p><p>Die Daten des Kindes bleiben unberührt. <b>Testdaten löschen</b> setzt das Testkonto ganz zurück (auch den Tag).</p>'},
   guidance:{title:'Unterstützen wie die Schule',text:'<p>Kurze Hinweise, wie die Schule ein Thema zeigt, und drei Fragen statt einer Erklärung. Bitte keinen zweiten Rechenweg danebenstellen.</p>'}
 };
 const ADULT_H2=[['Einschätzung','overview'],['Summary','overview'],['Übungsbeobachtungen','overview'],['Fokus-Themen','focus'],['Freiwillige Kalender','calendar'],['Settings','storycap'],['Profilangaben','profile'],['App-Version','version'],['Practice sheets','sheets'],['So unterstützen','guidance']];
@@ -2969,21 +3042,20 @@ function openHelp(key){
   const h=HELP[key]; if(!h) return;
   $('#helpTitle').textContent=h.title; $('#helpText').innerHTML=h.text;
   const inAdultArea=state.screen==='about' && state.aboutTab==='sheets';
-  $('#helpGuide').hidden=inAdultArea; $('#helpGuide').textContent=h.kid?'📖 Guide':'📖 Anleitung'; $('#helpGuide').dataset.kind=h.kid?'kid':'adult';
+  $('#helpGuide').hidden=inAdultArea||!!h.noGuide; $('#helpGuide').textContent=h.kid?'📖 Guide':'📖 Anleitung'; $('#helpGuide').dataset.kind=h.kid?'kid':'adult';
   const d=$('#helpDlg'); if(d.showModal) d.showModal(); else d.setAttribute('open','');
 }
 function closeHelp(){ const d=$('#helpDlg'); if(d.close) d.close(); else d.removeAttribute('open'); }
 function openGuide(kind){
-  const tab=kind==='kid'?'en':'de', title=kind==='kid'?'How to use Big Quest':'Anleitung für Erwachsene';
-  openAbout(tab);
-  const i=aboutParts(tab).sections.findIndex(s=>s.title===title);
-  if(i>=0){ state.aboutSub=i; renderAboutPage(); }
+  // The child guide is for the child: always in English. The grown-ups guide keeps the chosen language.
+  if(kind==='kid'){ openAbout('en', 'How to use Big Quest'); return; }
+  openAbout('info', PL()==='de'?'Anleitung für Erwachsene':'Guide for grown-ups');
 }
 /* Short help on the login screen: the app (and its guides in "About") is not open yet here. */
 const LOGIN_HELP=`<details class="login-help"><summary>❓ Help / Hilfe</summary>
 <p><b>Students:</b> tap 🎒 Student, type your user name and password. The first time, use the start code from your grown-up and then choose your own password.</p>
 <p><b>Erwachsene:</b> „👪 Parent / Teacher“, Benutzername und Startcode beim ersten Mal, dann ein eigenes Passwort (mindestens 8 Zeichen). Das Passwort gilt nur auf diesem Gerät.</p>
-<p>Passwort vergessen? / Forgot your password? Der Startcode funktioniert immer. Nach 5 Fehlversuchen 30 Sekunden warten. Die ausführlichen Anleitungen stehen nach der Anmeldung unter „About“.</p></details>`;
+<p>Passwort vergessen? / Forgot your password? Der Startcode funktioniert immer. Nach 5 Fehlversuchen 30 Sekunden warten. Die ausführlichen Anleitungen stehen nach der Anmeldung unter „📖 How Big Quest works“.</p></details>`;
 function renderLogin(role){
   const b=$('#loginBody'), T=LOGIN_TXT;
   if(!role){
@@ -3032,14 +3104,14 @@ function renderWelcome(u){
   const kid=u.role==='student';
   $('#loginBody').innerHTML=kid
     ? `<h2>Welcome to Big Quest! 🎉</h2><ul class="welcome"><li>🎯 <b>Practise Today</b> gives you 8 questions. Or pick a subject.</li><li>💡 <b>A mistake?</b> You get a hint and try again. “Show me how” is always OK.</li><li>⭐ Every solved task gives a star. Your <b>learning tree</b> grows on every practice day.</li><li>❓ <b>Help</b> is at the bottom of the start page. ⓘ explains things.</li><li>🔒 You stay logged in on this iPad. Tap <b>Log out</b> if someone else wants to use it.</li></ul><button class="btn primary" id="welcomeGo" type="button">Let’s go!</button>`
-    : `<h2>Willkommen, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 <b>Daten nur auf diesem Gerät:</b> Den Lernstand des Kindes sehen Sie auf dem Gerät, auf dem es übt.</li><li>🔑 Ihr Passwort gilt nur auf diesem Gerät. Auf einem weiteren Gerät einmal mit dem Startcode anmelden.</li><li>🚪 Abmeldung automatisch beim Verlassen, im Hintergrund und nach 5 Minuten.</li><li>📖 Die <b>Anleitung für Erwachsene</b> steht oben im Elternbereich, ⓘ erklärt jeden Abschnitt.</li></ul><button class="btn primary" id="welcomeGo" type="button">Los geht’s</button>`;
+    : `<h2>Willkommen, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 <b>Daten nur auf diesem Gerät:</b> Den Lernstand des Kindes sehen Sie auf dem Gerät, auf dem es übt.</li><li>🔑 Ihr Passwort gilt nur auf diesem Gerät. Auf einem weiteren Gerät einmal mit dem Startcode anmelden.</li><li>🚪 Abmeldung automatisch beim Verlassen, im Hintergrund und nach 5 Minuten.</li><li>📖 Die <b>Anleitung für Erwachsene</b> klappen Sie im Elternbereich auf, ⓘ erklärt jeden Abschnitt.</li></ul><button class="btn primary" id="welcomeGo" type="button">Los geht’s</button>`;
   $('#welcomeGo').addEventListener('click',()=>loginDone(u));
   $('#welcomeGo').focus();
 }
 function loginDone(u){
   $('#loginBody').innerHTML='';
   if(u.role==='student'){ store.set('session',{user:u.user}); adultUser=null; renderHome(); show('home'); }
-  else { adultUser={user:u.user, role:u.role, admin:!!u.admin}; parentAccess=true; state.ppage='home'; state.psubj=null; parentTouch(); openAbout('sheets'); }
+  else { adultUser={user:u.user, role:u.role, admin:!!u.admin}; parentAccess=true; state.psubj=null; state.popen=[]; parentTouch(); openAbout('sheets'); }
 }
 /* Test account bar: clearly marked, separate data, jump ahead one day, reset everything. */
 function renderTestBar(){
@@ -3047,23 +3119,26 @@ function renderTestBar(){
   if(!isTestAccount()){ bar.hidden=true; bar.innerHTML=''; return; }
   const off=+store.get('dayOffset',0)||0;
   bar.hidden=false;
-  bar.innerHTML=`🧪 <b>Test account</b> – separate test data. Day: ${off?'+'+off:'today'} (${dayKey()}) <span class="row" style="gap:6px;margin-top:6px"><button class="btn small" id="testDay" type="button">+1 day</button><button class="btn small" id="testReset" type="button">Reset test data</button></span>`;
+  bar.innerHTML=`🧪 <b>Testkonto</b> – eigene Testdaten. Tag: ${off?'+'+off:'heute'} (${dayKey()}) <span class="test-actions"><button class="btn small" id="testDay" type="button">+1 Tag</button><button type="button" class="info-btn" data-help="testday" aria-label="Info">ⓘ</button><button class="btn small" id="testReset" type="button">Testdaten löschen</button>${testReturn?'<button class="btn small primary" id="testBack" type="button">↩ Zurück zum Elternbereich</button>':''}</span>`;
   $('#testDay').addEventListener('click',()=>{ store.set('dayOffset',off+1); renderHome(); });
   $('#testReset').addEventListener('click',()=>{
-    if(!confirm('Delete all data of this test account on this device?')) return;
+    if(!confirm('Alle Daten dieses Testkontos auf diesem Gerät löschen?')) return;
     const ns=childNs(); if(!ns) return;
     Object.keys(localStorage).filter(k=>k.startsWith('bq2_'+ns+'__')).forEach(k=>localStorage.removeItem(k));
     try{ indexedDB.deleteDatabase('bq2_audio__'+ns); }catch(e){}
     renderHome();
   });
+  const back=$('#testBack'); if(back) back.addEventListener('click',backFromTest);
 }
 function logout(){
+  dropTestReturn();
   if(adultUser){ adultUser=null; parentLock(); }
   try{ localStorage.removeItem('bq2_session'); }catch(e){}
   showLogin();
 }
 function renderParentGate(){
   if(accountsOn()){ adultUser=null; if(studentSession()){ renderHome(); show('home'); } else showLogin(); return; }
+  aboutChrome();
   const existing=store.get('parentPin',null), body=$('#aboutBody');
   body.innerHTML=`<h2>Elternbereich</h2><p>${existing?'Bitte geben Sie Ihre Eltern-PIN ein.':'Ein Erwachsener richtet hier einmal eine eigene Eltern-PIN ein. Nicht das Passwort der App verwenden.'}</p><form id="parentForm" class="field"><label for="parentPin">${existing?'PIN':'Neue PIN (4 bis 8 Ziffern)'}</label><input id="parentPin" type="password" inputmode="numeric" pattern="[0-9]{4,8}" minlength="4" maxlength="8" autocomplete="off" required>${existing?'':'<label for="parentPinAgain">PIN wiederholen</label><input id="parentPinAgain" type="password" inputmode="numeric" pattern="[0-9]{4,8}" minlength="4" maxlength="8" autocomplete="off" required>'}<button class="btn" type="submit">${existing?'Öffnen':'PIN einrichten'}</button><p id="parentMessage" role="status"></p></form><p class="small">Die PIN gilt nur auf diesem Gerät. Vergessen? Den lokalen PIN-Eintrag durch einen Erwachsenen zurücksetzen lassen; Lerndaten müssen dafür nicht gelöscht werden.</p>`;
   $('#parentForm').addEventListener('submit',async e=>{
@@ -3088,7 +3163,7 @@ function renderParentGate(){
         if(!store.get('parentPin',null)) throw new Error('storage unavailable');
       }
       if(state.screen!=='about'||state.aboutTab!=='sheets') return;
-      parentFailures=0; parentAccess=true; state.ppage='home'; state.psubj=null; parentTouch();renderSheets();
+      parentFailures=0; parentAccess=true; state.psubj=null; state.popen=[]; parentTouch();renderSheets();
     }catch(err){message.textContent='Der geschützte Bereich konnte nicht geöffnet werden. Bitte im aktuellen Browser erneut versuchen.';button.disabled=false;}
   });
 }
@@ -3154,7 +3229,7 @@ function calendarText(days,time,text,now=new Date()){
 }
 function bindParentSettings(){
   bindStoryCap(); bindProfileAdmin(); bindVersionAdmin(); addAdultInfo($('#aboutBody'));
-  const pc=$('#parentClose'); if(pc) pc.addEventListener('click',()=>{parentLock();renderParentGate();});
+  const pc=$('#parentClose'); if(pc) pc.addEventListener('click',()=>{ if(accountsOn()) restoreRealChild(); parentLock(); renderParentGate(); });
   if($('#focusForm')) $('#focusForm').addEventListener('submit',e=>{
     e.preventDefault();if(!parentAccess) return;
     const chosen=Array.from(new FormData(e.currentTarget).getAll('focus'));
@@ -3368,39 +3443,46 @@ const ABOUT_EN=()=>`
 <p><b>Reading recordings:</b> the microphone opens only after tapping “Aufnahme starten” and is released after “Stopp”. The last three recordings stay only in this device's storage; the app never sends them. They leave the device only if someone shares or saves them via “Teilen / Sichern”. Every recording can be deleted.</p>
 <h3>Sources</h3>${sourcesHTML()}
 `;
-/* About as a menu with sub-pages (Peter, 30.10.): the overview keeps intro, the important note
-   and the version; every topic (incl. side notes, privacy and sources) opens as its own page. */
-const ABOUT_UI={de:{menu:'Themen',back:'← Übersicht',stand:'Stand: 30. Oktober 2026.'},en:{menu:'Topics',back:'← Overview',stand:'Last updated: 30 October 2026.'}};
+/* "So funktioniert Big Quest" (Peter, 30./31.10.): intro and important note, then every topic as an
+   accordion that opens in place (no clicking from page to page). Language via the flags 🇩🇪/🇺🇸. */
+const ABOUT_UI={de:{title:'📖 So funktioniert Big Quest',stand:'Stand: 30. Oktober 2026.'},en:{title:'📖 How Big Quest works',stand:'Last updated: 30 October 2026.'}};
 /* The user guide depends on the login (Peter, 31.10.): a logged-in child sees the child guide, not the
-   grown-ups guide; grown-ups find theirs at the top of the grown-ups area. Without accounts: both. */
+   grown-ups guide; grown-ups find theirs in the grown-ups area. Without accounts: both. */
 const ADULT_GUIDE_TITLES=['Anleitung für Erwachsene','Guide for grown-ups'];
 function aboutParts(lang){
   const html=lang==='en'?ABOUT_EN():ABOUT_DE(), parts=html.split('<h3>');
   let sections=parts.slice(1).map(p=>{ const i=p.indexOf('</h3>'); return {title:p.slice(0,i), body:p.slice(i+5)}; });
-  if(accountsOn() && studentSession()) sections=sections.filter(s=>!ADULT_GUIDE_TITLES.includes(s.title));
+  if(accountsOn() && studentSession() && !adultUser) sections=sections.filter(s=>!ADULT_GUIDE_TITLES.includes(s.title));
   return {main:parts[0], sections};
 }
-function renderAboutPage(){
-  const lang=state.aboutTab==='en'?'en':'de', ui=ABOUT_UI[lang], {main,sections}=aboutParts(lang), body=$('#aboutBody'), sub=state.aboutSub;
-  if(sub!=null && sections[sub]){
-    body.innerHTML=`<button class="btn small" id="aboutUp" type="button">${ui.back}</button><h2 class="about-sub-title">${sections[sub].title}</h2>${sections[sub].body}`;
-    $('#aboutUp').addEventListener('click',()=>{ state.aboutSub=null; renderAboutPage(); });
-  } else {
-    body.innerHTML=main+`<nav class="about-menu" aria-label="${ui.menu}">`+sections.map((s,i)=>`<button type="button" class="about-item" data-sec="${i}"><span>${s.title}</span><span aria-hidden="true">›</span></button>`).join('')+`</nav><p class="small">${ui.stand}</p>${appVersionLine()}`;
-    body.querySelectorAll('[data-sec]').forEach(b=>b.addEventListener('click',()=>{ state.aboutSub=+b.dataset.sec; renderAboutPage(); }));
-  }
-  window.scrollTo(0,0);
+const aboutSectionsHTML = (lang, open, noAdultGuide) => aboutParts(lang).sections.filter(s=>!(noAdultGuide && ADULT_GUIDE_TITLES.includes(s.title))).map(s=>`<details class="about-sec"${s.title===open?' open':''}><summary>${s.title}</summary><div class="about-sec-body">${s.body}</div></details>`).join('');
+function renderAboutPage(open){
+  const lang=PL(), ui=ABOUT_UI[lang], {main}=aboutParts(lang), body=$('#aboutBody');
+  body.innerHTML=main+`<div class="about-menu">${aboutSectionsHTML(lang, open)}</div><p class="small">${ui.stand}</p>${appVersionLine()}`;
+  if(open){ const d=[...body.querySelectorAll('details.about-sec')].find(x=>x.open); if(d) setTimeout(()=>d.scrollIntoView({block:'start'}),0); }
+  else window.scrollTo(0,0);
 }
-function openAbout(tab){
-  // A logged-in grown-up may read "About" without being logged out (Peter, 31.10.).
+/* Grown-ups area: own header (language, version, log out), no back arrow that leaves by accident.
+   Elsewhere one title only: the chip, or - with the grown-ups tab - the two tabs. */
+function aboutChrome(){
+  const adultView=state.aboutTab==='sheets' && parentAccess, tabs=!adultView && !(accountsOn() && !adultUser);
+  $('#aboutTop').hidden=adultView; $('#aboutTabs').hidden=!tabs; $('#aboutChip').hidden=tabs;
+  $('#aboutChip').textContent=ABOUT_UI[PL()].title; $('#tabInfo').textContent=ABOUT_UI[PL()].title;
+  ['tabDe','tabEn'].forEach(id=>{ const on=PL()===(id==='tabDe'?'de':'en'); $('#'+id).classList.toggle('on',on); $('#'+id).setAttribute('aria-pressed',on); });
+  ['tabInfo','tabSheets'].forEach(id=>$('#'+id).classList.toggle('primary', {tabInfo:'info',tabSheets:'sheets'}[id]===state.aboutTab));
+}
+function setLang(l){ store.set(langKey(),l); if(state.screen==='about') openAbout(state.aboutTab==='sheets'?'sheets':'info'); }
+function openAbout(tab, open){
+  if(tab==='de'||tab==='en'){ store.set(langKey(),tab); tab='info'; }
+  // A logged-in grown-up may read the info pages without being logged out (Peter, 31.10.).
   if(tab!=='sheets' && !(accountsOn() && adultUser)) parentLock();
-  state.aboutTab=tab||'de'; state.aboutSub=null;
+  state.aboutTab=tab||'info'; state.aboutSub=null;
   // With accounts there is no grown-ups tab for children: grown-ups log in openly instead.
   $('#tabSheets').hidden=accountsOn() && !adultUser;
   if(state.aboutTab==='sheets' && accountsOn() && !adultUser){ showLogin('adult'); return; }
-  ['tabDe','tabEn','tabSheets'].forEach(id=>$('#'+id).classList.toggle('primary', {tabDe:'de',tabEn:'en',tabSheets:'sheets'}[id]===state.aboutTab));
+  aboutChrome();
   if(state.aboutTab==='sheets') renderSheets();
-  else renderAboutPage();
+  else renderAboutPage(open);
   show('about'); snapshot();
 }
 
@@ -3566,10 +3648,11 @@ $('#helpClose').addEventListener('click',closeHelp);
 $('#helpGuide').addEventListener('click',()=>{ const k=$('#helpGuide').dataset.kind; closeHelp(); closeSheetDlg(); openGuide(k); });
 $('#logoutBtn').addEventListener('click',logout);
 $('#aboutBack').addEventListener('click',()=>{ state.back='home'; goBack(); });
-$('#tabDe').addEventListener('click',()=>openAbout('de'));
-$('#tabEn').addEventListener('click',()=>openAbout('en'));
+$('#tabDe').addEventListener('click',()=>setLang('de'));
+$('#tabEn').addEventListener('click',()=>setLang('en'));
+$('#tabInfo').addEventListener('click',()=>openAbout('info'));
 $('#tabSheets').addEventListener('click',()=>openAbout('sheets'));
-document.addEventListener('visibilitychange',()=>{if(!document.hidden) checkForUpdate(); if(document.hidden){recStop();parentLock();if(state.screen==='about'&&state.aboutTab==='sheets') renderParentGate();}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden) checkForUpdate(); if(document.hidden){recStop();parentLock();if(testReturn){dropTestReturn();renderTestBar();}if(state.screen==='about'&&state.aboutTab==='sheets') renderParentGate();}});
 $('#aboutBody').addEventListener('pointerdown',parentTouch);
 $('#aboutBody').addEventListener('keydown',parentTouch);
 window.addEventListener('hashchange',()=>{if(location.hash==='#eltern') openAbout('sheets');});

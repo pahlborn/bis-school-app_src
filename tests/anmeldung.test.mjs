@@ -14,12 +14,12 @@ import { kontenEinsetzen, kontenPruefen, pbkdf2Hex, normCode, codeErzeugen } fro
 import { TEST_PW } from './hilfen.mjs';
 import { browserStarten, appOeffnen } from './app-hilfen.mjs';
 
-const CODES = { mia: 'ABCD-EFGH', papa: 'PAPA-2345', frau: 'TEAC-HER2', probe: 'TEST-2345' };
+const CODES = { mia: 'ABCD-EFGH', papa: 'PAPA-2345', frau: 'TEAC-HER2', probe: 'TEST-2345', chef: 'CHEF-2345' };
 async function konto(user, role, kinder) {
   const salt = Array.from({ length: 16 }, (_, i) => i + user.length);
   return { user, role, ...(kinder ? { kinder } : {}), start: { salt, hash: await pbkdf2Hex(normCode(CODES[user]), salt) } };
 }
-const KONTEN = { users: [await konto('mia', 'student'), await konto('papa', 'parent', ['mia']), await konto('frau', 'teacher', ['mia']), { ...(await konto('probe', 'student')), test: true }] };
+const KONTEN = { users: [await konto('mia', 'student'), await konto('papa', 'parent', ['mia']), await konto('frau', 'teacher', ['mia']), { ...(await konto('probe', 'student')), test: true }, { ...(await konto('chef', 'parent', ['mia'])), admin: true }] };
 const app = kontenEinsetzen(await fs.readFile(path.join(WURZEL, QUELLEN.app)), KONTEN);
 
 let browser, server;
@@ -112,8 +112,8 @@ test('child view has no grown-ups tab; "Grown-ups" opens the grown-ups login ope
   await page.waitForSelector('#home:not([hidden])');
   await page.locator('#aboutBtn').click();
   assert.equal(await sichtbar(page, '#tabSheets'), false);
-  const menue = await page.locator('#aboutBody .about-item span:first-child').allTextContents();
-  assert.ok(menue.some((x) => x.startsWith('How to use Big Quest')), 'child guide for the child');
+  const menue = await page.$$eval('#aboutBody details.about-sec > summary', (s) => s.map((x) => x.textContent.trim()));
+  assert.deepEqual(menue.slice(0, 1), ['How to use Big Quest'], 'child guide for the child, in English by default');
   assert.ok(!menue.includes('Anleitung für Erwachsene'), 'no grown-ups guide for the child');
   await page.locator('#aboutBack').click();
   await page.locator('#adultBtn').click();
@@ -125,7 +125,8 @@ test('child view has no grown-ups tab; "Grown-ups" opens the grown-ups login ope
   await page.waitForSelector('#parentClose');
   assert.ok((await page.textContent('#aboutBody')).includes('Angemeldet als papa'));
   assert.ok(await page.locator('.psubject').count());
-  await page.locator('#aboutBack').click();
+  assert.equal(await sichtbar(page, '#aboutBack'), false, 'no back arrow in the grown-ups area');
+  await page.locator('#parentClose').click();
   await page.waitForSelector('#home:not([hidden])');
   assert.equal(await page.locator('#focusForm').count(), 0);
   await page.locator('#aboutBtn').click();
@@ -137,23 +138,54 @@ test('child view has no grown-ups tab; "Grown-ups" opens the grown-ups login ope
   await ctx.close();
 });
 
-test('grown-up can read "About" (both languages) and return without being logged out', async () => {
-  const { ctx, page, fehler } = await oeffnen();
+test('grown-ups header: language flags, version and log out always in view; info pages open in place without logout', async () => {
+  const { ctx, page, fehler } = await oeffnen({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   await anmelden(page, 'adult', 'papa', CODES.papa); await passwortSetzen(page, 'langes-passwort');
   await page.waitForSelector('#parentClose');
-  assert.equal(await page.textContent('#tabDe'), 'ℹ️ Über die App');
-  assert.equal(await page.textContent('#tabEn'), 'ℹ️ About the app');
-  await page.locator('#tabDe').click();
-  assert.ok(await page.locator('#aboutBody .about-item').count() >= 7);
-  await page.locator('#tabEn').click();
-  await page.locator('#tabSheets').click();
-  await page.waitForSelector('#parentClose');
+  for (const sel of ['.phdr [data-plang="de"]', '.phdr [data-plang="en"]', '#parentClose']) assert.ok(await sichtbar(page, sel), sel);
+  assert.equal(await sichtbar(page, '#aboutBack'), false, 'no back arrow that leaves the area');
+  assert.equal(await sichtbar(page, '#aboutTabs'), false, 'no tab row');
+  // scroll far down: header stays at the top (sticky)
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  const top = await page.locator('.phdr').evaluate((h) => h.getBoundingClientRect().top);
+  assert.ok(top >= -1 && top < 5, 'header stays in view: ' + top);
+  assert.ok(await page.locator('#parentClose').isVisible());
+  // English with the flag, also for the chapters
+  await page.locator('.phdr [data-plang="en"]').click();
+  assert.match(await page.textContent('.phdr'), /Grown-ups area/);
+  assert.match(await page.textContent('#parentClose'), /Log out/);
+  assert.deepEqual(await page.$$eval('#aboutBody details.psec > summary', (s) => s.map((x) => x.textContent.trim())),
+    ['📄 Practice sheets', '⚙️ Settings', '💡 Help like the school', '📖 Guide & background']);
+  // guide and info pages are one reading chapter: reading keeps the grown-up logged in
+  await page.locator('#aboutBody details.psec[data-psec="guide"] > summary').click();
+  const ab = page.locator('#aboutBody details.psec[data-psec="guide"] details.about-sec').first();
+  await ab.locator('summary').click();
+  assert.ok(await ab.locator('.about-sec-body').isVisible());
   assert.ok(await page.locator('.psubject').count(), 'still logged in');
+  await page.locator('.phdr [data-plang="de"]').click();
+  assert.ok(await page.locator('#aboutBody details.psec[data-psec="guide"]').evaluate((d) => d.open), 'opened chapter stays open after switching language');
+  assert.equal(await page.locator('#pPlayTest').count(), 0, 'no test child for a parent without admin');
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
 
-test('test account: own data apart from the child, "+1 day" brings reviews back, reset clears only test data', async () => {
+test('grown-ups area: chapters open in place, no sub-pages', async () => {
+  const { ctx, page, fehler } = await oeffnen();
+  await anmelden(page, 'adult', 'papa', CODES.papa); await passwortSetzen(page, 'langes-passwort');
+  await page.waitForSelector('#parentClose');
+  assert.equal(await page.locator('[data-ppage]').count(), 0, 'no page buttons any more');
+  assert.equal(await page.locator('#aboutBody details.psec[open]').count(), 0, 'chapters closed at the start');
+  for (const id of ['sheets', 'settings', 'help', 'guide']) {
+    const d = page.locator(`#aboutBody details.psec[data-psec="${id}"]`);
+    await d.locator('summary').first().click();
+    assert.ok(await d.locator('.psec-body').isVisible(), id);
+  }
+  assert.ok(await page.locator('#focusForm').isVisible(), 'settings content reachable');
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
+
+test('test account: own data apart from the child, "+1 Tag" with ⓘ, reset clears only test data', async () => {
   const { ctx, page, fehler } = await oeffnen();
   // the real child practises first
   await anmelden(page, 'student', 'mia', CODES.mia); await passwortSetzen(page, 'mond');
@@ -164,11 +196,16 @@ test('test account: own data apart from the child, "+1 day" brings reviews back,
   // test account
   await anmelden(page, 'student', 'probe', CODES.probe); await passwortSetzen(page, 'probe1');
   await page.waitForSelector('#testBar:not([hidden])');
-  assert.match(await page.textContent('#testBar'), /Test account/);
+  assert.match(await page.textContent('#testBar'), /Testkonto/);
+  assert.equal(await page.isVisible('#testBack'), false, 'no way into the grown-ups area without a grown-up');
   assert.equal(await page.textContent('#totalStars'), '0', 'test account starts empty');
+  // ⓘ explains "+1 Tag"
+  await page.locator('#testBar .info-btn[data-help="testday"]').click();
+  assert.ok(await page.locator('#helpDlg').isVisible());
+  assert.match(await page.textContent('#helpText'), /einen Tag vor/);
+  assert.equal(await page.isVisible('#helpGuide'), false, 'no guide jump here');
+  await page.locator('#helpClose').click();
   await page.locator('#todayBtn').click();
-  const q = await page.evaluate(() => window.__bq && window.__bq.round && window.__bq.round[0]);
-  // answer the first question wrongly (any wrong option) to create a review
   await page.locator('#qAnswers .opt:not(.correct)').first().click().catch(() => {});
   await page.locator('#quitBtn').click();
   const keys = await page.evaluate(() => Object.keys(localStorage));
@@ -180,12 +217,74 @@ test('test account: own data apart from the child, "+1 day" brings reviews back,
   assert.match(await page.textContent('#testBar'), /\+1/);
   page.once('dialog', (d) => d.accept());
   await page.locator('#testReset').click();
-  // after the reset the start page begins fresh (it quietly notes the current title again)
   const nachher = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('bq2_probe__')));
-  assert.deepEqual(nachher.filter((k) => k !== 'bq2_probe__rankSeen'), []);
+  assert.deepEqual(nachher.filter((k) => k !== 'bq2_probe__rankSeen' && k !== 'bq2_probe__kidLang'), []);
   assert.equal(await page.evaluate(() => localStorage.getItem('bq2_total')), '7', 'child data still untouched');
   assert.ok(await page.evaluate(() => localStorage.getItem('bq2_pw_probe')), 'own password survives the reset');
   assert.deepEqual(fehler, []);
+  await ctx.close();
+});
+
+test('admin: try the test child and come back without a new login; log out returns the device to the real child', async () => {
+  const { ctx, page, fehler } = await oeffnen();
+  await anmelden(page, 'student', 'mia', CODES.mia); await passwortSetzen(page, 'mond');
+  await page.waitForSelector('#home:not([hidden])');
+  await page.evaluate(() => localStorage.setItem('bq2_total', '7'));
+  await page.locator('#adultBtn').click();
+  await anmelden(page, 'adult', 'chef', CODES.chef); await passwortSetzen(page, 'langes-passwort');
+  await page.waitForSelector('#parentClose');
+  assert.equal(await page.locator('.phdr-test').count(), 0, 'real data at the start');
+  await page.locator('#pPlayTest').click();
+  await page.waitForSelector('#home:not([hidden])');
+  assert.match(await page.textContent('#testBar'), /Testkonto/);
+  assert.equal(await page.textContent('#totalStars'), '0', 'test data, not the child');
+  // info pages from the test account and back: stays in the test account, return still offered
+  await page.locator('#aboutBtn').click();
+  assert.ok(await page.locator('#about').isVisible());
+  assert.equal(await sichtbar(page, '#tabSheets'), false);
+  await page.locator('#aboutBack').click();
+  await page.waitForSelector('#home:not([hidden])');
+  assert.match(await page.textContent('#testBar'), /Testkonto/, 'still the test account');
+  assert.ok(await page.locator('#testBack').isVisible(), 'return to the grown-ups area still there');
+  await page.locator('#testBack').click();
+  await page.waitForSelector('#parentClose');
+  assert.match(await page.textContent('#aboutBody'), /Angemeldet als chef/);
+  assert.match(await page.textContent('.phdr-test'), /Testdaten/, 'clearly marked: test data');
+  await page.locator('#pRealData').click();
+  assert.equal(await page.locator('.phdr-test').count(), 0, 'back to real data');
+  // play again, come back, log out: the device goes back to the real child
+  await page.locator('#pPlayTest').click(); await page.locator('#testBack').click();
+  await page.waitForSelector('#parentClose');
+  await page.locator('#parentClose').click();
+  await page.waitForSelector('#home:not([hidden])');
+  assert.equal(await page.isVisible('#testBar'), false, 'real child again');
+  assert.equal(await page.textContent('#totalStars'), '7');
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
+
+test('admin on a device without a child logged in: after the test child, log out leads to the login, not to the test account', async () => {
+  const { ctx, page, fehler } = await oeffnen();
+  await anmelden(page, 'adult', 'chef', CODES.chef); await passwortSetzen(page, 'langes-passwort');
+  await page.waitForSelector('#parentClose');
+  await page.locator('#pPlayTest').click(); await page.locator('#testBack').click();
+  await page.waitForSelector('.phdr-test');
+  assert.ok(await page.locator('#pRealData').isVisible(), 'way back to real data');
+  await page.locator('#parentClose').click();
+  await page.waitForSelector('#login:not([hidden])');
+  assert.equal(await page.evaluate(() => localStorage.getItem('bq2_session')), null, 'no test session left on the device');
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
+
+test('the return ticket from the test child expires when the app goes to the background', async () => {
+  const { ctx, page } = await oeffnen();
+  await anmelden(page, 'adult', 'chef', CODES.chef); await passwortSetzen(page, 'langes-passwort');
+  await page.waitForSelector('#parentClose');
+  await page.locator('#pPlayTest').click();
+  await page.waitForSelector('#testBack');
+  await page.evaluate(() => { Object.defineProperty(document, 'hidden', { value: true, configurable: true }); document.dispatchEvent(new Event('visibilitychange')); });
+  await page.waitForFunction(() => !document.querySelector('#testBack'));
   await ctx.close();
 });
 
@@ -205,7 +304,7 @@ test('teacher sees observations read-only: no focus, settings, profile or sheet 
   await page.waitForSelector('#parentClose');
   const t = await page.textContent('#aboutBody');
   assert.ok(t.includes('Lehrkraft-Ansicht') && t.includes('Einschätzung'));
-  assert.ok(t.includes('Anleitung für Erwachsene'), 'grown-ups guide in the grown-ups area');
+  assert.ok(t.includes('Anleitung & Hintergrund'), 'grown-ups guide in the grown-ups area');
   for (const sel of ['#focusForm', '#storyCap', '#profileDelete', '#reminderForm', 'button[data-res]']) assert.equal(await page.locator(sel).count(), 0, sel);
   await ctx.close();
 });

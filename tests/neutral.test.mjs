@@ -83,17 +83,18 @@ test('title, eyebrow and home screen are neutral; eyebrow fully visible on a 320
 test('About (DE/EN) names no school, class or place and links no school website; adults see 4 neutral school links', async () => {
   const { ctx, page, fehler } = await appOeffnen(browser, server.url);
   await page.locator('#aboutBtn').click();
-  // overview and every sub-page of the About menu, German and English
+  // intro and every topic of the info pages (opened in place), German and English
   for (const tab of ['#tabDe', '#tabEn']) {
     await page.locator(tab).click();
-    const n = await page.locator('#aboutBody .about-item').count();
-    assert.ok(n >= 7, 'menu items: ' + n);
+    const n = await page.locator('#aboutBody details.about-sec').count();
+    assert.ok(n >= 7, 'topics: ' + n);
     const seiten = [await page.textContent('#aboutBody')];
     for (let i = 0; i < n; i++) {
-      await page.locator('#aboutBody .about-item').nth(i).click();
-      seiten.push(await page.textContent('#aboutBody'));
+      const d = page.locator('#aboutBody details.about-sec').nth(i);
+      await d.locator('summary').first().click();
+      seiten.push(await d.textContent());
       assert.equal(await page.locator('#aboutBody a[href*="bis-school.com"]').count(), 0);
-      await page.locator('#aboutUp').click();
+      await d.locator('summary').first().click();
     }
     for (const s of seiten) {
       assert.deepEqual(treffer(s), []);
@@ -148,6 +149,7 @@ test('old practice sheets and pending bridges are shown without private names', 
   const text = await page.textContent('#aboutBody');
   assert.ok(text.includes('Your class looked up force words'), 'old sheet prompt rewritten');
   assert.deepEqual(treffer(text), []);
+  await page.locator('#parentClose').click();
   await page.locator('#aboutBack').click();
   await page.locator('#todayBtn').click();
   assert.deepEqual(treffer(JSON.stringify((await zustand(page)).round)), []);
