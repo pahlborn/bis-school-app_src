@@ -8,7 +8,8 @@
 // Start codes are shown once in the terminal and written to a file OUTSIDE the repo
 // (%LOCALAPPDATA%\bis-school-app\startcodes.txt), never into chat logs or the repository.
 //
-//   node werkzeug/konten.mjs neu <name> <student|parent|teacher> [--kind <name>] [--admin]
+//   node werkzeug/konten.mjs neu <name> <student|parent|teacher> [--kind <name>] [--admin] [--test]
+//     --test: test child account (own data, "+1 day" and "reset" on the start page)
 //   node werkzeug/konten.mjs code-neu <name>
 //   node werkzeug/konten.mjs entfernen <name>
 //   node werkzeug/konten.mjs liste
@@ -73,7 +74,7 @@ export function kontenEinsetzen(app, konten) {
   const teile = text.split(MARKE);
   if (teile.length !== 2) throw new Error(`index.html muss die Kontenmarke ${MARKE} genau einmal enthalten.`);
   if (!konten) return Buffer.from(text, 'utf8');
-  const daten = { users: kontenPruefen(konten).users.map((u) => ({ user: u.user, role: u.role, admin: !!u.admin, kinder: u.kinder || [], start: u.start })) };
+  const daten = { users: kontenPruefen(konten).users.map((u) => ({ user: u.user, role: u.role, admin: !!u.admin, ...(u.test ? { test: true } : {}), kinder: u.kinder || [], start: u.start })) };
   return Buffer.from(teile[0] + JSON.stringify(daten) + teile[1], 'utf8');
 }
 
@@ -109,6 +110,7 @@ async function main() {
     if (!ROLLEN.includes(rolle)) throw new Error('Rolle: student, parent oder teacher');
     const u = { user: n, role: rolle };
     if (rest.includes('--admin')) u.admin = true;
+    if (rest.includes('--test')) { if (rolle !== 'student') throw new Error('--test nur fuer Kinderkonten'); u.test = true; }
     const i = rest.indexOf('--kind'); if (i >= 0) u.kinder = [normName(rest[i + 1])];
     const code = await mitNeuemCode(u);
     k.users.push(u);
