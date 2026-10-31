@@ -116,6 +116,48 @@ button{font:inherit;color:inherit}
 .login-form{display:flex;flex-direction:column;gap:12px}
 .info-btn{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:0;margin:-10px -6px -10px 2px;border:0;background:transparent;color:var(--accent);font-size:1.25rem;line-height:1;cursor:pointer;vertical-align:middle;font-family:inherit;text-transform:none;letter-spacing:0}
 .topbar .info-btn{margin:0}
+.pnav{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0 10px}
+.plang{display:inline-flex;border:2px solid var(--line);border-radius:999px;overflow:hidden;background:var(--surface);margin-right:4px}
+.plang button{border:0;background:none;padding:6px 12px;min-height:40px;min-width:44px;font-weight:700;cursor:pointer;color:var(--muted);font-family:inherit}
+.plang button.on{background:var(--accent);color:#fff}
+.pnav .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.phow{background:var(--soft);border-left:5px solid var(--accent);border-radius:12px;padding:10px 12px;margin:8px 0}
+.playout{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start}
+@media (min-width:860px){.playout{grid-template-columns:minmax(0,1fr) 340px}}
+.psubjects{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.psubject{display:flex;flex-direction:column;gap:8px;text-align:left;background:var(--surface);border:2px solid var(--line);border-radius:16px;padding:12px;cursor:pointer;box-shadow:var(--shadow);color:var(--ink);font-family:inherit}
+.prow{display:flex;align-items:center;gap:10px}
+.pico{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;flex:none}
+.pico svg{width:22px;height:22px;fill:none;stroke:#fff;stroke-width:2}
+.pname{font-family:var(--display);font-weight:700;font-size:1.05rem}
+.pdots{display:inline-flex;gap:4px;flex-wrap:wrap}
+.pdots i{width:14px;height:14px;border-radius:4px;display:inline-block}
+.pdots i.rs{background:#E45858}.pdots i.c{background:#F0A23B}.pdots i.m{background:#2DB37A}.pdots i.e{background:#5468E8}.pdots i.na{background:#C5CEDB}
+.pst{display:inline-block;border-radius:999px;padding:2px 10px;font-size:.82rem;font-weight:700}
+.pst i{font-weight:400;font-style:normal;opacity:.85}
+.pst.rs{background:#FDE8E8;color:#9B1C1C}.pst.c{background:#FFF1DC;color:#8A4B00}.pst.m{background:#E3F6EC;color:#0F6B43}.pst.e{background:#E7E9FF;color:#2F3BA8}.pst.na{background:#EEF1F5;color:#4A5568}.pst.mix{background:#F1EEFF;color:#4B3A9A}
+.psure{font-size:.78rem;color:var(--muted);font-weight:700}
+.pside{display:flex;flex-direction:column;gap:12px}
+.pcard{background:var(--surface);border:2px solid var(--line);border-radius:16px;padding:12px 14px}
+.pcard h2{font-size:1.1rem;margin-bottom:6px}
+.ph{font-weight:800;margin:10px 0 2px}
+.pdisc{font-size:.8rem;color:var(--muted);border-top:1px solid var(--line);margin-top:10px;padding-top:6px}
+.pleg{margin:4px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.psubjtitle{margin:10px 0 4px}
+.pquests{display:flex;flex-direction:column;gap:10px}
+.pquest{background:var(--surface);border:2px solid var(--line);border-radius:16px;padding:12px 14px}
+.phead{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:flex-start}
+.pqn{font-family:var(--display);font-weight:700;font-size:1.05rem}
+.pline{margin:6px 0;font-size:.92rem}
+.pold{color:#8A4B00;font-weight:700}
+.ptags{display:flex;gap:6px;flex-wrap:wrap}
+.ptag{border-radius:999px;padding:2px 8px;font-size:.78rem;font-weight:700}
+.ptag.school{background:#DDF4FF;color:#0B5876}.ptag.need{background:#FFF1DC;color:#8A4B00}
+.phelp{background:#F4F7FF;border-radius:10px;padding:8px 10px;margin:8px 0;font-size:.92rem}
+.psw{display:inline-flex;align-items:center;gap:8px;border:0;background:none;cursor:pointer;font-weight:700;min-height:44px;font-family:inherit;color:var(--ink)}
+.psw i{width:46px;height:26px;border-radius:13px;background:var(--line);position:relative;display:inline-block}
+.psw i::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.15s}
+.psw[aria-pressed=true] i{background:#2DB37A}.psw[aria-pressed=true] i::after{left:23px}
 .test-bar{border-left-color:#7A4FD8;background:#F1EEFF}
 .welcome{display:flex;flex-direction:column;gap:10px;padding-left:0;list-style:none;margin:0}
 .welcome li{background:var(--soft);border-radius:14px;padding:10px 12px}
@@ -508,7 +550,7 @@ const TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4
 /* Data per child (Peter, 31.10.: own test account). The FIRST student account keeps the existing
    keys bq2_<key> (no migration). Every other logged-in student gets bq2_<user>__<key>, so a test
    account never mixes with the child's data. Device-wide keys stay shared. */
-const GLOBAL_KEYS=/^(session|pw_.+|parentPin|muted)$/;
+const GLOBAL_KEYS=/^(session|pw_.+|parentPin|muted|parentLang)$/;
 function childNs(){
   if(!APP_ACCOUNTS || !APP_ACCOUNTS.users) return '';
   let s=null; try{ s=JSON.parse(localStorage.getItem('bq2_session')||'null'); }catch(e){}
@@ -2670,19 +2712,163 @@ function enterResult(sheetId, idx, res){
 }
 const storyCapHTML = () => '<h2>Settings</h2><p><label for="storyCap"><b>Pisolala stories may be up to:</b></label> <select id="storyCap">'+[1,2,3].map(l=>'<option value="'+l+'"'+(store.get('storyCap',2)===l?' selected':'')+'>'+EXCITE[l]+'</option>').join('')+'</select></p><p class="small">The child chooses how exciting a story should be, up to this limit. Every level stays kind: no horror, nobody gets hurt, all ends well.</p>';
 function bindStoryCap(){ const sc=$('#storyCap'); if(sc) sc.addEventListener('change',()=>{if(parentAccess) store.set('storyCap',+sc.value);}); }
+/* ======================= GROWN-UPS VIEW v2 (Peter, 31.10.) =======================
+   Same structure as the child's start page (subjects → quests) plus a summary in words: where the
+   child is doing well, where support helps, what grown-ups can do. Careful judgements: a stand is
+   shown only with enough evidence (≥8 first tries on ≥3 days), always with its basis, how sure it is
+   (little evidence / provisional / confirmed: ≥20 first tries, ≥5 days over ≥14 days), a trend only
+   when two comparable periods exist, and how recent it is (breaks are not a drop in ability).
+   DE/EN for the whole grown-ups branch. Sources: see "Einstufung – vorsichtig und nachvollziehbar". */
+const PL = () => store.get('parentLang','de')==='en'?'en':'de';
+const PT={
+  de:{home:'🏠 Übersicht',sheets:'📄 Übungsblätter',settings:'⚙️ Einstellungen',help:'💡 Helfen wie die Schule',
+    howHome:'<b>So lesen Sie diese Seite:</b> Links sehen Sie dieselben Fächer wie das Kind; jedes Kästchen ist eine Quest. Rechts steht die Einschätzung in Worten. Tippen Sie auf ein Fach, um zu sehen, was geübt wird, worauf die Einschätzung beruht und wie Sie helfen können.',
+    howSubj:'<b>Was kann ich hier tun?</b> Sie sehen jede Quest dieses Fachs mit Stand, Grundlage und einem Tipp. Mit <b>„Im Fokus“</b> legen Sie fest, woraus „Practise Today“ und das Übungsblatt Aufgaben nehmen – alles andere bleibt für das Kind trotzdem spielbar. <b>Empfehlung:</b> 2–4 Themen insgesamt: was gerade im Unterricht dran ist und wo Übung hilft.',
+    howSheets:'<b>Was kann ich hier tun?</b> Nach einem Übungsblatt tragen Sie pro Aufgabe ein, wie es lief. „With help“ und „Not yet“ sind gut so: Die App bietet dann leichtere Schritte an und wiederholt die Aufgabe später.',
+    howSettings:'<b>Was kann ich hier tun?</b> Fokus-Themen als Liste, Spannung der Pisolala-Geschichten, eine freiwillige Kalender-Erinnerung, Profilangaben des Kindes und die App-Version. Nichts davon ist Pflicht.',
+    howHelp:'<b>Was kann ich hier tun?</b> Kurz nachlesen, wie die Schule ein Thema zeigt, und mit drei Fragen helfen statt vorzurechnen.',
+    back:'← Alle Fächer',rec:'Empfehlung übernehmen',focus:'Im Fokus',school:'im Unterricht',need:'braucht Übung',how:'💡 So helfen Sie',
+    basis:'Worauf beruht das?',trend:'Tendenz',recent:'Aktualität',sure:'Wie sicher?',when:'Belastbar ab etwa 20 Aufgaben an 5 Tagen über zwei Wochen.',
+    tasks:(n,d)=>`${n} Aufgaben an ${d} ${d===1?'Tag':'Tagen'}`,self:'selbst gelöst',hint:'mit Hinweis',seen:'Lösungsweg angesehen',due:n=>`${n} Wiederholung${n===1?'':'en'} offen`,
+    none:'noch nicht geübt',ago:n=>n===0?'heute geübt':n===1?'gestern geübt':`vor ${n} Tagen geübt`,old:'Ältere Belege – bei Gelegenheit neu prüfen',
+    tr:{up:'↗ steigend',flat:'→ gleichbleibend',down:'↘ fallend',none:'noch keine verlässliche Tendenz'},
+    sw:{few:'wenig Belege',provisional:'vorläufig',confirmed:'bestätigt'},
+    sumT:'Einschätzung',sumIntro:(nm,d)=>`${nm} hat in den letzten 14 Tagen an ${d} ${d===1?'Tag':'Tagen'} geübt.`,noData:'Auf diesem Gerät wurde noch nicht geübt.',
+    good:'⭐ Das gelingt schon gut',support:'🤝 Hier hilft Unterstützung',few:'👀 Noch nicht einschätzbar',oldT:'🕰️ Länger nicht geübt',
+    goodLine:(q,a)=>`<b>${q}:</b> ${a.self} von ${a.n} Aufgaben selbst gelöst (${a.sure==='confirmed'?'bestätigt':'vorläufig'}).`,
+    fewLine:'Zu wenige Aufgaben für eine Einschätzung – das sagt nichts Schlechtes.',
+    disc:'Übungsstand der App, keine schulische Beurteilung. Das Kind sieht diese Einschätzung nicht.',child:'Ihr Kind',focusN:n=>`${n} im Fokus`,quests:n=>`${n} Quests`},
+  en:{home:'🏠 Overview',sheets:'📄 Practice sheets',settings:'⚙️ Settings',help:'💡 Help like the school',
+    howHome:'<b>How to read this page:</b> on the left you see the same subjects as the child; each small square is a quest. On the right is the summary in words. Tap a subject to see what is practised, what the summary is based on and how you can help.',
+    howSubj:'<b>What can I do here?</b> You see every quest of this subject with its status, basis and a tip. <b>“In focus”</b> decides where “Practise Today” and the practice sheet take their tasks from – everything else stays playable. <b>Recommendation:</b> 2–4 topics in total: what is taught right now and where practice helps.',
+    howSheets:'<b>What can I do here?</b> After a practice sheet, enter for each task how it went. “With help” and “Not yet” are fine: the app then offers easier steps and repeats the task later.',
+    howSettings:'<b>What can I do here?</b> Focus topics as a list, how exciting Pisolala stories may be, an optional calendar reminder, the child\'s profile details and the app version. None of this is required.',
+    howHelp:'<b>What can I do here?</b> Read briefly how the school teaches a topic and help with three questions instead of calculating for the child.',
+    back:'← All subjects',rec:'Use recommendation',focus:'In focus',school:'in class now',need:'needs practice',how:'💡 How you can help',
+    basis:'What is this based on?',trend:'Trend',recent:'How recent',sure:'How sure?',when:'Reliable from about 20 tasks on 5 days over two weeks.',
+    tasks:(n,d)=>`${n} tasks on ${d} ${d===1?'day':'days'}`,self:'on own',hint:'with a hint',seen:'solution viewed',due:n=>`${n} review${n===1?'':'s'} open`,
+    none:'not practised yet',ago:n=>n===0?'practised today':n===1?'practised yesterday':`practised ${n} days ago`,old:'Older evidence – check again when convenient',
+    tr:{up:'↗ rising',flat:'→ steady',down:'↘ falling',none:'no reliable trend yet'},
+    sw:{few:'little evidence',provisional:'provisional',confirmed:'confirmed'},
+    sumT:'Summary',sumIntro:(nm,d)=>`${nm} practised on ${d} ${d===1?'day':'days'} in the last 14 days.`,noData:'No practice on this device yet.',
+    good:'⭐ Going well',support:'🤝 Where support helps',few:'👀 Not yet possible to judge',oldT:'🕰️ Not practised for a while',
+    goodLine:(q,a)=>`<b>${q}:</b> ${a.self} of ${a.n} tasks on own (${a.sure==='confirmed'?'confirmed':'provisional'}).`,
+    fewLine:'Too few tasks for a judgement – that says nothing bad.',
+    disc:'App practice status, not a school assessment. The child does not see this summary.',child:'your child',focusN:n=>`${n} in focus`,quests:n=>`${n} quests`}
+};
+const PSTAND={de:{rs:'Braucht Unterstützung',c:'Wird sicherer',m:'Sicher',e:'Darüber hinaus',na:'Noch nicht einschätzbar',mix:'Gemischt'},
+  en:{rs:'Needs support',c:'Getting there',m:'Secure',e:'Going beyond',na:'Not yet possible to judge',mix:'Mixed'}};
+const SCHOOLTERM={rs:'Requires support',c:'Consolidating',m:'Meeting expectations',e:'Extending'};
+/* What is practised and how grown-ups can help – plain language, per quest. */
+const QUEST_INFO={
+  numbers:{de:['Uhrzeit, Zahlenstrahl und Stellenwert bis 9999.','Fragen: „Wie viele Tausender, Hunderter, Zehner, Einer hat die Zahl?“ – mit Geld oder Bauklötzen legen.'],en:['Clocks, number lines and place value to 9,999.','Ask: “How many thousands, hundreds, tens, ones?” – build it with coins or blocks.']},
+  round:{de:['Auf Zehner und Hunderter runden – mit dem Zahlenstrahl und der Mitte.','Nicht die Regel vorsagen. Fragen: „Welche Hunderter liegen davor und danach? Wo ist die Mitte?“'],en:['Rounding to tens and hundreds – with the number line and the halfway point.','Don’t tell the rule. Ask: “Which hundreds are before and after? Where is the halfway point?”']},
+  combos:{de:['Eine Zahl auf mehreren Wegen bilden (z. B. 500 = 300 + 200).','Fragen: „Findest du noch einen anderen Weg?“ – jeder richtige Weg zählt.'],en:['Make a number in more than one way (e.g. 500 = 300 + 200).','Ask: “Can you find another way?” – every correct way counts.']},
+  wordprob:{de:['Sachaufgaben: die richtigen Zahlen finden, dann Schritt für Schritt rechnen; auch fehlende Teile (278 + ? = 503).','Nicht vorrechnen. Fragen: „Was weißt du schon, was fehlt?“ und auf einem Zahlenstrahl springen lassen.'],en:['Word problems: find the right numbers, then calculate step by step; also missing parts (278 + ? = 503).','Don’t calculate for her. Ask: “What do you know, what is missing?” and let her jump on a number line.']},
+  detective:{de:['Tabellen lesen, schätzen, mit > und < vergleichen.','Beim Einkaufen Preise vergleichen lassen: „Was ist größer, um wie viel?“'],en:['Read tables, estimate, compare with > and <.','Compare prices while shopping: “Which is bigger, by how much?”']},
+  forces:{de:['Kräfte und Reibung: Rampen, faire Versuche.','Zuhause Spielzeugautos auf verschiedenen Böden rollen lassen und fragen: „Warum?“'],en:['Forces and friction: ramps, fair tests.','Roll toy cars on different floors at home and ask: “Why?”']},
+  units:{de:['Die passende Einheit wählen und immer dazuschreiben: cm, m, g, kg.','Gemeinsam wiegen und messen: zwei 500-g-Packungen mit 1 kg vergleichen.'],en:['Choose the right unit and always write it: cm, m, g, kg.','Weigh and measure together: compare two 500 g packets with 1 kg.']},
+  graphs:{de:['Balkendiagramme fertigstellen und lesen.','Eine kleine Strichliste führen (z. B. Wetter der Woche) und daraus ein Diagramm malen.'],en:['Finish and read bar graphs.','Keep a small tally (e.g. weather this week) and draw a graph from it.']},
+  opinion:{de:['Meinung begründen mit OREO: Opinion – Reason – Example – Opinion.','Fragen statt erklären: „Warum findest du das? Hast du ein Beispiel?“'],en:['Give an opinion with OREO: Opinion – Reason – Example – Opinion.','Ask instead of explaining: “Why do you think so? Do you have an example?”']},
+  sentences:{de:['Großschreibung am Satzanfang und bei Namen, Satzzeichen am Ende.','Beim Vorlesen auf Punkte und Großbuchstaben achten lassen.'],en:['Capital letters at the start and for names, punctuation at the end.','While reading aloud, let her notice full stops and capitals.']},
+  examples:{de:['Genaue, persönliche Beispiele: wer, wann, wo.','Nachfragen: „Wer war dabei? Wann war das? Wo?“'],en:['Specific, personal examples: who, when, where.','Ask: “Who was there? When was it? Where?”']},
+  words:{de:['Vorsilben, Nachsilben und zwischen den Zeilen lesen.','Wörter zerlegen: „un-happy“, „re-write“ – was bedeutet der Anfang?'],en:['Prefixes, suffixes and reading between the lines.','Take words apart: “un-happy”, “re-write” – what does the start mean?']},
+  anleitung:{de:['Eine Anleitung schreiben: Reihenfolge, Man-Form, trennbare Verben.','Beim Kochen oder Basteln die Schritte in der Man-Form sagen lassen.'],en:['Write instructions: order, “man” form, separable verbs.','While cooking or crafting, let her say the steps in the “man” form.']},
+  library:{de:['Bücher und Quellen finden und nutzen.','In der Bücherei gemeinsam ein Buch über die Signatur suchen.'],en:['Find and use books and sources.','In the library, look for a book by its call number together.']},
+  poetry:{de:['Gedichte von Roald Dahl.','Gemeinsam ein Gedicht laut und mit Betonung lesen.'],en:['Poems by Roald Dahl.','Read a poem aloud together with expression.']},
+  finish:{de:['Aufgaben vollständig erledigen, Einheiten aufschreiben, vor dem Abgeben prüfen.','Fragen: „Hast du jede Frage beantwortet und die Einheiten dazugeschrieben?“'],en:['Finish tasks completely, write units, check before handing in.','Ask: “Did you answer every question and write the units?”']},
+  team:{de:['Zusammenarbeit: zuhören, teilen, abwechseln.','Ein Spiel zu zweit spielen und vorher ausmachen, wer wann dran ist.'],en:['Teamwork: listen, share, take turns.','Play a game for two and agree beforehand who goes when.']},
+  school:{de:['Glows & Grows: sich selbst einschätzen, Lernstrategien.','Fragen: „Was ist dir heute gut gelungen? Was übst du als Nächstes?“'],en:['Glows & Grows: self-assessment, learning strategies.','Ask: “What went well today? What will you practise next?”']},
+  music:{de:['Rhythmus, Schlagwerk und die Aufführung.','Gemeinsam einen Rhythmus klatschen und nachmachen lassen.'],en:['Rhythm, percussion and the show.','Clap a rhythm together and let her copy it.']},
+  trip:{de:['Der Schulausflug (Archiv).','–'],en:['The school trip (archive).','–']}
+};
+const qInfo = (k,i) => { const x=QUEST_INFO[k]; return x?x[PL()][i]:(i===0?(WORLDS[k]&&WORLDS[k].sub)||'':''); };
+const daysBetween = (a,b) => Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/864e5);
+function assessQuest(k){
+  const log=store.get('attempts',[]).filter(a=>a.skill===k), first=log.filter(a=>a.attempt===1);
+  const isSelf=a=>a.ok && !a.help, n=first.length, self=first.filter(isSelf).length;
+  const hint=log.filter(a=>a.attempt>=2 && a.ok).length, seen=log.filter(a=>a.solutionShown).length;
+  const days=[...new Set(first.map(a=>a.day))].sort(), last=days[days.length-1]||null;
+  const span=days.length?daysBetween(days[0],last):0, age=last?daysBetween(last,dayKey()):null;
+  const enough=n>=8 && days.length>=3, st=enough?standOf(k):'NA';
+  const level=st==='NA'?'na':{RS:'rs',C:'c',M:'m',E:'e'}[st];
+  const sure=!enough?'few':(n>=20 && days.length>=5 && span>=14?'confirmed':'provisional');
+  let trend='none';
+  if(n>=16){ const h=Math.floor(n/2), A=first.slice(0,h), B=first.slice(h), r=x=>x.filter(isSelf).length/x.length, d=x=>new Set(x.map(a=>a.day)).size;
+    if(d(A)>=3 && d(B)>=3){ const diff=r(B)-r(A); trend=diff>0.15?'up':diff<-0.15?'down':'flat'; } }
+  const due=store.get('due',[]).filter(x=>x.q && x.q.world===k).length;
+  return {k,n,self,hint,seen,days:days.length,last,age,old:age!==null && age>21,level,sure,trend,due};
+}
+function subjectLevel(list){
+  const a=list.filter(x=>x.level!=='na'), strong=a.some(x=>x.level==='m'||x.level==='e'), weak=a.some(x=>x.level==='rs'||x.level==='c');
+  if(!a.length) return 'na'; if(strong && weak) return 'mix'; if(weak) return a.some(x=>x.level==='rs')?'rs':'c';
+  return a.every(x=>x.level==='e')?'e':'m';
+}
+const pChip = (lv,sure) => `<span class="pst ${lv}">${PSTAND[PL()][lv]}${SCHOOLTERM[lv]?` <i>(${SCHOOLTERM[lv]})</i>`:''}</span>${sure&&lv!=='na'?` <span class="psure">${PT[PL()].sw[sure]}</span>`:''}`;
+function summaryHTML(list, scope){
+  const T=PT[PL()], nm=playerName()||T.child;
+  const recentDays=new Set(store.get('attempts',[]).filter(a=>a.day && daysBetween(a.day,dayKey())<14).map(a=>a.day)).size;
+  const good=list.filter(a=>a.level==='m'||a.level==='e').sort((x,y)=>y.n-x.n).slice(0,3);
+  const need=list.filter(a=>a.level==='rs'||a.level==='c').sort((x,y)=>(x.level==='rs'?0:1)-(y.level==='rs'?0:1)||y.n-x.n).slice(0,2);
+  const few=list.filter(a=>a.n>0 && a.level==='na'), old=list.filter(a=>a.old);
+  let h=`<h2>${scope?esc(scope)+' – ':''}${T.sumT}</h2>`;
+  if(!list.some(a=>a.n)) return h+`<p>${T.noData}</p><div class="pdisc">${T.disc}</div>`;
+  if(!scope) h+=`<p>${T.sumIntro(esc(nm),recentDays)}</p>`;
+  if(good.length) h+=`<p class="ph">${T.good}</p><p>${good.map(a=>T.goodLine(esc(WORLDS[a.k].name),a)).join('<br>')}</p>`;
+  if(need.length) h+=`<p class="ph">${T.support}</p><p>${need.map(a=>`<b>${esc(WORLDS[a.k].name)}:</b> ${esc(qInfo(a.k,1))}`).join('<br>')}</p>`;
+  if(few.length) h+=`<p class="ph">${T.few}</p><p>${few.map(a=>esc(WORLDS[a.k].name)).join(', ')}. ${T.fewLine}</p>`;
+  if(old.length) h+=`<p class="ph">${T.oldT}</p><p>${old.map(a=>esc(WORLDS[a.k].name)).join(', ')} – ${T.old}.</p>`;
+  return h+`<div class="pdisc">${T.disc}</div>`;
+}
+const isTeacher = () => !!(accountsOn() && adultUser && adultUser.role==='teacher');
+function parentNavHTML(){
+  const T=PT[PL()], pages=isTeacher()?['home','help']:['home','sheets','settings','help'], cur=state.ppage||'home';
+  return `<div class="pnav"><div class="plang" role="group" aria-label="Sprache / Language"><button type="button" data-plang="de" class="${PL()==='de'?'on':''}">DE</button><button type="button" data-plang="en" class="${PL()==='en'?'on':''}">EN</button></div>${pages.map(p=>`<button type="button" class="btn small${p===cur?' primary':''}" data-ppage="${p}">${T[p]}</button>`).join('')}</div>`;
+}
+function parentHomeHTML(){
+  const T=PT[PL()], focus=focusTopics(), all=[];
+  const tiles=SUBJECTS.map(s=>{ const qs=questsIn(s), list=qs.map(assessQuest); all.push(...list); const f=qs.filter(k=>focus.includes(k)).length;
+    return `<button type="button" class="psubject" data-psubj="${s.key}"><span class="prow"><span class="pico" style="background:${s.color}">${ICONS[s.icon]||''}</span><span class="pname">${esc(s.name)}</span></span><span class="pdots">${list.map(a=>`<i class="${a.level}" title="${esc(WORLDS[a.k].name)}"></i>`).join('')}</span><span>${pChip(subjectLevel(list))}${f?` <span class="focus">${T.focusN(f)}</span>`:''}</span></button>`; }).join('');
+  return `<p class="phow">${T.howHome}</p><div class="playout"><div class="psubjects">${tiles}</div><aside class="pside"><div class="pcard" id="pSummary">${summaryHTML(all)}</div><div class="pcard">${legendHTML()}</div></aside></div>`;
+}
+function legendHTML(){
+  const T=PT[PL()], de=PL()==='de';
+  return `<h2>${de?'Was bedeuten die Farben?':'What do the colours mean?'}</h2>`+['m','e','c','rs','na'].map(l=>`<p class="pleg"><span class="pdots"><i class="${l}"></i></span> <b>${PSTAND[PL()][l]}</b>${SCHOOLTERM[l]?` <i>(${SCHOOLTERM[l]})</i>`:''}</p>`).join('')+`<p class="small">${de?'„Vorläufig“ heißt: genug für eine erste Einschätzung, noch nicht über längere Zeit bestätigt. „Bestätigt“: etwa 20 Aufgaben an 5 Tagen über zwei Wochen.':'“Provisional” means enough for a first judgement, not yet confirmed over a longer time. “Confirmed”: about 20 tasks on 5 days over two weeks.'}</p>`;
+}
+function parentSubjectHTML(key){
+  const T=PT[PL()], s=SUBJECTS.find(x=>x.key===key), focus=focusTopics(), list=questsIn(s).map(assessQuest), teacher=isTeacher();
+  const cards=list.map(a=>{ const k=a.k, tags=[FOCUS.includes(k)?`<span class="ptag school">${T.school}</span>`:'', (a.level==='rs'||a.level==='c')?`<span class="ptag need">${T.need}</span>`:''].join('');
+    return `<div class="pquest"><div class="phead"><div><div class="pqn">${esc(WORLDS[k].name)}</div><div class="small">${esc(qInfo(k,0))}</div></div><div>${pChip(a.level,a.sure)}</div></div>
+      <p class="pline"><b>${T.basis}</b> ${a.n?`${T.tasks(a.n,a.days)}: ${a.self} ${T.self}, ${a.hint} ${T.hint}, ${a.seen}× ${T.seen}.`:T.none+'.'} ${a.due?T.due(a.due)+'.':''}</p>
+      ${a.n?`<p class="pline"><b>${T.trend}:</b> ${T.tr[a.trend]} · <b>${T.recent}:</b> ${a.old?`<span class="pold">${T.old}</span>`:T.ago(a.age)}</p>`:''}
+      ${a.sure!=='confirmed'&&a.n?`<p class="pline small">${T.when}</p>`:''}
+      <div class="ptags">${tags}</div>
+      ${qInfo(k,1)&&qInfo(k,1)!=='–'?`<p class="phelp">${T.how}: ${esc(qInfo(k,1))}</p>`:''}
+      ${teacher?'':`<button type="button" class="psw" data-pfocus="${k}" aria-pressed="${focus.includes(k)}"><i></i>${T.focus}</button>`}</div>`; }).join('');
+  return `<button type="button" class="btn small" id="pBack">${T.back}</button><h2 class="psubjtitle">${esc(s.name)} <span class="small">· ${T.quests(list.length)}</span></h2>
+    <p class="phow">${T.howSubj}${teacher?'':` <button type="button" class="btn small" id="pRecommend">${T.rec}</button>`}</p>
+    <div class="playout"><div class="pquests">${cards}</div><aside class="pside"><div class="pcard">${summaryHTML(list, s.name)}</div></aside></div>`;
+}
+function sheetsPageHTML(){
+  const T=PT[PL()], all=store.get('sheets',[]).slice().reverse();
+  return `<h2>Practice sheets</h2><p class="phow">${T.howSheets}</p>`+(all.length?all.map(sh=>`<h3>Sheet of ${sh.day}</h3>`+sh.items.map((it,i)=>`<div class="sheetrow"><div class="q"><b>${i+1}.</b> ${esc(strip(sheetPrompt(it.q)).slice(0,140))}</div><div class="row">${Object.keys(RES).map(r=>`<button type="button" class="btn small${it.res===r?' on':''}" data-sheet="${sh.id}" data-i="${i}" data-res="${r}"${it.res?' disabled':''}>${RES[r]}</button>`).join('')}</div></div>`).join('')).join(''):'<p>No sheet made yet. Use “Practice sheet (PDF / print)” on the start page.</p>');
+}
 function renderSheets(){
   if(!parentAccess){ renderParentGate(); return; }
-  if(accountsOn() && adultUser && adultUser.role==='teacher'){
-    // Teacher: read only - observations, how we support like the school, version. No settings.
-    $('#aboutBody').innerHTML=parentHeaderHTML()+parentOverviewHTML()+versionAdminHTML()+parentGuidanceHTML();
-    $('#parentClose').addEventListener('click',()=>{parentLock();renderParentGate();});
-    bindVersionAdmin(); addAdultInfo($('#aboutBody')); parentTouch(); return;
-  }
-  const all=store.get('sheets',[]).slice().reverse();
-  const body=$('#aboutBody');
-  if(!all.length){ body.innerHTML=parentHeaderHTML()+parentOverviewHTML()+focusSettingsHTML()+reminderHTML()+storyCapHTML()+profileAdminHTML()+versionAdminHTML()+parentGuidanceHTML()+'<h2>Practice sheets</h2><p>No sheet made yet. Use “Practice sheet (PDF / print)” on the start page.</p>'; bindParentSettings(); return; }
-  body.innerHTML=parentHeaderHTML()+parentOverviewHTML()+focusSettingsHTML()+reminderHTML()+storyCapHTML()+profileAdminHTML()+versionAdminHTML()+parentGuidanceHTML()+'<h2>Practice sheets</h2><p class="small">Tick each task once. “With help” and “Not yet” are fine – the app then offers easier steps and repeats the task later. Nothing of this is shown to the child.</p>'+
-    all.map(sh=>`<h3>Sheet of ${sh.day}</h3>`+sh.items.map((it,i)=>`<div class="sheetrow"><div class="q"><b>${i+1}.</b> ${esc(strip(sheetPrompt(it.q)).slice(0,140))}</div><div class="row">${Object.keys(RES).map(r=>`<button type="button" class="btn small${it.res===r?' on':''}" data-sheet="${sh.id}" data-i="${i}" data-res="${r}"${it.res?' disabled':''}>${RES[r]}</button>`).join('')}</div></div>`).join('')).join('');
+  const body=$('#aboutBody'), T=PT[PL()];
+  let page=state.ppage||'home'; if(isTeacher() && (page==='sheets'||page==='settings')) page='home';
+  let html=parentHeaderHTML()+parentNavHTML();
+  if(page==='home') html+= state.psubj ? parentSubjectHTML(state.psubj) : parentHomeHTML();
+  else if(page==='sheets') html+=sheetsPageHTML();
+  else if(page==='settings') html+=`<p class="phow">${T.howSettings}</p>`+focusSettingsHTML()+storyCapHTML()+reminderHTML()+profileAdminHTML()+versionAdminHTML();
+  else html+=`<p class="phow">${T.howHelp}</p>`+parentGuidanceHTML();
+  body.innerHTML=html;
+  body.querySelectorAll('[data-plang]').forEach(b=>b.addEventListener('click',()=>{ store.set('parentLang',b.dataset.plang); renderSheets(); }));
+  body.querySelectorAll('[data-ppage]').forEach(b=>b.addEventListener('click',()=>{ state.ppage=b.dataset.ppage; state.psubj=null; renderSheets(); window.scrollTo(0,0); }));
+  body.querySelectorAll('[data-psubj]').forEach(b=>b.addEventListener('click',()=>{ state.psubj=b.dataset.psubj; renderSheets(); window.scrollTo(0,0); }));
+  const back=$('#pBack'); if(back) back.addEventListener('click',()=>{ state.psubj=null; renderSheets(); window.scrollTo(0,0); });
+  body.querySelectorAll('[data-pfocus]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; const k=b.dataset.pfocus, f=focusTopics().slice(), i=f.indexOf(k); if(i>=0) f.splice(i,1); else f.push(k); store.set('focus',f); renderHome(); renderSheets(); }));
+  const rec=$('#pRecommend'); if(rec) rec.addEventListener('click',()=>{ if(!parentAccess) return; const all=SUBJECTS.flatMap(questsIn).map(assessQuest); const f=uniq(FOCUS.concat(all.filter(a=>a.level==='rs'||a.level==='c').map(a=>a.k))); store.set('focus',f); renderHome(); renderSheets(); });
   body.querySelectorAll('button[data-res]').forEach(b=>b.addEventListener('click',()=>enterResult(b.dataset.sheet, +b.dataset.i, b.dataset.res)));
   bindParentSettings();
 }
@@ -2742,7 +2928,7 @@ const HELP={
   tree:{kid:true,title:'Your learning tree',text:'<p>Your tree grows on every day you practise – in the app or on a practice sheet. It never wilts, even if you take a break.</p><p>Your badges show how you learn: trying a challenge, thinking hard, finishing a sheet.</p>'},
   record:{kid:true,title:'Recording yourself',text:'<p>Tap “● Aufnahme starten”, read aloud, tap “■ Stopp”. Then listen to yourself!</p><p>The last three recordings stay on this iPad. To hand one in, tap “Teilen / Sichern” together with a grown-up.</p>'},
   sheet:{kid:true,title:'Practice sheet',text:'<p>A sheet with 6 tasks and a writing task, plus an answer page for grown-ups.</p><p>Share it as a PDF (by mail, message or into Files) or print it. Afterwards a grown-up can enter how it went.</p>'},
-  overview:{title:'Übungsbeobachtungen',text:'<p>Was das Kind geübt hat, nach Lernzielen der Schule sortiert: Anzahl, Übungstage, erste Fehler und Hilfen. Intern ordnet die App das nach dem Bewertungsschlüssel der Schule ein, nur um passende Aufgaben auszuwählen.</p><p>Das ist <b>keine schulische Bewertung</b> und wird dem Kind nie gezeigt.</p>'},
+  overview:{title:'Wie entsteht die Einschätzung?',text:'<p>Gezählt wird nur der <b>erste Versuch</b> jeder Aufgabe: selbst gelöst, mit Hinweis oder Lösungsweg angesehen. Eine Einschätzung gibt es erst ab <b>8 Aufgaben an 3 Tagen</b> – vorher „Noch nicht einschätzbar“, das sagt nichts Schlechtes.</p><p><b>Vorläufig</b> heißt: erste Einschätzung. <b>Bestätigt</b> erst nach etwa 20 Aufgaben an 5 Tagen über zwei Wochen. Eine <b>Tendenz</b> steht nur da, wenn zwei Zeiträume genug Aufgaben haben. Nach mehr als 3 Wochen Pause steht „ältere Belege“ – Ferien sind kein Leistungsabfall.</p><p>Das ist <b>keine schulische Bewertung</b> und wird dem Kind nie gezeigt.</p>'},
   focus:{title:'Fokus-Themen',text:'<p>Aus diesen Themen stellt „Practise Today“ die 8 Fragen zusammen; auch die Übungsblätter nutzen sie. Auf der Startseite tragen sie das Zeichen „Focus“.</p><p>Am besten die Themen wählen, die gerade in der Schule dran sind.</p>'},
   calendar:{title:'Kalender-Erinnerung',text:'<p>Freiwillig: erzeugt eine Kalenderdatei mit einer wiederkehrenden, freundlichen Einladung zum Üben. Die App selbst schickt keine Nachrichten.</p>'},
   storycap:{title:'Pisolala-Geschichten',text:'<p>Hier legen Sie fest, wie spannend eine Geschichte höchstens sein darf. Das Kind wählt selbst bis zu dieser Grenze. Jede Stufe bleibt freundlich.</p>'},
@@ -2751,7 +2937,7 @@ const HELP={
   sheets:{title:'Übungsblätter eintragen',text:'<p>Pro Aufgabe „Right“, „With help“ oder „Not yet“ antippen. „With help“ und „Not yet“ sind gut so: Die App bietet dann leichtere Schritte an und wiederholt die Aufgabe später.</p>'},
   guidance:{title:'Unterstützen wie die Schule',text:'<p>Kurze Hinweise, wie die Schule ein Thema zeigt, und drei Fragen statt einer Erklärung. Bitte keinen zweiten Rechenweg danebenstellen.</p>'}
 };
-const ADULT_H2=[['Übungsbeobachtungen','overview'],['Fokus-Themen','focus'],['Freiwillige Kalender','calendar'],['Settings','storycap'],['Profilangaben','profile'],['App-Version','version'],['Practice sheets','sheets'],['So unterstützen','guidance']];
+const ADULT_H2=[['Einschätzung','overview'],['Summary','overview'],['Übungsbeobachtungen','overview'],['Fokus-Themen','focus'],['Freiwillige Kalender','calendar'],['Settings','storycap'],['Profilangaben','profile'],['App-Version','version'],['Practice sheets','sheets'],['So unterstützen','guidance']];
 function addAdultInfo(root){ root.querySelectorAll('h2').forEach(h=>{ const m=ADULT_H2.find(([t])=>h.textContent.trim().startsWith(t)); if(m && !h.querySelector('.info-btn')) h.insertAdjacentHTML('beforeend',` <button type="button" class="info-btn" data-help="${m[1]}" aria-label="Info">ⓘ</button>`); }); }
 function openHelp(key){
   const h=HELP[key]; if(!h) return;
@@ -2827,7 +3013,7 @@ function renderWelcome(u){
 function loginDone(u){
   $('#loginBody').innerHTML='';
   if(u.role==='student'){ store.set('session',{user:u.user}); adultUser=null; renderHome(); show('home'); }
-  else { adultUser={user:u.user, role:u.role, admin:!!u.admin}; parentAccess=true; parentTouch(); openAbout('sheets'); }
+  else { adultUser={user:u.user, role:u.role, admin:!!u.admin}; parentAccess=true; state.ppage='home'; state.psubj=null; parentTouch(); openAbout('sheets'); }
 }
 /* Test account bar: clearly marked, separate data, jump ahead one day, reset everything. */
 function renderTestBar(){
@@ -2876,7 +3062,7 @@ function renderParentGate(){
         if(!store.get('parentPin',null)) throw new Error('storage unavailable');
       }
       if(state.screen!=='about'||state.aboutTab!=='sheets') return;
-      parentFailures=0; parentAccess=true;parentTouch();renderSheets();
+      parentFailures=0; parentAccess=true; state.ppage='home'; state.psubj=null; parentTouch();renderSheets();
     }catch(err){message.textContent='Der geschützte Bereich konnte nicht geöffnet werden. Bitte im aktuellen Browser erneut versuchen.';button.disabled=false;}
   });
 }
@@ -2910,7 +3096,7 @@ function parentOverviewHTML(){
 }
 function focusSettingsHTML(){
   const chosen=focusTopics();
-  return '<h2>Fokus-Themen auswählen</h2><p>Diese Auswahl steuert „Practise Today“, Fokus-Zeichen und Übungsblätter auf diesem Gerät. Wiederholungen dürfen weiterhin aus früher geübten Themen kommen. Ohne Auswahl wird frei gemischt.</p><form id="focusForm">'+SUBJECTS.map(s=>`<fieldset><legend>${esc(s.name)}</legend>${questsIn(s).map(k=>`<label class="focus-choice"><input type="checkbox" name="focus" value="${k}"${chosen.includes(k)?' checked':''}> ${esc(WORLDS[k].name)}</label>`).join('')}</fieldset>`).join('')+'<button class="btn" type="submit">Auswahl speichern</button> <button class="btn small" id="focusDefault" type="button">Ausgangsauswahl</button><p id="focusMessage" role="status"></p></form>';
+  return '<h2>Fokus-Themen auswählen</h2><p><b>Was bewirkt das?</b> „Practise Today“ und das Übungsblatt nehmen ihre Aufgaben nur aus den angehakten Themen; auf der Startseite tragen sie das Zeichen „Focus“. Alle anderen Quests bleiben für das Kind spielbar, fällige Wiederholungen kommen trotzdem. <b>Empfehlung:</b> 2–4 Themen – was gerade im Unterricht dran ist und wo Übung hilft. Bequemer geht es in der Übersicht: Fach antippen, dort steht neben jeder Quest der Schalter „Im Fokus“ mit Stand und Tipp. Ohne Auswahl wird frei gemischt.</p><form id="focusForm">'+SUBJECTS.map(s=>`<fieldset><legend>${esc(s.name)}</legend>${questsIn(s).map(k=>`<label class="focus-choice"><input type="checkbox" name="focus" value="${k}"${chosen.includes(k)?' checked':''}> ${esc(WORLDS[k].name)}</label>`).join('')}</fieldset>`).join('')+'<button class="btn" type="submit">Auswahl speichern</button> <button class="btn small" id="focusDefault" type="button">Ausgangsauswahl</button><p id="focusMessage" role="status"></p></form>';
 }
 const REMINDER_DAYS=['MO','TU','WE','TH','FR','SA','SU'];
 function reminderHTML(){
@@ -2942,14 +3128,14 @@ function calendarText(days,time,text,now=new Date()){
 }
 function bindParentSettings(){
   bindStoryCap(); bindProfileAdmin(); bindVersionAdmin(); addAdultInfo($('#aboutBody'));
-  $('#parentClose').addEventListener('click',()=>{parentLock();renderParentGate();});
-  $('#focusForm').addEventListener('submit',e=>{
+  const pc=$('#parentClose'); if(pc) pc.addEventListener('click',()=>{parentLock();renderParentGate();});
+  if($('#focusForm')) $('#focusForm').addEventListener('submit',e=>{
     e.preventDefault();if(!parentAccess) return;
     const chosen=Array.from(new FormData(e.currentTarget).getAll('focus'));
     store.set('focus',chosen);renderHome();$('#focusMessage').textContent='Auswahl gespeichert.';
   });
-  $('#focusDefault').addEventListener('click',()=>{if(!parentAccess) return;store.set('focus',FOCUS.slice());renderHome();renderSheets();});
-  $('#reminderForm').addEventListener('submit',e=>{
+  if($('#focusDefault')) $('#focusDefault').addEventListener('click',()=>{if(!parentAccess) return;store.set('focus',FOCUS.slice());renderHome();renderSheets();});
+  if($('#reminderForm')) $('#reminderForm').addEventListener('submit',e=>{
     e.preventDefault();if(!parentAccess) return;
     try{
       const days=Array.from(new FormData(e.currentTarget).getAll('reminderDay'));

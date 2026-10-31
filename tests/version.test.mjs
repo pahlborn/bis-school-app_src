@@ -13,7 +13,7 @@ import { entschluesseln, tresorAusHuelle, ohneTresor } from '../werkzeug/kern.mj
 import { versionErmitteln, versionEinsetzen, versionAuslesen, berlinZeit, MARKE } from '../werkzeug/version.mjs';
 import { TEST_PW } from './hilfen.mjs';
 import { kontenEinsetzen, kontenLesen } from '../werkzeug/konten.mjs';
-import { browserStarten, appOeffnen, elternOeffnen } from './app-hilfen.mjs';
+import { browserStarten, appOeffnen, elternOeffnen, elternSeite } from './app-hilfen.mjs';
 
 const tmp = () => fs.mkdtemp(path.join(os.tmpdir(), 'bq-version-'));
 const git = (cwd, ...a) => execFileSync('git', a, { cwd, encoding: 'utf8' }).trim();
@@ -95,6 +95,7 @@ test('built app: child sees only "v13" at the end of About (DE and EN); adults s
   assert.equal(await page.textContent('#aboutBody .app-version'), 'v13');
   await page.locator('#aboutBack').click();
   await elternOeffnen(page);
+  await elternSeite(page, 'settings');
   const info = await page.textContent('#versionInfo');
   assert.ok(info.includes('v13') && info.includes('30.10.2026 14:05') && info.includes('a1b2c3d'), info);
   assert.deepEqual(fehler, []);
@@ -114,6 +115,7 @@ test('published shell: "check for new version" says current, then reports a newe
   page.on('request', (q) => { if (!q.url().startsWith(server.url) && !q.url().includes('fonts.g')) anfragen.push(q.url()); });
   await page.goto(server.url + '/app/'); await page.waitForSelector('#home h1');
   await elternOeffnen(page);
+  await elternSeite(page, 'settings');
   await page.locator('#checkUpdate').click();
   await page.waitForFunction(() => !document.querySelector('#updateMessage').textContent.includes('Prüfe'));
   assert.match(await page.textContent('#updateMessage'), /^Aktuell/);

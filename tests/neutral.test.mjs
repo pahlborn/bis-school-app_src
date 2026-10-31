@@ -7,7 +7,7 @@ import fs from 'node:fs/promises';
 import http from 'node:http';
 import path from 'node:path';
 import { WURZEL, QUELLEN } from '../werkzeug/bauen.mjs';
-import { browserStarten, appOeffnen, elternOeffnen, zustand } from './app-hilfen.mjs';
+import { browserStarten, appOeffnen, elternOeffnen, elternSeite, zustand } from './app-hilfen.mjs';
 
 // The app runs in a closed function. For these tests only, the served copy exposes a few
 // internals at the very end of that function; the app file itself is not changed.
@@ -102,6 +102,7 @@ test('About (DE/EN) names no school, class or place and links no school website;
   }
   await page.locator('#aboutBack').click();
   await elternOeffnen(page);
+  await elternSeite(page, 'help');
   const links = page.locator('#aboutBody a[href*="bis-school.com"]');
   assert.equal(await links.count(), 4);
   for (const t of await links.allTextContents()) { assert.match(t, /^Website der Schule/); assert.deepEqual(treffer(t), []); }
@@ -143,6 +144,7 @@ test('old practice sheets and pending bridges are shown without private names', 
     localStorage.setItem('bq2_bridgeNext', JSON.stringify([q]));
   }, ALT_861);
   await elternOeffnen(page);
+  await elternSeite(page, 'sheets');
   const text = await page.textContent('#aboutBody');
   assert.ok(text.includes('Your class looked up force words'), 'old sheet prompt rewritten');
   assert.deepEqual(treffer(text), []);

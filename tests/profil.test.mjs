@@ -3,7 +3,7 @@
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { appServer, browserStarten, appOeffnen, elternOeffnen } from './app-hilfen.mjs';
+import { appServer, browserStarten, appOeffnen, elternOeffnen, elternSeite } from './app-hilfen.mjs';
 
 let browser, server;
 before(async () => { server = await appServer(); browser = await browserStarten(); });
@@ -117,6 +117,7 @@ test('adults see the details behind the PIN and can delete only them; learning d
   await page.evaluate(() => { localStorage.setItem('bq2_name', '"Alex"'); localStorage.setItem('bq2_birthday', '"03-14"'); localStorage.setItem('bq2_emoji', '"🦊"'); localStorage.setItem('bq2_total', '12'); localStorage.setItem('bq2_ev', '{"round":[["2026-10-28",2,1]]}'); });
   await page.reload(); await page.waitForSelector('#home h1');
   await elternOeffnen(page);
+  await elternSeite(page, 'settings');
   const t = await page.textContent('#aboutBody');
   assert.ok(t.includes('Alex') && t.includes('14.03.') && t.includes('🦊'));
   page.once('dialog', (d) => d.accept());

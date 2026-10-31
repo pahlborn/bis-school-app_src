@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { WURZEL, QUELLEN } from '../werkzeug/bauen.mjs';
-import { appServer, browserStarten, appOeffnen, klick, zurStart, elternOeffnen } from './app-hilfen.mjs';
+import { appServer, browserStarten, appOeffnen, klick, zurStart, elternOeffnen, elternSeite } from './app-hilfen.mjs';
 
 const quelltext = await fs.readFile(path.join(WURZEL, QUELLEN.app), 'utf8');
 const FOCUS = new Function('return ' + quelltext.match(/const FOCUS=(\[[^\]]*\]);/)[1])();
@@ -68,6 +68,7 @@ test('Ergebnisse eines Blattes eintragen: richtig, mit Hilfe, noch nicht', async
   await page.locator('#sheetClose').click();
   await zurStart(page);
   await elternOeffnen(page);
+  await elternSeite(page, 'sheets');
   const blatt = (await lies(page, 'sheets'))[0];
   await klick(page, `button[data-i="0"][data-res="ok"]`);
   await klick(page, `button[data-i="1"][data-res="help"]`);

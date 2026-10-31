@@ -60,8 +60,13 @@ test('child: ⓘ while playing, in the reading studio and at the practice sheet'
 test('grown-ups area: every section has ⓘ with a German explanation; no guide jump (would log out)', async () => {
   const { ctx, page, fehler } = await appOeffnen(browser, server.url);
   await elternOeffnen(page);
-  const keys = await page.$$eval('#aboutBody h2 .info-btn', (b) => b.map((x) => x.dataset.help));
-  for (const k of ['overview', 'focus', 'calendar', 'storycap', 'profile', 'version', 'guidance']) assert.ok(keys.includes(k), 'info at ' + k);
+  const infos = async () => page.$$eval('#aboutBody h2 .info-btn', (b) => b.map((x) => x.dataset.help));
+  assert.ok((await infos()).includes('overview'), 'info at the summary');
+  await page.locator('#aboutBody [data-ppage="help"]').click();
+  assert.ok((await infos()).includes('guidance'));
+  await page.locator('#aboutBody [data-ppage="settings"]').click();
+  const keys = await infos();
+  for (const k of ['focus', 'calendar', 'storycap', 'profile', 'version']) assert.ok(keys.includes(k), 'info at ' + k);
   const t = await hilfe(page, '#aboutBody .info-btn[data-help="focus"]', 'Fokus-Themen');
   assert.match(t, /Practise Today/);
   assert.equal(await page.isVisible('#helpGuide'), false);
