@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { WURZEL, QUELLEN } from '../werkzeug/bauen.mjs';
-import { appServer, browserStarten, appOeffnen, klick, zurStart, elternOeffnen, elternSeite } from './app-hilfen.mjs';
+import { appServer, browserStarten, appOeffnen, klick, zurStart, elternOeffnen, elternSeite, aboutAbschnitt } from './app-hilfen.mjs';
 
 const quelltext = await fs.readFile(path.join(WURZEL, QUELLEN.app), 'utf8');
 const FOCUS = new Function('return ' + quelltext.match(/const FOCUS=(\[[^\]]*\]);/)[1])();
@@ -98,11 +98,10 @@ test('About: Hinweis, Leitgedanken, Lernlogik, Herkunft, Datenschutz und Quellen
   await klick(page, '#aboutBtn');
   const de = await page.textContent('#aboutBody');
   for (const t of ['Wichtiger Hinweis', 'ohne pädagogische Herkunft', 'Leitgedanken', 'Lernlogik', 'Herkunft der Aufgaben', 'Datenschutz', 'Quellen', 'KI-Assistenten']) assert.ok(de.includes(t), t);
-  // Peter 30.10.: menu with sub-pages – the sources are their own page, not on the overview
-  assert.equal(await page.$$eval('#aboutBody a[href^="https://"]', (a) => a.length), 0, 'overview without source list');
-  await page.locator('#aboutBody .about-item', { hasText: 'Quellen' }).click();
-  assert.ok(await page.$$eval('#aboutBody a[href^="https://"]', (a) => a.length) >= 8);
-  await page.locator('#aboutUp').click();
+  // Peter 30./31.10.: topics open in place - the sources are only visible when opened
+  assert.equal(await page.locator('#aboutBody a[href^="https://"]:visible').count(), 0, 'overview without visible source list');
+  await aboutAbschnitt(page, 'Quellen');
+  assert.ok(await page.locator('#aboutBody a[href^="https://"]:visible').count() >= 8);
   await klick(page, '#tabEn');
   const en = await page.textContent('#aboutBody');
   for (const t of ['Please note', 'without any pedagogical origin', 'Sources']) assert.ok(en.includes(t), t);

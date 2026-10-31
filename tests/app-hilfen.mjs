@@ -75,10 +75,21 @@ export async function elternOeffnen(page){
   await page.waitForSelector('#parentClose');
 }
 
-/** Grown-ups view v2: switch to a sub-page (home, sheets, settings, help) with a real click. */
+/** Grown-ups area: overview on top, chapters (sheets, settings, help, guide, about) open in place.
+ *  'home' leaves a subject page; every other chapter is opened with a real click on its title. */
 export async function elternSeite(page, seite) {
-  await page.locator(`#aboutBody [data-ppage="${seite}"]`).click();
-  await page.waitForSelector(`#aboutBody [data-ppage="${seite}"].primary`);
+  if (seite === 'home') { if (await page.$('#pBack')) await page.locator('#pBack').click(); return; }
+  const d = page.locator(`#aboutBody details.psec[data-psec="${seite}"]`);
+  if (!(await d.evaluate((e) => e.open))) await d.locator('summary').first().click();
+  await page.waitForSelector(`#aboutBody details.psec[data-psec="${seite}"][open]`);
+}
+
+/** "So funktioniert Big Quest": open the topic whose title contains the text (real click). */
+export async function aboutAbschnitt(page, text) {
+  const d = page.locator('#aboutBody details.about-sec').filter({ has: page.locator('summary', { hasText: text }) }).first();
+  if (!(await d.evaluate((e) => e.open))) await d.locator('summary').first().click();
+  await page.waitForFunction((t) => [...document.querySelectorAll('#aboutBody details.about-sec[open] > summary')].some((s) => s.textContent.includes(t)), text);
+  return d;
 }
 
 /** Zurueck zur Startseite, egal wo die App gerade steht. */

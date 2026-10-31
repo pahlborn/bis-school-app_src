@@ -4,7 +4,8 @@
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { appServer, browserStarten, appOeffnen, alleKarten, karteOeffnen, elternOeffnen } from './app-hilfen.mjs';
+import { appServer, browserStarten, appOeffnen, alleKarten, karteOeffnen, elternOeffnen, elternSeite } from './app-hilfen.mjs';
+const offen = (page) => page.$$eval('#aboutBody details.about-sec[open] > summary', (s) => s.map((x) => x.textContent.trim()));
 
 let browser, server;
 before(async () => { server = await appServer(); browser = await browserStarten(); });
@@ -23,7 +24,7 @@ async function hilfe(page, sel, titel) {
 test('child: ❓ Help opens the child guide; ⓘ at the learning tree explains it and leads to the guide', async () => {
   const { ctx, page, fehler } = await appOeffnen(browser, server.url, { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   await page.locator('#guideBtn').click();
-  assert.equal(await page.textContent('#aboutBody .about-sub-title'), 'How to use Big Quest');
+  assert.deepEqual(await offen(page), ['How to use Big Quest'], 'the child guide opens in place');
   assert.ok(!BEWERTUNG.test(await page.textContent('#aboutBody')));
   await page.locator('#aboutBack').click();
   const t = await hilfe(page, '#home .info-btn[data-help="tree"]', 'Your learning tree');
@@ -31,7 +32,7 @@ test('child: ❓ Help opens the child guide; ⓘ at the learning tree explains i
   assert.ok(await page.isVisible('#helpGuide'));
   await page.locator('#helpGuide').click();
   assert.equal(await page.isVisible('#helpDlg'), false);
-  assert.equal(await page.textContent('#aboutBody .about-sub-title'), 'How to use Big Quest');
+  assert.deepEqual(await offen(page), ['How to use Big Quest']);
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
@@ -62,9 +63,9 @@ test('grown-ups area: every section has ⓘ with a German explanation; no guide 
   await elternOeffnen(page);
   const infos = async () => page.$$eval('#aboutBody h2 .info-btn', (b) => b.map((x) => x.dataset.help));
   assert.ok((await infos()).includes('overview'), 'info at the summary');
-  await page.locator('#aboutBody [data-ppage="help"]').click();
+  await elternSeite(page, 'help');
   assert.ok((await infos()).includes('guidance'));
-  await page.locator('#aboutBody [data-ppage="settings"]').click();
+  await elternSeite(page, 'settings');
   const keys = await infos();
   for (const k of ['focus', 'calendar', 'storycap', 'profile', 'version']) assert.ok(keys.includes(k), 'info at ' + k);
   const t = await hilfe(page, '#aboutBody .info-btn[data-help="focus"]', 'Fokus-Themen');
