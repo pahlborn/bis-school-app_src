@@ -335,7 +335,7 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
     <div id="advent" class="advent" hidden></div>
     <div id="subjects" class="subjects"></div>
     <div class="growrow"><div id="tree" class="tree"></div><div><div class="eyebrow">My learning tree</div><div id="treeText" class="muted"></div><div id="badges" class="badges"></div></div></div>
-    <button class="btn" id="sheetBtn" type="button">🖨️ Print a practice sheet</button>
+    <button class="btn" id="sheetBtn" type="button">📄 Practice sheet (PDF / print)</button>
     <div class="foot">
       <span>Topics from class, updated 30 October.</span>
       <span class="row" style="flex:0 0 auto">
@@ -366,6 +366,16 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
     <ol id="rankPath" class="rank-path"></ol>
     <p id="rankNext"></p>
     <div class="row"><button class="btn" id="rankClose" type="button">Close</button></div>
+  </dialog>
+
+  <!-- PRACTICE SHEET: PDF first (on the go, no printer), print where the browser supports it -->
+  <dialog id="sheetDlg" class="profile-dlg" aria-labelledby="sheetTitle">
+    <h2 id="sheetTitle">Your practice sheet is ready ✓</h2>
+    <p class="small">Task page and answer page for grown-ups.</p>
+    <div class="row"><button class="btn primary" id="sheetPdf" type="button">📄 Share / save as PDF</button></div>
+    <div class="row"><button class="btn" id="sheetPrint" type="button">🖨️ Print</button></div>
+    <p id="sheetMsg" class="small" role="status"></p>
+    <div class="row"><button class="btn" id="sheetClose" type="button">Close</button></div>
   </dialog>
 
   <!-- ABOUT & GROWN-UPS -->
@@ -2453,11 +2463,140 @@ function renderSheet(sheet){
     <p class="small">Working shown and units written = what the class rubric asks for. A second way to check = the next step up.</p></section>`;
   return page1+page2;
 }
+/* Peter, 30.10.: the app is mostly used on the go without a printer, and home-screen apps on iPad
+   ignore window.print(). So a new sheet offers "Share / save as PDF" first; "Print" stays where it works. */
+let currentSheet=null;
+const isStandalone = () => window.navigator.standalone===true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
 function printSheet(){
-  const sheet=buildSheet();
-  $('#printArea').innerHTML=renderSheet(sheet);
+  currentSheet=buildSheet();
+  $('#printArea').innerHTML=renderSheet(currentSheet);
+  $('#sheetPrint').hidden=isStandalone();
+  $('#sheetMsg').textContent='';
+  const d=$('#sheetDlg'); if(d.showModal) d.showModal(); else d.setAttribute('open','');
   snapshot();
-  setTimeout(()=>window.print(), 50);
+}
+function closeSheetDlg(){ const d=$('#sheetDlg'); if(d.close) d.close(); else d.removeAttribute('open'); }
+async function sharePdf(){
+  if(!currentSheet) return;
+  const msg=$('#sheetMsg'); msg.textContent='PDF wird erstellt …';
+  try{
+    const bytes=await sheetPdf(currentSheet), name='Practice sheet '+currentSheet.day+'.pdf', file=new File([bytes],name,{type:'application/pdf'});
+    if(navigator.canShare && navigator.share && navigator.canShare({files:[file]})){
+      try{ await navigator.share({files:[file], title:'Practice sheet'}); msg.textContent='PDF geteilt.'; return; }catch(e){ if(e && e.name==='AbortError'){ msg.textContent=''; return; } }
+    }
+    const a=document.createElement('a'); a.href=URL.createObjectURL(file); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+    msg.textContent='PDF gespeichert.';
+  }catch(e){ msg.textContent='Das PDF ließ sich nicht erstellen.'; console.error('pdf',e); }
+}
+
+/* ---------- minimal PDF writer (no library): A4, Helvetica, text, lines, boxes, JPEG images ---------- */
+const HELV=[278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
+const HELVB=[278,333,474,556,556,889,722,238,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,333,333,584,584,584,611,975,722,722,722,722,667,611,778,722,278,556,722,611,833,722,778,667,778,722,667,611,722,667,944,667,667,611,333,278,333,584,556,333,556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,611,611,389,556,333,611,556,778,556,556,500,389,280,389,584];
+const WIN={'€':0x80,'‚':0x82,'„':0x84,'…':0x85,'‘':0x91,'’':0x92,'“':0x93,'”':0x94,'•':0x95,'–':0x96,'—':0x97};
+function pdfText(s){ // to WinAnsi-safe text; unknown symbols get a plain replacement
+  return String(s).replace(/→/g,'->').replace(/☐/g,'[ ]').replace(/[✓✔]/g,'v').replace(/≈/g,'~').replace(/×/g,'x').replace(/[\u{1F000}-\u{1FFFF}\u2600-\u27BF\uFE0F\u200D]/gu,'').replace(/\s+/g,' ').trim();
+}
+function pdfBytesOf(s){ const out=[]; for(const ch of s){ const c=ch.codePointAt(0); out.push(WIN[ch]!==undefined?WIN[ch]:c<256?c:63); } return out; }
+function pdfWidth(s,size,bold){ const t=bold?HELVB:HELV; let w=0; for(const ch of s){ const c=ch.normalize('NFD').charCodeAt(0); w+=(c>=32&&c<=126?t[c-32]:556); } return w*size/1000; }
+class PdfDoc{
+  constructor(){ this.W=595.28; this.H=841.89; this.M=42; this.pages=[]; this.images=[]; this.newPage(); }
+  newPage(){ this.ops=[]; this.pages.push(this.ops); this.y=this.H-this.M; }
+  need(h){ if(this.y-h<this.M){ this.newPage(); } }
+  esc(s){ return pdfBytesOf(s).map(b=>b===40||b===41||b===92?'\\'+String.fromCharCode(b):b<32||b>126?'\\'+b.toString(8).padStart(3,'0'):String.fromCharCode(b)).join(''); }
+  text(str,{size=11,bold=false,x=0,gap=3}={}){
+    const words=pdfText(str).split(' '), maxW=this.W-2*this.M-x, lines=[]; let line='';
+    for(const w of words){ const t=line?line+' '+w:w; if(pdfWidth(t,size,bold)>maxW && line){ lines.push(line); line=w; } else line=t; }
+    if(line) lines.push(line);
+    for(const l of lines){ this.need(size+gap); this.y-=size; this.ops.push(`BT /${bold?'F2':'F1'} ${size} Tf ${(this.M+x).toFixed(2)} ${this.y.toFixed(2)} Td (${this.esc(l)}) Tj ET`); this.y-=gap; }
+  }
+  space(h){ this.y-=h; }
+  rule(x1,y,x2,w=0.6){ this.ops.push(`${w} w ${x1.toFixed(2)} ${y.toFixed(2)} m ${x2.toFixed(2)} ${y.toFixed(2)} l S`); }
+  box(h,label,numberLine){
+    this.need(h+6); const x=this.M, w=this.W-2*this.M, top=this.y-3;
+    this.ops.push(`0.5 G 0.8 w ${x.toFixed(2)} ${(top-h).toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)} re S 0 G`);
+    this.ops.push(`BT /F1 9 Tf ${(x+6).toFixed(2)} ${(top-12).toFixed(2)} Td (${this.esc(pdfText(label))}) Tj ET`);
+    if(numberLine){ const ly=top-h+14; this.ops.push('0.5 G'); this.rule(x+12,ly,x+w-12); [x+12,x+w/2,x+w-12].forEach(t=>this.ops.push(`${t.toFixed(2)} ${(ly-5).toFixed(2)} m ${t.toFixed(2)} ${(ly+5).toFixed(2)} l S`)); this.ops.push('0 G'); }
+    this.y=top-h-6;
+  }
+  lines(n,gap=22){ for(let i=0;i<n;i++){ this.need(gap); this.y-=gap; this.ops.push('0.6 G'); this.rule(this.M,this.y,this.W-this.M,0.5); this.ops.push('0 G'); } this.y-=4; }
+  image(jpeg,pw,ph,maxW,maxH){
+    let w=Math.min(maxW,pw), h=w*ph/pw; if(h>maxH){ h=maxH; w=h*pw/ph; }
+    this.need(h+6); const name='Im'+(this.images.length+1); this.images.push({name,jpeg,pw,ph});
+    this.y-=h; this.ops.push(`q ${w.toFixed(2)} 0 0 ${h.toFixed(2)} ${(this.M+(this.W-2*this.M-w)/2).toFixed(2)} ${this.y.toFixed(2)} cm /${name} Do Q`); this.y-=6;
+  }
+  bytes(){
+    const enc=new TextEncoder(), parts=[], offs=[]; let len=0;
+    const add=x=>{ const b=typeof x==='string'?Uint8Array.from(x,c=>c.charCodeAt(0)&255):x; parts.push(b); len+=b.length; };
+    const obj=(n,body)=>{ offs[n]=len; add(`${n} 0 obj\n`); body.forEach(add); add('\nendobj\n'); };
+    add('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+    const nPages=this.pages.length, firstPage=5, firstImg=firstPage+2*nPages, total=firstImg+this.images.length-1;
+    const xobj=this.images.length?`/XObject << ${this.images.map((im,i)=>`/${im.name} ${firstImg+i} 0 R`).join(' ')} >>`:'';
+    obj(1,['<< /Type /Catalog /Pages 2 0 R >>']);
+    obj(2,[`<< /Type /Pages /Count ${nPages} /Kids [${this.pages.map((_,i)=>`${firstPage+2*i} 0 R`).join(' ')}] >>`]);
+    obj(3,['<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>']);
+    obj(4,['<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>']);
+    this.pages.forEach((ops,i)=>{
+      const n=firstPage+2*i, content=ops.join('\n');
+      obj(n,[`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${this.W} ${this.H}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> ${xobj} >> /Contents ${n+1} 0 R >>`]);
+      obj(n+1,[`<< /Length ${content.length} >>\nstream\n`,content,'\nendstream']);
+    });
+    this.images.forEach((im,i)=>obj(firstImg+i,[`<< /Type /XObject /Subtype /Image /Width ${im.pw} /Height ${im.ph} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${im.jpeg.length} >>\nstream\n`,im.jpeg,'\nendstream']));
+    const xref=len, count=total+1;
+    add(`xref\n0 ${count}\n0000000000 65535 f \n`+Array.from({length:total},(_,i)=>String(offs[i+1]).padStart(10,'0')+' 00000 n \n').join(''));
+    add(`trailer\n<< /Size ${count} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+    const out=new Uint8Array(len); let p=0; parts.forEach(b=>{ out.set(b,p); p+=b.length; }); return out;
+  }
+}
+/* An SVG visual from the sheet becomes a JPEG: styles are copied inline so it looks like in the app. */
+async function svgToJpeg(svg){
+  const clone=svg.cloneNode(true), src=[svg,...svg.querySelectorAll('*')], dst=[clone,...clone.querySelectorAll('*')];
+  src.forEach((el,i)=>{ const cs=getComputedStyle(el); ['fill','stroke','stroke-width','stroke-dasharray','opacity','font-size','font-family','font-weight','text-anchor','dominant-baseline'].forEach(p=>{ const v=cs.getPropertyValue(p); if(v) dst[i].style.setProperty(p,v); }); });
+  const vb=(svg.getAttribute('viewBox')||'0 0 400 120').split(/[ ,]+/).map(Number), scale=2, pw=Math.round(vb[2]*scale), ph=Math.round(vb[3]*scale);
+  clone.setAttribute('xmlns','http://www.w3.org/2000/svg'); clone.setAttribute('width',pw); clone.setAttribute('height',ph);
+  const img=new Image(); img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(clone));
+  await img.decode();
+  const c=document.createElement('canvas'); c.width=pw; c.height=ph; const g=c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,pw,ph); g.drawImage(img,0,0,pw,ph);
+  const b64=c.toDataURL('image/jpeg',0.9).split(',')[1], bin=atob(b64);
+  return {jpeg:Uint8Array.from(bin,ch=>ch.charCodeAt(0)), pw, ph};
+}
+async function pdfVisual(doc, html){
+  const box=document.createElement('div'); box.className='visual pdf-render'; box.style.cssText='position:fixed;left:-10000px;top:0;width:560px'; box.innerHTML=html; document.body.appendChild(box);
+  try{
+    const svgs=[...box.querySelectorAll('svg')];
+    if(svgs.length){ for(const s of svgs){ try{ const im=await svgToJpeg(s); doc.image(im.jpeg,im.pw,im.ph,doc.W-2*doc.M,170); }catch(e){ doc.text('(Picture: see the app)',{size:9}); } } }
+    const rest=box.cloneNode(true); rest.querySelectorAll('svg').forEach(s=>s.remove());
+    const t=(rest.innerText||rest.textContent||'').trim(); if(t) doc.text(t,{size:10,x:12});
+  } finally { box.remove(); }
+}
+async function sheetPdf(sheet){
+  const doc=new PdfDoc(), name=store.get('name','')||'________________';
+  doc.text('My Practice Sheet',{size:20,bold:true,gap:6});
+  doc.text(`Name: ${name}     Date: ${sheet.day}     Believe. Inspire. Succeed.`,{size:10,gap:10});
+  let mathsIdx=sheet.items.findIndex(it=>MATHS.indexOf(it.q.world)>=0 && !it.q.visual); if(mathsIdx<0) mathsIdx=sheet.items.findIndex(it=>MATHS.indexOf(it.q.world)>=0);
+  for(let i=0;i<sheet.items.length;i++){
+    const q=sheet.items[i].q;
+    doc.space(4); doc.text(`${i+1}. ${strip(String(q.prompt).replace(/\bType\b/g,'Write').replace(/\btype\b/g,'write'))}`,{size:11.5,bold:true});
+    if(q.visual) await pdfVisual(doc,q.visual);
+    if(q.kind==='mc') q.options.forEach((o,k)=>{ if(q.htmlOptions) doc.text(`${LETTERS[k]}  (see the app)`,{size:11,x:12}); else doc.text(`${LETTERS[k]}  ${strip(o)}`,{size:11,x:12}); });
+    else if(q.kind==='type') doc.text('Answer: ____________',{size:11,x:12});
+    else { q.items.forEach(t=>doc.text(`[ ]  ${strip(t)}`,{size:11,x:12})); doc.text('Write 1, 2, 3 … in the boxes.',{size:9,x:12}); }
+    if(MATHS.indexOf(q.world)>=0) doc.box(64,'Show your work'+(q.world==='units'?' · write the unit (cm, m, g)':''),true);
+    if(i===mathsIdx) doc.box(44,'Check it another way',false);
+  }
+  doc.space(4);
+  if(sheet.writing==='de') doc.text(`${sheet.items.length+1}. Schreibe eine Anleitung für deine Traummaschine in 4 Schritten. Benutze die Man-Form und die Satzanfänge: Als Erstes, Als Nächstes, Danach, Zum Schluss.`,{size:11.5,bold:true});
+  else doc.text(`${sheet.items.length+1}. Write an OREO paragraph: Should our class have a reading corner? I think… One reason is… For example… That is why… Capital letters and full stops!`,{size:11.5,bold:true});
+  doc.lines(5);
+  doc.text('[ ] I answered every question   [ ] I checked my units   [ ] I explained one task to a grown-up   [ ] I worked with someone',{size:10});
+  doc.text('Today I am proud of: ______________________________   Next I will practise: ______________________________',{size:10});
+  doc.newPage();
+  doc.text('Answers – for grown-ups',{size:18,bold:true,gap:6});
+  doc.text(`Sheet of ${sheet.day}. Enter the results in the app afterwards (grown-ups area).`,{size:10,gap:10});
+  sheet.items.forEach((it,i)=>{ const q=it.q, key=q.kind==='mc'?`${LETTERS[q.answer]}${q.htmlOptions?'':' – '+strip(q.options[q.answer])}`:q.kind==='type'?String(q.answer):q.correct.map((k,j)=>`${j+1}. ${strip(q.items[k])}`).join(' · ');
+    doc.text(`${i+1}. ${key}`,{size:11,bold:true}); if(q.explain) doc.text(strip(q.explain),{size:10,x:12}); doc.space(3); });
+  doc.text(`${sheet.items.length+1}. Writing: look for order words, complete sentences, capitals and full stops.`,{size:11,bold:true});
+  doc.space(6); doc.text('Working shown and units written = what the class rubric asks for. A second way to check = the next step up.',{size:9});
+  return doc.bytes();
 }
 
 /* grown-ups: enter the results of a printed sheet; they count like answers in the app (with help = support level) */
@@ -2477,7 +2616,7 @@ function renderSheets(){
   if(!parentAccess){ renderParentGate(); return; }
   const all=store.get('sheets',[]).slice().reverse();
   const body=$('#aboutBody');
-  if(!all.length){ body.innerHTML=parentHeaderHTML()+parentOverviewHTML()+focusSettingsHTML()+reminderHTML()+storyCapHTML()+profileAdminHTML()+versionAdminHTML()+parentGuidanceHTML()+'<h2>Practice sheets</h2><p>No sheet printed yet. Use “Print a practice sheet” on the start page.</p>'; bindParentSettings(); return; }
+  if(!all.length){ body.innerHTML=parentHeaderHTML()+parentOverviewHTML()+focusSettingsHTML()+reminderHTML()+storyCapHTML()+profileAdminHTML()+versionAdminHTML()+parentGuidanceHTML()+'<h2>Practice sheets</h2><p>No sheet made yet. Use “Practice sheet (PDF / print)” on the start page.</p>'; bindParentSettings(); return; }
   body.innerHTML=parentHeaderHTML()+parentOverviewHTML()+focusSettingsHTML()+reminderHTML()+storyCapHTML()+profileAdminHTML()+versionAdminHTML()+parentGuidanceHTML()+'<h2>Practice sheets</h2><p class="small">Tick each task once. “With help” and “Not yet” are fine – the app then offers easier steps and repeats the task later. Nothing of this is shown to the child.</p>'+
     all.map(sh=>`<h3>Sheet of ${sh.day}</h3>`+sh.items.map((it,i)=>`<div class="sheetrow"><div class="q"><b>${i+1}.</b> ${esc(strip(sheetPrompt(it.q)).slice(0,140))}</div><div class="row">${Object.keys(RES).map(r=>`<button type="button" class="btn small${it.res===r?' on':''}" data-sheet="${sh.id}" data-i="${i}" data-res="${r}"${it.res?' disabled':''}>${RES[r]}</button>`).join('')}</div></div>`).join('')).join('');
   body.querySelectorAll('button[data-res]').forEach(b=>b.addEventListener('click',()=>enterResult(b.dataset.sheet, +b.dataset.i, b.dataset.res)));
@@ -2947,6 +3086,9 @@ $('#helpBtn').addEventListener('click',showWorked);
 $('#againBtn').addEventListener('click',()=>startRound(state.world));
 $('#homeBtn').addEventListener('click',goBack);
 $('#sheetBtn').addEventListener('click',printSheet);
+$('#sheetPdf').addEventListener('click',sharePdf);
+$('#sheetPrint').addEventListener('click',()=>{ closeSheetDlg(); setTimeout(()=>window.print(),50); });
+$('#sheetClose').addEventListener('click',closeSheetDlg);
 $('#aboutBtn').addEventListener('click',()=>openAbout());
 $('#aboutBack').addEventListener('click',()=>{ state.back='home'; goBack(); });
 $('#tabDe').addEventListener('click',()=>openAbout('de'));

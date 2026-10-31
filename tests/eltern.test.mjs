@@ -88,7 +88,7 @@ test('parent-selected focus persists and controls Today, badges and paper worksh
   const signs=await page.$$eval('#subjects .focus',e=>e.map(x=>x.textContent));
   assert.deepEqual(signs,['1 focus']);
   await klick(page,'#todayBtn');assert.ok((await zustand(page)).round.every(q=>q.world==='units'));
-  await zurStart(page);await page.evaluate(()=>window.print=()=>{});await klick(page,'#sheetBtn');
+  await zurStart(page);await page.evaluate(()=>window.print=()=>{});await klick(page,'#sheetBtn');await page.locator('#sheetClose').click();
   assert.ok((await data(page,'sheets'))[0].items.every(i=>i.q.world==='units'));
   await page.reload();await klick(page,'#todayBtn');assert.ok((await zustand(page)).round.every(q=>q.world==='units'));
   await ctx.close();

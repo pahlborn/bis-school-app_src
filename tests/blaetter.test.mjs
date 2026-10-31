@@ -25,7 +25,8 @@ const lies = (page, k) => page.evaluate((key) => JSON.parse(localStorage.getItem
 
 test('Uebungsblatt: 6 Aufgaben aus den Fokus-Themen, Schreibaufgabe, Loesungsseite, Druck ausgeloest', async () => {
   const { ctx, page, fehler } = await app();
-  await klick(page, '#sheetBtn');
+  await page.locator('#sheetBtn').click();
+  await page.locator('#sheetPrint').click();
   await page.waitForTimeout(200);
   assert.equal(await page.evaluate(() => window.__gedruckt), 1);
   const seiten = await page.$$eval('#printArea .sheet', (s) => s.length);
@@ -64,6 +65,7 @@ test('beim Drucken erscheint nur das Blatt, hell', async () => {
 test('Ergebnisse eines Blattes eintragen: richtig, mit Hilfe, noch nicht', async () => {
   const { ctx, page, fehler } = await app();
   await klick(page, '#sheetBtn');
+  await page.locator('#sheetClose').click();
   await zurStart(page);
   await elternOeffnen(page);
   const blatt = (await lies(page, 'sheets'))[0];
