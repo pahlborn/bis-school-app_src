@@ -115,6 +115,13 @@ button{font:inherit;color:inherit}
 .about-item span:last-child{font-size:1.4rem;color:var(--muted)}
 .about-sub-title{margin:12px 0 8px}
 ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
+.recorder{display:flex;flex-direction:column;gap:10px;background:var(--soft);border-radius:16px;padding:14px;border:2px solid var(--line)}
+.recorder .rec-row{align-items:center;gap:12px}
+.recorder .rec-row .btn{flex:0 0 auto}
+.recorder .clock{font-family:var(--display);font-size:1.6rem;font-weight:600;font-variant-numeric:tabular-nums}
+.btn.recording{background:var(--bad);border-color:var(--bad);color:#fff}
+.rec-item{display:flex;flex-direction:column;gap:6px;background:var(--surface);border-radius:12px;padding:10px;border:2px solid var(--line)}
+.rec-item audio{width:100%}
 .chipstat.rank-chip{cursor:pointer;gap:6px;background:var(--rk-bg,var(--surface));color:var(--rk-fg,var(--ink));border-color:var(--rk-fg,var(--line));font-size:1rem}
 .note-banner.rank-note{border-left-color:var(--rk-fg,var(--sun));background:var(--rk-bg,var(--soft));color:var(--rk-fg,var(--ink))}
 .rank-path{list-style:none;margin:12px 0;padding:0;display:flex;flex-direction:column;gap:6px}
@@ -1752,9 +1759,9 @@ const STUDIOS={
     extra:['Choose one habit for this week and tell a grown-up which one.','After each piece of work, read the list and tick what you did.','When all are ticked, celebrate and pick a new focus!'],
     tips:['Show your thinking, label your work and try a second way to check.']},
   read:{name:'Lese-Studio (Deutsch)', sub:'Leseaufnahme Herbst: üben, dann aufnehmen', color:'var(--w-read)', icon:'read',
-    intro:'Suche dir eine Seite aus deinem Lesebuch aus. Lies den Text zwei- bis dreimal laut vor. Wenn du ihn flüssig lesen kannst, mach deine Leseaufnahme auf der Lernplattform deiner Klasse. Die Aufgabe ist noch offen!',
-    timer:true,
-    checks:['Eine Seite aus meinem Lesebuch ausgesucht','1. Mal laut gelesen','2. Mal laut gelesen','3. Mal laut gelesen, jetzt flüssig!','Leseaufnahme gemacht und auf die Lernplattform hochgeladen'],
+    intro:'Suche dir eine Seite aus deinem Lesebuch aus. Lies den Text zwei- bis dreimal laut vor. Wenn du ihn flüssig lesen kannst, nimm dich hier auf und hör dich an. Die beste Aufnahme lädst du dann auf die Lernplattform deiner Klasse hoch.',
+    recorder:true,
+    checks:['Eine Seite aus meinem Lesebuch ausgesucht','1. Mal laut gelesen','2. Mal laut gelesen','3. Mal laut gelesen, jetzt flüssig!','Aufgenommen, angehört und auf die Lernplattform hochgeladen'],
     extraTitle:'Aufwärmen: Zungenbrecher',
     extra:['Fischers Fritz fischt frische Fische, frische Fische fischt Fischers Fritz.','Blaukraut bleibt Blaukraut und Brautkleid bleibt Brautkleid.','Zwischen zwei Zwetschgenzweigen zwitschern zwei Schwalben.','Acht alte Ameisen aßen am Abend Ananas.'],
     tips:['Lies langsam und deutlich, nicht schnell.','Mach bei Punkten eine kleine Pause.','Stolperst du über ein Wort? Lies den Satz noch einmal.']},
@@ -1808,7 +1815,7 @@ function show(name){
   if(name!=='about') parentLock();
   state.screen=name;
   home.hidden=name!=='home'; play.hidden=name!=='play'; results.hidden=name!=='results'; studioScreen.hidden=name!=='studio'; subjectScreen.hidden=name!=='subject'; aboutScreen.hidden=name!=='about';
-  if(name!=='studio') stopTimer();
+  if(name!=='studio'){ stopTimer(); recStop(); }
   confettiRun++; // stop confetti that is still falling from the last screen
   window.scrollTo(0,0);
 }
@@ -2727,6 +2734,7 @@ const ABOUT_DE=()=>`
 <h3>Datenschutz</h3>
 <p>Der Elternbereich verwendet eine separate, auf dem Gerät gespeicherte PIN. Sie schützt vor versehentlichem Zugriff, nicht vor gezielter Manipulation von Browserdaten. Er sperrt beim Verlassen und nach Inaktivität. Die dort angezeigten Beobachtungen sind weder Diagnosen noch Bewertungen der Schule. Eine optionale Kalenderdatei wird lokal erzeugt; erst der von den Eltern gewählte Kalender bestimmt Speicherung und Benachrichtigungen.</p>
 <p>Die Anwendung läuft vollständig im Browser und ist nur verschlüsselt veröffentlicht. Name, Sterne und Übungsstand werden ausschließlich auf dem jeweiligen Gerät gespeichert und nicht weitergegeben; es gibt keine Werbung und keine Auswertungsdienste. Nach dem Öffnen lädt die Anwendung Schriftarten von Google Fonts; dabei wird die IP-Adresse des Geräts an Google übermittelt.</p>
+<p><b>Leseaufnahmen:</b> Das Mikrofon wird nur nach einem Tipp auf „Aufnahme starten“ geöffnet und nach „Stopp“ wieder freigegeben. Die letzten drei Aufnahmen bleiben ausschließlich im Speicher dieses Geräts; die Anwendung verschickt sie nicht. Weitergegeben werden sie nur, wenn jemand sie selbst über „Teilen / Sichern“ hochlädt oder speichert. Jede Aufnahme lässt sich löschen.</p>
 <h3>Quellen</h3>${sourcesHTML()}`;
 const ABOUT_EN=()=>`
 <h2>About this app</h2>
@@ -2758,6 +2766,7 @@ const ABOUT_EN=()=>`
 <h3>Privacy</h3>
 <p>The parental area has a separate, device-local PIN and locks when left or inactive. This is a UI guard against accidental access, not protection against someone manipulating browser data. Its observations are not school assessments. Optional calendar reminders are generated locally; the chosen calendar controls import, storage and notifications.</p>
 <p>The app runs entirely in the browser and is published only in encrypted form. Name, stars and practice status are stored solely on the device and never shared; there is no advertising and no analytics. After opening, the app loads fonts from Google Fonts, which transmits the device's IP address to Google.</p>
+<p><b>Reading recordings:</b> the microphone opens only after tapping “Aufnahme starten” and is released after “Stopp”. The last three recordings stay only in this device's storage; the app never sends them. They leave the device only if someone shares or saves them via “Teilen / Sichern”. Every recording can be deleted.</p>
 <h3>Sources</h3>${sourcesHTML()}
 `;
 /* About as a menu with sub-pages (Peter, 30.10.): the overview keeps intro, the important note
@@ -2799,9 +2808,9 @@ function openStudio(k){
   while(checks.length<d.checks.length) checks.push(false);
   const done=checks.filter(Boolean).length;
   let html=`<div class="eyebrow">${esc(d.sub)}</div><h2>${esc(d.name)}</h2><p class="muted">${esc(d.intro)}</p>`;
-  /* Only a stopwatch: the app never records audio (the reading recording is made on the class learning platform). */
-  const sw=k==='read'?{go:'⏱ Stoppuhr starten',pause:'Pause',reset:'Zurück auf 0',note:'Die Stoppuhr misst nur die Zeit. Die App nimmt nichts auf.'}
-                     :{go:'⏱ Start stopwatch',pause:'Pause',reset:'Reset',note:'The stopwatch only measures time. The app records nothing.'};
+  /* Stopwatch (Pantastic): measures time only. Reading studio: real recording (see recorderHTML). */
+  const sw={go:'⏱ Start stopwatch',pause:'Pause',reset:'Reset',note:'The stopwatch only measures time.'};
+  if(d.recorder) html+=recorderHTML();
   if(d.timer){
     html+=`<div class="timer"><span class="clock" id="tClock" aria-label="Stopwatch">00:00</span><span class="row" style="flex:1;justify-content:flex-end"><button class="btn small primary" id="tStart" type="button">${sw.go}</button><button class="btn small" id="tReset" type="button">${sw.reset}</button></span></div><p class="small" id="tNote">${sw.note}</p>`;
   }
@@ -2828,7 +2837,75 @@ function openStudio(k){
     });
     $('#tReset').addEventListener('click',()=>{ stopTimer(); timerElapsed=0; clock.textContent='00:00'; startBtn.textContent=sw.go; });
   }
+  if(d.recorder && recSupported()){ $('#recBtn').addEventListener('click',recToggle); renderRecList(); }
   show('studio'); snapshot();
+}
+
+/* ---------- reading recording (Peter, 30.10.) ----------
+   Record, listen, keep on THIS device (IndexedDB, newest 3), share or save for uploading to the
+   class learning platform. The app itself never sends a recording anywhere; the microphone is
+   only opened after a tap on "Aufnahme starten" and released right after "Stopp". */
+const REC_MAX=3, REC_LIMIT_MS=5*60*1000;
+let rec=null, recUrls=[];
+const recSupported = () => !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder && window.indexedDB);
+const recMime = () => { for(const m of ['audio/mp4','audio/webm;codecs=opus','audio/webm']) if(MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) return m; return ''; };
+const recExt = m => /mp4|aac|m4a/.test(m)?'m4a':/ogg/.test(m)?'ogg':'webm';
+const recLabel = ts => new Date(ts).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+const recFileDate = ts => { const d=new Date(ts); return dayKey(d)+' '+pad(d.getHours())+'-'+pad(d.getMinutes()); };
+function recDb(){ return new Promise((res,rej)=>{ const r=indexedDB.open('bq2_audio',1); r.onupgradeneeded=()=>r.result.createObjectStore('rec',{keyPath:'id'}); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+function recTx(mode, fn){ return recDb().then(db=>new Promise((res,rej)=>{ const t=db.transaction('rec',mode), out=fn(t.objectStore('rec')); t.oncomplete=()=>{ db.close(); res(out&&out.result); }; t.onerror=()=>{ db.close(); rej(t.error); }; })); }
+const recAll = () => recTx('readonly', s=>s.getAll()).then(a=>(a||[]).sort((x,y)=>y.created-x.created));
+const recDel = id => recTx('readwrite', s=>s.delete(id));
+async function recPut(item){ await recTx('readwrite', s=>s.put(item)); for(const old of (await recAll()).slice(REC_MAX)) await recDel(old.id); }
+function recorderHTML(){
+  if(!recSupported()) return `<div class="recorder"><h3>🎙️ Meine Leseaufnahme</h3><p class="small">Auf diesem Gerät kann die App nicht aufnehmen. Nimm dich direkt auf der Lernplattform deiner Klasse auf.</p></div>`;
+  return `<div class="recorder" id="recorder"><h3>🎙️ Meine Leseaufnahme</h3><div class="row rec-row"><button class="btn primary" id="recBtn" type="button">● Aufnahme starten</button><span class="clock" id="recClock">00:00</span></div><p class="small" id="recMsg" role="status">Die Aufnahme bleibt nur auf diesem Gerät. Die App schickt nichts weg – hochladen kannst du selbst über „Teilen / Sichern“.</p><div id="recList"></div></div>`;
+}
+async function recToggle(){
+  if(rec) return recStop();
+  const msg=$('#recMsg'), btn=$('#recBtn');
+  let stream;
+  try{ stream=await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch(e){ msg.textContent=e&&e.name==='NotAllowedError'?'Bitte erlaube das Mikrofon für diese Seite (in den Einstellungen des Browsers) und versuch es noch einmal.':'Das Mikrofon lässt sich gerade nicht öffnen.'; return; }
+  const mime=recMime(), mr=new MediaRecorder(stream, mime?{mimeType:mime}:undefined), chunks=[], start=Date.now();
+  mr.ondataavailable=e=>{ if(e.data && e.data.size) chunks.push(e.data); };
+  mr.onstop=async()=>{
+    stream.getTracks().forEach(t=>t.stop());
+    const type=mr.mimeType||mime||'audio/webm', blob=new Blob(chunks,{type});
+    const m=$('#recMsg');
+    if(blob.size){ try{ await recPut({id:'r'+start, created:start, durationMs:Date.now()-start, mime:type, blob}); if(m) m.textContent='Gespeichert. Hör dich an!'; }catch(err){ if(m) m.textContent='Speichern hat auf diesem Gerät nicht geklappt.'; } }
+    renderRecList();
+  };
+  mr.start(1000);
+  rec={mr, timer:setInterval(()=>{ const t=Date.now()-start, c=$('#recClock'); if(c) c.textContent=fmtTime(t); if(t>=REC_LIMIT_MS) recStop(); },250)};
+  btn.textContent='■ Stopp'; btn.classList.add('recording'); msg.textContent='Aufnahme läuft … (höchstens 5 Minuten)';
+}
+function recStop(){
+  if(!rec) return;
+  clearInterval(rec.timer);
+  try{ if(rec.mr.state!=='inactive') rec.mr.stop(); }catch(e){}
+  rec=null;
+  const b=$('#recBtn'); if(b){ b.textContent='● Aufnahme starten'; b.classList.remove('recording'); }
+}
+async function recShare(r){
+  const name='Leseaufnahme '+recFileDate(r.created)+'.'+recExt(r.mime), file=new File([r.blob],name,{type:r.mime||'audio/webm'});
+  if(navigator.canShare && navigator.share && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file], title:'Leseaufnahme'}); return; }catch(e){ if(e && e.name==='AbortError') return; }
+  }
+  const a=document.createElement('a'); a.href=URL.createObjectURL(file); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+}
+async function renderRecList(){
+  const box=$('#recList'); if(!box) return;
+  recUrls.forEach(u=>URL.revokeObjectURL(u)); recUrls=[];
+  let all;
+  try{ all=await recAll(); }catch(e){ box.innerHTML='<p class="small">Aufnahmen können auf diesem Gerät nicht gespeichert werden.</p>'; return; }
+  box.innerHTML=all.length?all.map(r=>`<div class="rec-item" data-id="${esc(r.id)}"><div class="small"><b>${esc(recLabel(r.created))}</b> · ${fmtTime(r.durationMs)}</div><audio controls preload="metadata"></audio><div class="row"><button class="btn small" data-share type="button">⤴ Teilen / Sichern</button><button class="btn small" data-del type="button">🗑 Löschen</button></div></div>`).join('')+`<p class="small">Die letzten ${REC_MAX} Aufnahmen bleiben gespeichert.</p>`:'<p class="small">Noch keine Aufnahme.</p>';
+  all.forEach(r=>{
+    const el=box.querySelector(`[data-id="${r.id}"]`), url=URL.createObjectURL(r.blob); recUrls.push(url);
+    el.querySelector('audio').src=url;
+    el.querySelector('[data-share]').addEventListener('click',()=>recShare(r));
+    el.querySelector('[data-del]').addEventListener('click',async()=>{ if(!confirm('Diese Aufnahme löschen?')) return; await recDel(r.id); renderRecList(); });
+  });
 }
 
 let confettiRun=0;
@@ -2875,7 +2952,7 @@ $('#aboutBack').addEventListener('click',()=>{ state.back='home'; goBack(); });
 $('#tabDe').addEventListener('click',()=>openAbout('de'));
 $('#tabEn').addEventListener('click',()=>openAbout('en'));
 $('#tabSheets').addEventListener('click',()=>openAbout('sheets'));
-document.addEventListener('visibilitychange',()=>{if(document.hidden){parentLock();if(state.screen==='about'&&state.aboutTab==='sheets') renderParentGate();}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){recStop();parentLock();if(state.screen==='about'&&state.aboutTab==='sheets') renderParentGate();}});
 $('#aboutBody').addEventListener('pointerdown',parentTouch);
 $('#aboutBody').addEventListener('keydown',parentTouch);
 window.addEventListener('hashchange',()=>{if(location.hash==='#eltern') openAbout('sheets');});
