@@ -11,8 +11,8 @@ before(async () => { server = await appServer(); browser = await browserStarten(
 after(async () => { await browser?.close(); server?.close(); });
 
 const MENUE = {
-  '#tabDe': ['Grundidee', 'Leitgedanken', 'Aufbau', 'Lernlogik', 'Exkurs: Was passiert bei einer falschen Antwort?', 'Herkunft der Aufgaben', 'Datenschutz', 'Quellen'],
-  '#tabEn': ['Idea', 'Guiding principles', 'How it works', 'Side note: what happens after a wrong answer?', 'Origin of the tasks', 'Privacy', 'Sources']
+  '#tabDe': ['Anleitung für Erwachsene', 'How to use Big Quest (für Kinder)', 'Grundidee', 'Leitgedanken', 'Aufbau', 'Lernlogik', 'Exkurs: Was passiert bei einer falschen Antwort?', 'Herkunft der Aufgaben', 'Datenschutz', 'Quellen'],
+  '#tabEn': ['Guide for grown-ups', 'How to use Big Quest', 'Idea', 'Guiding principles', 'How it works', 'Side note: what happens after a wrong answer?', 'Origin of the tasks', 'Privacy', 'Sources']
 };
 
 for (const [tab, titel] of Object.entries(MENUE)) {
