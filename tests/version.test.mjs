@@ -103,7 +103,7 @@ test('built app: child sees only "v13" at the end of About (DE and EN); adults s
 
 test('published shell: "check for new version" says current, then reports a newer one; only own address is contacted', async () => {
   const ziel = await tmp();
-  const r = await distBauen(TEST_PW, { ziel, version: V });
+  const r = await distBauen(TEST_PW, { ziel, version: V, konten: null });
   const schluessel = Buffer.from(r.schluesselRoh).toString('base64');
   inhalt['/app/'] = await fs.readFile(path.join(ziel, 'index.html'), 'utf8');
   const ctx = await browser.newContext();
@@ -118,7 +118,7 @@ test('published shell: "check for new version" says current, then reports a newe
   await page.waitForFunction(() => !document.querySelector('#updateMessage').textContent.includes('Prüfe'));
   assert.match(await page.textContent('#updateMessage'), /^Aktuell/);
   const ziel2 = await tmp();
-  await distBauen(TEST_PW, { ziel: ziel2, version: { ...V, n: 14, hash: 'b2c3d4e', date: '31.10.2026 09:00' } });
+  await distBauen(TEST_PW, { ziel: ziel2, version: { ...V, n: 14, hash: 'b2c3d4e', date: '31.10.2026 09:00' }, konten: null });
   inhalt['/app/'] = await fs.readFile(path.join(ziel2, 'index.html'), 'utf8');
   await page.locator('#checkUpdate').click();
   await page.waitForFunction(() => document.querySelector('#updateMessage').textContent.includes('v14'));

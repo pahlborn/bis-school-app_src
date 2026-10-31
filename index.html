@@ -2669,7 +2669,7 @@ function parentTouch(){
   parentTimer=setTimeout(()=>{parentLock();if(state.screen==='about'&&state.aboutTab==='sheets') renderParentGate();},5*60*1000);
 }
 function parentHeaderHTML(){
-  if(accountsOn() && adultUser) return `<h2>${adultUser.role==='teacher'?'Lehrkraft-Ansicht':'Elternbereich'}</h2><p>Angemeldet als <b>${esc(adultUser.user)}</b> (${adultUser.role==='teacher'?'Lehrkraft':'Eltern'}). Übungsbeobachtungen auf diesem Gerät, keine schulische Bewertung. <button class="btn small" id="parentClose" type="button">Abmelden</button></p><p class="small">Abmeldung beim Verlassen, beim Wechsel in den Hintergrund und nach fünf Minuten ohne Bedienung.</p>`;
+  if(accountsOn() && adultUser) return `<h2>${adultUser.role==='teacher'?'Lehrkraft-Ansicht':'Elternbereich'}</h2><p>Angemeldet als <b>${esc(adultUser.user)}</b> (${adultUser.admin?'Admin':adultUser.role==='teacher'?'Lehrkraft':'Eltern'}). Übungsbeobachtungen auf diesem Gerät, keine schulische Bewertung. <button class="btn small" id="parentClose" type="button">Abmelden</button></p><p class="small">Abmeldung beim Verlassen, beim Wechsel in den Hintergrund und nach fünf Minuten ohne Bedienung.</p>`;
   return '<h2>Elternbereich</h2><p>Nur für Erwachsene: Übungsbeobachtungen auf diesem Gerät, keine schulische Bewertung. <button class="btn small" id="parentClose" type="button">Sperren</button></p><p class="small">Sperrt beim Verlassen, beim Wechsel in den Hintergrund und nach fünf Minuten ohne Bedienung. Die PIN ist ein lokaler Bedienungsschutz; sie ersetzt nicht das Passwort der verschlüsselten App.</p>';}
 /* ---------- login (S3, Peter 30.10.) ----------
    Role first (like the school platform), then user name + password. Accounts come from the admin
@@ -2742,7 +2742,7 @@ function renderSetPassword(u){
 function loginDone(u){
   $('#loginBody').innerHTML='';
   if(u.role==='student'){ store.set('session',{user:u.user}); adultUser=null; renderHome(); show('home'); }
-  else { adultUser={user:u.user, role:u.role}; parentAccess=true; parentTouch(); openAbout('sheets'); }
+  else { adultUser={user:u.user, role:u.role, admin:!!u.admin}; parentAccess=true; parentTouch(); openAbout('sheets'); }
 }
 function logout(){
   if(adultUser){ adultUser=null; parentLock(); }
