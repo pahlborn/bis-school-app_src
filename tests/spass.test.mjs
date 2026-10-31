@@ -68,18 +68,18 @@ test('Pisolala auf Deutsch nur nach einer Runde im Fach Deutsch (Anleitung)', as
   await ctx.close();
 });
 
-test('Lese-Studio: nur eine Stoppuhr, klar beschriftet; die App greift nie auf das Mikrofon zu', async () => {
+test('Studios: Lese-Studio hat die Aufnahme statt einer Stoppuhr; Pantastic behält die Stoppuhr; Mikrofon erst nach Tipp', async () => {
   const { ctx, page, fehler } = await app();
   await page.evaluate(() => { window.__mic = 0; if (navigator.mediaDevices) navigator.mediaDevices.getUserMedia = () => { window.__mic++; return Promise.reject(new Error('no')); }; });
   await karteOeffnen(page, (await alleKarten(page)).find((k) => k.item === 'studio:read'));
-  assert.equal(await page.textContent('#tStart'), '⏱ Stoppuhr starten');
-  assert.match(await page.textContent('#tNote'), /nimmt nichts auf/);
+  assert.equal(await page.locator('#tStart').count(), 0, 'no stopwatch in the reading studio');
+  assert.equal(await page.evaluate(() => window.__mic), 0, 'opening the studio does not open the microphone');
+  await karteOeffnen(page, (await alleKarten(page)).find((k) => k.item === 'studio:stage'));
   await page.locator('#tStart').click();
   assert.equal(await page.textContent('#tStart'), 'Pause');
   await page.locator('#tStart').click();
-  assert.equal(await page.textContent('#tStart'), '⏱ Stoppuhr starten');
+  assert.equal(await page.textContent('#tStart'), '⏱ Start stopwatch');
   assert.equal(await page.evaluate(() => window.__mic), 0);
-  assert.ok(!(await import('node:fs')).readFileSync(new URL('../index.html', import.meta.url), 'utf8').match(/getUserMedia|MediaRecorder/), 'no recording code in the app');
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
