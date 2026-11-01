@@ -111,11 +111,16 @@ test('child view has no grown-ups tab; "Grown-ups" opens the grown-ups login ope
   const { ctx, page, fehler } = await oeffnen();
   await anmelden(page, 'student', 'mia', CODES.mia); await passwortSetzen(page, 'mond');
   await page.waitForSelector('#home:not([hidden])');
-  await page.locator('#aboutBtn').click();
+  // help by role (Peter 01.11.): one help button, only the child guide - no concept, sources or grown-up notes
+  assert.equal(await sichtbar(page, '#aboutBtn'), false, 'no second info button for the child');
+  await page.locator('#guideBtn').click();
   assert.equal(await sichtbar(page, '#tabSheets'), false);
-  const menue = await page.$$eval('#aboutBody details.about-sec > summary', (s) => s.map((x) => x.textContent.trim()));
-  assert.deepEqual(menue.slice(0, 1), ['How to use Big Quest'], 'child guide for the child, in English by default');
-  assert.ok(!menue.includes('Anleitung für Erwachsene'), 'no grown-ups guide for the child');
+  assert.equal((await page.textContent('#aboutBody h2')).trim(), 'How to use Big Quest');
+  assert.equal(await page.locator('#aboutBody details').count(), 0, 'no topic list');
+  const kind = await page.textContent('#aboutBody');
+  for (const w of ['Wichtiger Hinweis', 'Please note', 'Grundidee', 'Guiding principles', 'Sources', 'Quellen', 'Privacy', 'Anleitung für Erwachsene', 'Guide for grown-ups', 'Requires support']) assert.ok(!kind.includes(w), 'not for the child: ' + w);
+  assert.equal(await sichtbar(page, '#aboutTop .flags'), false, 'child guide is English only');
+  assert.equal((await page.textContent('#aboutChip')).trim(), '❓ Help');
   await page.locator('#aboutBack').click();
   await page.locator('#adultBtn').click();
   assert.ok(await sichtbar(page, '#loginUser'));
@@ -131,7 +136,7 @@ test('child view has no grown-ups tab; "Grown-ups" opens the grown-ups login ope
   await page.locator('#parentClose').click();
   await page.waitForSelector('#home:not([hidden])');
   assert.equal(await page.locator('#focusForm').count(), 0);
-  await page.locator('#aboutBtn').click();
+  await page.locator('#guideBtn').click();
   assert.equal(await sichtbar(page, '#tabSheets'), false, 'after the grown-up left, the child sees no grown-ups tab');
   await page.locator('#aboutBack').click();
   await page.reload(); await page.waitForSelector('#home:not([hidden])');
@@ -163,6 +168,8 @@ test('grown-ups header: language flags, version and log out always in view; info
   const ab = page.locator('#aboutBody details.psec[data-psec="guide"] details.about-sec').first();
   await ab.locator('summary').click();
   assert.ok(await ab.locator('.about-sec-body').isVisible());
+  const kapitel = await page.$$eval('#aboutBody details.psec[data-psec="guide"] details.about-sec > summary', (s) => s.map((x) => x.textContent.trim()));
+  assert.ok(!kapitel.some((t) => t.startsWith('How to use Big Quest')), 'no child guide in the grown-ups area');
   assert.ok(await page.locator('.psubject').count(), 'still logged in');
   await page.locator('.phdr [data-plang="de"]').click();
   assert.ok(await page.locator('#aboutBody details.psec[data-psec="guide"]').evaluate((d) => d.open), 'opened chapter stays open after switching language');
@@ -241,8 +248,8 @@ test('admin: try the test child and come back without a new login; log out retur
   await page.waitForSelector('#home:not([hidden])');
   assert.match(await page.textContent('#testBar'), /Testkonto/);
   assert.equal(await page.textContent('#totalStars'), '0', 'test data, not the child');
-  // info pages from the test account and back: stays in the test account, return still offered
-  await page.locator('#aboutBtn').click();
+  // help from the test account and back: stays in the test account, return still offered
+  await page.locator('#guideBtn').click();
   assert.ok(await page.locator('#about').isVisible());
   assert.equal(await sichtbar(page, '#tabSheets'), false);
   await page.locator('#aboutBack').click();
