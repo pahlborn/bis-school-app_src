@@ -1472,7 +1472,7 @@ function partQ(){
   return typed("How many "+s.t[0]+" are "+s.t[1]+" or "+s.t[2]+" together? Type your answer.", s.a+s.b, s.a+" + "+s.b+" = "+(s.a+s.b)+". The question asks only about the two parts, not the total.", Object.assign({visual:quote(s.text)}, WPR));
 }
 const WPR_MC=[
- ["What should you do FIRST with a word problem?","Read it twice and underline the numbers",["Write any number","Add all the numbers","Guess"],"Reading twice stops you from mixing up the total and the parts."],
+ ["A word problem is a short story with numbers. What is a good FIRST step?","Read it carefully: what is the question, and which numbers do I need?",["Add up all the numbers I can see","Start calculating with the first number","Write down the biggest number"],"First understand the story: What does the question ask? Which numbers do you need – the whole or a part? Then calculate. Adding every number you see often gives a wrong answer."],
  ["The problem says 905 stickers, but you wrote 902. What happens?","All your calculations come out wrong",["Nothing","You get extra points","The answer is still right"],"One wrong digit at the start makes every step wrong. Check the numbers against the text."],
  ["A problem has two steps. What is a good strategy?","Do one step, write the result, then do the next step",["Do both steps in your head at once","Skip the first step","Only write the final answer"],"Writing the middle result keeps multi-step problems clear."],
  ["How do you check a subtraction like 905 − 600 = 305?","Add 305 + 600 and see if you get 905",["Subtract again faster","Ask a friend for the answer","Erase the question"],"Addition undoes subtraction."]
@@ -2085,7 +2085,7 @@ function renderQuestion(){
   const A=$('#qAnswers'); A.innerHTML=''; A.className='answers'+(q.grid?' grid':'')+(q.grid3?' grid3':'');
   const fb=$('#feedback'); fb.hidden=true; fb.innerHTML=''; fb.className='feedback';
   const nb=$('#nextBtn'); nb.hidden=true; nb.textContent=state.idx===state.round.length-1?'See my stars':'Next question';
-  $('#helpRow').hidden=false; $('#helpBtn').textContent=helpLabels(q)[0]; $('#answerBtn').textContent=helpLabels(q)[1]; $('#answerBtn').hidden=true;   // the answer only after the tip (Peter, 01.11.)
+  $('#helpRow').hidden=false; $('#helpBtn').hidden=false; $('#helpBtn').textContent=helpLabels(q)[0]; $('#answerBtn').textContent=helpLabels(q)[1]; $('#answerBtn').hidden=true;   // the answer only after the tip (Peter, 01.11.)
   if(q.kind==='mc'){
     q.options.forEach((o,i)=>{
       const b=document.createElement('button'); b.type='button'; b.className='opt'+(q.vis?' vis':'');
@@ -2189,11 +2189,70 @@ const helpLabels = q => q.world==='anleitung' ? ['Zeig mir, wie','Zeig mir die L
    (support level, other numbers), fully worked - then the child solves its own task. Only where the app
    can build a truly similar easier task (rounding, missing parts, place value); elsewhere the button
    does not appear. A success afterwards counts as with help, like after the tip. */
+/* Easier worked examples for maths tasks without a "coach" family (Peter, 01.11.: "Show me an example"
+   must always be EASIER than the task). Each entry recognises a task type by its prompt and builds
+   a small, simpler example of the same type: smaller or rounder numbers, one step, with a picture
+   where it helps. Conceptual questions (why/what is) get none. */
+const qAns = q => q.kind==='mc'?strip(q.options[q.answer]):String(q.answer);
+const ex1 = (prompt, answer, explain, visual) => ({kind:'type', level:1, prompt, answer:String(answer), explain, visual:visual||''});
+const MATH_EXAMPLES=[
+  // Time & Numbers
+  [/What time does the clock show|Which clock shows/, q=>{ const h=/\b3\b/.test(strip(q.prompt))?9:3; return ex1(`What time does this clock show?`, `${h}:00`, `The short hand points to ${h}. The long hand points straight up to 12. That is ${h}:00 – ${h} o’clock.`, clockSVG(h,0,150)); }],
+  [/Is that AM or PM/, q=>/AM/.test(qAns(q))?ex1('We eat dinner at 6:00 in the evening. AM or PM?', 'PM', 'Afternoon, evening and night are PM. Morning, from midnight to noon, is AM.'):ex1('We eat breakfast at 7:00 in the morning. AM or PM?', 'AM', 'Morning, from midnight to noon, is AM. Afternoon, evening and night are PM.')],
+  [/follow the jumps/, ()=>ex1('Start at 20. Jump +10, then +5. Where do you land?', 35, '20 + 10 = 30. Then 30 + 5 = 35. Do one jump at a time.', numberLineSVG(20,[10,5]))],
+  [/odd or even/, q=>/even/i.test(qAns(q))?ex1('Is 15 odd or even?', 'odd', 'Look only at the last digit: 5. 5 people make two pairs and one is left over, so 15 is odd.'):ex1('Is 14 odd or even?', 'even', 'Look only at the last digit: 4. 4 people can make pairs with nobody left over, so 14 is even.')],
+  [/Which number is the (largest|smallest)/, q=>{ const big=/largest/.test(strip(q.prompt)); return ex1(`Which is the ${big?'largest':'smallest'}: 245, 452 or 254?`, big?452:245, `Compare the hundreds first: 2, 4 and 2. ${big?'452 has the most hundreds, so it is the largest.':'245 and 254 both have 2 hundreds – now compare the tens: 4 tens is less than 5 tens, so 245 is the smallest.'}`); }],
+  [/thousands, .*hundreds, .*tens and .*ones/, ()=>ex1('2 hundreds, 3 tens and 5 ones. What number is that?', 235, 'Write each digit in its column: 2 | 3 | 5. That makes 235.', tableHTML(['Hundreds','Tens','Ones'],[['2','3','5']]))],
+  [/(more|less) than [\d,]+\?/, q=>{ const more=/more than/.test(strip(q.prompt)); return ex1(`What is 10 ${more?'more':'less'} than 25?`, more?35:15, `Only the tens change: 2 tens ${more?'+':'−'} 1 ten = ${more?3:1} tens. 25 ${more?'+':'−'} 10 = ${more?35:15}.`); }],
+  [/^[\d,]+ [+−] [\d,]+ = \?$/, q=>{ const plus=/\+/.test(strip(q.prompt)); return plus?ex1('40 + 30 = ?', 70, 'Add the tens: 4 tens + 3 tens = 7 tens = 70.'):ex1('70 − 20 = ?', 50, 'Take away the tens: 7 tens − 2 tens = 5 tens = 50.'); }],
+  // Rounding Road (tasks without a coach family)
+  [/Round each number to the nearest hundred, then add|estimate .* by rounding each number to the nearest hundred/, ()=>ex1('About how much is 210 + 390?', 600, '210 is about 200. 390 is about 400. 200 + 400 = 600.')],
+  [/Which estimate is closer to the exact answer/, ()=>ex1('Which estimate is closer to 32 + 47 (exactly 79)?', 'nearest ten: 30 + 50 = 80', 'Nearest ten: 30 + 50 = 80, only 1 away from 79. Nearest hundred: 0 + 0 = 0, far away. Rounding to tens is closer.')],
+  [/is between .* The halfway point is/, ()=>ex1('130 is between 100 and 200. The halfway point is 150. So 130…', 'rounds down to 100', '130 comes before the halfway point 150, so it rounds down to 100.', benchLineSVG(130,100,200))],
+  [/halfway point between|exactly halfway between/, ()=>ex1('What is halfway between 100 and 200?', 150, '100 and 200 are 100 apart. Half of 100 is 50. 100 + 50 = 150.')],
+  [/two benchmark hundreds around|Between which two hundreds does/, q=>/^300\b/.test(qAns(q))?ex1('Between which two hundreds is 640?', '600 and 700', '640 has 6 hundreds, so it is more than 600. The next hundred is 700.', benchLineSVG(640,600,700)):ex1('Between which two hundreds is 340?', '300 and 400', '340 has 3 hundreds, so it is more than 300. The next hundred is 400.', benchLineSVG(340,300,400))],
+  [/Which number rounds to/, ()=>ex1('Which number rounds to 100: 120 or 180?', 120, '120 is 20 away from 100 but 80 away from 200, so it rounds to 100.')],
+  // Number Combinations
+  [/Is that reasonable/, q=>/^Yes/.test(qAns(q))?ex1('Leo says 52 + 39 = 191. Is that reasonable?', 'no', 'Estimate: 50 + 40 = 90. 191 is far away from 90, so something went wrong.'):ex1('Leo says 52 + 39 = 91. Is that reasonable?', 'yes', 'Estimate: 50 + 40 = 90. 91 is close to 90, so it is reasonable.')],
+  [/three different.* ways to make/, ()=>ex1('Show three different ways to make 10.', '5 + 5, 6 + 4, 7 + 3', 'Each line makes 10, and no line is the same: 5 + 5, 6 + 4, 7 + 3.')],
+  [/split .* Which is .*another.* way to make/, ()=>ex1('Mia made 100 as 50 + 50. Another way?', '60 + 40', '60 + 40 also makes 100, and it is different from 50 + 50.')],
+  // Word Problems
+  [/Round each number to the nearest ten, then add/, ()=>ex1('21 + 39 ≈ ?', 60, '21 is about 20. 39 is about 40. 20 + 40 = 60.')],
+  [/Which sticker combination adds up to/, ()=>ex1('Which adds up to 10: 4 + 6 or 4 + 5?', '4 + 6', '4 + 6 = 10. 4 + 5 = 9, one too few.')],
+  [/Which calculation finds how many stickers/, ()=>ex1('Ana has 5 stickers. She gets 3 more. Which calculation?', '5 + 3', 'She gets more, so we add: 5 + 3 = 8.')],
+  [/together\? Type your answer/, ()=>ex1('3 red marbles and 4 blue marbles. How many together?', 7, 'Together means add: 3 + 4 = 7.')],
+  [/Which number is the total number/, ()=>ex1('There are 12 marbles. 5 of them are red. Which number is the total?', 12, '12 is all the marbles together – the whole. 5 is only a part.')],
+  // Data Detective
+  [/Which symbol makes this true/, q=>qAns(q)==='<'?ex1('52 ___ 25', '>', 'Compare the tens first: 5 tens are more than 2 tens, so 52 > 25. The open side faces the bigger number.'):ex1('25 ___ 52', '<', 'Compare the tens first: 2 tens are less than 5 tens, so 25 < 52. The open side faces the bigger number.')],
+  [/on which day did the driver travel the (most|least)/, q=>{ const most=/most/.test(strip(q.prompt)); return ex1(`On which day did the driver travel the ${most?'most':'least'}?`, most?'Day 3':'Day 2', `Compare the three numbers: 120, 80 and 200. The ${most?'biggest is 200 (Day 3)':'smallest is 80 (Day 2)'}.`, tableHTML(['Day','Kilometres'],[['Day 1','120 km'],['Day 2','80 km'],['Day 3','200 km']])); }],
+  [/About how many kilometres in these three days/, ()=>ex1('About how many kilometres: 110 km and 190 km?', '300 km', '110 is about 100. 190 is about 200. 100 + 200 = 300 km.')],
+  [/Which equation correctly splits/, ()=>ex1('Split 10 stickers into two packs.', '6 + 4 = 10', 'Both packs together must make the whole: 6 + 4 = 10.')],
+  // Units & Measuring
+  [/stopped at the arrow\. How far did it roll/, q=>{ const v=/^30\b/.test(qAns(q))?20:30; return ex1('The car stopped at the arrow. How far did it roll?', `${v} cm`, `Read the number right under the arrow: ${v}. The stick shows centimetres, so ${v} cm.`, rulerSVG(v)); }],
+  [/The scale shows the car’s mass/, ()=>ex1('The scale shows 50 g. What do you write?', '50 g', 'Write the number AND the unit: 50 g.')],
+  [/Which unit is right/, q=>qAns(q)==='cm'?ex1('A room is about 5 ___ long. Which unit?', 'm', 'A room is long – metres fit. Centimetres are for short things like a book.'):ex1('A book is about 30 ___. Which unit?', 'cm', 'A book is short – centimetres fit. Metres are for long things like a room.')],
+  [/Which is longer: .* cm or .* m\?/, q=>/m$/.test(qAns(q))&&!/cm$/.test(qAns(q))?ex1('Which is longer: 150 cm or 1 m?', '150 cm', '1 m = 100 cm. 150 cm is more than 100 cm, so 150 cm is longer.'):ex1('Which is longer: 50 cm or 1 m?', '1 m', '1 m = 100 cm. 100 cm is more than 50 cm, so 1 m is longer.')],
+  [/^[\d,]+ m = how many cm\?/, q=>qAns(q)==='100'?ex1('2 m = how many cm?', 200, 'Every metre has 100 centimetres. 2 m = 100 cm + 100 cm = 200 cm.'):ex1('1 m = how many cm?', 100, 'Every metre has 100 centimetres. So 1 m = 100 cm.')],
+  [/A box holds .* stickers\. You have about/, ()=>ex1('A box holds 10 stickers. You have 12. What is true?', 'All but 2 fit', '10 fit in the box, 12 − 10 = 2 stay outside.')],
+  [/How much is that in metres and centimetres/, ()=>ex1('120 cm = ? m ? cm', '1 m 20 cm', '100 cm make 1 m. 120 cm = 100 cm + 20 cm = 1 m 20 cm.')],
+  // Bar Graphs
+  [/Read the graph\. How far did the car roll on/, ()=>ex1('How far did the car roll on Ramp A?', '40 cm', 'Find the bar for Ramp A. Follow its top to the numbers on the side: 40.', barChartSVG([{label:'Ramp A',v:40},{label:'Ramp B',v:20}],{titleText:'Example: how far the car rolled (cm)'}))],
+  [/Read the graph\. On which surface did the car roll the farthest/, ()=>ex1('On which ramp did the car roll the farthest?', 'Ramp A', 'The tallest bar shows the farthest distance: Ramp A.', barChartSVG([{label:'Ramp A',v:40},{label:'Ramp B',v:20}],{titleText:'Example: how far the car rolled (cm)'}))],
+  [/Read the graph\. Which surface had the most friction/, ()=>ex1('Which ramp had the most friction?', 'Ramp B', 'Most friction stops the car early: the shortest bar – Ramp B.', barChartSVG([{label:'Ramp A',v:40},{label:'Ramp B',v:20}],{titleText:'Example: how far the car rolled (cm)'}))],
+  [/Look at the data\. Which conclusion fits/, ()=>ex1('Carpet 20 cm, Tiles 80 cm. Which surface has more friction?', 'Carpet', 'The car stopped sooner on carpet, so carpet has more friction.', tableHTML(['Surface','Distance'],[['Carpet','20 cm'],['Tiles','80 cm']]))]
+];
 function exampleFor(q){
-  const ans=x=>x.kind==='mc'?x.options[x.answer]:String(x.answer);
+  const ans=x=>x.kind==='mc'?strip(x.options[x.answer]):String(x.answer);
   const c=bridgeFor(q).slice(0,2).filter(e=>levelOf(e)<levelOf(q) && JSON.stringify(e.coach)!==JSON.stringify(q.coach));
   c.sort((a,b)=>(ans(a)===ans(q))-(ans(b)===ans(q)));   // prefer an example with a different answer
-  return c[0]||null;
+  if(c[0]) return c[0];
+  if(q.coach || levelOf(q)<=1) return null;             // nothing easier than the support level
+  const p=strip(q.prompt), hit=MATH_EXAMPLES.find(([re])=>re.test(p));
+  if(!hit) return null;
+  const ex=hit[1](q);
+  // never give the task's own answer away, never repeat the task itself
+  if(ans(ex).toLowerCase()===ans(q).toLowerCase() || strip(ex.prompt)===p) return null;
+  return ex;
 }
 /* after the tip: the tip button becomes "Show me an example" if there is one, otherwise it goes */
 function afterTip(q){
@@ -2204,7 +2263,7 @@ function afterTip(q){
 }
 function showExample(){
   if(state.answered || !state.example) return;
-  const q=state.round[state.idx], ex=state.example, de=q.world==='anleitung', h=guidance(ex,null,true), fb=$('#feedback');
+  const q=state.round[state.idx], ex=state.example, de=q.world==='anleitung', h=ex.coach?guidance(ex,null,true):{text:ex.explain,visual:ex.visual||''}, fb=$('#feedback');
   state.exampled=true;
   const log=store.get('attempts',[]); log.push({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,exampleShown:true,qid:q.dueId||qId(q)}); store.set('attempts',log.slice(-200));
   const answer=ex.kind==='mc'?esc(strip(ex.options[ex.answer])):esc(ex.answer);
