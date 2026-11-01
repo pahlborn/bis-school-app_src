@@ -193,6 +193,7 @@ button{font:inherit;color:inherit}
 .phdr{position:sticky;top:0;z-index:5;background:var(--bg,#F6F8FC);border-bottom:2px solid var(--line);padding:8px 0;margin:0 0 8px;display:flex;flex-direction:column;gap:6px}
 .phdr-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .phdr-who{font-family:var(--display);font-weight:700}
+.phdr-kid{font-size:.85rem;font-weight:700;background:var(--soft);border-radius:999px;padding:2px 10px}
 .phdr-ver{font-size:.8rem;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:999px;padding:2px 8px}
 .phdr-act{display:flex;align-items:center;gap:6px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
 .phdr .flags{margin-left:0}
@@ -3006,6 +3007,8 @@ function parentHomeHTML(){
   // A waiting practice sheet is mentioned once, calmly, with a way straight to it (not for teachers).
   const wait=isTeacher()?[]:waitingSheets(), w=wait[wait.length-1];
   const note=w?`<p class="phow psheet-note">📄 ${wait.length===1?(de?`${sheetName(w)} wartet aufs Eintragen.`:`${sheetName(w)} is waiting to be entered.`):(de?`${wait.length} Übungsblätter warten aufs Eintragen.`:`${wait.length} practice sheets are waiting to be entered.`)} <button type="button" class="btn small" data-opensheet="${w.id}">${de?'Jetzt eintragen':'Enter now'}</button></p>`:'';
+  const noKid=accountsOn() && !studentSession() ? `<p class="phow pnokid">📱 ${de?'Auf diesem Gerät ist kein Kind angemeldet. Den Lernstand sehen Sie auf dem Gerät, auf dem Ihr Kind übt – dort unten „👪 Grown-ups“ antippen.':'No child is logged in on this device. You see your child’s progress on the device where they practice – tap “👪 Grown-ups” at the bottom there.'}</p>` : '';
+  if(noKid) return noKid;   // nothing to show: without a logged-in child the data on this device are not the child's
   return `${note}<p class="phow">${T.howHome}</p><div class="playout"><div class="psubjects">${tiles}</div><aside class="pside"><div class="pcard" id="pSummary">${summaryHTML(all)}</div><div class="pcard">${legendHTML()}</div></aside></div>`;
 }
 function legendHTML(){
@@ -3013,6 +3016,7 @@ function legendHTML(){
   return `<h2>${de?'Was bedeuten die Farben?':'What do the colors mean?'}</h2>`+['m','e','c','rs','na'].map(l=>`<p class="pleg"><span class="pdots"><i class="${l}"></i></span> <b>${PSTAND[PL()][l]}</b>${SCHOOLTERM[l]?` <i>(${SCHOOLTERM[l]})</i>`:''}</p>`).join('')+`<p class="small">${de?'„Vorläufig“ heißt: genug für eine erste Einschätzung, noch nicht über längere Zeit bestätigt. „Bestätigt“: etwa 20 Aufgaben an 5 Tagen über zwei Wochen.':'“Provisional” means enough for a first judgment, not yet confirmed over a longer time. “Confirmed”: about 20 tasks on 5 days over two weeks.'}</p>`;
 }
 function parentSubjectHTML(key){
+  if(accountsOn() && !studentSession()) return parentHomeHTML();
   const T=PT[PL()], s=SUBJECTS.find(x=>x.key===key), focus=focusTopics(), list=questsIn(s).map(assessQuest), teacher=isTeacher(), fOn=store.get('focusOn',[]), fOff=store.get('focusOff',[]);
   const cards=list.map(a=>{ const k=a.k, tags=[FOCUS.includes(k)?`<span class="ptag school">${T.school}</span>`:'', (a.level==='rs'||a.level==='c')?`<span class="ptag need">${T.need}</span>`:''].join('');
     return `<div class="pquest"><div class="phead"><div><div class="pqn">${esc(WORLDS[k].name)}</div><div class="small">${esc(qInfo(k,0))}</div></div><div>${pChip(a.level,a.sure)}</div></div>
@@ -3136,7 +3140,10 @@ function parentHeaderHTML(){
     : (de?'Elternbereich':'Grown-ups area');
   const close=accountsOn()?(de?'Abmelden':'Log out'):(de?'Sperren':'Lock');
   const test=testUserFor();
-  let h=`<header class="phdr"><div class="phdr-row"><span class="phdr-who">👪 ${who}</span><span class="phdr-act">${v?`<span class="phdr-ver" id="pVersion">${esc(v)}</span>`:''}${flagsHTML()}${test?`<button type="button" class="btn small" id="pPlayTest">🧪 ${de?'Testkind':'Test child'}</button>`:''}<button class="btn small" id="parentClose" type="button">${close}</button></span></div>`;
+  // whose data is shown (Peter, 01.11.): the child logged in on this device - data stay on the device
+  const kid=accountsOn()?studentSession():null;
+  const kidChip=accountsOn()?`<span class="phdr-kid" id="pKid">${kid?(isTestAccount()?'🧪 ':'👧 ')+esc(kid.user):(de?'👧 kein Kind auf diesem Gerät':'👧 no child on this device')}</span>`:'';
+  let h=`<header class="phdr"><div class="phdr-row"><span class="phdr-who">👪 ${who}</span>${kidChip}<span class="phdr-act">${v?`<span class="phdr-ver" id="pVersion">${esc(v)}</span>`:''}${flagsHTML()}${test?`<button type="button" class="btn small" id="pPlayTest">🧪 ${de?'Testkind':'Test child'}</button>`:''}<button class="btn small" id="parentClose" type="button">${close}</button></span></div>`;
   if(accountsOn() && isTestAccount()) h+=`<div class="phdr-row phdr-test">🧪 <b>${de?'Hier stehen Testdaten.':'You are looking at test data.'}</b>${store.get('sessionPrev',null)?`<button type="button" class="btn small" id="pRealData">${de?'Zurück zu echten Daten':'Back to real data'}</button>`:''}</div>`;
   return h+'</header>';
 }

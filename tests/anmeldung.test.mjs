@@ -52,6 +52,14 @@ async function passwortSetzen(page, pw) {
   await page.locator('#welcomeGo').click();
 }
 const sichtbar = (page, sel) => page.locator(sel).isVisible();
+/** the child logs in on its device, then a grown-up opens the grown-ups area there */
+async function kindDann(page, wer, pw) {
+  await anmelden(page, 'student', 'mia', CODES.mia); await passwortSetzen(page, 'mond');
+  await page.waitForSelector('#home:not([hidden])');
+  await page.locator('#adultBtn').click();
+  await anmelden(page, 'adult', wer, CODES[wer]); await passwortSetzen(page, pw);
+  await page.waitForSelector('#parentClose');
+}
 const lies = (page, k) => page.evaluate((key) => JSON.parse(localStorage.getItem('bq2_' + key) || 'null'), k);
 
 test('with accounts the app starts with the login: role choice, no list of names, nothing behind it reachable', async () => {
@@ -147,8 +155,7 @@ test('child view has no grown-ups tab; "Grown-ups" opens the grown-ups login ope
 
 test('grown-ups header: language flags, version and log out always in view; info pages open in place without logout', async () => {
   const { ctx, page, fehler } = await oeffnen({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
-  await anmelden(page, 'adult', 'papa', CODES.papa); await passwortSetzen(page, 'langes-passwort');
-  await page.waitForSelector('#parentClose');
+  await kindDann(page, 'papa', 'langes-passwort');
   for (const sel of ['.phdr [data-plang="de"]', '.phdr [data-plang="en"]', '#parentClose']) assert.ok(await sichtbar(page, sel), sel);
   assert.equal(await sichtbar(page, '#aboutBack'), false, 'no back arrow that leaves the area');
   assert.equal(await sichtbar(page, '#aboutTabs'), false, 'no tab row');
@@ -335,8 +342,7 @@ async function allesSichtbar(page) {
 test('language: the English grown-ups area has no German left-overs, the German one no English UI labels', async () => {
   const { ctx, page, fehler } = await oeffnen({ viewport: { width: 1200, height: 900 } });
   await page.evaluate(() => localStorage.setItem('bq2_attempts', JSON.stringify(Array.from({ length: 30 }, (_, i) => ({ day: '2026-10-' + (10 + i % 6), skill: i % 2 ? 'round' : 'units', level: 2, attempt: 1, ok: i % 3 !== 0, help: false })))));
-  await anmelden(page, 'adult', 'chef', CODES.chef); await passwortSetzen(page, 'langes-passwort');
-  await page.waitForSelector('#parentClose');
+  await kindDann(page, 'chef', 'langes-passwort');
   await page.locator('.phdr [data-plang="en"]').click();
   // German example sentences for the German-class quest are meant to stay German
   const en = (await allesSichtbar(page)).filter((z) => !/Grundschulkönig|Van der Kleij|Als Erstes|schneidet man|faltet man/.test(z));
@@ -349,10 +355,33 @@ test('language: the English grown-ups area has no German left-overs, the German 
   await ctx.close();
 });
 
+test('whose data: the header names the child on this device; without a child no overview, only a clear note', async () => {
+  const { ctx, page, fehler } = await oeffnen();
+  await page.evaluate(() => localStorage.setItem('bq2_total', '9'));   // old practice on this device without login
+  await anmelden(page, 'adult', 'papa', CODES.papa); await passwortSetzen(page, 'langes-passwort');
+  await page.waitForSelector('#parentClose');
+  assert.match(await page.textContent('#pKid'), /kein Kind auf diesem Gerät/);
+  assert.match(await page.textContent('.pnokid'), /Auf diesem Gerät ist kein Kind angemeldet/);
+  assert.equal(await page.locator('.psubject').count(), 0, 'no overview of data that are not the child’s');
+  await page.locator('.phdr [data-plang="en"]').click();
+  assert.match(await page.textContent('#pKid'), /no child on this device/);
+  await page.locator('.phdr [data-plang="de"]').click();
+  await page.locator('#parentClose').click();
+  // with the child logged in: name in the header, overview there
+  await anmelden(page, 'student', 'mia', CODES.mia); await passwortSetzen(page, 'mond');
+  await page.locator('#adultBtn').click();
+  await page.locator('#loginUser').fill('papa'); await page.locator('#loginPw').fill('langes-passwort'); await page.locator('#loginGo').click();
+  await page.waitForSelector('#parentClose');
+  assert.match(await page.textContent('#pKid'), /mia/);
+  assert.equal(await page.locator('.pnokid').count(), 0);
+  assert.ok(await page.locator('.psubject').count());
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
+
 test('teacher sees observations read-only: no focus, settings, profile or sheet entry', async () => {
   const { ctx, page } = await oeffnen();
-  await anmelden(page, 'adult', 'frau', CODES.frau); await passwortSetzen(page, 'lehrkraft-123');
-  await page.waitForSelector('#parentClose');
+  await kindDann(page, 'frau', 'lehrkraft-123');
   const t = await page.textContent('#aboutBody');
   assert.ok(t.includes('Lehrkraft-Ansicht') && t.includes('Einschätzung'));
   assert.ok(t.includes('Anleitung & Hintergrund'), 'grown-ups guide in the grown-ups area');
