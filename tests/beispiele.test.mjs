@@ -50,3 +50,42 @@ test('maths: an easier example for (almost) every computable task; never the tas
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
+
+// English, German, Science, Library: hand-written easier examples (Peter, 01.11.). Questions that only ask for
+// a definition, a fact about the class or a rule get a tip but no example.
+const SPRACHE = ['opinion', 'sentences', 'examples', 'words', 'anleitung', 'library', 'forces'];
+const WISSEN = /^(What is|What does|What should|What did|What do you|Why did|Wofür|Was ist|Was prüfst|Who collected|Which fairy tale|On # October|When you use|You want a book|Which is the best FIRST|Your class looked up|The library celebrated|Which research source is an encyclopedia|What is Kiddle|In the extension|Your partner|Your group|How do you attach|Which tool|Which force pulls|Which is an example of gravity|A force is|How do bicycle|Three trials gave|Why do we|Why does MORE friction|Why do people put sand|Why did the car|The car stopped quickly|Which of these would make)/;
+test('English, German, Science, Library: an easier example wherever a task type allows it; never the answer', async () => {
+  const { ctx, page, fehler } = await appOeffnen(browser, server.url);
+  const karten = (await alleKarten(page)).filter((k) => SPRACHE.includes(k.item));
+  let zaehlt = 0, mit = 0; const ohne = new Set();
+  for (const k of karten) {
+    for (let r = 0; r < 3; r++) {
+      await karteOeffnen(page, k);
+      for (let i = 0; i < 8; i++) {
+        const s = await zustand(page); const q = s.round[s.idx];
+        if (await page.$('#takeChallenge')) await klick(page, '#takeChallenge');
+        const text = String(q.prompt).replace(/<[^>]+>/g, '');
+        await page.locator('#helpBtn').click();
+        const label = await page.textContent('#helpBtn');
+        const angeboten = (await page.isVisible('#helpBtn')) && /Show me an example|Zeig mir ein Beispiel/.test(label);
+        const norm = text.replace(/\d[\d,.:]*/g, '#');
+        if (!WISSEN.test(norm)) { zaehlt++; if (angeboten) mit++; else ohne.add(q.world + ': ' + norm.slice(0, 70)); }
+        if (angeboten) {
+          await page.locator('#helpBtn').click();
+          const fb = await page.textContent('#feedback');
+          assert.match(fb, /An easier example|Ein leichteres Beispiel/, text);
+          const ex = (fb.match(/(?:Answer|Lösung): (.*?)(?:Now you|Jetzt du)/s) || [])[1] || '';
+          assert.notEqual(ex.trim().toLowerCase(), antwort(q).trim().toLowerCase(), 'gives away the answer: ' + text);
+        }
+        await klick(page, '#answerBtn'); await klick(page, '#nextBtn');
+        if (await page.isVisible('#results')) break;
+      }
+      await zurStart(page);
+    }
+  }
+  console.log(`language with example: ${mit}/${zaehlt}`, [...ohne]);
+  assert.ok(mit / zaehlt >= 0.85, `coverage ${mit}/${zaehlt}: ` + [...ohne].join(' | '));
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});

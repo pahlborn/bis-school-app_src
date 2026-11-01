@@ -2260,13 +2260,88 @@ const MATH_EXAMPLES=[
   [/Read the graph\. Which surface had the most friction/, ()=>ex1('Which ramp had the most friction?', 'Ramp B', 'Most friction stops the car early: the shortest bar – Ramp B.', barChartSVG([{label:'Ramp A',v:40},{label:'Ramp B',v:20}],{titleText:'Example: how far the car rolled (cm)'}))],
   [/Look at the data\. Which conclusion fits/, ()=>ex1('Carpet 20 cm, Tiles 80 cm. Which surface has more friction?', 'Carpet', 'The car stopped sooner on carpet, so carpet has more friction.', tableHTML(['Surface','Distance'],[['Carpet','20 cm'],['Tiles','80 cm']]))]
 ];
+/* Easier examples for English, German, Science and Library (Peter, 01.11.): written by hand per task type -
+   a short, simple case of the same kind, worked through, never the task's own answer. Questions that only
+   ask for a definition or a rule ("What is …?", "Why do we …?") get a tip but no example. */
+const LANG_EXAMPLES={
+  opinion:[
+    [/states a clear opinion/, ()=>ex1('Which sentence states a clear opinion about pets?', 'Dogs are the best pets.', '“Best” shows what someone thinks. “Dogs have four legs” is a fact – everyone can check it.')],
+    [/opinion with a reason/, ()=>ex1('Which sentence is an opinion with a reason?', 'I love summer because I can swim outside.', 'Opinion: “I love summer”. Reason: “because I can swim outside”. The word “because” often starts the reason.')],
+    [/restates the opinion at the end/, ()=>ex1('Which sentence says the opinion again at the end?', 'That is why dogs are the best pets.', '“That is why …” brings the reader back to the opinion from the start.')],
+    [/Which reason supports|REASON why/, ()=>ex1('Which reason supports “summer is the best season”?', 'We can swim outside every day.', 'A reason explains WHY the opinion is true. Swimming every day is a reason to like summer.')],
+    [/in OREO order/, ()=>ex1('Put a short OREO paragraph about pets in order.', 'Opinion → Reason → Example → Opinion', '1. Dogs are the best pets. 2. They are very loyal. 3. For example, my dog waits for me at the door. 4. That is why dogs are the best pets.')],
+    [/Which part of the OREO plan is this sentence/, q=>/Example/.test(qAns(q))?ex1('“Dogs are the best pets.” Which part of OREO is it?', 'Opinion', 'It says what someone thinks – that is the O at the start (or the end).'):ex1('“For example, my dog waits for me at the door.” Which part of OREO is it?', 'Example', '“For example …” tells something that really happened – that is the E.')],
+    [/^Which sentence is an opinion\?/, ()=>ex1('Which is an opinion: “Cats have four legs” or “Cats are the cutest animals”?', 'Cats are the cutest animals', '“Cutest” is what someone thinks – an opinion. Legs can be counted – a fact.')],
+    [/^Which sentence is a fact\?/, ()=>ex1('Which is a fact: “Pizza is yummy” or “Pizza is baked in an oven”?', 'Pizza is baked in an oven', 'You can check how pizza is made – a fact. “Yummy” is what someone thinks.')],
+    [/what does \w stand for/, q=>/Reason/.test(qAns(q))?ex1('In OREO, what does E stand for?', 'Example', 'O = Opinion, R = Reason, E = Example, O = Opinion again.'):ex1('In OREO, what does R stand for?', 'Reason', 'O = Opinion, R = Reason, E = Example, O = Opinion again.')],
+    [/good start for a reason sentence/, ()=>ex1('Which start fits an EXAMPLE sentence?', 'For example, …', '“For example” starts an example. A reason often starts with “because” or “One reason is …”.')]
+  ],
+  sentences:[
+    [/Which sentence is written correctly/, ()=>ex1('Which is correct: “my cat is called tom.” or “My cat is called Tom.”?', 'My cat is called Tom.', 'Capital letter at the start (My), capital letter for the name (Tom), full stop at the end.')],
+    [/MUST have a capital letter/, q=>/Paris/i.test(qAns(q))?ex1('“We visit grandma in rome.” Which word needs a capital?', 'Rome', 'Rome is the name of a city. Names always start with a capital letter.'):ex1('“We visit grandma in paris.” Which word needs a capital?', 'Paris', 'Paris is the name of a city. Names always start with a capital letter.')],
+    [/Which end mark does this sentence need/, q=>qAns(q).includes('?')?ex1('“I like apples” – which end mark?', '.', 'It tells something, so it ends with a full stop.'):ex1('“Where is my bag” – which end mark?', '?', 'It asks something, so it ends with a question mark.')],
+    [/How many capital letters are missing/, q=>qAns(q)==='2'?ex1('“tom and i like rome.” How many capitals are missing?', 3, 'Tom (name, and the start), I (always capital), Rome (city) – 3 capitals.'):ex1('“my dog max is big.” How many capitals are missing?', 2, 'My (start of the sentence) and Max (a name) – 2 capitals.')]
+  ],
+  examples:[
+    [/more specific and personal/, ()=>ex1('Which example is more specific: “I play there.” or “Last Sunday I played tag with my brother by the big oak tree.”?', 'Last Sunday I played tag with my brother by the big oak tree.', 'It says WHEN (last Sunday), WHO (my brother), WHAT (tag) and WHERE (by the big oak tree).')],
+    [/most specific/, ()=>ex1('Which hypothesis is more specific: “The ball will bounce.” or “The ball will bounce higher on wood than on carpet.”?', 'The ball will bounce higher on wood than on carpet.', 'It says what will happen AND what you compare – so you can test it.')],
+    [/How can you make it better/, ()=>ex1('“Plants grow.” How can you make it more specific?', 'The plant by the window will grow taller than the plant in the dark cupboard.', 'Say what you compare (window or cupboard) and what you measure (how tall).')],
+    [/prediction could you actually test/, ()=>ex1('Which can you test: “Cats are happy.” or “Ice melts faster in the sun than in the shade.”?', 'Ice melts faster in the sun than in the shade.', 'You can put two ice cubes in the sun and in the shade and watch. “Happy” cannot be measured.')],
+    [/in a logical order/, ()=>ex1('Put “making toast” in order.', 'Put bread in the toaster → wait → take the toast out → spread butter', 'Ask: what has to happen first so the next step is possible?')]
+  ],
+  words:[
+    [/\+ -\w+ = \?/, ()=>ex1('dark + -ness = ?', 'darkness', '-ness turns a describing word into a thing: dark → darkness.')],
+    [/prefix to make the opposite of/, q=>/unkind/.test(qAns(q))?ex1('Add a prefix to make the opposite of “lock”.', 'unlock', '“un-” turns it around: unlock.'):ex1('Add a prefix to make the opposite of “kind”.', 'unkind', '“un-” means not: unkind = not kind.')],
+    [/'-ful' means full of|‘-ful’ means full of/, ()=>ex1('“-ful” means full of. What does “playful” mean?', 'full of play', 'play + -ful = full of play.')],
+    [/'re-' means again|‘re-’ means again/, ()=>ex1('“re-” means again. What does “reread” mean?', 'read again', 're- + read = read again.')],
+    [/'pre-' means before|‘pre-’ means before/, ()=>ex1('“pre-” means before. Which word means “wash before”?', 'prewash', 'pre- + wash = wash before.')],
+    [/'-less' means without|‘-less’ means without/, ()=>ex1('“-less” means without. Which word means “without fear”?', 'fearless', 'fear + -less = without fear.')],
+    [/'-ly' tells you how|‘-ly’ tells you how/, ()=>ex1('In “He spoke softly”, which word has the suffix -ly?', 'softly', 'soft + -ly tells HOW he spoke.')],
+    [/'mis-' means wrongly|‘mis-’ means wrongly/, ()=>ex1('“mis-” means wrongly. What does “misread” mean?', 'read wrongly', 'mis- + read = read wrongly.')],
+    [/'-er' can mean a person who|‘-er’ can mean a person who/, ()=>ex1('A person who bakes is a …', 'baker', 'bake + -er = a person who bakes.')],
+    [/more than one box/, ()=>ex1('Which word means “more than one fox”?', 'foxes', 'Words ending in x add -es: fox → foxes.')],
+    [/means 'not agree'|means ‘not agree’/, ()=>ex1('Which word means “not like”?', 'dislike', '“dis-” means not: dislike = not like.')],
+    [/^A prefix goes/, ()=>ex1('A suffix goes …', 'at the end of a word', 'help + -ful = helpful: the suffix -ful is at the end.')],
+    [/Which word has a prefix/, ()=>ex1('Which word has a prefix: “unhappy” or “happy”?', 'unhappy', '“un-” is added at the front – that is a prefix.')],
+    [/Which word has a suffix/, ()=>ex1('Which word has a suffix: “helpful” or “help”?', 'helpful', '“-ful” is added at the end – that is a suffix.')],
+    [/weather/, ()=>ex1('Mia yawned and rubbed her eyes. How does she feel?', 'tired', 'Clues: yawning and rubbing eyes. Put the clues together.')],
+    [/How does .* feel|What was someone doing|probably going|about to do|What just happened/, ()=>ex1('Tom put on his coat, hat and gloves. What is the weather like?', 'cold', 'Clues: coat, hat and gloves. People wear them when it is cold.')]
+  ],
+  anleitung:[
+    [/trennbare Verb .* richtig/, ()=>ex1('Welcher Satz ist richtig mit „aufmachen“?', 'Man macht die Tür auf.', 'Bei trennbaren Verben steht die Vorsilbe am Satzende: macht … auf.')],
+    [/Bilde das zusammengesetzte Wort/, ()=>ex1('Haus + Tür = ?', 'die Haustür', 'Die beiden Wörter werden zusammengeschrieben. Das letzte Wort bestimmt den Artikel: die Tür → die Haustür.')],
+    [/in die richtige Reihenfolge/, ()=>ex1('Zähne putzen – in welcher Reihenfolge?', 'Zahnpasta auf die Bürste → putzen → ausspülen', 'Frage dich: Was muss zuerst passieren, damit der nächste Schritt geht?')],
+    [/genau genug/, ()=>ex1('Welche Anweisung ist genauer: „Mach es fertig.“ oder „Klebe die zwei Teile mit Klebstoff zusammen.“?', 'Klebe die zwei Teile mit Klebstoff zusammen.', 'Sie sagt genau, was man tut und womit.')],
+    [/^Als Erstes, als Nächstes, danach/, ()=>ex1('Was kommt nach „Als Erstes“?', 'Als Nächstes', 'Als Erstes → Als Nächstes → Danach → Zum Schluss.')],
+    [/Satzanfang passt für den/, q=>/Zum Schluss/.test(qAns(q))?ex1('Welcher Satzanfang passt für den ersten Schritt?', 'Als Erstes', '„Als Erstes“ zeigt: Hier beginnt die Anleitung.'):ex1('Welcher Satzanfang passt für den letzten Schritt?', 'Zum Schluss', '„Zum Schluss“ zeigt: Das ist der letzte Schritt.')],
+    [/Man-Form/, ()=>ex1('Welcher Satz steht in der Man-Form: „Ich rühre den Teig.“ oder „Man rührt den Teig.“?', 'Man rührt den Teig.', 'Die Man-Form spricht niemanden direkt an: man rührt, man schneidet, man klebt.')],
+    [/Welches Wort ist zusammengesetzt/, ()=>ex1('Welches Wort ist zusammengesetzt: „Schultasche“ oder „Tasche“?', 'Schultasche', 'Schultasche = Schule + Tasche.')],
+    [/Welches Verb ist trennbar/, ()=>ex1('Ist „aufräumen“ trennbar?', 'ja: Man räumt auf.', 'Die Vorsilbe „auf“ wandert im Satz ans Ende: Man räumt das Zimmer auf.')]
+  ],
+  library:[
+    [/research source fits best|source would you use to watch|source shows videos/, q=>qAns(q)==='BrainPop'?ex1('You want to read facts about blue whales. Which source?', 'an encyclopedia like Britannica', 'An encyclopedia has checked facts to read.'):ex1('You want to WATCH a short video about volcanoes. Which source?', 'BrainPop', 'BrainPop has short videos that explain things.')],
+    [/researchable question/, ()=>ex1('Which can you research: “Why do cats purr?” or “Is my cat nice?”?', 'Why do cats purr?', 'You can find facts about it in books or online. “Nice” is just an opinion.')]
+  ],
+  forces:[
+    [/ramp steeper/, ()=>ex1('A sled slides down a gentle hill and then a steep hill. Where is it faster?', 'on the steep hill', 'A steeper slope lets gravity pull harder along it – faster and farther.')],
+    [/variable or a control/, ()=>ex1('In a plant test you only change the amount of water. The pot size stays the same. Is the pot size a variable or a control?', 'a control', 'What stays the same is a control. What you change is the variable.')],
+    [/steps of the scientific method in order|Friction Roll steps in order|lesson in order/, ()=>ex1('Put a simple test in order.', 'Ask a question → predict → test → look at the results', 'First you wonder, then you guess, then you try it, then you check what happened.')],
+    [/had the most friction|has the MOST friction/, ()=>ex1('A car rolled 20 cm on a rug and 80 cm on the floor. Which has more friction?', 'the rug', 'More friction stops the car sooner – the shorter distance.', tableHTML(['Surface','Distance'],[['Rug','20 cm'],['Floor','80 cm']]))],
+    [/has the LEAST friction|roll the farthest|roll farthest/, ()=>ex1('Ice or sand – where does a toy car roll farther?', 'ice', 'Ice is smooth – little friction, so the car rolls far. Sand rubs a lot.')],
+    [/Which of these is a PUSH/, ()=>ex1('Opening a drawer towards you – push or pull?', 'pull', 'You bring it towards you – that is a pull. A push moves something away.')],
+    [/Which of these is a PULL/, ()=>ex1('Kicking a ball – push or pull?', 'push', 'Your foot moves the ball away – that is a push.')],
+    [/only thing that changes/, ()=>ex1('Plant test: same pots, same soil, same window – only the water is different. What changes?', 'the water', 'In a fair test only ONE thing changes.')],
+    [/problem with .* test/, ()=>ex1('Max changed the ramp AND the car at the same time. What is the problem?', 'two things changed', 'Then you cannot tell what made the difference. Change only one thing.')],
+    [/^Why (do|does|is)/, ()=>ex1('Why do running shoes have a rough sole?', 'more friction, so you do not slip', 'Rough surfaces rub more – that gives grip. Smooth surfaces slide.')]
+  ]
+};
 function exampleFor(q){
   const ans=x=>x.kind==='mc'?strip(x.options[x.answer]):String(x.answer);
   const c=bridgeFor(q).slice(0,2).filter(e=>levelOf(e)<levelOf(q) && JSON.stringify(e.coach)!==JSON.stringify(q.coach));
   c.sort((a,b)=>(ans(a)===ans(q))-(ans(b)===ans(q)));   // prefer an example with a different answer
   if(c[0]) return c[0];
   if(q.coach || levelOf(q)<=1) return null;             // nothing easier than the support level
-  const p=strip(q.prompt), hit=MATH_EXAMPLES.find(([re])=>re.test(p));
+  const p=strip(q.prompt), hit=MATH_EXAMPLES.find(([re])=>re.test(p)) || (LANG_EXAMPLES[q.world]||[]).find(([re])=>re.test(p));
   if(!hit) return null;
   const ex=hit[1](q);
   // never give the task's own answer away, never repeat the task itself
@@ -3818,7 +3893,7 @@ const ABOUT_DE=()=>`
 <li><b>Wiederholung:</b> Die Aufgabe kommt am nächsten Übungstag wieder, dann nach drei und nach sieben Tagen – wo möglich mit neuen Zahlen.</li>
 </ol>
 <p><b>Ausnahmen:</b> Bei nur zwei Antwortmöglichkeiten (etwa AM/PM) erklärt die App sofort. Bei Eintipp-Aufgaben bleibt die Eingabe stehen, dazu kommt ein Hinweis. Beim Ordnen werden die richtigen Plätze markiert.</p>
-<p>Hilfe gibt es in zwei Stufen, wie es die Forschung zu Lernprogrammen empfiehlt: „Zeig mir, wie“ gibt einen kurzen Tipp zum Vorgehen, ohne die Lösung zu verraten; danach probiert das Kind selbst. Bei Runden, Stellenwert und fehlenden Teilen kann es sich außerdem ein leichteres, vorgerechnetes Beispiel mit anderen Zahlen ansehen („Zeig mir ein Beispiel“). Gelingt die Aufgabe danach, zählt sie als „mit Hilfe“ gelöst. Erst „Zeig mir die Lösung“ zeigt die Lösung mit kurzer Erklärung; die Aufgabe gilt dann als noch nicht geschafft und kommt später wieder. Um Hilfe zu bitten, ist nie ein Fehler. Eine Note oder Stufe sieht das Kind dabei nie.</p>
+<p>Hilfe gibt es in zwei Stufen, wie es die Forschung zu Lernprogrammen empfiehlt: „Zeig mir, wie“ gibt einen kurzen Tipp zum Vorgehen, ohne die Lösung zu verraten; danach probiert das Kind selbst. Bei den meisten Aufgaben kann es sich außerdem ein leichteres, vorgerechnetes Beispiel derselben Art ansehen („Zeig mir ein Beispiel“) – in Mathe mit anderen Zahlen, in den Sprachen und in Science als einfacher Fall. Fragen nach einer Regel oder einem Begriff bekommen nur den Tipp. Gelingt die Aufgabe danach, zählt sie als „mit Hilfe“ gelöst. Erst „Zeig mir die Lösung“ zeigt die Lösung mit kurzer Erklärung; die Aufgabe gilt dann als noch nicht geschafft und kommt später wieder. Um Hilfe zu bitten, ist nie ein Fehler. Eine Note oder Stufe sieht das Kind dabei nie.</p>
 <h3>Helfen wie die Schule</h3>
 <p>Eltern haben Rechnen, Lesen und Schreiben oft nach anderen Lehrplänen gelernt. Erklärt man dem Kind den eigenen Weg, ist er für das Kind neu und verwirrt. Die App nutzt deshalb die Modelle, die die Unterrichtsaufgaben der Schule zeigen – zum Beispiel den Zahlenstrahl mit Nachbar-Hundertern und Mitte, das Zerlegen von Zahlen und das Gerüst OREO beim Meinungstext –, und gibt Erwachsenen bei jeder Quest an, wie die Schule das Thema zeigt. Was aus einer Unterrichtsaufgabe stammt und was eine allgemeine, passende Übungsdarstellung ist, ist jeweils angegeben. Die Grundregel: erst fragen, wie es in der Klasse gemacht wird, dann genau dort helfen, wo der Weg des Kindes stockt; keinen zweiten Weg danebenstellen. Hilfe der Eltern wirkt vor allem, wenn sie gezielt und gelassen ist (Patall et al. 2008); eigene Mathe-Angst überträgt sich leicht (Maloney et al. 2015).</p>
 <h3>Wie die App einstuft – Titel, Lernbaum, Abzeichen und Stand</h3>
@@ -3867,7 +3942,7 @@ const ABOUT_EN=()=>`
 <li><b>Review:</b> the task returns on the next practice day, then after three and seven days – with new numbers where possible.</li>
 </ol>
 <p><b>Exceptions:</b> with only two options (such as AM/PM) the app explains at once. In typing tasks the entry stays and a hint is added. In ordering tasks the correct places are marked.</p>
-<p>Help comes in two steps, as research on tutoring programs suggests: “Show me how” gives a short tip on how to go about it without giving the answer away; then the child tries. For rounding, place value and missing parts the child can also look at an easier worked example with other numbers (“Show me an example”). A success then counts as solved “with help”. Only “Show me the answer” shows the solution with a short explanation; the task then counts as not yet mastered and comes back later. Asking for help is never a mistake. The child never sees a grade or level.</p>
+<p>Help comes in two steps, as research on tutoring programs suggests: “Show me how” gives a short tip on how to go about it without giving the answer away; then the child tries. For most tasks the child can also look at an easier worked example of the same kind (“Show me an example”) – in math with other numbers, in the languages and science as a simple case. Questions about a rule or a term get only the tip. A success then counts as solved “with help”. Only “Show me the answer” shows the solution with a short explanation; the task then counts as not yet mastered and comes back later. Asking for help is never a mistake. The child never sees a grade or level.</p>
 <h3>Helping the way school does</h3>
 <p>Parents often learned math, reading and writing under different curricula. If they explain their own method, it is new to the child and confusing. The app therefore uses the models shown in the school’s class assignments – for example the number line with neighboring hundreds and the halfway point, breaking numbers apart, and the OREO frame for opinion writing – and tells grown-ups at every quest how school shows the topic. It always says whether something comes from a class assignment or is a general, fitting practice model. The basic rule: first ask how it is done in class, then help exactly where the child’s own way gets stuck; don’t add a second method. Parents’ help works best when it is targeted and calm (Patall et al. 2008); parents’ own math anxiety is easily passed on (Maloney et al. 2015).</p>
 <h3>How the app judges – titles, learning tree, badges and level</h3>
