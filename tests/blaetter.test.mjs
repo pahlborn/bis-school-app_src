@@ -115,6 +115,27 @@ test('Vertippt: ein anderer Knopf korrigiert genau – nichts doppelt, Wiederhol
   await ctx.close();
 });
 
+// Abzeichen Principled (01.11.): ein Blatt bis zum Ende bearbeitet, genau einmal je Blatt.
+test('Abzeichen Principled: erst wenn jede Aufgabe des Blatts ein Ergebnis hat, einmal je Blatt', async () => {
+  const { ctx, page, fehler } = await app();
+  await klick(page, '#sheetBtn'); await page.locator('#sheetClose').click(); await zurStart(page);
+  await elternOeffnen(page); await elternSeite(page, 'sheets');
+  const blatt = (await lies(page, 'sheets'))[0], n = blatt.items.length;
+  await page.locator(`details.psheet[data-sheetid="${blatt.id}"] > summary`).click();
+  for (let i = 0; i < n - 1; i++) await blattKnopf(page, i, i % 2 ? 'help' : 'ok').click();
+  assert.equal(((await lies(page, 'badges')) || {}).principled || 0, 0, 'not yet - one task still open');
+  await blattKnopf(page, n - 1, 'no').click();       // "not yet" also counts as worked on
+  assert.equal((await lies(page, 'badges')).principled, 1);
+  await blattKnopf(page, 0, 'no').click();           // correction
+  await blattKnopf(page, 0, 'ok').click();
+  assert.equal((await lies(page, 'badges')).principled, 1, 'a correction does not count twice');
+  await page.reload();
+  await page.waitForSelector('#home');
+  assert.match(await page.textContent('#badges'), /Principled/);
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
+
 test('alte Eintraege ohne Protokoll bleiben gesperrt; leeres Blatt verwerfen; Hinweis in der Uebersicht fuehrt hin', async () => {
   const { ctx, page, fehler } = await app();
   await klick(page, '#sheetBtn'); await page.locator('#sheetClose').click(); await zurStart(page);
