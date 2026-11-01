@@ -129,6 +129,19 @@ test('Practise Today und Fach-Mixe: viele Runden durchspielbar, ohne Haenger', a
   await ctx.close();
 });
 
+// Strategie- und Verstaendnisfragen (01.11.): falsche Antworten sollen typische
+// Denkfehler sein, keine Scherzantworten, die man ohne Nachdenken ausschliesst;
+// Runden nach dem Schulmodell (Nachbarzahlen und Mitte), nicht "ab 5 aufrunden".
+test('Strategiefragen: keine Scherz-Ablenker, Runden nach dem Schulmodell', () => {
+  const SCHERZ = ['Take a selfie', 'Ask the sticker', 'Colour the page', 'The first letter', 'Draw a map',
+    'Ask a stranger', 'Hide it', 'Throw it away', 'Write it bigger', 'So the numbers look pretty',
+    'Tens look nicer', 'Erase the question', 'Draw on the back', 'Fold it', 'Because it is a rule for colouring'];
+  for (const s of SCHERZ) assert.ok(!quelltext.includes(`"${s}"`), `Scherz-Ablenker noch da: ${s}`);
+  assert.ok(!/digit 5 or more: round up/i.test(quelltext), 'Rundungsregel "ab 5" statt Nachbarzahlen und Mitte');
+  assert.match(quelltext, /Round 347 to the nearest hundred\. How do you decide\?","Find the halfway point 350/);
+  assert.match(quelltext, /You made 905 as 500 \+ 400 \+ 5\. Which is ANOTHER correct way\?","600 \+ 300 \+ 5"/);
+});
+
 test('jede Quest: Runden mit richtigen Antworten ergeben 8 von 8', async () => {
   const { ctx, page, fehler } = await app();
   for (const k of await alleKarten(page)) {
