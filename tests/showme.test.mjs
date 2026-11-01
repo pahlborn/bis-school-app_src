@@ -1,6 +1,6 @@
-// Help in two steps (Peter, 01.11.): "Show me how" gives a short tip (not the answer), the child tries
-// again (success = with help); "Show me the answer" shows the solution once, the task counts as not
-// passed and comes back. Asking for the tip alone is not a mistake. Real clicks.
+// Help in two steps (Peter, 01.11.): first "Show me how" (a short tip, not the answer); if that does
+// not help, "Show me the answer" appears next to it (the tip button stays). A success after the tip
+// counts as with help; the answer counts as not passed and comes back. Real clicks.
 //   node --test tests/showme.test.mjs
 
 import { test, before, after } from 'node:test';
@@ -20,6 +20,8 @@ const vorkommen = (text, teil) => text.split(teil).length - 1;
 
 test('"Show me how" gives a short tip, not the answer: no evidence, no review, the child can still answer', async () => {
   const { ctx, page, fehler } = await open();
+  assert.ok(await page.isVisible('#helpBtn'));
+  assert.equal(await page.isVisible('#answerBtn'), false, 'first the tip, the answer only afterwards');
   await page.locator('#helpBtn').click();
   const text = await page.textContent('#feedback');
   assert.match(text, /Here’s a way to do it/);
@@ -29,7 +31,10 @@ test('"Show me how" gives a short tip, not the answer: no evidence, no review, t
   assert.equal(await data(page, 'ev'), null, 'no evidence yet');
   assert.equal(await data(page, 'due'), null, 'no review yet');
   assert.ok(await page.locator('#qAnswers .opt[data-i="1"]').isEnabled(), 'answers still open');
-  assert.equal(await page.textContent('#helpBtn'), 'Show me the answer');
+  assert.ok(await page.isVisible('#helpBtn'), '"Show me how" stays');
+  assert.equal(await page.textContent('#helpBtn'), 'Show me how');
+  assert.ok(await page.isVisible('#answerBtn'), 'now the answer can be asked for');
+  assert.equal(await page.textContent('#answerBtn'), 'Show me the answer');
   assert.equal(await page.isVisible('#nextBtn'), false);
   assert.deepEqual(fehler, []);
   await ctx.close();
@@ -63,7 +68,7 @@ test('wrong answer after the tip: no second tip, the explained answer once, revi
 test('"Show me the answer" after the tip: solution once, not passed (yellow, no "Not quite"), review tomorrow, bridge', async () => {
   const { ctx, page, fehler } = await open();
   await page.locator('#helpBtn').click();
-  await page.locator('#helpBtn').click();
+  await page.locator('#answerBtn').click();
   const text = await page.textContent('#feedback');
   assert.match(text, /Here’s the answer/);
   assert.ok(!/Not quite|wrong|Requires|Consolidating|Meeting|Extending|%/.test(text));
@@ -97,8 +102,9 @@ test('after a first mistake the tip comes by itself; the button then offers the 
   const { ctx, page } = await open();
   await page.locator('#qAnswers .opt[data-i="0"]').click();
   assert.match(await page.textContent('#feedback'), /Try one more time/);
-  assert.equal(await page.textContent('#helpBtn'), 'Show me the answer');
-  await page.locator('#helpBtn').click();
+  assert.ok(await page.isVisible('#helpBtn'), '"Show me how" stays');
+  assert.ok(await page.isVisible('#answerBtn'));
+  await page.locator('#answerBtn').click();
   const ev = (await data(page, 'ev')).round;
   assert.equal(ev.length, 1); assert.equal(ev[0][2], 0);
   const log = await data(page, 'attempts');
@@ -120,10 +126,11 @@ test('German quest: "Zeig mir, wie" and "Zeig mir die Lösung"', async () => {
   const q = { kind: 'mc', world: 'anleitung', label: 'Anleitung', level: 2, prompt: 'Welcher Satz ist richtig?', options: ['Dann schneidet man das Papier.', 'Dann schneidet man das Papier aus.', 'Dann man schneidet aus.'], answer: 1, explain: 'Die Vorsilbe steht am Satzende.' };
   const { ctx, page } = await open(q);
   assert.equal(await page.textContent('#helpBtn'), 'Zeig mir, wie');
+  assert.equal(await page.isVisible('#answerBtn'), false);
   await page.locator('#helpBtn').click();
   assert.match(await page.textContent('#feedback'), /So kannst du vorgehen/);
-  assert.equal(await page.textContent('#helpBtn'), 'Zeig mir die Lösung');
-  await page.locator('#helpBtn').click();
+  assert.equal(await page.textContent('#answerBtn'), 'Zeig mir die Lösung');
+  await page.locator('#answerBtn').click();
   assert.match(await page.textContent('#feedback'), /Das ist die Lösung.*Lösung: Dann schneidet man das Papier aus\./s);
   await ctx.close();
 });
