@@ -1962,7 +1962,8 @@ function renderHome(){
   const total=store.get('total',0);
   $('#totalStars').textContent=total; renderRank(total);
   renderTestBar();
-  const acc=accountsOn(); $('#adultBtn').hidden=!acc; $('#logoutBtn').hidden=!acc; $('#aboutBtn').textContent=acc?'📖 How Big Quest works':'📖 How it works & grown-ups';
+  const acc=accountsOn(); $('#adultBtn').hidden=!acc; $('#logoutBtn').hidden=!acc; // Help by role (Peter, 01.11.): a logged-in child has one help button with the child guide only.
+  $('#aboutBtn').hidden=acc; $('#aboutBtn').textContent='📖 How it works & grown-ups';
   renderProfileBtn();
   const c=$('#subjects'); c.innerHTML='';
   SUBJECTS.forEach(s=>{
@@ -2603,7 +2604,7 @@ function renderSheet(sheet){
     ${sheet.items.map((it,i)=>paperTask(it.q, i+1, i===mathsIdx)).join('')}${writing}
     <div class="task ticks">☐ I answered every question &nbsp; ☐ I checked my units &nbsp; ☐ I explained one task to a grown-up &nbsp; ☐ I worked with someone<br>
     Today I am proud of: ______________________________ &nbsp; Next I will practise: ______________________________</div></section>`;
-  const page2=`<section class="sheet answers-page"><h1>Answers – for grown-ups</h1><div class="meta"><span>Sheet of ${sheet.day}</span><span>Enter results in the app: About &amp; grown-ups → Elternbereich</span></div>
+  const page2=`<section class="sheet answers-page"><h1>Answers – for grown-ups</h1><div class="meta"><span>Sheet of ${sheet.day}</span><span>Enter results in the app: 👪 Grown-ups → Practice sheets</span></div>
     <ol>${sheet.items.map(it=>`<li>${keyFor(it.q)}<br><span class="small">${esc(it.q.explain||'')}</span></li>`).join('')}<li>Writing: look for order words, complete sentences, capitals and full stops.</li></ol>
     <p class="small">Working shown and units written = what the class rubric asks for. A second way to check = the next step up.</p></section>`;
   return page1+page2;
@@ -3072,7 +3073,7 @@ function openGuide(kind){
 const LOGIN_HELP=`<details class="login-help"><summary>❓ Help / Hilfe</summary>
 <p><b>Students:</b> tap 🎒 Student, type your user name and password. The first time, use the start code from your grown-up and then choose your own password.</p>
 <p><b>Erwachsene:</b> „👪 Parent / Teacher“, Benutzername und Startcode beim ersten Mal, dann ein eigenes Passwort (mindestens 8 Zeichen). Das Passwort gilt nur auf diesem Gerät.</p>
-<p>Passwort vergessen? / Forgot your password? Der Startcode funktioniert immer. Nach 5 Fehlversuchen 30 Sekunden warten. Die ausführlichen Anleitungen stehen nach der Anmeldung unter „📖 How Big Quest works“.</p></details>`;
+<p>Passwort vergessen? / Forgot your password? Der Startcode funktioniert immer. Nach 5 Fehlversuchen 30 Sekunden warten. Nach der Anmeldung: Kinder tippen „❓ Help“, Erwachsene finden ihre Anleitung im Elternbereich. / After logging in: children tap “❓ Help”, grown-ups find their guide in the grown-ups area.</p></details>`;
 function renderLogin(role){
   const b=$('#loginBody'), T=loginTxt(role==='adult');
   if(!role){
@@ -3461,15 +3462,23 @@ const ABOUT_EN=()=>`
 const ABOUT_UI={de:{title:'📖 So funktioniert Big Quest',stand:'Stand: 30. Oktober 2026.'},en:{title:'📖 How Big Quest works',stand:'Last updated: 30 October 2026.'}};
 /* The user guide depends on the login (Peter, 31.10.): a logged-in child sees the child guide, not the
    grown-ups guide; grown-ups find theirs in the grown-ups area. Without accounts: both. */
-const ADULT_GUIDE_TITLES=['Anleitung für Erwachsene','Guide for grown-ups'];
+const ADULT_GUIDE_TITLES=['Anleitung für Erwachsene','Guide for grown-ups'], KID_GUIDE_TITLES=['How to use Big Quest','How to use Big Quest (für Kinder)'];
+/* A logged-in child sees only the child guide (Peter, 01.11.: help strictly by role - no concept,
+   no sources, no notes for grown-ups). Grown-ups find guide and background in their area. */
+const kidView = () => accountsOn() && !!studentSession() && !adultUser;
 function aboutParts(lang){
   const html=lang==='en'?ABOUT_EN():ABOUT_DE(), parts=html.split('<h3>');
   let sections=parts.slice(1).map(p=>{ const i=p.indexOf('</h3>'); return {title:p.slice(0,i), body:p.slice(i+5)}; });
   if(accountsOn() && studentSession() && !adultUser) sections=sections.filter(s=>!ADULT_GUIDE_TITLES.includes(s.title));
   return {main:parts[0], sections};
 }
-const aboutSectionsHTML = (lang, open, noAdultGuide) => aboutParts(lang).sections.filter(s=>!(noAdultGuide && ADULT_GUIDE_TITLES.includes(s.title))).map(s=>`<details class="about-sec"${s.title===open?' open':''}><summary>${s.title}</summary><div class="about-sec-body">${s.body}</div></details>`).join('');
+const aboutSectionsHTML = (lang, open, forAdults) => aboutParts(lang).sections.filter(s=>!(forAdults && (ADULT_GUIDE_TITLES.includes(s.title) || KID_GUIDE_TITLES.includes(s.title)))).map(s=>`<details class="about-sec"${s.title===open?' open':''}><summary>${s.title}</summary><div class="about-sec-body">${s.body}</div></details>`).join('');
 function renderAboutPage(open){
+  if(kidView()){
+    const g=aboutParts('en').sections.find(s=>s.title==='How to use Big Quest');
+    $('#aboutBody').innerHTML=`<h2>${g.title}</h2>${g.body}${appVersionLine()}`;
+    window.scrollTo(0,0); return;
+  }
   const lang=PL(), ui=ABOUT_UI[lang], {main}=aboutParts(lang), body=$('#aboutBody');
   body.innerHTML=main+`<div class="about-menu">${aboutSectionsHTML(lang, open)}</div><p class="small">${ui.stand}</p>${appVersionLine()}`;
   if(open){ const d=[...body.querySelectorAll('details.about-sec')].find(x=>x.open); if(d) setTimeout(()=>d.scrollIntoView({block:'start'}),0); }
@@ -3480,7 +3489,8 @@ function renderAboutPage(open){
 function aboutChrome(){
   const adultView=state.aboutTab==='sheets' && parentAccess, tabs=!adultView && !(accountsOn() && !adultUser);
   $('#aboutTop').hidden=adultView; $('#aboutTabs').hidden=!tabs; $('#aboutChip').hidden=tabs;
-  $('#aboutChip').textContent=ABOUT_UI[PL()].title; $('#tabInfo').textContent=ABOUT_UI[PL()].title;
+  $('#aboutChip').textContent=kidView()?'❓ Help':ABOUT_UI[PL()].title; $('#tabInfo').textContent=ABOUT_UI[PL()].title;
+  $('#aboutTop .flags').hidden=kidView();   // the child guide is English only
   ['tabDe','tabEn'].forEach(id=>{ const on=PL()===(id==='tabDe'?'de':'en'); $('#'+id).classList.toggle('on',on); $('#'+id).setAttribute('aria-pressed',on); });
   ['tabInfo','tabSheets'].forEach(id=>$('#'+id).classList.toggle('primary', {tabInfo:'info',tabSheets:'sheets'}[id]===state.aboutTab));
 }
