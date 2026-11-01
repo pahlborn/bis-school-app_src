@@ -60,6 +60,11 @@ test('overview of the school ratings in the grown-ups area: standards, history, 
   assert.match(t, /Stellenwert[^\n]*\s+Wird sicherer/);
   for (const w of ['Mastering Basic Numbers and Calculations – Milestone', 'Persuade for the Park!', 'Friction Frenzy', 'Lesson 4', 'Wartet auf Bewertung', 'Glows and Grows', 'ES = mit Unterstützung']) assert.ok(t.includes(w), w);
   assert.ok(!/Toddle|BIS\b|3B/.test(t), 'neutral wording');
+  // rubric: the teacher's rating and the child's own rating side by side (Peter 01.11.)
+  await page.locator('details.psec[data-psec="school"] details.about-sec', { hasText: 'Milestone' }).locator('summary').click();
+  const ms = await page.locator('details.psec[data-psec="school"] details.about-sec', { hasText: 'Milestone' }).innerText();
+  assert.match(ms, /Sticker combinations: Lehrkraft Wird sicherer \(Consolidating\) · selbst eingeschätzt Darüber hinaus \(Extending\)/);
+  assert.match(t, /Alle Einstufungen hier sind die der Lehrkraft/);
   // the school line at the quest
   await page.locator('[data-psubj="maths"]').click();
   const round = await page.locator('.pquest', { has: page.locator('[data-pfocus="round"]') }).innerText();
