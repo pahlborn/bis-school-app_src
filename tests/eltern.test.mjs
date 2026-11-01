@@ -49,14 +49,13 @@ test('leaving or explicitly locking removes protected content; direct #eltern st
   await ctx.close();
 });
 
-test('idle and background locks do not leave hidden observation DOM behind',async()=>{
+test('no idle or background lock (Peter 31.10.): the area stays open until it is locked',async()=>{
   const {ctx,page}=await open();await page.clock.install();
   await elternOeffnen(page);
-  await page.clock.fastForward(5*60*1000+1);
-  await page.waitForSelector('#parentForm');
-  assert.equal(await page.locator('.psubject').count(),0);
-  await unlock(page);await page.waitForSelector('#parentClose');
+  await page.clock.fastForward(60*60*1000);
   await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'));});
+  assert.ok(await page.locator('.psubject').count()>0,'still open');
+  await klick(page,'#parentClose');
   assert.equal(await page.locator('.psubject').count(),0);
   assert.ok(await page.isVisible('#parentForm'));
   await ctx.close();
@@ -79,11 +78,23 @@ test('an in-flight PIN check cannot reopen the area after it was left or hidden'
   await ctx.close();
 });
 
+/* Focus is set in one place only: the switch at each quest (Peter 31.10.). */
+async function fokusSchalter(page,k){
+  for(const s of await page.$$eval('[data-psubj]',b=>b.map(x=>x.dataset.psubj))){
+    await page.locator(`[data-psubj="${s}"]`).first().click();
+    if(await page.locator(`[data-pfocus="${k}"]`).count()){ await page.locator(`[data-pfocus="${k}"]`).click(); await page.locator('#pBack').click(); return; }
+    await page.locator('#pBack').click();
+  }
+  throw new Error('no switch for '+k);
+}
 test('parent-selected focus persists and controls Today, badges and paper worksheets',async()=>{
-  const {ctx,page}=await open();await elternOeffnen(page);await elternSeite(page,'settings');
-  await page.locator('#focusForm input').evaluateAll(inputs=>inputs.forEach(i=>i.checked=i.value==='units'));
-  await page.locator('#focusForm button[type="submit"]').click();
+  const {ctx,page}=await open();
+  await page.evaluate(()=>localStorage.setItem('bq2_focus','[]'));
+  await elternOeffnen(page);
+  assert.equal(await page.locator('#focusForm').count(),0,'no second focus list');
+  await fokusSchalter(page,'units');
   assert.deepEqual(await data(page,'focus'),['units']);
+  await klick(page,'#parentClose');
   await zurStart(page);
   const signs=await page.$$eval('#subjects .focus',e=>e.map(x=>x.textContent));
   assert.deepEqual(signs,['1 focus']);
@@ -94,13 +105,16 @@ test('parent-selected focus persists and controls Today, badges and paper worksh
   await ctx.close();
 });
 
-test('empty focus remains empty but allows mixed practice; restore-default control works',async()=>{
-  const {ctx,page}=await open();await elternOeffnen(page);await elternSeite(page,'settings');
-  await page.locator('#focusForm input').evaluateAll(inputs=>inputs.forEach(i=>i.checked=false));
-  await page.locator('#focusForm button[type="submit"]').click();
+test('empty focus remains empty but allows mixed practice; the recommendation restores it',async()=>{
+  const {ctx,page}=await open();
+  await page.evaluate(()=>localStorage.setItem('bq2_focus','["units"]'));
+  await elternOeffnen(page);
+  await fokusSchalter(page,'units');
   assert.deepEqual(await data(page,'focus'),[]);
+  await klick(page,'#parentClose');
   await zurStart(page);await klick(page,'#todayBtn');assert.equal((await zustand(page)).round.length,8);
-  await zurStart(page);await elternOeffnen(page);await elternSeite(page,'settings');await klick(page,'#focusDefault');
+  await zurStart(page);await elternOeffnen(page);
+  await page.locator('[data-psubj]').first().click();await page.locator('#pRecommend').click();
   assert.equal((await data(page,'focus')).length,8);await ctx.close();
 });
 

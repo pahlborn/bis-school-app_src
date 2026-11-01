@@ -63,13 +63,12 @@ test('grown-ups area: every section has ⓘ with a German explanation; no guide 
   await elternOeffnen(page);
   const infos = async () => page.$$eval('#aboutBody h2 .info-btn', (b) => b.map((x) => x.dataset.help));
   assert.ok((await infos()).includes('overview'), 'info at the summary');
-  await elternSeite(page, 'help');
-  assert.ok((await infos()).includes('guidance'));
   await elternSeite(page, 'settings');
+  await elternSeite(page, 'guide');
   const keys = await infos();
-  for (const k of ['focus', 'calendar', 'storycap', 'profile', 'version']) assert.ok(keys.includes(k), 'info at ' + k);
-  const t = await hilfe(page, '#aboutBody .info-btn[data-help="focus"]', 'Fokus-Themen');
-  assert.match(t, /Practise Today/);
+  for (const k of ['guidance', 'calendar', 'storycap', 'profile', 'version', 'sheets']) assert.ok(keys.includes(k), 'info at ' + k);
+  const t = await hilfe(page, '#aboutBody .info-btn[data-help="storycap"]', 'Pisolala-Geschichten');
+  assert.match(t, /spannend/);
   assert.equal(await page.isVisible('#helpGuide'), false);
   await page.locator('#helpClose').click();
   assert.ok(await page.locator('#parentClose').count(), 'still in the grown-ups area');

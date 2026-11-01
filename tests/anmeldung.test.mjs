@@ -99,10 +99,11 @@ test('wrong password, unknown name and the wrong role are refused; after 5 tries
   assert.ok(await sichtbar(page, '#login'));
   await page.locator('#loginBack').click();
   await anmelden(page, 'adult', 'mia', CODES.mia);
-  await page.waitForFunction(() => document.querySelector('#loginMsg').textContent.includes('not right'));
+  // grown-ups log in in their language (German by default)
+  await page.waitForFunction(() => document.querySelector('#loginMsg').textContent.includes('stimmt nicht'));
   for (let i = 0; i < 4; i++) { await page.locator('#loginPw').fill('x' + i); await page.locator('#loginGo').click(); await page.waitForFunction(() => !document.querySelector('#loginGo').disabled); }
   await page.locator('#loginPw').fill(CODES.papa); await page.locator('#loginUser').fill('papa'); await page.locator('#loginGo').click();
-  assert.match(await page.textContent('#loginMsg'), /wait/);
+  assert.match(await page.textContent('#loginMsg'), /warten/);
   await ctx.close();
 });
 
@@ -120,10 +121,11 @@ test('child view has no grown-ups tab; "Grown-ups" opens the grown-ups login ope
   assert.ok(await sichtbar(page, '#loginUser'));
   await anmelden(page, 'adult', 'papa', CODES.papa);
   await page.locator('#newPw1').fill('kurz'); await page.locator('#newPw2').fill('kurz'); await page.locator('#setPwGo').click();
-  assert.match(await page.textContent('#setPwMsg'), /at least 8/);
+  assert.match(await page.textContent('#setPwMsg'), /mindestens 8/);
   await passwortSetzen(page, 'langes-passwort');
   await page.waitForSelector('#parentClose');
-  assert.ok((await page.textContent('#aboutBody')).includes('Angemeldet als papa'));
+  assert.match(await page.textContent('.phdr'), /Elternbereich · papa/);
+  assert.equal(await page.locator('#aboutBody > p.small').count(), 0, 'no processing notes under the header');
   assert.ok(await page.locator('.psubject').count());
   assert.equal(await sichtbar(page, '#aboutBack'), false, 'no back arrow in the grown-ups area');
   await page.locator('#parentClose').click();
@@ -155,7 +157,7 @@ test('grown-ups header: language flags, version and log out always in view; info
   assert.match(await page.textContent('.phdr'), /Grown-ups area/);
   assert.match(await page.textContent('#parentClose'), /Log out/);
   assert.deepEqual(await page.$$eval('#aboutBody details.psec > summary', (s) => s.map((x) => x.textContent.trim())),
-    ['📄 Practice sheets', '⚙️ Settings', '💡 Help like the school', '📖 Guide & background']);
+    ['📄 Practice sheets', '👧 For your child', '📖 Guide & background']);
   // guide and info pages are one reading chapter: reading keeps the grown-up logged in
   await page.locator('#aboutBody details.psec[data-psec="guide"] > summary').click();
   const ab = page.locator('#aboutBody details.psec[data-psec="guide"] details.about-sec').first();
@@ -175,12 +177,13 @@ test('grown-ups area: chapters open in place, no sub-pages', async () => {
   await page.waitForSelector('#parentClose');
   assert.equal(await page.locator('[data-ppage]').count(), 0, 'no page buttons any more');
   assert.equal(await page.locator('#aboutBody details.psec[open]').count(), 0, 'chapters closed at the start');
-  for (const id of ['sheets', 'settings', 'help', 'guide']) {
+  for (const id of ['sheets', 'settings', 'guide']) {
     const d = page.locator(`#aboutBody details.psec[data-psec="${id}"]`);
     await d.locator('summary').first().click();
     assert.ok(await d.locator('.psec-body').isVisible(), id);
   }
-  assert.ok(await page.locator('#focusForm').isVisible(), 'settings content reachable');
+  assert.ok(await page.locator('#storyCap').isVisible(), 'settings content reachable');
+  assert.equal(await page.locator('#focusForm').count(), 0, 'focus only at the quest, not twice');
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
@@ -248,7 +251,7 @@ test('admin: try the test child and come back without a new login; log out retur
   assert.ok(await page.locator('#testBack').isVisible(), 'return to the grown-ups area still there');
   await page.locator('#testBack').click();
   await page.waitForSelector('#parentClose');
-  assert.match(await page.textContent('#aboutBody'), /Angemeldet als chef/);
+  assert.match(await page.textContent('.phdr'), /chef/);
   assert.match(await page.textContent('.phdr-test'), /Testdaten/, 'clearly marked: test data');
   await page.locator('#pRealData').click();
   assert.equal(await page.locator('.phdr-test').count(), 0, 'back to real data');
@@ -277,24 +280,64 @@ test('admin on a device without a child logged in: after the test child, log out
   await ctx.close();
 });
 
-test('the return ticket from the test child expires when the app goes to the background', async () => {
+test('test child: the way back stays when the iPad sleeps and when the app is reopened', async () => {
   const { ctx, page } = await oeffnen();
   await anmelden(page, 'adult', 'chef', CODES.chef); await passwortSetzen(page, 'langes-passwort');
   await page.waitForSelector('#parentClose');
   await page.locator('#pPlayTest').click();
   await page.waitForSelector('#testBack');
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { value: true, configurable: true }); document.dispatchEvent(new Event('visibilitychange')); });
-  await page.waitForFunction(() => !document.querySelector('#testBack'));
+  assert.ok(await page.locator('#testBack').isVisible(), 'still there after sleep');
+  await page.reload(); await page.waitForSelector('#testBack');
+  await page.locator('#testBack').click(); await page.waitForSelector('#parentClose');
   await ctx.close();
 });
 
-test('grown-up is logged out when the app goes to the background', async () => {
+test('grown-up stays logged in: no timer, not when the iPad sleeps, not when the app is reopened; only "Abmelden" ends it', async () => {
   const { ctx, page } = await oeffnen();
+  await page.clock.install();
+  await anmelden(page, 'student', 'mia', CODES.mia); await passwortSetzen(page, 'mond');
+  await page.locator('#adultBtn').click();
   await anmelden(page, 'adult', 'papa', CODES.papa); await passwortSetzen(page, 'langes-passwort');
   await page.waitForSelector('#parentClose');
+  await page.clock.fastForward(60 * 60 * 1000);
   await page.evaluate(() => { Object.defineProperty(document, 'hidden', { value: true, configurable: true }); document.dispatchEvent(new Event('visibilitychange')); });
-  await page.waitForSelector('#login:not([hidden])');
-  assert.equal(await page.locator('#focusForm').count(), 0);
+  assert.ok(await page.locator('.psubject').count(), 'still logged in after an hour and sleep');
+  await page.reload(); await page.waitForSelector('#parentClose');
+  assert.ok(await page.locator('.psubject').count(), 'still logged in after reopening');
+  await page.locator('#parentClose').click();
+  await page.waitForSelector('#home:not([hidden])');
+  assert.equal(await page.evaluate(() => localStorage.getItem('bq2_adultSession')), null);
+  await page.reload(); await page.waitForSelector('#home:not([hidden])');
+  assert.equal(await page.locator('#parentClose').count(), 0, 'after log-out the child is there again');
+  // "Grown-ups" asks for the login again
+  await page.locator('#adultBtn').click();
+  assert.ok(await page.locator('#loginUser').isVisible());
+  await ctx.close();
+});
+
+/* Peter 31.10.: DE/EN must work everywhere in the grown-ups branch (meaning-based, American English). */
+async function allesSichtbar(page) {
+  for (const id of ['sheets', 'settings', 'guide']) { const d = page.locator(`#aboutBody details.psec[data-psec="${id}"]`); if (!(await d.evaluate((e) => e.open))) await d.locator('summary').first().click(); }
+  await page.$$eval('#aboutBody details', (d) => d.forEach((x) => (x.open = true)));
+  const texte = [await page.locator('#about').innerText()];
+  for (const s of await page.$$eval('[data-psubj]', (b) => [...new Set(b.map((x) => x.dataset.psubj))])) { await page.locator(`[data-psubj="${s}"]`).first().click(); texte.push(await page.locator('#about').innerText()); await page.locator('#pBack').click(); }
+  for (const k of await page.$$eval('#aboutBody .info-btn', (b) => [...new Set(b.map((x) => x.dataset.help))])) { await page.locator(`#aboutBody .info-btn[data-help="${k}"]`).first().click(); texte.push(await page.locator('#helpDlg').innerText()); await page.locator('#helpClose').click(); }
+  return texte.join('\n').split('\n');
+}
+test('language: the English grown-ups area has no German left-overs, the German one no English UI labels', async () => {
+  const { ctx, page, fehler } = await oeffnen({ viewport: { width: 1200, height: 900 } });
+  await page.evaluate(() => localStorage.setItem('bq2_attempts', JSON.stringify(Array.from({ length: 30 }, (_, i) => ({ day: '2026-10-' + (10 + i % 6), skill: i % 2 ? 'round' : 'units', level: 2, attempt: 1, ok: i % 3 !== 0, help: false })))));
+  await anmelden(page, 'adult', 'chef', CODES.chef); await passwortSetzen(page, 'langes-passwort');
+  await page.waitForSelector('#parentClose');
+  await page.locator('.phdr [data-plang="en"]').click();
+  const en = (await allesSichtbar(page)).filter((z) => !/Grundschulkönig|Van der Kleij/.test(z));
+  assert.deepEqual(en.filter((z) => /[äöüÄÖÜß]|\b(und|der|die|das|Sie|nicht|ist|mit|für|oder|eine|wie|auf|bei)\b/.test(z)), [], 'German in the English view');
+  assert.deepEqual(en.filter((z) => /practis(ed|ing)|colours?\b|judgement/.test(z) && !/Practise Today/.test(z)), [], 'American English');
+  await page.locator('.phdr [data-plang="de"]').click();
+  const de = (await allesSichtbar(page)).join('\n');
+  for (const w of ['Practice sheets', 'For your child', 'Delete details', 'Sheet from', 'Check for a new version', 'Optional calendar', 'Profile details', 'Pisolala stories', 'Supporting the way', 'Research informs the design', 'Private sources']) assert.ok(!de.includes(w), 'English in the German view: ' + w);
+  assert.deepEqual(fehler, []);
   await ctx.close();
 });
 
