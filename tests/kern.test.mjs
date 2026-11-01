@@ -64,7 +64,8 @@ test('Huelle: Platzhalter genau einmal, sonst Abbruch', () => {
 
 // S8 (30.10.): some words were removed from the app on purpose. The list keeps them so the
 // public shell stays protected; tests/neutral.test.mjs checks they are absent from visible text.
-const BEWUSST_ENTFERNT = ['International School', 'Grade 3B', '3B Big Quest', '3B Quest'];
+// 01.11.: names of teachers, places and the platform appear in the app only base64-encoded (old-text rewriting).
+const BEWUSST_ENTFERNT = ['International School', 'Grade 3B', '3B Big Quest', '3B Quest', 'Bavarian', 'Bhan', 'Zeckser', 'Schlüer', 'Toddle'];
 test('jedes verbotene Wort steht in der App oder ist bewusst entfernt (sonst schuetzt es nichts)', () => {
   const fehlt = q.woerter.filter((w) => !appText.toLowerCase().includes(w.toLowerCase()) && !BEWUSST_ENTFERNT.includes(w));
   assert.deepEqual(fehlt, [], 'Diese Woerter stehen nicht in index.html - Liste nachziehen: ' + fehlt.join(', '));
