@@ -98,6 +98,20 @@ button{font:inherit;color:inherit}
 .me .chipstat{flex:0 0 auto}
 .profile-btn{justify-content:flex-start;min-width:0;overflow:hidden;font-size:1rem}
 .profile-btn #profileName{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.greet-dlg{padding:14px}
+.greet-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.greet-top h2{margin:0;font-size:1.3rem}
+.greet-q{font-weight:700;margin:10px 0 6px}
+.greet-moods,.greet-offers{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+#greetDlg .greet-moods .btn,#greetDlg .greet-offers .btn{font-size:.9rem;padding:6px 8px;min-height:44px;line-height:1.2}
+#greetDlg h2{font-size:1.3rem}
+#greetDlg .greet-q{font-size:1rem;margin:10px 0 6px}
+.greet-dlg .story{margin-top:8px}
+.greet-moods .btn[aria-pressed="true"]{outline:3px solid var(--sun)}
+.greet-offers .btn{min-height:44px}
+.greet-offers .btn.cozy{outline:3px solid var(--sun)}
+#greetDlg .greet-reply{margin:8px 0 0;font-size:.88rem;line-height:1.35}
+#greetDlg .greet-reply .small{display:block;margin-top:4px;font-size:.82rem}
 .profile-dlg{border:0;border-radius:22px;padding:18px;width:min(420px,calc(100vw - 24px));max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);overflow:auto;background:var(--surface);color:var(--ink);box-shadow:0 10px 40px rgba(15,22,38,.35)}
 .profile-dlg::backdrop{background:rgba(15,22,38,.45)}
 .profile-dlg form{display:flex;flex-direction:column;gap:12px}
@@ -470,6 +484,17 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
     <h2 id="helpTitle"></h2>
     <div id="helpText"></div>
     <div class="row"><button class="btn" id="helpGuide" type="button">📖 Guide</button><button class="btn primary" id="helpClose" type="button">OK</button></div>
+  </dialog>
+
+  <!-- GREETING (S6): once a day for a logged-in child; only the day is stored, never the mood -->
+  <dialog id="greetDlg" class="profile-dlg greet-dlg" aria-labelledby="greetTitle">
+    <div class="greet-top"><h2 id="greetTitle"></h2><button class="btn small" id="greetSkip" type="button">Skip</button></div>
+    <p class="greet-q">How are you today?</p>
+    <div class="greet-moods" id="greetMoods"></div>
+    <p id="greetReply" class="greet-reply" role="status" hidden></p>
+    <p class="greet-q">What would you like to do today?</p>
+    <div class="greet-offers" id="greetOffers"></div>
+    <div id="greetJoke"></div>
   </dialog>
 
   <!-- PRACTICE SHEET: PDF first (on the go, no printer), print where the browser supports it -->
@@ -2206,6 +2231,7 @@ function show(name){
   confettiRun++; // stop confetti that is still falling from the last screen
   window.scrollTo(0,0);
   if(pendingUpdate && ['home','login','subject'].includes(name)) applyUpdate();
+  if(name==='home') maybeGreet();
 }
 function playerName(){ return String(store.get('name','')||'').trim(); }
 /* One card for a quest or studio. back: where Back and "Choose a quest" return to. */
@@ -3732,12 +3758,12 @@ function renderWelcome(u){
     : de
     ? `<h2>Willkommen, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 <b>Daten nur auf diesem Gerät:</b> Den Lernstand des Kindes sehen Sie auf dem Gerät, auf dem es übt.</li><li>🔑 Ihr Passwort gilt nur auf diesem Gerät. Auf einem weiteren Gerät einmal mit dem Startcode anmelden.</li><li>🚪 Sie bleiben angemeldet, bis Sie <b>Abmelden</b> tippen. Auf dem Gerät des Kindes nach dem Nachsehen bitte abmelden.</li><li>📖 Die Anleitung steht im Elternbereich unter <b>„📖 Anleitung & Hintergrund“</b>, ⓘ erklärt einzelne Abschnitte.</li></ul><button class="btn primary" id="welcomeGo" type="button">Los geht’s</button>`
     : `<h2>Welcome, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 <b>Data only on this device:</b> you see your child’s progress on the device where they practice.</li><li>🔑 Your password works only on this device. On another device, log in once with the start code.</li><li>🚪 You stay logged in until you tap <b>Log out</b>. On your child’s device, please log out when you are done.</li><li>📖 The guide is in the grown-ups area under <b>“📖 Guide & background”</b>; ⓘ explains each section.</li></ul><button class="btn primary" id="welcomeGo" type="button">Let’s go</button>`;
-  $('#welcomeGo').addEventListener('click',()=>loginDone(u));
+  $('#welcomeGo').addEventListener('click',()=>loginDone(u,true));
   $('#welcomeGo').focus();
 }
-function loginDone(u){
+function loginDone(u, welcomed){
   $('#loginBody').innerHTML='';
-  if(u.role==='student'){ store.set('session',{user:u.user}); adultUser=null; renderHome(); show('home'); }
+  if(u.role==='student'){ store.set('session',{user:u.user}); adultUser=null; if(welcomed) store.set('greetDay',dayKey()); renderHome(); show('home'); }
   else { store.set('adultSession',{user:u.user}); adultUser={user:u.user, role:u.role, admin:!!u.admin}; parentAccess=true; state.psubj=null; state.popen=state.popen||[]; openAbout('sheets'); }
 }
 /* Test account bar (for grown-ups, in their language): clearly marked, separate data, jump ahead one
@@ -4378,6 +4404,53 @@ $('#quitBtn').addEventListener('click',goBack);
 $('#studioBack').addEventListener('click',goBack);
 $('#subjectBack').addEventListener('click',()=>{ state.back='home'; goBack(); });
 $('#todayBtn').addEventListener('click',()=>{ state.back='home'; startRound('today'); });
+/* S6 Greeting (spec 30.10., built 01.11.): once a day, when a logged-in child reaches the start page -
+   friendly and optional, one tap to skip. Not on the day of the first login (the welcome is enough), never
+   for grown-ups. The mood only changes the reply and puts cozy offers first; it is never stored, counted
+   or shown to anyone. Stored is only the day (greetDay), so the greeting does not come twice. */
+const MOODS=[['great','😄 Great','Yay! Let’s have fun.'],['okay','🙂 Okay','Thanks for telling me.'],['tired','😴 Tired','Thanks for telling me. How about something short and cozy?'],['sad','😢 Sad','Thanks for telling me. It’s okay to feel like that. Something cozy might help.']];
+const GREET_OFFERS=[['today','⭐ Practise Today'],['subject','📚 Choose a subject'],['joke','😄 A joke'],['tree','🌳 My learning tree'],['sheet','📄 Practice sheet']];
+function maybeGreet(){
+  if(!accountsOn() || adultUser || !studentSession() || isTestAccount() || state.screen!=='home') return;   // the admin's test child is for trying features: no greeting
+  const d=$('#greetDlg'); if(d.open || store.get('greetDay','')===dayKey()) return;
+  const nm=playerName();
+  $('#greetTitle').textContent=nm?`Hi, ${nm}! 👋`:'Hi there! 👋';
+  $('#greetMoods').innerHTML=MOODS.map(m=>`<button type="button" class="btn small" data-mood="${m[0]}" aria-pressed="false">${m[1]}</button>`).join('');
+  $('#greetReply').hidden=true; $('#greetReply').innerHTML=''; $('#greetJoke').innerHTML=''; $('#greetSkip').textContent='Skip';
+  renderGreetOffers(false);
+  $('#greetMoods').querySelectorAll('[data-mood]').forEach(b=>b.addEventListener('click',()=>{
+    const m=MOODS.find(x=>x[0]===b.dataset.mood), cozy=m[0]==='tired'||m[0]==='sad';
+    $('#greetMoods').querySelectorAll('[data-mood]').forEach(x=>x.setAttribute('aria-pressed', String(x===b)));
+    const r=$('#greetReply'); r.hidden=false;
+    r.innerHTML=esc(m[2])+(m[0]==='sad'?'<br><span class="small">If something is on your mind, you can talk to a grown-up you trust.</span>':'');
+    renderGreetOffers(cozy);
+  }));
+  if(d.showModal) d.showModal(); else d.setAttribute('open','');
+}
+function renderGreetOffers(cozy){
+  const order=cozy?['joke','tree','today','subject','sheet']:GREET_OFFERS.map(o=>o[0]);
+  $('#greetOffers').innerHTML=order.map(k=>`<button type="button" class="btn${cozy&&(k==='joke'||k==='tree')?' cozy':''}" data-offer="${k}">${GREET_OFFERS.find(o=>o[0]===k)[1]}</button>`).join('');
+  $('#greetOffers').querySelectorAll('[data-offer]').forEach(b=>b.addEventListener('click',()=>greetGo(b.dataset.offer)));
+}
+function closeGreet(){ store.set('greetDay',dayKey()); const d=$('#greetDlg'); if(d.close) d.close(); else d.removeAttribute('open'); }
+function greetGo(k){
+  if(k==='joke'){
+    store.set('greetDay',dayKey());
+    const j=pick(jokePool());
+    $('#greetJoke').innerHTML=`<div class="story">${esc(j[0])}</div><button class="btn small" id="greetJokeAnswer" type="button">Show the answer</button>`;
+    $('#greetJokeAnswer').addEventListener('click',()=>{ $('#greetJokeAnswer').outerHTML=`<div class="story"><i>${esc(j[1])}</i></div>`; });
+    $('#greetSkip').textContent='Done ✓';
+    return;
+  }
+  closeGreet();
+  if(k==='today') $('#todayBtn').click();
+  else if(k==='subject') $('#subjects').scrollIntoView({block:'start'});
+  else if(k==='tree') $('#tree').scrollIntoView({block:'center'});
+  else if(k==='sheet') $('#sheetBtn').click();
+}
+$('#greetSkip').addEventListener('click',closeGreet);
+$('#greetDlg').addEventListener('cancel',()=>store.set('greetDay',dayKey()));   // Escape works like Skip
+
 $('#nextBtn').addEventListener('click',next);
 // two buttons side by side (Peter, 01.11.: "Show me how" must not disappear)
 $('#helpBtn').addEventListener('click',()=>{ if(state.answered) return; if(!state.hinted) showHint(); else showExample(); });
