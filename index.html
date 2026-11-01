@@ -1564,8 +1564,8 @@ function mixFrom(keys){
 }
 const questsIn = s => s.items.filter(k=>k.indexOf('studio:')!==0 && !isArchived(WORLDS[k]));
 /* ======================= LEARNING LOGIC (hidden from the child) ======================= */
-/* Guidance follows the representations found in Toddle. Other subject hints
-   are supporting practice, not a claim about an unverified BIS teaching method. */
+/* Guidance follows the representations found on the class learning platform. Other subject hints
+   are supporting practice, not a claim about an unverified school teaching method. */
 function roundingModel(n, step, solved){
   const lo=Math.floor(n/step)*step, hi=lo+step, mid=lo+step/2;
   const x=v=>40+(v-lo)/step*440;
@@ -1660,7 +1660,7 @@ function queueBridge(q){
   tasks.slice(0,slots).forEach((b,i)=>{ state.round[state.idx+1+i]=b; });
   if(tasks.length>slots) store.set('bridgeNext',store.get('bridgeNext',[]).concat(tasks.slice(slots)).slice(-12));
 }
-/* School key (BIS standards legend): Not applicable, Requires support, Consolidating, Meeting expectations, Extending.
+/* School key (standards legend of the school): Not applicable, Requires support, Consolidating, Meeting expectations, Extending.
    It is used ONLY to choose the next questions. Nothing of it is ever shown to the child: no levels, no words, no percentages.
    Skill = the quest a question belongs to (q.world). Level: 1 = support (one step, a visual help), 2 = year level, 3 = extending (explain, second way, check). */
 function withLevel(fn, level){ return function(){ const q=fn.apply(this, arguments); q.level=level; return q; }; }
@@ -1669,7 +1669,7 @@ distanceExplainQ=withLevel(distanceExplainQ,3); halfwayQ=withLevel(halfwayQ,3); 
 anotherWayQ=withLevel(anotherWayQ,3); reasonableQ=withLevel(reasonableQ,3); tableConclusionQ=withLevel(tableConclusionQ,3);
 const levelOf = q => q.level||2;
 
-/* BIS standards each quest practises (from Toddle, Grade 3). Used for the parent view; never shown to the child. */
+/* School standards each quest practises (from the class learning platform, Grade 3). Used for the parent view; never shown to the child. */
 const STANDARDS={
   numbers:['M-N1','M-N2'], round:['M-N3','M-N6'], combos:['M-N4','M-N6'], wordprob:['M-N4','M-N5'], detective:['M-N2','M-N3','M-D1'],
   forces:['S-F1'], units:['M-M1'], graphs:['M-D1'], opinion:['E-W1','E-S2'], sentences:['E-W1'], examples:['E-W1'], words:['E-R1'],
@@ -1745,31 +1745,34 @@ function advanceDue(q){
    school, teachers or places. They are rewritten when shown, never in storage. If an old
    copy cannot be rewritten exactly (e.g. capital-letter variants), a fresh question of the
    same quest and kind takes its place; the review keeps its id and runs out as usual. */
-const PRIVATE_RE=/\b3B\b|Bavaria|Zeckser|Bhan|Schl(?:ü|u)er|Haimhausen|Munich|Toddle|Legoland/i;
+/* The old wording (names of the class, school, teachers and places) is stored only base64-encoded
+   (Peter, 01.11.: no plain names anywhere in the app), decoded when needed. */
+const unb64 = s => decodeURIComponent(escape(atob(s)));
+const PRIVATE_RE=new RegExp(unb64('XGIzQlxifEJhdmFyaWF8WmVja3NlcnxCaGFufFNjaGwoPzrDvHx1KWVyfEhhaW1oYXVzZW58TXVuaWNofFRvZGRsZXxMZWdvbGFuZA=='),'i');
 const LEGACY_TEXT=[
-  ['3B looked up force words with Ms. Zeckser using books','Your class looked up force words using books'],
-  ['Which tool did 3B use','Which tool did your class use'],
-  ['In music 3B composed','In music your class composed'],
-  ['Dear Ms. Bhan…','Dear Sir or Madam…'],
-  ['Upload to Toddle','Upload it online'],
-  ['upload to Toddle at the end','upload to your class learning platform at the end'],
-  ['Which two songs did Ms. Schlüer ask','Which two songs did your music teacher ask'],
-  ['On Bavarian Day the library celebrated stories from our host country. Which country is that?','The library celebrated fairy tales collected by the Brothers Grimm. Which country do they come from?'],
-  ['Our school is in Bavaria. Bavaria is in Germany.','The Brothers Grimm collected their fairy tales in Germany.'],
-  ['Munich is the best city in Germany.','Paris is the most beautiful city in the world.'],
-  ['Munich is the capital of Bavaria.','Paris is the capital of France.'],
-  ['Bavaria is in the south of Germany.','France is a country in Europe.'],
-  ['On the Legoland school trip','On a school trip'],
-  ['That is the Legoland list!','That is the school trip list!'],
-  ['Legoland trip! Do you','School trip to the theme park! Do you'],
-  ['at Legoland. What do you do?','at the theme park. What do you do?'],
-  ['A Legoland robot','A theme park robot'],
-  ['Because Legoland has enough toys','Because the theme park has enough toys'],
-  ['most important Legoland rule','most important trip rule'],
-  ['Legoland Trip','Theme Park Trip'],
-  ['Then we stayed with our group at Legoland.','Then we stayed with our group at the theme park.'],
-  ['Can we go to Legoland again','Can we go to the theme park again'],
-  ['"Legoland","Munich","Atlantis"','"Wonderland","London","Atlantis"']
+  [unb64('M0IgbG9va2VkIHVwIGZvcmNlIHdvcmRzIHdpdGggTXMuIFplY2tzZXIgdXNpbmcgYm9va3M='),"Your class looked up force words using books"],
+  [unb64('V2hpY2ggdG9vbCBkaWQgM0IgdXNl'),"Which tool did your class use"],
+  [unb64('SW4gbXVzaWMgM0IgY29tcG9zZWQ='),"In music your class composed"],
+  [unb64('RGVhciBNcy4gQmhhbuKApg=='),"Dear Sir or Madam…"],
+  [unb64('VXBsb2FkIHRvIFRvZGRsZQ=='),"Upload it online"],
+  [unb64('dXBsb2FkIHRvIFRvZGRsZSBhdCB0aGUgZW5k'),"upload to your class learning platform at the end"],
+  [unb64('V2hpY2ggdHdvIHNvbmdzIGRpZCBNcy4gU2NobMO8ZXIgYXNr'),"Which two songs did your music teacher ask"],
+  [unb64('T24gQmF2YXJpYW4gRGF5IHRoZSBsaWJyYXJ5IGNlbGVicmF0ZWQgc3RvcmllcyBmcm9tIG91ciBob3N0IGNvdW50cnkuIFdoaWNoIGNvdW50cnkgaXMgdGhhdD8='),"The library celebrated fairy tales collected by the Brothers Grimm. Which country do they come from?"],
+  [unb64('T3VyIHNjaG9vbCBpcyBpbiBCYXZhcmlhLiBCYXZhcmlhIGlzIGluIEdlcm1hbnku'),"The Brothers Grimm collected their fairy tales in Germany."],
+  [unb64('TXVuaWNoIGlzIHRoZSBiZXN0IGNpdHkgaW4gR2VybWFueS4='),"Paris is the most beautiful city in the world."],
+  [unb64('TXVuaWNoIGlzIHRoZSBjYXBpdGFsIG9mIEJhdmFyaWEu'),"Paris is the capital of France."],
+  [unb64('QmF2YXJpYSBpcyBpbiB0aGUgc291dGggb2YgR2VybWFueS4='),"France is a country in Europe."],
+  [unb64('T24gdGhlIExlZ29sYW5kIHNjaG9vbCB0cmlw'),"On a school trip"],
+  [unb64('VGhhdCBpcyB0aGUgTGVnb2xhbmQgbGlzdCE='),"That is the school trip list!"],
+  [unb64('TGVnb2xhbmQgdHJpcCEgRG8geW91'),"School trip to the theme park! Do you"],
+  [unb64('YXQgTGVnb2xhbmQuIFdoYXQgZG8geW91IGRvPw=='),"at the theme park. What do you do?"],
+  [unb64('QSBMZWdvbGFuZCByb2JvdA=='),"A theme park robot"],
+  [unb64('QmVjYXVzZSBMZWdvbGFuZCBoYXMgZW5vdWdoIHRveXM='),"Because the theme park has enough toys"],
+  [unb64('bW9zdCBpbXBvcnRhbnQgTGVnb2xhbmQgcnVsZQ=='),"most important trip rule"],
+  [unb64('TGVnb2xhbmQgVHJpcA=='),"Theme Park Trip"],
+  [unb64('VGhlbiB3ZSBzdGF5ZWQgd2l0aCBvdXIgZ3JvdXAgYXQgTGVnb2xhbmQu'),"Then we stayed with our group at the theme park."],
+  [unb64('Q2FuIHdlIGdvIHRvIExlZ29sYW5kIGFnYWlu'),"Can we go to the theme park again"],
+  [unb64('IkxlZ29sYW5kIiwiTXVuaWNoIiwiQXRsYW50aXMi'),"\"Wonderland\",\"London\",\"Atlantis\""]
 ];
 const isPrivate = q => PRIVATE_RE.test(JSON.stringify(q));
 function sheetPrompt(q){
@@ -1895,7 +1898,16 @@ const FOCUS=['wordprob','round','combos','units','graphs','sentences','examples'
    Choices of earlier versions (a list, or focusOn/focusOff) are taken over once as a manual choice. */
 function focusAuto(){
   const need=SUBJECTS.flatMap(questsIn).map(assessQuest).filter(a=>a.level==='rs'||a.level==='c').map(a=>a.k);
-  return uniq(FOCUS.concat(need));
+  return uniq(classTopics().concat(need));
+}
+/* Class topics (Peter, 01.11.): derived from the school's evaluations - the quests the teacher names as
+   next steps ("Areas of development") in the last 8 weeks; if there are none that recent, all of them;
+   without evaluations for this child, the hand-made list FOCUS. New evaluations change the focus by themselves. */
+function classTopics(){
+  const d=typeof schoolData==='function'?schoolData():null; if(!d) return FOCUS;
+  const done=d.tasks.filter(t=>!t.pending && (t.focusNext||[]).length), recent=done.filter(t=>daysBetween(t.day,dayKey())<=56);
+  const list=uniq((recent.length?recent:done).flatMap(t=>t.focusNext)).filter(k=>WORLDS[k]);
+  return list.length?list:FOCUS;
 }
 const cleanFocus = l => uniq(l).filter(k=>WORLDS[k] && !k.startsWith('mix_') && k!=='today' && !isArchived(WORLDS[k]));
 function migrateFocus(){
@@ -2412,7 +2424,7 @@ function showResults(){
 }
 
 /* ---------- fun: school mottos, tree, badges, challenge, treats, themes, birthday ---------- */
-/* Rewards growth, courage and persistence (BIS: "grow and flourish", "take risks in a supportive culture"), never results or levels.
+/* Rewards growth, courage and persistence (school mission: "grow and flourish", "take risks in a supportive culture"), never results or levels.
    No streaks, nothing expires, no leaderboards. Messages appear now and then, at most one per round. */
 const NOTES={
   start:['Believe. Your brain grows every time you practise.','You choose. Voice and choice!','Inspire someone: show a grown-up what you learned today.'],
@@ -2971,7 +2983,7 @@ const PT={
     howSheets:'<b>So geht’s:</b> Blatt antippen (die Nummer steht auch auf dem Papier) und pro Aufgabe wählen, wie es lief. Vertippt? Einfach den richtigen Knopf antippen. „Mit Hilfe“ und „Noch nicht“ sind gut so: Die App bietet dann leichtere Schritte an und wiederholt die Aufgabe später. Ein Blatt, das nicht eingetragen wird, zählt einfach nicht.',
     howSettings:'<b>Was kann ich hier tun?</b> Fokus-Themen als Liste, Spannung der Pisolala-Geschichten, eine freiwillige Kalender-Erinnerung, Profilangaben des Kindes und die App-Version. Nichts davon ist Pflicht.',
     howHelp:'<b>Was kann ich hier tun?</b> Kurz nachlesen, wie die Schule ein Thema zeigt, und mit drei Fragen helfen statt vorzurechnen.',
-    back:'← Alle Fächer',focus:'Im Fokus',fm:'🎯 Fokus',fAuto:'Automatisch',fMan:'Manuell',fAutoTxt:'Die App wählt selbst: was gerade im Unterricht dran ist und dazu alles, wo die Einschätzung Unterstützung nahelegt. Das passt sich von selbst an. Tippen Sie bei einer Quest auf „Im Fokus“, wechselt die Wahl auf „Manuell“.',fManTxt:'Sie legen selbst fest, woraus „Practise Today“ und das Übungsblatt Aufgaben nehmen – zum Beispiel vor einem Test. Mit „Automatisch“ übernimmt wieder die App.',fNote:'Alle Quests bleiben für das Kind spielbar; der Fokus bestimmt nur, was „Practise Today“ und das Übungsblatt bevorzugen.',school:'im Unterricht',need:'braucht Übung',how:'💡 So helfen Sie',
+    back:'← Alle Fächer',focus:'Im Fokus',fm:'🎯 Fokus',fAuto:'Automatisch',fMan:'Manuell',fAutoTxt:'Die App wählt selbst: die Themen, die die Lehrkraft in ihren Bewertungen als nächste Schritte nennt, und dazu alles, wo die Einschätzung Unterstützung nahelegt. Das passt sich von selbst an. Tippen Sie bei einer Quest auf „Im Fokus“, wechselt die Wahl auf „Manuell“.',fManTxt:'Sie legen selbst fest, woraus „Practise Today“ und das Übungsblatt Aufgaben nehmen – zum Beispiel vor einem Test. Mit „Automatisch“ übernimmt wieder die App.',fNote:'Alle Quests bleiben für das Kind spielbar; der Fokus bestimmt nur, was „Practise Today“ und das Übungsblatt bevorzugen.',school:'nächster Schritt laut Schule',need:'braucht Übung',how:'💡 So helfen Sie',
     basis:'Worauf beruht das?',trend:'Tendenz',recent:'Aktualität',sure:'Wie sicher?',when:'Belastbar ab etwa 20 Aufgaben an 5 Tagen über zwei Wochen.',
     tasks:(n,d)=>`${n} Aufgaben an ${d} ${d===1?'Tag':'Tagen'}`,self:'selbst gelöst',hint:'mit Hilfe',ex:n=>`davon ${n} mit Beispiel`,seen:'Lösungsweg angesehen',due:n=>`${n} Wiederholung${n===1?'':'en'} offen`,
     none:'noch nicht geübt',ago:n=>n===0?'heute geübt':n===1?'gestern geübt':`vor ${n} Tagen geübt`,old:'Ältere Belege – bei Gelegenheit neu prüfen',
@@ -2988,7 +3000,7 @@ const PT={
     howSheets:'<b>How it works:</b> tap a sheet (its number is also on the paper) and choose for each task how it went. Tapped the wrong one? Just tap the right button. “With help” and “Not yet” are fine: the app then offers easier steps and brings the task back later. A sheet that isn’t entered simply doesn’t count.',
     howSettings:'<b>What can I do here?</b> Focus topics as a list, how exciting Pisolala stories may be, an optional calendar reminder, the child\'s profile details and the app version. None of this is required.',
     howHelp:'<b>What can I do here?</b> Read briefly how the school teaches a topic and help with three questions instead of calculating for the child.',
-    back:'← All subjects',focus:'In focus',fm:'🎯 Focus',fAuto:'Automatic',fMan:'Manual',fAutoTxt:'The app chooses by itself: what is taught in class right now, plus everything where the summary suggests support. It adapts by itself. Tapping “In focus” at a quest switches to “Manual”.',fManTxt:'You decide where “Practise Today” and the practice sheet take their tasks from – for example before a test. Choose “Automatic” to let the app take over again.',fNote:'All quests stay playable for your child; the focus only decides what “Practise Today” and the practice sheet prefer.',school:'in class now',need:'needs practice',how:'💡 How you can help',
+    back:'← All subjects',focus:'In focus',fm:'🎯 Focus',fAuto:'Automatic',fMan:'Manual',fAutoTxt:'The app chooses by itself: the topics the teacher names as next steps in the evaluations, plus everything where the summary suggests support. It adapts by itself. Tapping “In focus” at a quest switches to “Manual”.',fManTxt:'You decide where “Practise Today” and the practice sheet take their tasks from – for example before a test. Choose “Automatic” to let the app take over again.',fNote:'All quests stay playable for your child; the focus only decides what “Practise Today” and the practice sheet prefer.',school:'next step per school',need:'needs practice',how:'💡 How you can help',
     basis:'What is this based on?',trend:'Trend',recent:'How recent',sure:'How sure?',when:'Reliable from about 20 tasks on 5 days over two weeks.',
     tasks:(n,d)=>`${n} tasks on ${d} ${d===1?'day':'days'}`,self:'on own',hint:'with help',ex:n=>`${n} of them with an example`,seen:'solution viewed',due:n=>`${n} review${n===1?'':'s'} open`,
     none:'not practiced yet',ago:n=>n===0?'practiced today':n===1?'practiced yesterday':`practiced ${n} days ago`,old:'Older evidence – check again when convenient',
@@ -3145,7 +3157,7 @@ function schoolLine(k){ const s=schoolStandFor(k); if(!s) return ''; return `<p 
 function parentSubjectHTML(key){
   if(accountsOn() && !viewedKid()) return parentHomeHTML();
   const T=PT[PL()], s=SUBJECTS.find(x=>x.key===key), focus=focusTopics(), list=questsIn(s).map(assessQuest), teacher=isTeacher(), man=focusManualMode();
-  const cards=list.map(a=>{ const k=a.k, tags=[FOCUS.includes(k)?`<span class="ptag school">${T.school}</span>`:'', (a.level==='rs'||a.level==='c')?`<span class="ptag need">${T.need}</span>`:''].join('');
+  const cards=list.map(a=>{ const k=a.k, tags=[classTopics().includes(k)?`<span class="ptag school">${T.school}</span>`:'', (a.level==='rs'||a.level==='c')?`<span class="ptag need">${T.need}</span>`:''].join('');
     return `<div class="pquest"><div class="phead"><div><div class="pqn">${esc(WORLDS[k].name)}</div><div class="small">${esc(qInfo(k,0))}</div></div><div>${pChip(a.level,a.sure)}</div></div>
       <p class="pline"><b>${T.basis}</b> ${a.n?`${T.tasks(a.n,a.days)}: ${a.self} ${T.self}, ${a.hint} ${T.hint}${a.ex?` (${T.ex(a.ex)})`:''}, ${a.seen}× ${T.seen}.`:T.none+'.'} ${a.due?T.due(a.due)+'.':''}</p>
       ${a.n?`<p class="pline"><b>${T.trend}:</b> ${T.tr[a.trend]} · <b>${T.recent}:</b> ${a.old?`<span class="pold">${T.old}</span>`:T.ago(a.age)}</p>`:''}
@@ -3334,7 +3346,7 @@ const HELP={
   record:{kid:true,title:'Recording yourself',text:'<p>Tap “● Aufnahme starten”, read aloud, tap “■ Stopp”. Then listen to yourself!</p><p>The last three recordings stay on this iPad. To hand one in, tap “Teilen / Sichern” together with a grown-up.</p>'},
   sheet:{kid:true,title:'Practice sheet',text:'<p>A sheet with 6 tasks and a writing task, plus an answer page for grown-ups.</p><p>Share it as a PDF (by mail, message or into Files) or print it. Afterwards a grown-up can enter how it went.</p>'},
   overview:{title:'Wie entsteht die Einschätzung?',text:'<p>Gezählt wird nur der <b>erste Versuch</b> jeder Aufgabe: selbst gelöst, mit Hinweis oder Lösungsweg angesehen. Eine Einschätzung gibt es erst ab <b>8 Aufgaben an 3 Tagen</b> – vorher „Noch nicht einschätzbar“, das sagt nichts Schlechtes.</p><p><b>Vorläufig</b> heißt: erste Einschätzung. <b>Bestätigt</b> erst nach etwa 20 Aufgaben an 5 Tagen über zwei Wochen. Eine <b>Tendenz</b> steht nur da, wenn zwei Zeiträume genug Aufgaben haben. Nach mehr als 3 Wochen Pause steht „ältere Belege“ – Ferien sind kein Leistungsabfall.</p><p>Das ist <b>keine schulische Bewertung</b> und wird dem Kind nie gezeigt.</p>'},
-  focus:{title:'Fokus-Themen',text:'<p>Aus diesen Themen stellt „Practise Today“ die 8 Fragen zusammen; auch die Übungsblätter nutzen sie. Auf der Startseite tragen sie das Zeichen „Focus“.</p><p>Die App wählt sie selbst: was gerade im Unterricht dran ist und wo Übung hilft. Unter „🎯 Fokus“ können Sie auf „Manuell“ umstellen und selbst wählen.</p>'},
+  focus:{title:'Fokus-Themen',text:'<p>Aus diesen Themen stellt „Practise Today“ die 8 Fragen zusammen; auch die Übungsblätter nutzen sie. Auf der Startseite tragen sie das Zeichen „Focus“.</p><p>Die App wählt sie selbst: was die Lehrkraft als nächste Schritte nennt und wo Übung hilft. Unter „🎯 Fokus“ können Sie auf „Manuell“ umstellen und selbst wählen.</p>'},
   school:{title:'Einstufungen der Schule',text:'<p>Die Einstufungen stammen aus den bewerteten Aufgaben auf der Lernplattform der Schule. Solange in der App für eine Quest noch zu wenig geübt wurde (weniger als 6 Antworten oder 2 Tage), richtet die App die Schwierigkeit der Aufgaben danach aus. Danach zählt die eigene Übung.</p><p>Die Einschätzung im Elternbereich beruht nur auf der Übung in der App. Neue Bewertungen der Schule werden bei Gelegenheit übernommen.</p>'},
   calendar:{title:'Kalender-Erinnerung',text:'<p>Freiwillig: erzeugt eine Kalenderdatei mit einer wiederkehrenden, freundlichen Einladung zum Üben. Die App selbst schickt keine Nachrichten.</p>'},
   storycap:{title:'Pisolala-Geschichten',text:'<p>Hier legen Sie fest, wie spannend eine Geschichte höchstens sein darf. Das Kind wählt selbst bis zu dieser Grenze. Jede Stufe bleibt freundlich.</p>'},
@@ -3347,7 +3359,7 @@ const HELP={
 /* Grown-ups help in English: meaning-based, American English (Peter, 31.10.). */
 const HELP_EN={
   overview:{title:'How is the summary made?',text:'<p>Only the <b>first try</b> at each task counts: solved on their own, with a hint, or after viewing the solution. A judgment appears only after <b>8 tasks on 3 days</b> – until then it says “not enough to tell yet”, which says nothing bad.</p><p><b>Provisional</b> means a first judgment. <b>Confirmed</b> only after about 20 tasks on 5 days over two weeks. A <b>trend</b> is shown only when two periods have enough tasks. After a break of more than 3 weeks it says “older evidence” – vacations are not a drop in ability.</p><p>This is <b>not a school assessment</b> and is never shown to your child.</p>'},
-  focus:{title:'Focus topics',text:'<p>“Practise Today” builds its 8 questions from these topics; practice sheets use them too. On the start page they carry the “Focus” sign.</p><p>The app picks them by itself: what is taught in class right now and where practice helps. Under “🎯 Focus” you can switch to “Manual” and choose yourself.</p>'},
+  focus:{title:'Focus topics',text:'<p>“Practise Today” builds its 8 questions from these topics; practice sheets use them too. On the start page they carry the “Focus” sign.</p><p>The app picks them by itself: what the teacher names as next steps and where practice helps. Under “🎯 Focus” you can switch to “Manual” and choose yourself.</p>'},
   school:{title:'School ratings',text:'<p>The ratings come from the evaluated assignments on the school’s learning platform. While there is too little practice in the app for a quest (fewer than 6 answers or 2 days), the app sets the difficulty of the tasks by them. After that, the app’s own practice counts.</p><p>The summary in the grown-ups area is based only on practice in the app. New school evaluations are added from time to time.</p>'},
   calendar:{title:'Calendar reminder',text:'<p>Optional: creates a calendar file with a recurring, friendly invitation to practice. The app itself never sends messages.</p>'},
   storycap:{title:'Pisolala stories',text:'<p>Set how exciting a story may be at most. Your child chooses up to this limit. Every level stays kind.</p>'},
@@ -3537,21 +3549,21 @@ STANDARD_TEXT['E-S2']='Sprechen und Zuhören: Meinungen äußern und besprechen'
    Letters: C = Consolidating, M = Meeting expectations (school legend). ATL/Learner profile:
    ES = emerging with support, Obs. = observed, Ind. = independent. */
 const SCHOOL_DATA={kathie:{asOf:'2026-11-01', tasks:[
-  {day:'2026-10-27', area:'math', title:'Mastering Basic Numbers and Calculations – Milestone', std:{'M-N1':'C','M-N2':'M','M-N3':'M','M-N4':'C','M-N5':'C','M-N6':'C'}, quests:['wordprob','combos','round'],
+  {day:'2026-10-27', area:'math', title:'Mastering Basic Numbers and Calculations – Milestone', std:{'M-N1':'C','M-N2':'M','M-N3':'M','M-N4':'C','M-N5':'C','M-N6':'C'}, quests:['wordprob','combos','round'], focusNext:['wordprob'],
    // rubric: teacher = highlighted cell, self = the child's own tick (Peter, 01.11.)
    rubric:[{crit:'Sticker combinations',teacher:'C',self:'E'},{crit:'Funny face stickers',teacher:'C',self:'E'},{crit:'Rounding and estimation',teacher:'C',self:'E'}],
    good:{de:'Auf Zehner runden sicher; mit dem Überschlag begründet, warum die Sticker nicht in die Schachtel passen.',en:'Rounding to the nearest ten is secure; used the estimate to explain why the stickers would not fit in the box.'},
    next:{de:'Zahlen in Sachaufgaben genau lesen (die Gesamtzahl wurde verlesen); klare Strategien für Plus- und Minusaufgaben mit mehreren Schritten.',en:'Read the numbers in word problems carefully (the total was misread); clear strategies for multi-step addition and subtraction.'}},
-  {day:'2026-10-15', area:'english', title:'Persuade for the Park! (opinion writing)', std:{'E-S1':'C','E-S2':'M'}, atl:{'Caring':'Ind.','Thinkers':'Obs.','Connection':'Ind.'}, quests:['opinion','examples','sentences'],
+  {day:'2026-10-15', area:'english', title:'Persuade for the Park! (opinion writing)', std:{'E-S1':'C','E-S2':'M'}, atl:{'Caring':'Ind.','Thinkers':'Obs.','Connection':'Ind.'}, quests:['opinion','examples','sentences'], focusNext:['examples','sentences'],
    good:{de:'Meinung am Anfang und am Ende klar formuliert; gute Gründe (Bewegung, Natur erleben).',en:'Opinion stated clearly at the beginning and the end; good reasons (exercise, learning about nature).'},
    next:{de:'Beispiele genauer und persönlicher; Großbuchstaben am Satzanfang und bei Namen, Satzzeichen prüfen.',en:'Make examples more specific and personal; capital letters at the start of sentences and for names, check punctuation.'}},
-  {day:'2026-10-15', area:'math', title:'Lesson 4 – rounding to the nearest hundred', std:{}, quests:['round'],
+  {day:'2026-10-15', area:'math', title:'Lesson 4 – rounding to the nearest hundred', std:{}, quests:['round'], focusNext:['round'],
    good:{de:'Nachbar-Hunderter 100 und 200 und die Mitte 150 richtig; 120 richtig eingetragen und auf 100 gerundet.',en:'Benchmark hundreds 100 and 200 and the halfway point 150 correct; placed 120 correctly and rounded it to 100.'},
    next:{de:'Genauer erklären, woran man erkennt, welcher Hunderter näher ist (Abstände, Mitte).',en:'Explain in more detail how you know which hundred is closer (distances, halfway point).'}},
-  {day:'2026-10-04', area:'science', title:'Friction Frenzy (friction experiment)', std:{'E-W1':'C','E-W2':'C','M-D1':'C','M-M1':'C','S-F1':'C'}, atl:{'Research skills':'Obs.','Critical thinking: giving reasons':'Ind.','Transfer: generalising':'Ind.','Function':'Ind.','Responsibility':'ES'}, quests:['forces','units','graphs','finish','examples'],
+  {day:'2026-10-04', area:'science', title:'Friction Frenzy (friction experiment)', std:{'E-W1':'C','E-W2':'C','M-D1':'C','M-M1':'C','S-F1':'C'}, atl:{'Research skills':'Obs.','Critical thinking: giving reasons':'Ind.','Transfer: generalising':'Ind.','Function':'Ind.','Responsibility':'ES'}, quests:['forces','units','graphs','finish','examples'], focusNext:['examples','units','graphs','finish'],
    good:{de:'Versteht Reibung (mehr Reibung = kürzere Strecke) und begründet klar; arbeitet gut in der Gruppe mit.',en:'Understands friction (more friction = shorter distance) and explains it clearly; works well in the group.'},
    next:{de:'Genauere Hypothese; Messwerte vollständig und mit richtiger Einheit (cm statt m), Masse notieren; Balkendiagramm vollständig beschriften; jede Frage beantworten.',en:'More specific hypothesis; record all measurements with the right unit (cm, not m) and the mass; label the bar graph completely; answer every question.'}},
-  {day:'2026-10-03', area:'math', title:'Mastering Basic Numbers – Apprentice (Travel for Work)', std:{'M-N1':'C','M-N3':'C','M-N4':'C'}, quests:['combos','round','detective'],
+  {day:'2026-10-03', area:'math', title:'Mastering Basic Numbers – Apprentice (Travel for Work)', std:{'M-N1':'C','M-N3':'C','M-N4':'C'}, quests:['combos','round','detective'], focusNext:['combos','round'],
    good:{de:'Tabelle richtig gelesen (wenigste und meiste Fahrt); Überschlag durch Runden auf Hunderter richtig; 900 am Zahlenstrahl und mit Gleichungen zerlegt.',en:'Read the table correctly (least and most travel); estimate by rounding to hundreds correct; broke 900 apart on a number line and with equations.'},
    next:{de:'Verschiedene Zerlegungen von 900 finden statt dreimal dieselbe Zahl; begründen, warum auf Hunderter oder auf Zehner gerundet wird.',en:'Find different ways to break 900 apart instead of the same number three times; explain why to round to hundreds or to tens.'}},
   {day:'2026-10-21', pending:true, area:'learner', title:'Glows and Grows (self-assessment)', std:{}, quests:['school'],
@@ -3584,7 +3596,7 @@ function schoolHTML(){
   const atl=d.tasks.filter(t=>t.atl).map(t=>Object.entries(t.atl).map(([a,v])=>`<li>${esc(a)}: <b>${esc(v)}</b> <span class="small">(${esc(t.title)}, ${fmtDay(t.day)})</span></li>`).join('')).join('');
   const done=d.tasks.filter(t=>!t.pending).sort((a,b)=>a.day<b.day?1:-1), pend=d.tasks.filter(t=>t.pending);
   const rub=t=>t.rubric?`<p><b>${de?'Bewertungsraster':'Rubric'}:</b></p><ul>${t.rubric.map(x=>`<li>${esc(x.crit)}: ${de?'Lehrkraft':'teacher'} ${pChip(SL[x.teacher])} · ${de?'selbst eingeschätzt':'self-rating'} ${pChip(SL[x.self])}</li>`).join('')}</ul>`:'';
-  const task=t=>`<details class="about-sec"><summary>${fmtDay(t.day)} · ${esc(t.title)}</summary><div class="about-sec-body">${Object.keys(t.std).length?`<p>${Object.entries(t.std).map(([s,r])=>`${esc((de?STANDARD_TEXT:STANDARD_TEXT_EN)[s]||s)}: ${pChip(SL[r])}`).join('<br>')}</p>`:''}${rub(t)}<p><b>${T.good}:</b> ${esc(t.good[L])}</p>${t.next[L]?`<p><b>${T.next}:</b> ${esc(t.next[L])}</p>`:''}<p class="small">${T.quests}: ${t.quests.filter(q=>WORLDS[q]).map(q=>esc(WORLDS[q].name)).join(', ')}</p></div></details>`;
+  const task=t=>`<details class="about-sec"><summary>${fmtDay(t.day)} · ${esc(t.title)}</summary><div class="about-sec-body">${Object.keys(t.std).length?`<p>${Object.entries(t.std).map(([s,r])=>`${esc((de?STANDARD_TEXT:STANDARD_TEXT_EN)[s]||s)}: ${pChip(SL[r])}`).join('<br>')}</p>`:''}${rub(t)}<p><b>${T.good}:</b> ${esc(t.good[L])}</p>${t.next[L]?`<p><b>${T.next}:</b> ${esc(t.next[L])}</p>`:''}${(t.focusNext||[]).length?`<p class="small">${de?'Daraus im automatischen Fokus':'In the automatic focus because of this'}: ${t.focusNext.filter(q=>WORLDS[q]).map(q=>esc(WORLDS[q].name)).join(', ')}</p>`:''}<p class="small">${T.quests}: ${t.quests.filter(q=>WORLDS[q]).map(q=>esc(WORLDS[q].name)).join(', ')}</p></div></details>`;
   return `<h2>${T.h}</h2><p class="small">${T.intro.replace('{d}',fmtDay(d.asOf))}</p><h3 class="psub">${T.std}</h3><div class="tablewrap"><table class="dt"><thead><tr><th>${T.area}</th><th>Standard</th><th>${T.now}</th><th>${T.quests}</th></tr></thead><tbody>${rows}</tbody></table></div>`
     +(atl?`<h3 class="psub">${T.atl}</h3><p class="small">${T.atlKey}</p><ul>${atl}</ul>`:'')
     +`<h3 class="psub">${T.tasks}</h3><div class="about-menu">${done.map(task).join('')}</div>`
@@ -3762,7 +3774,7 @@ const GUIDE_ADULT_DE=`<p><b>Das Wichtigste vorab:</b> Die App hat keinen Server.
 <li><b>Einrichten (einmalig):</b> Seite in Safari öffnen und das Familienpasswort eingeben („angemeldet bleiben“ angehakt lassen). Dann Teilen-Symbol → „Zum Home-Bildschirm“ → „Hinzufügen“ und künftig nur noch über das Symbol öffnen. Die Home-Bildschirm-App hat einen eigenen Speicher und fragt beim ersten Öffnen noch einmal nach dem Familienpasswort.</li>
 <li><b>Kind anmelden (einmalig je Gerät):</b> „🎒 Student“, Benutzername und Startcode eingeben, dann ein eigenes Passwort wählen (mindestens 4 Zeichen). Das Kind bleibt angemeldet, bis jemand „Log out“ tippt.</li>
 <li><b>Als Erwachsener anmelden:</b> auf dem Gerät des Kindes unten „👪 Grown-ups“ (das Kind bleibt angemeldet), Benutzername und Startcode, dann ein eigenes Passwort (mindestens 8 Zeichen). Sie bleiben angemeldet, bis Sie oben „Abmelden“ tippen – auch wenn das iPad in den Ruhezustand geht oder die App geschlossen wird. Auf dem Gerät des Kindes nach dem Nachsehen bitte abmelden; danach ist dort wieder das Kind angemeldet.</li>
-<li><b>Im Elternbereich:</b> oben die Übersicht wie auf der Kinderseite mit der Einschätzung in Worten (keine Schulbeurteilung). Fach antippen: bei jeder Quest Grundlage, Tipp und der Schalter „Im Fokus“. Den Fokus wählt die App selbst – was gerade im Unterricht dran ist und wo Übung hilft –, daraus nimmt „Practise Today“ seine Aufgaben; über „🎯 Fokus“ stellen Sie auf „Manuell“, um selbst zu wählen, und mit „Automatisch“ wieder zurück. Darunter zum Aufklappen: Übungsblätter, „Für das Kind“ (Pisolala-Geschichten, Kalender-Erinnerung, Profilangaben), „Ihr Kind unterstützen“ (die wichtigsten Regeln), „So funktioniert Big Quest“ (das Konzept, auch wie die App einstuft) und diese Bedienungshilfe. Die Sprache wechseln Sie oben mit den Flaggen.</li>
+<li><b>Im Elternbereich:</b> oben die Übersicht wie auf der Kinderseite mit der Einschätzung in Worten (keine Schulbeurteilung). Fach antippen: bei jeder Quest Grundlage, Tipp und der Schalter „Im Fokus“. Den Fokus wählt die App selbst – was die Lehrkraft als nächste Schritte nennt und wo Übung hilft –, daraus nimmt „Practise Today“ seine Aufgaben; über „🎯 Fokus“ stellen Sie auf „Manuell“, um selbst zu wählen, und mit „Automatisch“ wieder zurück. Darunter zum Aufklappen: Übungsblätter, „Für das Kind“ (Pisolala-Geschichten, Kalender-Erinnerung, Profilangaben), „Ihr Kind unterstützen“ (die wichtigsten Regeln), „So funktioniert Big Quest“ (das Konzept, auch wie die App einstuft) und diese Bedienungshilfe. Die Sprache wechseln Sie oben mit den Flaggen.</li>
 <li><b>Für das Kind:</b> Practise Today oder ein Fach; bei Fehlern Hinweis, zweiter Versuch, dann Lösungsweg; Lese-Studio mit Aufnahme (Teilen/Sichern zum Hochladen auf die Lernplattform der Klasse); Übungsblatt als PDF; nach jeder Runde Witz, Rätsel oder Geschichte.</li>
 </ol>
 <p><b>Gut zu wissen:</b> Eigene Passwörter gelten nur auf dem Gerät, auf dem sie festgelegt wurden; auf einem weiteren Gerät einmal mit dem Startcode anmelden. Passwort vergessen? Der Startcode funktioniert immer. Nach 5 Fehlversuchen 30 Sekunden warten. Neue Versionen lädt die App beim Start und beim Zurückkehren selbst. Familienpasswort und Startcodes bitte nicht weitergeben. Admin: „🧪 Testkind“ öffnet das Testkonto mit eigenen Daten, „↩ Zurück zum Elternbereich“ führt zurück.</p>`;
@@ -3771,7 +3783,7 @@ const GUIDE_ADULT_EN=`<p><b>Most important first:</b> the app has no server. Eve
 <li><b>Set up (once):</b> open the page in Safari and enter the family password (keep “stay signed in” checked). Then tap Share → “Add to Home Screen” → “Add”, and from then on open it with the icon. The home-screen app has its own storage and asks for the family password once more.</li>
 <li><b>Log in your child (once per device):</b> “🎒 Student”, username and start code, then choose a personal password (at least 4 characters). Your child stays logged in until someone taps “Log out”.</li>
 <li><b>Log in as a grown-up:</b> on your child’s device tap “👪 Grown-ups” at the bottom (your child stays logged in), enter your username and start code, then a personal password (at least 8 characters). You stay logged in until you tap “Log out” at the top – even when the iPad goes to sleep or the app is closed. On your child’s device, please log out when you are done; your child is then logged in there again.</li>
-<li><b>In the grown-ups area:</b> at the top, an overview like your child’s start page with a summary in plain words (not a school assessment). Tap a subject: each quest shows what the summary is based on, a tip, and the “In focus” switch. The app picks the focus by itself – what is taught in class right now and where practice helps – and “Practise Today” takes its tasks from there; under “🎯 Focus” switch to “Manual” to choose yourself, and back with “Automatic”. Below, open as needed: practice sheets, “For your child” (Pisolala stories, calendar reminder, profile details), “Supporting your child” (the key rules), “How Big Quest works” (the concept, including how the app judges) and this guide to using the app. Switch the language with the flags at the top.</li>
+<li><b>In the grown-ups area:</b> at the top, an overview like your child’s start page with a summary in plain words (not a school assessment). Tap a subject: each quest shows what the summary is based on, a tip, and the “In focus” switch. The app picks the focus by itself – what the teacher names as next steps and where practice helps – and “Practise Today” takes its tasks from there; under “🎯 Focus” switch to “Manual” to choose yourself, and back with “Automatic”. Below, open as needed: practice sheets, “For your child” (Pisolala stories, calendar reminder, profile details), “Supporting your child” (the key rules), “How Big Quest works” (the concept, including how the app judges) and this guide to using the app. Switch the language with the flags at the top.</li>
 <li><b>For your child:</b> “Practise Today” or a subject; after a mistake a hint, a second try, then the worked solution; reading studio with recording (share/save to upload to the class learning platform); practice sheet as PDF; a joke, riddle or story after each round.</li>
 </ol>
 <p><b>Good to know:</b> personal passwords work only on the device where they were set; on another device, log in once with the start code. Forgot your password? The start code always works. After 5 wrong tries, wait 30 seconds. The app loads new versions by itself when it starts and when you come back to it. Please keep the family password and start codes private. Admin: “🧪 Test child” opens the test account with its own data; “↩ Back to grown-ups area” brings you back.</p>`;
@@ -3783,6 +3795,7 @@ const ABOUT_DE=()=>`
 <h3>How to use Big Quest (für Kinder)</h3>${GUIDE_KID}
 <h3>Grundidee</h3>
 <p>Üben soll Freude bereiten, Neugier wecken und Selbstvertrauen stärken. Die Anwendung kennt deshalb weder Zeitvorgaben noch Ranglisten, Punktabzüge oder verfallende Belohnungen. Gewürdigt werden Ausdauer, Mut und Wachstum – nicht das Ergebnis einer einzelnen Runde.</p>
+<p>Die Aufgaben bauen auf dem auf, was die Lehrkraft bewertet hat: Ihre Einstufungen bestimmen, wie schwer die Aufgaben am Anfang sind, und die nächsten Schritte, die sie nennt, bestimmen, welche Themen automatisch im Fokus stehen. Mit der Zeit übernimmt die eigene Übung. Das Kind sieht davon nichts – nur passende Aufgaben.</p>
 <h3>Leitgedanken</h3>
 <p>Die Gestaltung orientiert sich an den veröffentlichten Leitsätzen der Schule und am Primary Years Programme des International Baccalaureate:</p>
 <ul>
@@ -3816,7 +3829,7 @@ const ABOUT_DE=()=>`
 <li><b>Interner Stand je Quest</b> (nur zur Aufgabenwahl, das Kind sieht ihn nie): Grundlage sind die letzten 60 ersten Versuche dieser Quest, je mit Tag, Stufe (1 Grundlage, 2 Klassenniveau, 3 Herausforderung) und richtig/falsch. Mit Tipp, Beispiel oder Brücke gelöste Aufgaben zählen auf Stufe 1. Noch nicht einschätzbar: weniger als 6 Antworten oder weniger als 2 Tage. Sicher: unter den letzten 20 Antworten auf Klassenniveau mindestens 6, davon mindestens 80 % richtig, richtig an mindestens 3 Tagen. Darüber hinaus: zusätzlich unter den letzten 12 Herausforderungs-Antworten mindestens 4, davon mindestens 70 % richtig, an mindestens 2 Tagen. Wird sicherer: Klassenniveau mindestens 50 % richtig (ohne Klassenniveau: Grundlage mindestens 80 %). Sonst: braucht Unterstützung. Danach richtet sich die nächste Runde: bei „braucht Unterstützung“ keine Herausforderungen und mindestens zwei Grundlage-Aufgaben, bei „wird sicherer“ höchstens eine Herausforderung, bei „sicher“ zwei bis drei, darüber hinaus drei bis vier.</li>
 <li><b>Startwert aus der Schule:</b> Solange es für eine Quest noch zu wenig eigene Übung gibt (weniger als 6 Antworten oder weniger als 2 Tage), nimmt die App für die Aufgabenwahl die letzte Einstufung der Schule im Hauptstandard dieser Quest. Die Einschätzung im Elternbereich beruht dagegen nur auf eigener Übung.</li>
 <li><b>Einschätzung im Elternbereich:</b> derselbe Stand, aber erst ab 8 ersten Versuchen an mindestens 3 Tagen; vorher „Noch nicht einschätzbar“. „Bestätigt“ ab 20 ersten Versuchen an 5 Tagen über mindestens 14 Tage, sonst „vorläufig“. Eine Tendenz steht erst ab 16 ersten Versuchen, wenn beide Hälften an mindestens 3 Tagen geübt wurden: steigend oder fallend, wenn sich der Anteil „selbst gelöst“ um mehr als 15 Prozentpunkte ändert. Liegt die letzte Übung mehr als 21 Tage zurück, steht „ältere Belege“ – Ferien sind kein Leistungsabfall.</li>
-<li><b>Fokus:</b> automatisch die Themen aus dem Unterricht plus jede Quest mit „braucht Unterstützung“ oder „wird sicherer“; Erwachsene können unter „🎯 Fokus“ auf „Manuell“ umstellen und selbst wählen.</li>
+<li><b>Fokus:</b> automatisch die Themen, die die Lehrkraft in den Bewertungen der letzten 8 Wochen als nächste Schritte nennt (gibt es keine so neuen, alle bisherigen; ohne Bewertungen die Unterrichtsthemen), plus jede Quest mit „braucht Unterstützung“ oder „wird sicherer“; Erwachsene können unter „🎯 Fokus“ auf „Manuell“ umstellen und selbst wählen.</li>
 <li><b>Wiederholung:</b> Eine falsch gelöste oder gezeigte Aufgabe kommt nach 1, 3 und 7 Tagen wieder und rückt erst nach einer selbstständigen richtigen Lösung weiter.</li>
 </ul>
 <p>Alle Schwellenwerte sind begründete Annahmen der Eltern, keine Vorgaben der Schule, und lassen sich anpassen.</p>
@@ -3835,6 +3848,7 @@ const ABOUT_EN=()=>`
 <h3>How to use Big Quest</h3>${GUIDE_KID}
 <h3>Idea</h3>
 <p>Practice should be enjoyable, spark curiosity and build confidence. There are therefore no time targets, leaderboards, penalties or expiring rewards. Persistence, courage and growth are celebrated – not the result of a single round.</p>
+<p>The tasks build on what the teacher has evaluated: the teacher’s ratings decide how hard the tasks are at the start, and the next steps the teacher names decide which topics are in focus automatically. Over time, the child’s own practice takes over. The child sees none of this – only fitting tasks.</p>
 <h3>Guiding principles</h3>
 <ul>
 <li><i>“A place for everyone to grow and flourish”</i> – progress is made visible and celebrated without comparison.</li>
@@ -3864,7 +3878,7 @@ const ABOUT_EN=()=>`
 <li><b>Internal level per quest</b> (only for choosing tasks, never shown to the child): based on the last 60 first tries of this quest, each with day, level (1 support, 2 grade level, 3 challenge) and right/wrong. Tasks solved with a tip, an example or a bridge count at level 1. Not yet possible to judge: fewer than 6 answers or fewer than 2 days. Secure: among the last 20 grade-level answers at least 6, at least 80 % right, right on at least 3 days. Going beyond: in addition, among the last 12 challenge answers at least 4, at least 70 % right, on at least 2 days. Getting there: grade level at least 50 % right (without grade-level answers: support level at least 80 %). Otherwise: needs support. The next round follows from this: with “needs support” no challenges and at least two support tasks, with “getting there” at most one challenge, with “secure” two to three, going beyond three to four.</li>
 <li><b>Starting point from school:</b> while there is too little own practice for a quest (fewer than 6 answers or fewer than 2 days), the app uses the school’s latest rating of the quest’s main standard to choose tasks. The summary in the grown-ups area, on the other hand, is based only on own practice.</li>
 <li><b>Summary in the grown-ups area:</b> the same level, but only from 8 first tries on at least 3 days; before that “Not yet possible to judge”. “Confirmed” from 20 first tries on 5 days over at least 14 days, otherwise “provisional”. A trend is shown only from 16 first tries, when both halves were practiced on at least 3 days: rising or falling when the share solved on their own changes by more than 15 percentage points. If the last practice was more than 21 days ago, it says “older evidence” – vacations are not a drop in ability.</li>
-<li><b>Focus:</b> automatically the topics taught in class plus every quest with “needs support” or “getting there”; grown-ups can switch to “Manual” under “🎯 Focus” and choose themselves.</li>
+<li><b>Focus:</b> automatically the topics the teacher names as next steps in the evaluations of the last 8 weeks (if there are none that recent, all earlier ones; without evaluations, the class topics), plus every quest with “needs support” or “getting there”; grown-ups can switch to “Manual” under “🎯 Focus” and choose themselves.</li>
 <li><b>Review:</b> a task answered wrongly or shown comes back after 1, 3 and 7 days and only moves on after a correct answer without help.</li>
 </ul>
 <p>All thresholds are reasoned assumptions by the parents, not requirements of the school, and can be adjusted.</p>

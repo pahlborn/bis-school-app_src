@@ -65,10 +65,15 @@ test('overview of the school ratings in the grown-ups area: standards, history, 
   const ms = await page.locator('details.psec[data-psec="school"] details.about-sec', { hasText: 'Milestone' }).innerText();
   assert.match(ms, /Sticker combinations: Lehrkraft Wird sicherer \(Consolidating\) · selbst eingeschätzt Darüber hinaus \(Extending\)/);
   assert.match(t, /Alle Einstufungen hier sind die der Lehrkraft/);
+  assert.match(ms, /Daraus im automatischen Fokus: Word Problems/);
   // the school line at the quest
   await page.locator('[data-psubj="maths"]').click();
   const round = await page.locator('.pquest', { has: page.locator('[data-pfocus="round"]') }).innerText();
   assert.match(round, /🏫 Schule: Sicher \(Meeting expectations\) 27\.10\.2026/);
+  // automatic focus = the teacher's next steps (Peter 01.11.): word problems yes, data detective no
+  assert.equal(await page.getAttribute('[data-pfocus="wordprob"]', 'aria-pressed'), 'true');
+  assert.equal(await page.getAttribute('[data-pfocus="detective"]', 'aria-pressed'), 'false');
+  assert.match(round, /nächster Schritt laut Schule/);
   // English
   await page.locator('.phdr [data-plang="en"]').click();
   assert.match(await page.locator('.pquest', { has: page.locator('[data-pfocus="round"]') }).innerText(), /🏫 School: Secure/);
