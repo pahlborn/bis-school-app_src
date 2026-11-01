@@ -338,7 +338,8 @@ test('language: the English grown-ups area has no German left-overs, the German 
   await anmelden(page, 'adult', 'chef', CODES.chef); await passwortSetzen(page, 'langes-passwort');
   await page.waitForSelector('#parentClose');
   await page.locator('.phdr [data-plang="en"]').click();
-  const en = (await allesSichtbar(page)).filter((z) => !/Grundschulkönig|Van der Kleij/.test(z));
+  // German example sentences for the German-class quest are meant to stay German
+  const en = (await allesSichtbar(page)).filter((z) => !/Grundschulkönig|Van der Kleij|Als Erstes|schneidet man|faltet man/.test(z));
   assert.deepEqual(en.filter((z) => /[äöüÄÖÜß]|\b(und|der|die|das|Sie|nicht|ist|mit|für|oder|eine|wie|auf|bei)\b/.test(z)), [], 'German in the English view');
   assert.deepEqual(en.filter((z) => /practis(ed|ing)|colours?\b|judgement/.test(z) && !/Practise Today/.test(z)), [], 'American English');
   await page.locator('.phdr [data-plang="de"]').click();
@@ -356,6 +357,9 @@ test('teacher sees observations read-only: no focus, settings, profile or sheet 
   assert.ok(t.includes('Lehrkraft-Ansicht') && t.includes('Einschätzung'));
   assert.ok(t.includes('Anleitung & Hintergrund'), 'grown-ups guide in the grown-ups area');
   for (const sel of ['#focusForm', '#storyCap', '#profileDelete', '#reminderForm', 'button[data-res]']) assert.equal(await page.locator(sel).count(), 0, sel);
+  await page.locator('[data-psubj="maths"]').click();
+  assert.ok(await page.locator('details.phelpq').count(), 'teacher sees the help');
+  assert.equal(await page.locator('[data-psheetq]').count(), 0, 'no sheet making for teachers');
   await ctx.close();
 });
 
