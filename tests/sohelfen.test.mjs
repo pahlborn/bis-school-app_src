@@ -98,3 +98,15 @@ test('a practice sheet on one topic straight from the quest', async () => {
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
+
+test('basis line shows how much help was used: with help, of them with an example', async () => {
+  const { ctx, page } = await appOeffnen(browser, server.url);
+  const a = (o) => ({ day: tag(1), skill: 'round', level: 2, attempt: 1, ok: true, help: false, ...o });
+  await page.evaluate((log) => localStorage.setItem('bq2_attempts', JSON.stringify(log)),
+    [a({}), a({}), a({ help: true }), a({ help: true, example: true }), a({ ok: false }), a({ attempt: 2, ok: true, help: true })].filter((x) => x.attempt === 1 || true));
+  await elternOeffnen(page);
+  await page.locator('[data-psubj="maths"]').click();
+  const zeile = await page.locator('.pquest', { has: page.locator('[data-pfocus="round"]') }).locator('.pline').first().innerText();
+  assert.match(zeile, /2 selbst gelöst, 3 mit Hilfe \(davon 1 mit Beispiel\)/);
+  await ctx.close();
+});

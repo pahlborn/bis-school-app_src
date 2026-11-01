@@ -2073,7 +2073,7 @@ function renderQuestion(){
   const q=state.round[state.idx];
   state.answered=false; state.typed=''; state.picked=[];
   state.attempts=0; state.evidenceRecorded=false; state.firstResponse=null; state.locked=[];
-  state.rejected=[]; state.hinted=false;
+  state.rejected=[]; state.hinted=false; state.exampled=false; state.example=null;
   state.challengeRewarded=false;
   window.scrollTo(0,0);
   const pn=$('#playNote'); pn.hidden=!state.pendingNote; pn.textContent=state.pendingNote||''; state.pendingNote=null;
@@ -2163,7 +2163,7 @@ function observeAttempt(q, ok, response){
     if(!ok) rememberWrong(q);
   }
   const log=store.get('attempts',[]);
-  log.push({day:dayKey(),skill:q.world,family:q.coach?q.coach.family:null,level:levelOf(q),attempt:state.attempts,ok:ok,response:response,qid:q.dueId||qId(q),help:state.attempts>1||!!q.assisted||!!state.hinted});
+  log.push({day:dayKey(),skill:q.world,family:q.coach?q.coach.family:null,level:levelOf(q),attempt:state.attempts,ok:ok,response:response,qid:q.dueId||qId(q),help:state.attempts>1||!!q.assisted||!!state.hinted,example:!!state.exampled});
   store.set('attempts',log.slice(-200));
 }
 function hintFeedback(q, response){
@@ -2171,7 +2171,7 @@ function hintFeedback(q, response){
   fb.className='feedback hint'; fb.hidden=false;
   fb.innerHTML=`<span class="mark">${q.world==='anleitung'?'Noch ein Versuch':'Try one more time'}</span><p>${esc(h.text)}</p>${h.visual?`<div class="visual">${h.visual}</div>`:''}`;
   $('#nextBtn').hidden=true;
-  state.hinted=true; $('#answerBtn').hidden=false;   // the tip was given: now the answer may be asked for
+  state.hinted=true; afterTip(q);   // the tip was given: now an easier example or the answer
   fb.scrollIntoView({block:'nearest',behavior:'auto'});
   snapshot();
 }
@@ -2184,11 +2184,40 @@ function hintFeedback(q, response){
    2. "Show me the answer" (offered after the tip or after a first mistake) shows the answer with a
       short explanation, once. The task counts as not passed (yellow dot, no "Not quite" when the
       child had not answered yet), comes back for review, and a bridge of easier tasks follows. */
-const helpLabels = q => q.world==='anleitung' ? ['Zeig mir, wie','Zeig mir die Lösung'] : ['Show me how','Show me the answer'];
+const helpLabels = q => q.world==='anleitung' ? ['Zeig mir, wie','Zeig mir die Lösung','Zeig mir ein Beispiel'] : ['Show me how','Show me the answer','Show me an example'];
+/* "Show me an example" (Peter, 01.11.): after the tip, an example that is clearly EASIER than the task
+   (support level, other numbers), fully worked - then the child solves its own task. Only where the app
+   can build a truly similar easier task (rounding, missing parts, place value); elsewhere the button
+   does not appear. A success afterwards counts as with help, like after the tip. */
+function exampleFor(q){
+  const ans=x=>x.kind==='mc'?x.options[x.answer]:String(x.answer);
+  const c=bridgeFor(q).slice(0,2).filter(e=>levelOf(e)<levelOf(q) && JSON.stringify(e.coach)!==JSON.stringify(q.coach));
+  c.sort((a,b)=>(ans(a)===ans(q))-(ans(b)===ans(q)));   // prefer an example with a different answer
+  return c[0]||null;
+}
+/* after the tip: the tip button becomes "Show me an example" if there is one, otherwise it goes */
+function afterTip(q){
+  $('#answerBtn').hidden=false;
+  if(!state.example) state.example=exampleFor(q);
+  const b=$('#helpBtn');
+  if(state.example && !state.exampled){ b.hidden=false; b.textContent=helpLabels(q)[2]; } else b.hidden=true;
+}
+function showExample(){
+  if(state.answered || !state.example) return;
+  const q=state.round[state.idx], ex=state.example, de=q.world==='anleitung', h=guidance(ex,null,true), fb=$('#feedback');
+  state.exampled=true;
+  const log=store.get('attempts',[]); log.push({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,exampleShown:true,qid:q.dueId||qId(q)}); store.set('attempts',log.slice(-200));
+  const answer=ex.kind==='mc'?esc(strip(ex.options[ex.answer])):esc(ex.answer);
+  fb.className='feedback hint'; fb.hidden=false;
+  fb.innerHTML=`<span class="mark">${de?'Ein leichteres Beispiel':'An easier example'}</span><div class="worked"><p>${ex.prompt}</p>${h.visual?`<div class="visual">${h.visual}</div>`:''}<p>${esc(h.text)}</p><p><b>${de?'Lösung':'Answer'}: ${answer}</b></p></div><p><b>${de?'Jetzt du – deine Aufgabe oben.':'Now you – your question above.'}</b></p>`;
+  $('#helpBtn').hidden=true; $('#answerBtn').hidden=false;
+  fb.scrollIntoView({block:'nearest',behavior:'auto'});
+  snapshot();
+}
 function showHint(){
   const q=state.round[state.idx], de=q.world==='anleitung', h=guidance(q,null,false), fb=$('#feedback');
   if(!state.hinted){ const log=store.get('attempts',[]); log.push({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,hintShown:true,qid:q.dueId||qId(q)}); store.set('attempts',log.slice(-200)); }
-  state.hinted=true; $('#answerBtn').hidden=false;
+  state.hinted=true; afterTip(q);
   fb.className='feedback hint'; fb.hidden=false;
   fb.innerHTML=`<span class="mark">${de?'So kannst du vorgehen':'Here’s a way to do it'}</span><p>${esc(h.text)}</p>${h.visual?`<div class="visual">${h.visual}</div>`:''}`;
   fb.scrollIntoView({block:'nearest',behavior:'auto'});
@@ -2878,7 +2907,7 @@ const PT={
     howHelp:'<b>Was kann ich hier tun?</b> Kurz nachlesen, wie die Schule ein Thema zeigt, und mit drei Fragen helfen statt vorzurechnen.',
     back:'← Alle Fächer',rec:'Automatik wiederherstellen',focus:'Im Fokus',byOn:'von Ihnen eingeschaltet',byOff:'von Ihnen ausgeschaltet',school:'im Unterricht',need:'braucht Übung',how:'💡 So helfen Sie',
     basis:'Worauf beruht das?',trend:'Tendenz',recent:'Aktualität',sure:'Wie sicher?',when:'Belastbar ab etwa 20 Aufgaben an 5 Tagen über zwei Wochen.',
-    tasks:(n,d)=>`${n} Aufgaben an ${d} ${d===1?'Tag':'Tagen'}`,self:'selbst gelöst',hint:'mit Hinweis',seen:'Lösungsweg angesehen',due:n=>`${n} Wiederholung${n===1?'':'en'} offen`,
+    tasks:(n,d)=>`${n} Aufgaben an ${d} ${d===1?'Tag':'Tagen'}`,self:'selbst gelöst',hint:'mit Hilfe',ex:n=>`davon ${n} mit Beispiel`,seen:'Lösungsweg angesehen',due:n=>`${n} Wiederholung${n===1?'':'en'} offen`,
     none:'noch nicht geübt',ago:n=>n===0?'heute geübt':n===1?'gestern geübt':`vor ${n} Tagen geübt`,old:'Ältere Belege – bei Gelegenheit neu prüfen',
     tr:{up:'↗ steigend',flat:'→ gleichbleibend',down:'↘ fallend',none:'noch keine verlässliche Tendenz'},
     sw:{few:'wenig Belege',provisional:'vorläufig',confirmed:'bestätigt'},
@@ -2895,7 +2924,7 @@ const PT={
     howHelp:'<b>What can I do here?</b> Read briefly how the school teaches a topic and help with three questions instead of calculating for the child.',
     back:'← All subjects',rec:'Back to automatic',focus:'In focus',byOn:'turned on by you',byOff:'turned off by you',school:'in class now',need:'needs practice',how:'💡 How you can help',
     basis:'What is this based on?',trend:'Trend',recent:'How recent',sure:'How sure?',when:'Reliable from about 20 tasks on 5 days over two weeks.',
-    tasks:(n,d)=>`${n} tasks on ${d} ${d===1?'day':'days'}`,self:'on own',hint:'with a hint',seen:'solution viewed',due:n=>`${n} review${n===1?'':'s'} open`,
+    tasks:(n,d)=>`${n} tasks on ${d} ${d===1?'day':'days'}`,self:'on own',hint:'with help',ex:n=>`${n} of them with an example`,seen:'solution viewed',due:n=>`${n} review${n===1?'':'s'} open`,
     none:'not practiced yet',ago:n=>n===0?'practiced today':n===1?'practiced yesterday':`practiced ${n} days ago`,old:'Older evidence – check again when convenient',
     tr:{up:'↗ rising',flat:'→ steady',down:'↘ falling',none:'no reliable trend yet'},
     sw:{few:'little evidence',provisional:'provisional',confirmed:'confirmed'},
@@ -2991,7 +3020,8 @@ const daysBetween = (a,b) => Math.round((new Date(b+'T12:00:00')-new Date(a+'T12
 function assessQuest(k){
   const log=store.get('attempts',[]).filter(a=>a.skill===k), first=log.filter(a=>a.attempt===1);
   const isSelf=a=>a.ok && !a.help, n=first.length, self=first.filter(isSelf).length;
-  const hint=log.filter(a=>a.attempt>=2 && a.ok).length, seen=log.filter(a=>a.solutionShown).length;
+  // with help: right on a second try, or right on the first try after a tip or an example
+  const helped=log.filter(a=>a.ok && (a.attempt>=2 || (a.attempt===1 && a.help))), hint=helped.length, ex=helped.filter(a=>a.example).length, seen=log.filter(a=>a.solutionShown).length;
   const days=[...new Set(first.map(a=>a.day))].sort(), last=days[days.length-1]||null;
   const span=days.length?daysBetween(days[0],last):0, age=last?daysBetween(last,dayKey()):null;
   const enough=n>=8 && days.length>=3, st=enough?standOf(k):'NA';
@@ -3001,7 +3031,7 @@ function assessQuest(k){
   if(n>=16){ const h=Math.floor(n/2), A=first.slice(0,h), B=first.slice(h), r=x=>x.filter(isSelf).length/x.length, d=x=>new Set(x.map(a=>a.day)).size;
     if(d(A)>=3 && d(B)>=3){ const diff=r(B)-r(A); trend=diff>0.15?'up':diff<-0.15?'down':'flat'; } }
   const due=store.get('due',[]).filter(x=>x.q && x.q.world===k).length;
-  return {k,n,self,hint,seen,days:days.length,last,age,old:age!==null && age>21,level,sure,trend,due};
+  return {k,n,self,hint,ex,seen,days:days.length,last,age,old:age!==null && age>21,level,sure,trend,due};
 }
 function subjectLevel(list){
   const a=list.filter(x=>x.level!=='na'), strong=a.some(x=>x.level==='m'||x.level==='e'), weak=a.some(x=>x.level==='rs'||x.level==='c');
@@ -3045,7 +3075,7 @@ function parentSubjectHTML(key){
   const T=PT[PL()], s=SUBJECTS.find(x=>x.key===key), focus=focusTopics(), list=questsIn(s).map(assessQuest), teacher=isTeacher(), fOn=store.get('focusOn',[]), fOff=store.get('focusOff',[]);
   const cards=list.map(a=>{ const k=a.k, tags=[FOCUS.includes(k)?`<span class="ptag school">${T.school}</span>`:'', (a.level==='rs'||a.level==='c')?`<span class="ptag need">${T.need}</span>`:''].join('');
     return `<div class="pquest"><div class="phead"><div><div class="pqn">${esc(WORLDS[k].name)}</div><div class="small">${esc(qInfo(k,0))}</div></div><div>${pChip(a.level,a.sure)}</div></div>
-      <p class="pline"><b>${T.basis}</b> ${a.n?`${T.tasks(a.n,a.days)}: ${a.self} ${T.self}, ${a.hint} ${T.hint}, ${a.seen}× ${T.seen}.`:T.none+'.'} ${a.due?T.due(a.due)+'.':''}</p>
+      <p class="pline"><b>${T.basis}</b> ${a.n?`${T.tasks(a.n,a.days)}: ${a.self} ${T.self}, ${a.hint} ${T.hint}${a.ex?` (${T.ex(a.ex)})`:''}, ${a.seen}× ${T.seen}.`:T.none+'.'} ${a.due?T.due(a.due)+'.':''}</p>
       ${a.n?`<p class="pline"><b>${T.trend}:</b> ${T.tr[a.trend]} · <b>${T.recent}:</b> ${a.old?`<span class="pold">${T.old}</span>`:T.ago(a.age)}</p>`:''}
       ${a.sure!=='confirmed'&&a.n?`<p class="pline small">${T.when}</p>`:''}
       <div class="ptags">${tags}</div>
@@ -3208,7 +3238,7 @@ function showLogin(role){ $('#loginBody').innerHTML=''; renderLogin(role); show(
    "📖 Guide" opens the matching user guide in About (not offered inside the grown-ups area,
    because leaving it logs the grown-up out). */
 const HELP={
-  play:{kid:true,title:'How a question works',text:'<p>Choose or type your answer. Not right yet? You get a tip and can try again. After two tries you see how it works.</p><p>“Show me how” gives you a tip – that is always OK, it is not a mistake. Still stuck? “Show me the answer” shows the solution, and the question comes back later so you can practise it.</p>'},
+  play:{kid:true,title:'How a question works',text:'<p>Choose or type your answer. Not right yet? You get a tip and can try again. After two tries you see how it works.</p><p>“Show me how” gives you a tip – that is always OK, it is not a mistake. Still stuck? Sometimes there is an easier example to look at first. “Show me the answer” shows the solution, and the question comes back later so you can practise it.</p>'},
   tree:{kid:true,title:'Your learning tree',text:'<p>Your tree grows on every day you practise – in the app or on a practice sheet. It never wilts, even if you take a break.</p><p>Your badges show how you learn: trying a challenge, thinking hard, finishing a sheet.</p>'},
   record:{kid:true,title:'Recording yourself',text:'<p>Tap “● Aufnahme starten”, read aloud, tap “■ Stopp”. Then listen to yourself!</p><p>The last three recordings stay on this iPad. To hand one in, tap “Teilen / Sichern” together with a grown-up.</p>'},
   sheet:{kid:true,title:'Practice sheet',text:'<p>A sheet with 6 tasks and a writing task, plus an answer page for grown-ups.</p><p>Share it as a PDF (by mail, message or into Files) or print it. Afterwards a grown-up can enter how it went.</p>'},
@@ -3598,7 +3628,7 @@ const ABOUT_DE=()=>`
 <li><b>Wiederholung:</b> Die Aufgabe kommt am nächsten Übungstag wieder, dann nach drei und nach sieben Tagen – wo möglich mit neuen Zahlen.</li>
 </ol>
 <p><b>Ausnahmen:</b> Bei nur zwei Antwortmöglichkeiten (etwa AM/PM) erklärt die App sofort. Bei Eintipp-Aufgaben bleibt die Eingabe stehen, dazu kommt ein Hinweis. Beim Ordnen werden die richtigen Plätze markiert.</p>
-<p>Hilfe gibt es in zwei Stufen, wie es die Forschung zu Lernprogrammen empfiehlt: „Zeig mir, wie“ gibt einen kurzen Tipp zum Vorgehen, ohne die Lösung zu verraten; danach probiert das Kind selbst. Gelingt es, zählt es als „mit Hilfe“ gelöst. Erst „Zeig mir die Lösung“ zeigt die Lösung mit kurzer Erklärung; die Aufgabe gilt dann als noch nicht geschafft und kommt später wieder. Um Hilfe zu bitten, ist nie ein Fehler. Eine Note oder Stufe sieht das Kind dabei nie.</p>
+<p>Hilfe gibt es in zwei Stufen, wie es die Forschung zu Lernprogrammen empfiehlt: „Zeig mir, wie“ gibt einen kurzen Tipp zum Vorgehen, ohne die Lösung zu verraten; danach probiert das Kind selbst. Bei Runden, Stellenwert und fehlenden Teilen kann es sich außerdem ein leichteres, vorgerechnetes Beispiel mit anderen Zahlen ansehen („Zeig mir ein Beispiel“). Gelingt die Aufgabe danach, zählt sie als „mit Hilfe“ gelöst. Erst „Zeig mir die Lösung“ zeigt die Lösung mit kurzer Erklärung; die Aufgabe gilt dann als noch nicht geschafft und kommt später wieder. Um Hilfe zu bitten, ist nie ein Fehler. Eine Note oder Stufe sieht das Kind dabei nie.</p>
 <h3>Herkunft der Aufgaben</h3>
 <p>Themen und Erfolgskriterien folgen den Lerneinheiten der 3. Klasse im Schuljahr 2026/27, wie sie auf der Lernplattform der Schule veröffentlicht sind – darunter <i>Friction Frenzy</i> (How the World Works), <i>Persuade for the Park</i> (Who We Are), <i>Mastering Basic Numbers</i> mit <i>Travel for Work</i> und dem <i>Sticker Milestone</i>, das Runden auf Zehner und Hunderter, die <i>Anleitung</i> zur Traummaschine, die Leseaufnahme, die Bibliotheksstunden sowie die Primary Production <i>Pantastic</i>. Die Aufgaben selbst sind neu formuliert oder werden mit wechselnden Zahlen erzeugt; Arbeitsblätter der Schule werden nicht wiedergegeben. Die Geschichten um <i>Pisolala</i> sind eine Erfindung der Familie.</p>
 <h3>Datenschutz</h3>
@@ -3632,7 +3662,7 @@ const ABOUT_EN=()=>`
 <li><b>Review:</b> the task returns on the next practice day, then after three and seven days – with new numbers where possible.</li>
 </ol>
 <p><b>Exceptions:</b> with only two options (such as AM/PM) the app explains at once. In typing tasks the entry stays and a hint is added. In ordering tasks the correct places are marked.</p>
-<p>Help comes in two steps, as research on tutoring programs suggests: “Show me how” gives a short tip on how to go about it without giving the answer away; then the child tries. A success then counts as solved “with help”. Only “Show me the answer” shows the solution with a short explanation; the task then counts as not yet mastered and comes back later. Asking for help is never a mistake. The child never sees a grade or level.</p>
+<p>Help comes in two steps, as research on tutoring programs suggests: “Show me how” gives a short tip on how to go about it without giving the answer away; then the child tries. For rounding, place value and missing parts the child can also look at an easier worked example with other numbers (“Show me an example”). A success then counts as solved “with help”. Only “Show me the answer” shows the solution with a short explanation; the task then counts as not yet mastered and comes back later. Asking for help is never a mistake. The child never sees a grade or level.</p>
 <h3>Origin of the tasks</h3>
 <p>Topics and success criteria follow the Grade 3 units of the 2026/27 school year as published on the school's learning platform. The tasks themselves are rewritten or generated with varying numbers; school worksheets are not reproduced. The stories about <i>Pisolala</i> are a family invention.</p>
 <h3>Privacy</h3>
@@ -3841,7 +3871,7 @@ $('#subjectBack').addEventListener('click',()=>{ state.back='home'; goBack(); })
 $('#todayBtn').addEventListener('click',()=>{ state.back='home'; startRound('today'); });
 $('#nextBtn').addEventListener('click',next);
 // two buttons side by side (Peter, 01.11.: "Show me how" must not disappear)
-$('#helpBtn').addEventListener('click',()=>{ if(!state.answered) showHint(); });
+$('#helpBtn').addEventListener('click',()=>{ if(state.answered) return; if(!state.hinted) showHint(); else showExample(); });
 $('#answerBtn').addEventListener('click',showWorked);
 $('#againBtn').addEventListener('click',()=>startRound(state.world));
 $('#homeBtn').addEventListener('click',goBack);
