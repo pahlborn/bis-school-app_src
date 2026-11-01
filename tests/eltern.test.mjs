@@ -1,6 +1,10 @@
 import {test,before,after} from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {WURZEL,QUELLEN} from '../werkzeug/bauen.mjs';
 import {appServer,browserStarten,appOeffnen,klick,elternOeffnen,elternSeite,zurStart,zustand} from './app-hilfen.mjs';
+const FOCUS=new Function('return '+(await fs.readFile(path.join(WURZEL,QUELLEN.app),'utf8')).match(/const FOCUS=(\[[^\]]*\]);/)[1])();
 let server,browser;
 before(async()=>{server=await appServer();browser=await browserStarten();});
 after(async()=>{await browser?.close();server?.close();});
@@ -78,7 +82,7 @@ test('an in-flight PIN check cannot reopen the area after it was left or hidden'
   await ctx.close();
 });
 
-/* Focus is set in one place only: the switch at each quest (Peter 31.10.). */
+/* Focus is automatic; grown-ups deviate only with the switch at each quest (Peter 31.10./01.11.). */
 async function fokusSchalter(page,k){
   for(const s of await page.$$eval('[data-psubj]',b=>b.map(x=>x.dataset.psubj))){
     await page.locator(`[data-psubj="${s}"]`).first().click();
@@ -89,11 +93,11 @@ async function fokusSchalter(page,k){
 }
 test('parent-selected focus persists and controls Today, badges and paper worksheets',async()=>{
   const {ctx,page}=await open();
-  await page.evaluate(()=>localStorage.setItem('bq2_focus','[]'));
+  await page.evaluate(f=>localStorage.setItem('bq2_focusOff',JSON.stringify(f)),FOCUS);   // everything automatic switched off
   await elternOeffnen(page);
   assert.equal(await page.locator('#focusForm').count(),0,'no second focus list');
   await fokusSchalter(page,'units');
-  assert.deepEqual(await data(page,'focus'),['units']);
+  assert.deepEqual((await data(page,'focusOff')).sort(),FOCUS.filter(k=>k!=='units').sort());
   await klick(page,'#parentClose');
   await zurStart(page);
   const signs=await page.$$eval('#subjects .focus',e=>e.map(x=>x.textContent));
@@ -105,17 +109,22 @@ test('parent-selected focus persists and controls Today, badges and paper worksh
   await ctx.close();
 });
 
-test('empty focus remains empty but allows mixed practice; the recommendation restores it',async()=>{
+test('empty focus remains empty but allows mixed practice; "Back to automatic" restores it',async()=>{
   const {ctx,page}=await open();
-  await page.evaluate(()=>localStorage.setItem('bq2_focus','["units"]'));
+  await page.evaluate(()=>localStorage.setItem('bq2_focus','["units"]'));   // list of an earlier version
   await elternOeffnen(page);
   await fokusSchalter(page,'units');
-  assert.deepEqual(await data(page,'focus'),[]);
+  assert.equal(await data(page,'focus'),null,'old list taken over once');
+  assert.deepEqual((await data(page,'focusOff')).sort(),[...FOCUS].sort());
   await klick(page,'#parentClose');
   await zurStart(page);await klick(page,'#todayBtn');assert.equal((await zustand(page)).round.length,8);
   await zurStart(page);await elternOeffnen(page);
   await page.locator('[data-psubj]').first().click();await page.locator('#pRecommend').click();
-  assert.equal((await data(page,'focus')).length,8);await ctx.close();
+  assert.equal(await data(page,'focusOff'),null);assert.equal(await data(page,'focusOn'),null);
+  assert.equal(await page.locator('#pRecommend').count(),0,'button only when something was changed');
+  await klick(page,'#parentClose');await zurStart(page);
+  const n=(await page.$$eval('#subjects .focus',e=>e.map(x=>+x.textContent.split(' ')[0]))).reduce((a,b)=>a+b,0);
+  assert.equal(n,FOCUS.length);await ctx.close();
 });
 
 test('observation overview uses the school words only behind PIN and labels shared evidence honestly',async()=>{

@@ -80,18 +80,25 @@ test('subject page: status with school term, how sure, basis, trend, recency, ti
   await ctx.close();
 });
 
-test('focus is switched right at the quest; the child start page follows; recommendation adds topics that need practice', async () => {
+test('focus is automatic (class topics + where support helps); the switch deviates; "Back to automatic" undoes it', async () => {
   const { ctx, page } = await appOeffnen(browser, server.url);
-  await mitDaten(page, SERIEN);
-  await page.evaluate(() => localStorage.setItem('bq2_focus', '[]'));
+  // detective is not a class topic, but needs support → in focus automatically
+  await mitDaten(page, { ...SERIEN, detective: serie('detective', Array.from({ length: 10 }, (_, i) => [[5, 3, 1][i % 3], i % 5 === 0])) });
   await elternOeffnen(page);
   await page.locator('[data-psubj="maths"]').click();
+  assert.equal(await page.getAttribute('[data-pfocus="detective"]', 'aria-pressed'), 'true', 'needs support → automatic focus');
+  assert.equal(await page.getAttribute('[data-pfocus="round"]', 'aria-pressed'), 'true', 'class topic → automatic focus');
+  assert.equal(await page.locator('#pRecommend').count(), 0, 'nothing changed yet');
   await page.locator('[data-pfocus="round"]').click();
-  assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('bq2_focus'))), ['round']);
-  assert.equal(await page.getAttribute('[data-pfocus="round"]', 'aria-pressed'), 'true');
+  assert.equal(await page.getAttribute('[data-pfocus="round"]', 'aria-pressed'), 'false');
+  assert.match(await page.locator('[data-pfocus="round"]').locator('xpath=..').textContent(), /von Ihnen ausgeschaltet/);
+  assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('bq2_focusOff'))), ['round']);
+  await page.locator('[data-pfocus="numbers"]').click();
+  assert.match(await page.locator('[data-pfocus="numbers"]').locator('xpath=..').textContent(), /von Ihnen eingeschaltet/);
   await page.locator('#pRecommend').click();
-  const f = await page.evaluate(() => JSON.parse(localStorage.getItem('bq2_focus')));
-  assert.ok(f.includes('units'), 'needs practice → recommended');
+  assert.equal(await page.getAttribute('[data-pfocus="round"]', 'aria-pressed'), 'true');
+  assert.equal(await page.getAttribute('[data-pfocus="numbers"]', 'aria-pressed'), 'false');
+  assert.equal(await page.locator('.pby').count(), 0);
   await ctx.close();
 });
 
