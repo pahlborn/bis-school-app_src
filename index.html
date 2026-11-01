@@ -948,8 +948,8 @@ function threeAddendsQ(){
     rounded.join(" + ")+" = "+fmt(right)+". Rounding first makes big sums quick to estimate.", Object.assign({grid:true}, RND));
 }
 const ROUND_MC=[
- ["Why do we round numbers before adding?","To estimate the answer quickly",["To make the answer smaller","Because it is a rule for colouring","So the numbers look pretty"],"A quick guess that is close helps you check your real answer."],
- ["Which digit do you look at when rounding to the nearest hundred?","The tens digit",["The thousands digit","The ones digit","The first letter"],"Tens digit 5 or more: round up. 4 or less: round down."],
+ ["Why do we round numbers before adding?","To estimate quickly and check the real answer",["To get the exact answer","Because rounded numbers are always right","To change the numbers in the problem"],"Rounding gives a quick estimate. If the real answer is far away from it, check again."],
+ ["Round 347 to the nearest hundred. How do you decide?","Find the halfway point 350: 347 is before it, so 300",["Look at the 7: it is big, so 400","Always round up, so 400","Take away the 47, so 340"],"300 and 400 are the neighbouring hundreds. The halfway point is 350. 347 comes before 350, so it is closer to 300."],
  ["What are the two benchmark hundreds around 470?","400 and 500",["300 and 400","470 and 480","100 and 1000"],"400 is just below 470. 500 is just above."],
  ["Which number rounds to 600?","582",["549","651","509"],"582 is close to 600. Only 18 away."],
  ["Which number is exactly halfway between 300 and 400?","350",["310","390","305"],"350 is right in the middle. Middle numbers round up."]
@@ -970,7 +970,7 @@ const OREO_MC=[
  ["In ‘Persuade for the Park’, who needs to hear why the park should stay open?","The local council",["The fire brigade","A football team","The zoo keeper"],"The council decides about the park. Your words must convince them."],
  ["How many reasons should you brainstorm on your OREO planning sheet for the park?","At least three",["One","Ten","None"],"Three reasons with three examples make a strong letter."],
  ["Which is a REASON why the park is valuable?","It is a place where the community can meet.",["I went there on Tuesday.","The council is closing it.","My shoes are red."],"A reason says WHY."],
- ["What should you do FIRST before writing your persuasive text?","Fill in the OREO planning sheet",["Take photos","Upload it online","Draw a map"],"Plan first. Then write."],
+ ["What should you do FIRST before writing your persuasive text?","Plan it with the OREO sheet: opinion, reasons, examples",["Start writing straight away","Write the ending first","Only choose a title"],"Plan first. With a plan, the text has a clear order."],
  ["Which words make your writing more persuasive?","must, important, everyone",["maybe, sort of, perhaps","the, and, a","blue, green, red"],"Strong words convince people."],
  ["How do you finish an OREO text?","Restate your opinion in a powerful way",["Write your phone number","Start a new topic","Draw a picture"],"Say your opinion again at the end. Then the reader remembers it."]
 ];
@@ -1058,7 +1058,7 @@ const LIB_MC=[
  ["When you use facts from a website in your work, what should you do?","Say where you found them",["Keep it secret","Change the numbers","Copy the whole page"],"Say where you found the facts. Then others can check."],
  ["Which source would you use to <b>watch</b> how forces work?","A BrainPop video",["A dictionary","A map","A calculator"],"Videos show things moving."],
  ["Your class looked up force words using books, Britannica and…","iPads",["telescopes","microwaves","typewriters"],"Books, iPads and Britannica."],
- ["Which is the best FIRST step when researching a new word like ‘friction’?","Look it up in Britannica or a book",["Make up a meaning","Ask a stranger","Skip it"],"Look it up first. Then write it in your own words."],
+ ["Which is the best FIRST step when researching a new word like ‘friction’?","Look it up in an encyclopedia or a book",["Guess what it means","Copy a whole page about it","Skip the word"],"Look it up first. Then explain it in your own words."],
  ["On 8 October the whole class read online at the same time. Why?","To try to set a Guinness World Record for the most people reading online together",["To test the Wi-Fi","Because it was raining","To win a pumpkin"],"The class tried to set a world record for reading online together."]
 ];
 const SOURCES=[
@@ -1196,11 +1196,11 @@ const COMPLETE_MC=[
  ["Which hypothesis is the most specific?","If the car rolls on carpet, it will roll a shorter distance than on wood, because carpet has more friction.",["The car will roll.","Something will happen to the car.","Carpet is soft."],"A good guess says what will happen and why."]
 ];
 const RESP_MC=[
- ["Your group finished the experiment. What is YOUR job before you leave the table?","Check the sheet: every measurement has its unit, every question is answered",["Nothing, the teacher checks","Only pack the car away","Take a selfie"],"Your job is only done when your sheet is complete."],
+ ["Your group finished the experiment. What is YOUR job before you leave the table?","Check the sheet: every measurement has its unit, every question is answered",["Nothing, the teacher checks","Only pack the car away","Leave the checking to your partner"],"Your job is only done when your sheet is complete."],
  ["What do you upload to your class learning platform at the end of Friction Frenzy?","The finished experiment sheet with all data AND photos of the setup",["Only one photo","A drawing","Nothing"],"The sheet and the photos. Both show your work."],
  ["You forgot to weigh the car. What is the responsible thing to do?","Weigh it now and write the mass in grams",["Make up a number","Leave the box empty","Write ‘heavy’"],"Every number counts. Go back and get it."],
- ["Your bar graph is half finished and the bell rings. What do you do?","Tell the teacher and finish it as soon as possible",["Throw it away","Hand it in half done","Hide it"],"Finish the job. That is being responsible."],
- ["Before you hand in a worksheet, what is the last thing to do?","Read it through once and check nothing is missing",["Draw on the back","Fold it","Hand it in fast"],"One last look finds missing answers and units."],
+ ["Your bar graph is half finished and the bell rings. What do you do?","Tell the teacher and finish it as soon as possible",["Hand it in half done without saying anything","Leave it and forget about it","Ask a friend to finish it for you"],"Finish the job and tell the teacher. That is being responsible."],
+ ["Before you hand in a worksheet, what is the last thing to do?","Read it through once and check nothing is missing",["Hand it in as fast as possible","Only check the first question","Add a drawing"],"One last look finds missing answers and units."],
  ["Who is responsible for recording your group’s data correctly?","Everyone in the group, taking turns",["Only the fastest writer","Only the teacher","Nobody"],"Everyone checks the numbers and the units."]
 ];
 function buildUnits(){ return shuffle([unitPickQ(), unitPickQ(), unitPickQ(), convertQ(), convertQ(), rulerQ(), rulerQ(), massRecordQ()]); }
@@ -1442,11 +1442,11 @@ function roundTenAddQ(){
   return mc("Round each number to the nearest <b>ten</b>, then add: <b>"+nums.join(" + ")+"</b> ≈ ?", fmt(right), fill3(right,[right+10,right-10,right+20,right-20,right+100]).map(fmt), r.join(" + ")+" = "+right+". Exact: "+nums.reduce((p,c)=>p+c,0)+", so about "+right+" stickers is a good estimate.", Object.assign({grid:true}, STK));
 }
 const STK_MC=[
- ["How can you check that 905 − 600 = 305?","Add 305 + 600 and see if you get 905",["Guess again","Ask the sticker","Subtract 305 from 305"],"Adding undoes taking away. So you can check."],
+ ["How can you check that 905 − 600 = 305?","Add 305 + 600 and see if you get 905",["Subtract 600 from 905 again","Add 905 + 600","Round 305 to 300"],"Adding undoes taking away: 305 + 600 must give 905 again."],
  ["Which answer is correctly <b>labelled</b>?","305 stickers",["305","stickers","305 cm"],"Write the number and what it counts. 305 stickers."],
  ["A box holds 250 stickers. You have about 254. What is true?","Almost all fit, about 4 are left over",["None fit","All fit with lots of room","You need 10 boxes"],"254 is only a little more than 250. A few stay outside."],
- ["Why do we round to the nearest ten here instead of the nearest hundred?","Tens give a closer estimate for small numbers",["Hundreds are not allowed","Tens look nicer","It makes no difference"],"For small numbers like 48, tens are closer than hundreds."],
- ["You found ONE way to make 905. How can you explore another idea?","Show more than one correct way",["Stop there","Colour the page","Write it bigger"],"Try a different combination and check that the total stays the same."],
+ ["To estimate 48 + 31, why round to the nearest TEN, not the nearest hundred?","Tens give a closer estimate for numbers like these",["Rounding to hundreds is not allowed","It makes no difference","Hundreds give a closer estimate"],"48 + 31 is about 50 + 30 = 80 (exactly 79). To the nearest hundred it would be 0 + 0 = 0 – far away."],
+ ["You made 905 as 500 + 400 + 5. Which is ANOTHER correct way?","600 + 300 + 5",["500 + 400 + 5","500 + 300 + 5","900 + 50"],"600 + 300 + 5 = 905 and it is different from the first way. Always check that the total stays 905."],
  ["Before you hand in a maths problem, what should you check?","That the work is shown, labelled and the answer is reasonable",["That it is written in pen","That the page is full","That you finished first"],"Show your work. Write the label. Check the answer."]
 ];
 function buildStickers(){ return shuffle([stickerMissingQ(), stickerMissingQ(), missingAddendQ(STK), stickerComboQ(), funnyFaceQ(), roundTenAddQ(), roundTenAddQ()].concat(fromBank(STK_MC,STK,1))); }
@@ -1479,9 +1479,9 @@ function partQ(){
 }
 const WPR_MC=[
  ["A word problem is a short story with numbers. What is a good FIRST step?","Read it carefully: what is the question, and which numbers do I need?",["Add up all the numbers I can see","Start calculating with the first number","Write down the biggest number"],"First understand the story: What does the question ask? Which numbers do you need – the whole or a part? Then calculate. Adding every number you see often gives a wrong answer."],
- ["The problem says 905 stickers, but you wrote 902. What happens?","All your calculations come out wrong",["Nothing","You get extra points","The answer is still right"],"One wrong digit at the start makes every step wrong. Check the numbers against the text."],
- ["A problem has two steps. What is a good strategy?","Do one step, write the result, then do the next step",["Do both steps in your head at once","Skip the first step","Only write the final answer"],"Writing the middle result keeps multi-step problems clear."],
- ["How do you check a subtraction like 905 − 600 = 305?","Add 305 + 600 and see if you get 905",["Subtract again faster","Ask a friend for the answer","Erase the question"],"Addition undoes subtraction."]
+ ["The problem says 905 stickers, but you wrote 902. What happens?","Every next step uses the wrong number, so the answer is wrong",["Only the last step is wrong","It is fine, 902 is close","The estimate fixes it"],"One wrong number at the start makes every step wrong. Check your numbers against the text."],
+ ["A problem has two steps. What is a good strategy?","Do one step, write the result, then do the next step",["Add all the numbers at once","Stop after the first step","Only write the final answer"],"Writing the middle result keeps problems with two steps clear."],
+ ["How do you check a subtraction like 905 − 600 = 305?","Add 305 + 600 and see if you get 905",["Subtract 600 from 905 again","Add 905 + 600","Round 305 to 300"],"Adding undoes taking away: 305 + 600 must give 905 again."]
 ];
 function buildWordProb(){ return shuffle([findTotalQ(), findTotalQ(), twoStepQ(), twoStepQ(), operationQ(), operationQ(), partQ()].concat(fromBank(WPR_MC,WPR,1))); }
 
