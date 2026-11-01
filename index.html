@@ -158,7 +158,8 @@ button{font:inherit;color:inherit}
 .psw i{width:46px;height:26px;border-radius:13px;background:var(--line);position:relative;display:inline-block}
 .psw i::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.15s}
 .psw[aria-pressed=true] i{background:#2DB37A}
-.pby{font-size:.8rem;color:var(--muted);font-weight:700}
+.pfmode{background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:8px 12px;margin:8px 0}
+.pfmode .small{margin:6px 0 0}
 .phelpq{background:#F4F7FF;border-radius:10px;margin:8px 0;font-size:.92rem}
 .phelpq>summary{cursor:pointer;min-height:44px;padding:8px 10px;font-weight:700;display:flex;align-items:center}
 .phelpq.need{background:#FFF6E5;border-left:4px solid #F0A23B}
@@ -193,6 +194,7 @@ button{font:inherit;color:inherit}
 .phdr{position:sticky;top:0;z-index:5;background:var(--bg,#F6F8FC);border-bottom:2px solid var(--line);padding:8px 0;margin:0 0 8px;display:flex;flex-direction:column;gap:6px}
 .phdr-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .phdr-who{font-family:var(--display);font-weight:700}
+.phdr-kids{display:inline-flex;flex-wrap:wrap;gap:6px}
 .phdr-kid{font-size:.85rem;font-weight:700;background:var(--soft);border-radius:999px;padding:2px 10px}
 .phdr-ver{font-size:.8rem;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:999px;padding:2px 8px}
 .phdr-act{display:flex;align-items:center;gap:6px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
@@ -584,9 +586,13 @@ const TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4
    keys bq2_<key> (no migration). Every other logged-in student gets bq2_<user>__<key>, so a test
    account never mixes with the child's data. Device-wide keys stay shared. */
 const GLOBAL_KEYS=/^(session|sessionPrev|adultSession|pw_.+|parentPin|muted|parentLang)$/;
+/* Grown-ups area: whose data is shown (Peter, 01.11.: choose the child). viewUser overrides the child
+   logged in on this device - only while a grown-up looks at the data; reset when leaving the area. */
+let viewUser=null;
 function childNs(){
   if(!APP_ACCOUNTS || !APP_ACCOUNTS.users) return '';
   let s=null; try{ s=JSON.parse(localStorage.getItem('bq2_session')||'null'); }catch(e){}
+  if(viewUser) s={user:viewUser};
   const first=APP_ACCOUNTS.users.find(u=>u.role==='student');
   return s && s.user && first && s.user!==first.user && APP_ACCOUNTS.users.some(u=>u.user===s.user && u.role==='student') ? s.user : '';
 }
@@ -1881,42 +1887,42 @@ const SUBJECTS=[
 /* FOCUS: the topics taught in class right now (from the school's learning platform). "Practise Today"
    and the practice sheet draw their questions from the focus. */
 const FOCUS=['wordprob','round','combos','units','graphs','sentences','examples','finish'];
-/* Automatic focus (Peter, 31.10./01.11.): what is taught in class now plus the quests where the
-   grown-ups' summary suggests support ("Needs support" / "Getting there", only with enough evidence).
-   Grown-ups deviate per quest with the switch (focusOn / focusOff); "Back to automatic" clears that.
-   A list saved by an earlier version is taken over once as such deviations. */
+/* Focus mode (Peter, 01.11.): "Automatic" (default) = what is taught in class now plus the quests where
+   the grown-ups' summary suggests support ("Needs support" / "Getting there", only with enough evidence)
+   - it adapts by itself. "Manual" = grown-ups decide exactly which quests are in focus (focusManual),
+   e.g. before a test. Tapping a switch in automatic mode starts manual mode from the current choice.
+   Choices of earlier versions (a list, or focusOn/focusOff) are taken over once as a manual choice. */
 function focusAuto(){
   const need=SUBJECTS.flatMap(questsIn).map(assessQuest).filter(a=>a.level==='rs'||a.level==='c').map(a=>a.k);
   return uniq(FOCUS.concat(need));
 }
+const cleanFocus = l => uniq(l).filter(k=>WORLDS[k] && !k.startsWith('mix_') && k!=='today' && !isArchived(WORLDS[k]));
 function migrateFocus(){
-  const saved=store.get('focus',null); if(!Array.isArray(saved)) return;
-  const auto=focusAuto();
-  store.set('focusOn', saved.filter(k=>!auto.includes(k)));
-  store.set('focusOff', auto.filter(k=>!saved.includes(k)));
-  store.del('focus');
+  const saved=store.get('focus',null), on=store.get('focusOn',null), off=store.get('focusOff',null);
+  if(Array.isArray(saved)){ store.set('focusMode','manual'); store.set('focusManual',cleanFocus(saved)); store.del('focus'); }
+  if(Array.isArray(on) || Array.isArray(off)){
+    if((on||[]).length || (off||[]).length){ store.set('focusMode','manual'); store.set('focusManual',cleanFocus(focusAuto().concat(on||[])).filter(k=>!(off||[]).includes(k))); }
+    store.del('focusOn'); store.del('focusOff');
+  }
 }
+const focusManualMode = () => store.get('focusMode','auto')==='manual';
 let focusMemo={key:null,val:[]};
 function focusTopics(){
   migrateFocus();
   const raw=k=>{ try{ return localStorage.getItem(storeKey(k))||''; }catch(e){ return ''; } };
   // computed once per change of the data (the start page asks for it many times)
-  const key=[storeKey('x'),raw('attempts').length,raw('ev').length,raw('focusOn'),raw('focusOff'),dayKey()].join('|');
-  if(focusMemo.key!==key){
-    const on=store.get('focusOn',[]), off=store.get('focusOff',[]);
-    focusMemo={key, val:uniq(focusAuto().concat(on)).filter(k=>!off.includes(k) && WORLDS[k] && !k.startsWith('mix_') && k!=='today' && !isArchived(WORLDS[k]))};
-  }
+  const key=[storeKey('x'),raw('attempts').length,raw('ev').length,raw('focusMode'),raw('focusManual'),dayKey()].join('|');
+  if(focusMemo.key!==key) focusMemo={key, val:cleanFocus(focusManualMode()?store.get('focusManual',[]):focusAuto())};
   return focusMemo.val.slice();
 }
-function toggleFocus(k){
-  const auto=focusAuto(), now=focusTopics().includes(k);
-  const on=store.get('focusOn',[]).filter(x=>x!==k), off=store.get('focusOff',[]).filter(x=>x!==k);
-  if(now && auto.includes(k)) off.push(k);         // switched off although automatic
-  if(!now && !auto.includes(k)) on.push(k);        // switched on although not automatic
-  store.set('focusOn',on); store.set('focusOff',off);
+function setFocusMode(mode){
+  if(mode==='manual'){ if(!focusManualMode()){ store.set('focusManual',focusTopics()); store.set('focusMode','manual'); } }
+  else { store.del('focusMode'); store.del('focusManual'); }
 }
-const focusChanged = () => store.get('focusOn',[]).length>0 || store.get('focusOff',[]).length>0;
-function resetFocus(){ store.del('focusOn'); store.del('focusOff'); }
+function toggleFocus(k){
+  const list=focusTopics(); setFocusMode('manual');
+  store.set('focusManual', list.includes(k)?list.filter(x=>x!==k):list.concat([k]));
+}
 const todayISO=new Date().toISOString().slice(0,10);
 const isArchived = d => !!d && (d.archived===true || (!!d.until && todayISO>d.until));
 SUBJECTS.forEach(s=>{ if(questsIn(s).length>1) WORLDS['mix_'+s.key]={name:s.name+' Mix', sub:'A bit of everything in '+s.name, color:s.color, icon:'mix', build:()=>mixFrom(questsIn(s))}; });
@@ -2146,7 +2152,7 @@ function score(ok){
   state.answered=true; state.results[state.idx]=ok;
   if(ok){ state.stars++; state.streak++; } else state.streak=0;
   const q=state.round[state.idx];
-  if(ok && q.dueId && state.attempts===1 && !q.assisted) advanceDue(q);
+  if(ok && q.dueId && state.attempts===1 && !q.assisted && !state.hinted) advanceDue(q);   // only a success without help moves a review on
   if(!ok) queueBridge(q);
   if(ok && levelOf(q)===3){ addBadge('thinker'); if(q.world==='combos') addBadge('openMinded'); }
   if(q.challenge && !state.challengeRewarded){ addBadge('riskTaker'); state.challengeRewarded=true; state.noteNow=maybeNote('brave',1); }
@@ -2960,11 +2966,11 @@ const PL = () => store.get(langKey(), langKey()==='kidLang'?'en':'de')==='en'?'e
 const PT={
   de:{home:'🏠 Übersicht',sheets:'📄 Übungsblätter',settings:'👧 Für das Kind',help:'💡 Helfen wie die Schule',
     howHome:'<b>So lesen Sie diese Seite:</b> Links sehen Sie dieselben Fächer wie das Kind; jedes Kästchen ist eine Quest. Rechts steht die Einschätzung in Worten. Tippen Sie auf ein Fach, um zu sehen, was geübt wird, worauf die Einschätzung beruht und wie Sie helfen können.',
-    howSubj:'<b>Was kann ich hier tun?</b> Jede Quest mit Stand, Grundlage und Tipp. <b>„Im Fokus“</b> wählt die App selbst: was gerade im Unterricht dran ist und wo Übung hilft. Daraus nehmen „Practise Today“ und das Übungsblatt ihre Aufgaben; alles andere bleibt spielbar. Mit dem Schalter weichen Sie davon ab.',
+    howSubj:'<b>Was kann ich hier tun?</b> Jede Quest mit Stand, Grundlage und Tipp. Darüber legen Sie fest, wie der Fokus gewählt wird.',
     howSheets:'<b>So geht’s:</b> Blatt antippen (die Nummer steht auch auf dem Papier) und pro Aufgabe wählen, wie es lief. Vertippt? Einfach den richtigen Knopf antippen. „Mit Hilfe“ und „Noch nicht“ sind gut so: Die App bietet dann leichtere Schritte an und wiederholt die Aufgabe später. Ein Blatt, das nicht eingetragen wird, zählt einfach nicht.',
     howSettings:'<b>Was kann ich hier tun?</b> Fokus-Themen als Liste, Spannung der Pisolala-Geschichten, eine freiwillige Kalender-Erinnerung, Profilangaben des Kindes und die App-Version. Nichts davon ist Pflicht.',
     howHelp:'<b>Was kann ich hier tun?</b> Kurz nachlesen, wie die Schule ein Thema zeigt, und mit drei Fragen helfen statt vorzurechnen.',
-    back:'← Alle Fächer',rec:'Automatik wiederherstellen',focus:'Im Fokus',byOn:'von Ihnen eingeschaltet',byOff:'von Ihnen ausgeschaltet',school:'im Unterricht',need:'braucht Übung',how:'💡 So helfen Sie',
+    back:'← Alle Fächer',focus:'Im Fokus',fm:'🎯 Fokus',fAuto:'Automatisch',fMan:'Manuell',fAutoTxt:'Die App wählt selbst: was gerade im Unterricht dran ist und dazu alles, wo die Einschätzung Unterstützung nahelegt. Das passt sich von selbst an. Tippen Sie bei einer Quest auf „Im Fokus“, wechselt die Wahl auf „Manuell“.',fManTxt:'Sie legen selbst fest, woraus „Practise Today“ und das Übungsblatt Aufgaben nehmen – zum Beispiel vor einem Test. Mit „Automatisch“ übernimmt wieder die App.',fNote:'Alle Quests bleiben für das Kind spielbar; der Fokus bestimmt nur, was „Practise Today“ und das Übungsblatt bevorzugen.',school:'im Unterricht',need:'braucht Übung',how:'💡 So helfen Sie',
     basis:'Worauf beruht das?',trend:'Tendenz',recent:'Aktualität',sure:'Wie sicher?',when:'Belastbar ab etwa 20 Aufgaben an 5 Tagen über zwei Wochen.',
     tasks:(n,d)=>`${n} Aufgaben an ${d} ${d===1?'Tag':'Tagen'}`,self:'selbst gelöst',hint:'mit Hilfe',ex:n=>`davon ${n} mit Beispiel`,seen:'Lösungsweg angesehen',due:n=>`${n} Wiederholung${n===1?'':'en'} offen`,
     none:'noch nicht geübt',ago:n=>n===0?'heute geübt':n===1?'gestern geübt':`vor ${n} Tagen geübt`,old:'Ältere Belege – bei Gelegenheit neu prüfen',
@@ -2977,11 +2983,11 @@ const PT={
     disc:'Übungsstand der App, keine schulische Beurteilung. Das Kind sieht diese Einschätzung nicht.',child:'Ihr Kind',focusN:n=>`${n} im Fokus`,quests:n=>`${n} Quests`},
   en:{home:'🏠 Overview',sheets:'📄 Practice sheets',settings:'👧 For your child',help:'💡 Help like the school',
     howHome:'<b>How to read this page:</b> on the left are the same subjects your child sees; each small square is a quest. On the right is a summary in plain words. Tap a subject to see what is practiced, what the summary is based on, and how you can help.',
-    howSubj:'<b>What can I do here?</b> Every quest with its status, basis and a tip. The app picks <b>“In focus”</b> by itself: what is taught in class right now and where practice helps. “Practise Today” and the practice sheet take their tasks from there; everything else stays playable. Use the switch to change it.',
+    howSubj:'<b>What can I do here?</b> Every quest with its status, basis and a tip. Above, you choose how the focus is set.',
     howSheets:'<b>How it works:</b> tap a sheet (its number is also on the paper) and choose for each task how it went. Tapped the wrong one? Just tap the right button. “With help” and “Not yet” are fine: the app then offers easier steps and brings the task back later. A sheet that isn’t entered simply doesn’t count.',
     howSettings:'<b>What can I do here?</b> Focus topics as a list, how exciting Pisolala stories may be, an optional calendar reminder, the child\'s profile details and the app version. None of this is required.',
     howHelp:'<b>What can I do here?</b> Read briefly how the school teaches a topic and help with three questions instead of calculating for the child.',
-    back:'← All subjects',rec:'Back to automatic',focus:'In focus',byOn:'turned on by you',byOff:'turned off by you',school:'in class now',need:'needs practice',how:'💡 How you can help',
+    back:'← All subjects',focus:'In focus',fm:'🎯 Focus',fAuto:'Automatic',fMan:'Manual',fAutoTxt:'The app chooses by itself: what is taught in class right now, plus everything where the summary suggests support. It adapts by itself. Tapping “In focus” at a quest switches to “Manual”.',fManTxt:'You decide where “Practise Today” and the practice sheet take their tasks from – for example before a test. Choose “Automatic” to let the app take over again.',fNote:'All quests stay playable for your child; the focus only decides what “Practise Today” and the practice sheet prefer.',school:'in class now',need:'needs practice',how:'💡 How you can help',
     basis:'What is this based on?',trend:'Trend',recent:'How recent',sure:'How sure?',when:'Reliable from about 20 tasks on 5 days over two weeks.',
     tasks:(n,d)=>`${n} tasks on ${d} ${d===1?'day':'days'}`,self:'on own',hint:'with help',ex:n=>`${n} of them with an example`,seen:'solution viewed',due:n=>`${n} review${n===1?'':'s'} open`,
     none:'not practiced yet',ago:n=>n===0?'practiced today':n===1?'practiced yesterday':`practiced ${n} days ago`,old:'Older evidence – check again when convenient',
@@ -3056,8 +3062,8 @@ const HELP_Q={
   finish:{de:['Aufgaben vollständig erledigen, Einheiten aufschreiben, vor dem Abgeben prüfen.','„Ich habe etwas geschrieben“ wird mit „alles erledigt und geprüft“ verwechselt.',['Eine kurze Prüfliste vorleben: „Jede Frage? Beschriftung und Einheit? Ergibt es Sinn?“ – erst gemeinsam, dann seltener erinnern.'],'Nur „Prüf das nochmal“ sagen, ohne zu zeigen, wie.','Rückmeldungen der Schule zu Aufgaben; EEF Metakognition'],
     en:['Finish tasks completely, write the units, check before handing in.','Mixing up “I wrote something” with “I finished and checked everything”.',['Model a short checklist: “Every question? Labels and units? Does it make sense?” – first together, then remind less and less.'],'Just saying “check it again” without showing how.','School feedback on assignments; EEF metacognition guidance']}
 };
-const HQ_T={de:{exp:'Was die Schule erwartet',trip:'Typische Stolpersteine',home:'Ideen für zu Hause',avoid:'Besser nicht',src:'Grundlage',stuck:'Daran hing es',first:'erste Antwort',right:'richtig',sheet:'📄 Übungsblatt nur zu diesem Thema'},
-            en:{exp:'What school expects',trip:'Common stumbling blocks',home:'Ideas for home',avoid:'Better not',src:'Based on',stuck:'Where it got stuck',first:'first answer',right:'correct',sheet:'📄 Practice sheet on this topic only'}};
+const HQ_T={de:{way:'So zeigt es die Schule',ask:'Fragen statt erklären',exp:'Was die Schule erwartet',trip:'Typische Stolpersteine',home:'Ideen für zu Hause',avoid:'Besser nicht',src:'Grundlage',stuck:'Daran hing es',first:'erste Antwort',right:'richtig',sheet:'📄 Übungsblatt nur zu diesem Thema'},
+            en:{way:'How school shows it',ask:'Ask instead of explaining',exp:'What school expects',trip:'Common stumbling blocks',home:'Ideas for home',avoid:'Better not',src:'Based on',stuck:'Where it got stuck',first:'first answer',right:'correct',sheet:'📄 Practice sheet on this topic only'}};
 const answerText = q => q.kind==='mc' ? (q.htmlOptions?'('+LETTERS[q.answer]+')':strip(q.options[q.answer])) : q.kind==='type' ? String(q.answer) : q.correct.map(i=>q.items[i]).join(' → ');
 const responseText = r => Array.isArray(r) ? r.join(' → ') : strip(String(r==null?'':r));
 /* "Where it got stuck": up to two tasks of this quest that are still waiting for review, with the right
@@ -3068,12 +3074,17 @@ function stuckHTML(k){
   return `<p class="ph">${L.stuck}</p><ul class="pstuck">`+due.map(d=>{ const f=log.find(a=>a.qid===d.id && a.attempt===1 && !a.ok);
     return `<li>${esc(strip(sheetPrompt(d.q)).slice(0,160))}<br><span class="small">${L.right}: <b>${esc(answerText(d.q))}</b>${f && f.response!=null && f.response!==''?` · ${L.first}: ${esc(responseText(f.response))}`:''}</span></li>`; }).join('')+'</ul>';
 }
+function schoolWayHTML(k){
+  const w=SCHOOL_WAY[k], L=HQ_T[PL()]; if(!w) return '';
+  const x=w[PL()==='de'?'de':'en'];
+  return `<p><b>${L.way}:</b> ${esc(x.text)}</p><p><b>${L.ask}:</b></p><ul>${x.questions.map(t=>`<li>${esc(t)}</li>`).join('')}</ul><p class="small">${esc(x.source)}</p>`;
+}
 function helpHTML(a){
   const k=a.k, h=HELP_Q[k], L=HQ_T[PL()], T=PT[PL()], need=a.level==='rs'||a.level==='c';
   const sheet=isTeacher()?'':`<p><button type="button" class="btn small" data-psheetq="${k}">${L.sheet}</button></p>`;
   if(!h){ const tip=qInfo(k,1); return (tip&&tip!=='–'?`<p class="phelp">${T.how}: ${esc(tip)}</p>`:'')+stuckHTML(k)+sheet; }
   const [exp,trip,home,avoid,src]=h[PL()];
-  return `<details class="phelpq${need?' need':''}"${need?' open':''}><summary>${T.how}</summary><div class="phelpq-body"><p><b>${L.exp}:</b> ${esc(exp)}</p><p><b>${L.trip}:</b> ${esc(trip)}</p><p><b>${L.home}:</b></p><ul>${home.map(x=>`<li>${esc(x)}</li>`).join('')}</ul><p><b>${L.avoid}:</b> ${esc(avoid)}</p><p class="small">${L.src}: ${esc(src)}</p></div></details>`+stuckHTML(k)+sheet;
+  return `<details class="phelpq${need?' need':''}"${need?' open':''}><summary>${T.how}</summary><div class="phelpq-body"><p><b>${L.exp}:</b> ${esc(exp)}</p><p><b>${L.trip}:</b> ${esc(trip)}</p><p><b>${L.home}:</b></p><ul>${home.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>${schoolWayHTML(k)}<p><b>${L.avoid}:</b> ${esc(avoid)}</p><p class="small">${L.src}: ${esc(src)}</p></div></details>`+stuckHTML(k)+sheet;
 }
 const daysBetween = (a,b) => Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/864e5);
 function assessQuest(k){
@@ -3121,7 +3132,7 @@ function parentHomeHTML(){
   // A waiting practice sheet is mentioned once, calmly, with a way straight to it (not for teachers).
   const wait=isTeacher()?[]:waitingSheets(), w=wait[wait.length-1];
   const note=w?`<p class="phow psheet-note">📄 ${wait.length===1?(de?`${sheetName(w)} wartet aufs Eintragen.`:`${sheetName(w)} is waiting to be entered.`):(de?`${wait.length} Übungsblätter warten aufs Eintragen.`:`${wait.length} practice sheets are waiting to be entered.`)} <button type="button" class="btn small" data-opensheet="${w.id}">${de?'Jetzt eintragen':'Enter now'}</button></p>`:'';
-  const noKid=accountsOn() && !studentSession() ? `<p class="phow pnokid">📱 ${de?'Auf diesem Gerät ist kein Kind angemeldet. Den Lernstand sehen Sie auf dem Gerät, auf dem Ihr Kind übt – dort unten „👪 Grown-ups“ antippen.':'No child is logged in on this device. You see your child’s progress on the device where they practice – tap “👪 Grown-ups” at the bottom there.'}</p>` : '';
+  const noKid=accountsOn() && !viewedKid() ? `<p class="phow pnokid">📱 ${de?'Auf diesem Gerät ist kein Kind angemeldet. Den Lernstand sehen Sie auf dem Gerät, auf dem Ihr Kind übt – dort unten „👪 Grown-ups“ antippen.':'No child is logged in on this device. You see your child’s progress on the device where they practice – tap “👪 Grown-ups” at the bottom there.'}</p>` : '';
   if(noKid) return noKid;   // nothing to show: without a logged-in child the data on this device are not the child's
   return `${note}<p class="phow">${T.howHome}</p><div class="playout"><div class="psubjects">${tiles}</div><aside class="pside"><div class="pcard" id="pSummary">${summaryHTML(all)}</div><div class="pcard">${legendHTML()}</div></aside></div>`;
 }
@@ -3130,8 +3141,8 @@ function legendHTML(){
   return `<h2>${de?'Was bedeuten die Farben?':'What do the colors mean?'}</h2>`+['m','e','c','rs','na'].map(l=>`<p class="pleg"><span class="pdots"><i class="${l}"></i></span> <b>${PSTAND[PL()][l]}</b>${SCHOOLTERM[l]?` <i>(${SCHOOLTERM[l]})</i>`:''}</p>`).join('')+`<p class="small">${de?'„Vorläufig“ heißt: genug für eine erste Einschätzung, noch nicht über längere Zeit bestätigt. „Bestätigt“: etwa 20 Aufgaben an 5 Tagen über zwei Wochen.':'“Provisional” means enough for a first judgment, not yet confirmed over a longer time. “Confirmed”: about 20 tasks on 5 days over two weeks.'}</p>`;
 }
 function parentSubjectHTML(key){
-  if(accountsOn() && !studentSession()) return parentHomeHTML();
-  const T=PT[PL()], s=SUBJECTS.find(x=>x.key===key), focus=focusTopics(), list=questsIn(s).map(assessQuest), teacher=isTeacher(), fOn=store.get('focusOn',[]), fOff=store.get('focusOff',[]);
+  if(accountsOn() && !viewedKid()) return parentHomeHTML();
+  const T=PT[PL()], s=SUBJECTS.find(x=>x.key===key), focus=focusTopics(), list=questsIn(s).map(assessQuest), teacher=isTeacher(), man=focusManualMode();
   const cards=list.map(a=>{ const k=a.k, tags=[FOCUS.includes(k)?`<span class="ptag school">${T.school}</span>`:'', (a.level==='rs'||a.level==='c')?`<span class="ptag need">${T.need}</span>`:''].join('');
     return `<div class="pquest"><div class="phead"><div><div class="pqn">${esc(WORLDS[k].name)}</div><div class="small">${esc(qInfo(k,0))}</div></div><div>${pChip(a.level,a.sure)}</div></div>
       <p class="pline"><b>${T.basis}</b> ${a.n?`${T.tasks(a.n,a.days)}: ${a.self} ${T.self}, ${a.hint} ${T.hint}${a.ex?` (${T.ex(a.ex)})`:''}, ${a.seen}× ${T.seen}.`:T.none+'.'} ${a.due?T.due(a.due)+'.':''}</p>
@@ -3139,9 +3150,9 @@ function parentSubjectHTML(key){
       ${a.sure!=='confirmed'&&a.n?`<p class="pline small">${T.when}</p>`:''}
       <div class="ptags">${tags}</div>
       ${helpHTML(a)}
-      ${teacher?'':`<button type="button" class="psw" data-pfocus="${k}" aria-pressed="${focus.includes(k)}"><i></i>${T.focus}</button>${fOn.includes(k)?` <span class="pby">${T.byOn}</span>`:fOff.includes(k)?` <span class="pby">${T.byOff}</span>`:''}`}</div>`; }).join('');
+      ${teacher?'':`<button type="button" class="psw" data-pfocus="${k}" aria-pressed="${focus.includes(k)}"><i></i>${T.focus}</button>`}</div>`; }).join('');
   return `<button type="button" class="btn small" id="pBack">${T.back}</button><h2 class="psubjtitle">${esc(s.name)} <span class="small">· ${T.quests(list.length)}</span></h2>
-    <p class="phow">${T.howSubj}${teacher||!focusChanged()?'':` <button type="button" class="btn small" id="pRecommend">${T.rec}</button>`}</p>
+    <p class="phow">${T.howSubj}</p>${teacher?'':`<div class="pfmode"><div class="phdr-row"><b>${T.fm}:</b><span class="plang" role="group" aria-label="${T.fm}"><button type="button" data-fmode="auto" class="${man?'':'on'}" aria-pressed="${!man}">${T.fAuto}</button><button type="button" data-fmode="manual" class="${man?'on':''}" aria-pressed="${man}">${T.fMan}</button></span></div><p class="small">${man?T.fManTxt:T.fAutoTxt} ${T.fNote}</p></div>`}
     <div class="playout"><div class="pquests">${cards}</div><aside class="pside"><div class="pcard">${summaryHTML(list, s.name)}</div></aside></div>`;
 }
 const sheetDay = d => PL()==='de' ? d.split('-').reverse().join('.') : new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
@@ -3176,20 +3187,26 @@ function renderSheets(){
   aboutChrome();
   const body=$('#aboutBody'), lang=PL(), T=PT[lang], de=lang==='de', teacher=isTeacher(), open=state.popen||(state.popen=[]);
   let html=parentHeaderHTML()+(state.psubj ? parentSubjectHTML(state.psubj) : parentHomeHTML());
+  // the chapters only on the overview, not again inside a subject (Peter, 01.11.)
+  const onOverview=!state.psubj || (accountsOn() && !viewedKid());
   const secs=[];
   if(!teacher) secs.push(['sheets', T.sheets, sheetsPageHTML()]);
   if(!teacher) secs.push(['settings', T.settings, storyCapHTML()+reminderHTML()+profileAdminHTML()]);
-  secs.push(['guide', de?'📖 Anleitung & Hintergrund':'📖 Guide & background', (de?GUIDE_ADULT_DE:GUIDE_ADULT_EN)+parentGuidanceHTML()+`<h2 class="psub">${ABOUT_UI[lang].title}</h2>`+aboutParts(lang).main+`<div class="about-menu">${aboutSectionsHTML(lang,null,true)}</div>`+schoolSourcesHTML()+versionAdminHTML()]);
-  html+='<div class="psecs">'+secs.map(([id,title,b])=>`<details class="psec" data-psec="${id}"${open.includes(id)?' open':''}><summary>${title}</summary><div class="psec-body">${b}</div></details>`).join('')+'</div>';
+  // Peter, 01.11.: three kinds of reading matter, kept apart - practical support, the concept, using the app
+  secs.push(['support', de?'🤝 Ihr Kind unterstützen':'🤝 Supporting your child', supportGuideHTML()]);
+  secs.push(['concept', ABOUT_UI[lang].title, aboutParts(lang).main+`<div class="about-menu">${aboutSectionsHTML(lang,null,true)}</div>`]);
+  secs.push(['app', de?'📱 Bedienung & Technik':'📱 Using the app', (de?GUIDE_ADULT_DE:GUIDE_ADULT_EN)+versionAdminHTML()]);
+  if(onOverview) html+='<div class="psecs">'+secs.map(([id,title,b])=>`<details class="psec" data-psec="${id}"${open.includes(id)?' open':''}><summary>${title}</summary><div class="psec-body">${b}</div></details>`).join('')+'</div>';
   body.innerHTML=html;
   body.querySelectorAll('details.psec').forEach(d=>d.addEventListener('toggle',()=>{ const id=d.dataset.psec, i=open.indexOf(id); if(d.open && i<0) open.push(id); if(!d.open && i>=0) open.splice(i,1); }));
   body.querySelectorAll('[data-plang]').forEach(b=>b.addEventListener('click',()=>setLang(b.dataset.plang)));
   const real=$('#pRealData'); if(real) real.addEventListener('click',()=>{ if(!parentAccess) return; restoreRealChild(); renderSheets(); });
+  body.querySelectorAll('[data-pkid]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess || !kidChoices().includes(b.dataset.pkid)) return; const s=studentSession(); viewUser=(s && s.user===b.dataset.pkid)?null:b.dataset.pkid; state.psubj=null; renderSheets(); }));
   const play=$('#pPlayTest'); if(play) play.addEventListener('click',playTest);
   body.querySelectorAll('[data-psubj]').forEach(b=>b.addEventListener('click',()=>{ state.psubj=b.dataset.psubj; renderSheets(); window.scrollTo(0,0); }));
   const back=$('#pBack'); if(back) back.addEventListener('click',()=>{ state.psubj=null; renderSheets(); window.scrollTo(0,0); });
   body.querySelectorAll('[data-pfocus]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; toggleFocus(b.dataset.pfocus); renderHome(); renderSheets(); }));
-  const rec=$('#pRecommend'); if(rec) rec.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; resetFocus(); renderHome(); renderSheets(); });
+  body.querySelectorAll('[data-fmode]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; setFocusMode(b.dataset.fmode); renderHome(); renderSheets(); }));
   body.querySelectorAll('button[data-res]').forEach(b=>b.addEventListener('click',()=>enterResult(b.dataset.sheet, +b.dataset.i, b.dataset.res)));
   body.querySelectorAll('[data-psheetq]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; printSheet([b.dataset.psheetq]); renderSheets(); }));
   body.querySelectorAll('[data-discard]').forEach(b=>b.addEventListener('click',()=>discardSheet(b.dataset.discard)));
@@ -3204,7 +3221,7 @@ function renderSheets(){
 let parentAccess=false, parentFailures=0, parentBlockedUntil=0, parentEpoch=0;
 function parentLock(){
   parentEpoch++;
-  parentAccess=false;
+  parentAccess=false; viewUser=null;
   if(accountsOn()) adultUser=null;
   if(state.aboutTab==='sheets') $('#aboutBody').innerHTML='';
 }
@@ -3220,6 +3237,14 @@ function adultResume(){
 const FLAG_DE='<svg class="flagsvg" viewBox="0 0 30 18" aria-hidden="true"><rect width="30" height="6" fill="#000"/><rect y="6" width="30" height="6" fill="#DD0000"/><rect y="12" width="30" height="6" fill="#FFCE00"/></svg>', FLAG_US='<svg class="flagsvg" viewBox="0 0 38 20" aria-hidden="true"><rect width="38" height="20" fill="#fff"/><rect y="0.00" width="38" height="1.54" fill="#B22234"/><rect y="3.08" width="38" height="1.54" fill="#B22234"/><rect y="6.15" width="38" height="1.54" fill="#B22234"/><rect y="9.23" width="38" height="1.54" fill="#B22234"/><rect y="12.31" width="38" height="1.54" fill="#B22234"/><rect y="15.38" width="38" height="1.54" fill="#B22234"/><rect y="18.46" width="38" height="1.54" fill="#B22234"/><rect width="15.2" height="10.77" fill="#3C3B6E"/><circle cx="1.6" cy="1.5" r=".6" fill="#fff"/><circle cx="4.6" cy="1.5" r=".6" fill="#fff"/><circle cx="7.6" cy="1.5" r=".6" fill="#fff"/><circle cx="10.6" cy="1.5" r=".6" fill="#fff"/><circle cx="13.6" cy="1.5" r=".6" fill="#fff"/><circle cx="1.6" cy="4.1" r=".6" fill="#fff"/><circle cx="4.6" cy="4.1" r=".6" fill="#fff"/><circle cx="7.6" cy="4.1" r=".6" fill="#fff"/><circle cx="10.6" cy="4.1" r=".6" fill="#fff"/><circle cx="13.6" cy="4.1" r=".6" fill="#fff"/><circle cx="1.6" cy="6.7" r=".6" fill="#fff"/><circle cx="4.6" cy="6.7" r=".6" fill="#fff"/><circle cx="7.6" cy="6.7" r=".6" fill="#fff"/><circle cx="10.6" cy="6.7" r=".6" fill="#fff"/><circle cx="13.6" cy="6.7" r=".6" fill="#fff"/><circle cx="1.6" cy="9.3" r=".6" fill="#fff"/><circle cx="4.6" cy="9.3" r=".6" fill="#fff"/><circle cx="7.6" cy="9.3" r=".6" fill="#fff"/><circle cx="10.6" cy="9.3" r=".6" fill="#fff"/><circle cx="13.6" cy="9.3" r=".6" fill="#fff"/></svg>';
 const flagsHTML = () => `<span class="flags" role="group" aria-label="Sprache / Language"><button type="button" class="flag${PL()==='de'?' on':''}" data-plang="de" aria-label="Deutsch" aria-pressed="${PL()==='de'}">${FLAG_DE}</button><button type="button" class="flag${PL()==='en'?' on':''}" data-plang="en" aria-label="English" aria-pressed="${PL()==='en'}">${FLAG_US}</button></span>`;
 /* The test account is for the admin only (Peter, 31.10.): one way in, no extra choice for other grown-ups. */
+const viewedKid = () => accountsOn() ? (viewUser || (studentSession()||{}).user || null) : null;
+/* children whose data can be looked at on this device: those who logged in here (own password on this
+   device) or are logged in now; the test account only for the admin; teachers only their own children */
+function kidChoices(){
+  if(!accountsOn() || !adultUser) return [];
+  const me=APP_ACCOUNTS.users.find(u=>u.user===adultUser.user)||{}, cur=(studentSession()||{}).user;
+  return APP_ACCOUNTS.users.filter(u=>u.role==='student' && (!u.test || adultUser.admin) && (adultUser.role!=='teacher' || (me.kinder||[]).includes(u.user)) && (u.user===cur || store.get('pw_'+u.user,null))).map(u=>u.user);
+}
 const testUserFor = () => accountsOn() && adultUser && adultUser.admin ? APP_ACCOUNTS.users.find(u=>u.role==='student' && u.test) || null : null;
 const isTestUser = user => !!(APP_ACCOUNTS && APP_ACCOUNTS.users.some(u=>u.user===user && u.test));
 function switchChild(user){
@@ -3255,10 +3280,13 @@ function parentHeaderHTML(){
   const close=accountsOn()?(de?'Abmelden':'Log out'):(de?'Sperren':'Lock');
   const test=testUserFor();
   // whose data is shown (Peter, 01.11.): the child logged in on this device - data stay on the device
-  const kid=accountsOn()?studentSession():null;
-  const kidChip=accountsOn()?`<span class="phdr-kid" id="pKid">${kid?(isTestAccount()?'🧪 ':'👧 ')+esc(kid.user):(de?'👧 kein Kind auf diesem Gerät':'👧 no child on this device')}</span>`:'';
+  // whose data: the child chosen here or the one logged in on this device; a choice when several children use this device
+  const kid=viewedKid(), kids=kidChoices();
+  const kidChip=!accountsOn()?'':kids.length>1
+    ? `<span class="phdr-kids" role="group" aria-label="${de?'Kind':'Child'}">${kids.map(u=>`<button type="button" class="btn small${u===kid?' primary':''}" data-pkid="${esc(u)}" aria-pressed="${u===kid}">${isTestUser(u)?'🧪':'👧'} ${esc(u)}</button>`).join('')}</span>`
+    : `<span class="phdr-kid" id="pKid">${kid?(isTestUser(kid)?'🧪 ':'👧 ')+esc(kid):(de?'👧 kein Kind auf diesem Gerät':'👧 no child on this device')}</span>`;
   let h=`<header class="phdr"><div class="phdr-row"><span class="phdr-who">👪 ${who}</span>${kidChip}<span class="phdr-act">${v?`<span class="phdr-ver" id="pVersion">${esc(v)}</span>`:''}${flagsHTML()}${test?`<button type="button" class="btn small" id="pPlayTest">🧪 ${de?'Testkind':'Test child'}</button>`:''}<button class="btn small" id="parentClose" type="button">${close}</button></span></div>`;
-  if(accountsOn() && isTestAccount()) h+=`<div class="phdr-row phdr-test">🧪 <b>${de?'Hier stehen Testdaten.':'You are looking at test data.'}</b>${store.get('sessionPrev',null)?`<button type="button" class="btn small" id="pRealData">${de?'Zurück zu echten Daten':'Back to real data'}</button>`:''}</div>`;
+  if(accountsOn() && kid && isTestUser(kid)) h+=`<div class="phdr-row phdr-test">🧪 <b>${de?'Hier stehen Testdaten.':'You are looking at test data.'}</b>${store.get('sessionPrev',null)?`<button type="button" class="btn small" id="pRealData">${de?'Zurück zu echten Daten':'Back to real data'}</button>`:''}</div>`;
   return h+'</header>';
 }
 /* ---------- login (S3, Peter 30.10.) ----------
@@ -3302,26 +3330,26 @@ const HELP={
   record:{kid:true,title:'Recording yourself',text:'<p>Tap “● Aufnahme starten”, read aloud, tap “■ Stopp”. Then listen to yourself!</p><p>The last three recordings stay on this iPad. To hand one in, tap “Teilen / Sichern” together with a grown-up.</p>'},
   sheet:{kid:true,title:'Practice sheet',text:'<p>A sheet with 6 tasks and a writing task, plus an answer page for grown-ups.</p><p>Share it as a PDF (by mail, message or into Files) or print it. Afterwards a grown-up can enter how it went.</p>'},
   overview:{title:'Wie entsteht die Einschätzung?',text:'<p>Gezählt wird nur der <b>erste Versuch</b> jeder Aufgabe: selbst gelöst, mit Hinweis oder Lösungsweg angesehen. Eine Einschätzung gibt es erst ab <b>8 Aufgaben an 3 Tagen</b> – vorher „Noch nicht einschätzbar“, das sagt nichts Schlechtes.</p><p><b>Vorläufig</b> heißt: erste Einschätzung. <b>Bestätigt</b> erst nach etwa 20 Aufgaben an 5 Tagen über zwei Wochen. Eine <b>Tendenz</b> steht nur da, wenn zwei Zeiträume genug Aufgaben haben. Nach mehr als 3 Wochen Pause steht „ältere Belege“ – Ferien sind kein Leistungsabfall.</p><p>Das ist <b>keine schulische Bewertung</b> und wird dem Kind nie gezeigt.</p>'},
-  focus:{title:'Fokus-Themen',text:'<p>Aus diesen Themen stellt „Practise Today“ die 8 Fragen zusammen; auch die Übungsblätter nutzen sie. Auf der Startseite tragen sie das Zeichen „Focus“.</p><p>Die App wählt sie selbst: was gerade im Unterricht dran ist und wo Übung hilft. Mit dem Schalter an der Quest weichen Sie davon ab.</p>'},
+  focus:{title:'Fokus-Themen',text:'<p>Aus diesen Themen stellt „Practise Today“ die 8 Fragen zusammen; auch die Übungsblätter nutzen sie. Auf der Startseite tragen sie das Zeichen „Focus“.</p><p>Die App wählt sie selbst: was gerade im Unterricht dran ist und wo Übung hilft. Unter „🎯 Fokus“ können Sie auf „Manuell“ umstellen und selbst wählen.</p>'},
   calendar:{title:'Kalender-Erinnerung',text:'<p>Freiwillig: erzeugt eine Kalenderdatei mit einer wiederkehrenden, freundlichen Einladung zum Üben. Die App selbst schickt keine Nachrichten.</p>'},
   storycap:{title:'Pisolala-Geschichten',text:'<p>Hier legen Sie fest, wie spannend eine Geschichte höchstens sein darf. Das Kind wählt selbst bis zu dieser Grenze. Jede Stufe bleibt freundlich.</p>'},
   profile:{title:'Profilangaben',text:'<p>Name, Geburtstag (ohne Jahr) und Emoji, die das Kind unter „My profile“ eingetragen hat. Sie liegen nur auf diesem Gerät. Löschen entfernt nur diese Angaben, keine Lerndaten.</p>'},
   version:{title:'App-Version',text:'<p>Zeigt den Stand der App auf diesem Gerät. Die App aktualisiert sich beim Start und beim Zurückkehren selbst. „Nach neuer Version suchen“ vergleicht mit der veröffentlichten Seite.</p>'},
   sheets:{title:'Übungsblätter eintragen',text:'<p>Pro Aufgabe „Richtig“, „Mit Hilfe“ oder „Noch nicht“ antippen. „Mit Hilfe“ und „Noch nicht“ sind gut so: Die App bietet dann leichtere Schritte an und wiederholt die Aufgabe später.</p>'},
   testday:{noGuide:true,title:'Testkonto: +1 Tag',text:'<p><b>+1 Tag</b> stellt die Uhr der App nur für dieses Testkonto einen Tag vor. So sehen Sie sofort, was sonst erst morgen passiert: Fehler kommen als Wiederholung zurück, der Lernbaum wächst, die Einschätzung im Elternbereich sammelt Übungstage.</p><p>Die Daten des Kindes bleiben unberührt. <b>Testdaten löschen</b> setzt das Testkonto ganz zurück (auch den Tag).</p>'},
-  guidance:{title:'Unterstützen wie die Schule',text:'<p>Kurze Hinweise, wie die Schule ein Thema zeigt, und drei Fragen statt einer Erklärung. Bitte keinen zweiten Rechenweg danebenstellen.</p>'}
+  guidance:{title:'Ihr Kind unterstützen',text:'<p>Die wichtigsten Regeln in Kürze. Konkretes zu jedem Thema – auch wie die Schule es zeigt – steht in der Übersicht bei jeder Quest unter „💡 So helfen Sie“.</p>'}
 };
 /* Grown-ups help in English: meaning-based, American English (Peter, 31.10.). */
 const HELP_EN={
   overview:{title:'How is the summary made?',text:'<p>Only the <b>first try</b> at each task counts: solved on their own, with a hint, or after viewing the solution. A judgment appears only after <b>8 tasks on 3 days</b> – until then it says “not enough to tell yet”, which says nothing bad.</p><p><b>Provisional</b> means a first judgment. <b>Confirmed</b> only after about 20 tasks on 5 days over two weeks. A <b>trend</b> is shown only when two periods have enough tasks. After a break of more than 3 weeks it says “older evidence” – vacations are not a drop in ability.</p><p>This is <b>not a school assessment</b> and is never shown to your child.</p>'},
-  focus:{title:'Focus topics',text:'<p>“Practise Today” builds its 8 questions from these topics; practice sheets use them too. On the start page they carry the “Focus” sign.</p><p>The app picks them by itself: what is taught in class right now and where practice helps. Use the switch at a quest to change it.</p>'},
+  focus:{title:'Focus topics',text:'<p>“Practise Today” builds its 8 questions from these topics; practice sheets use them too. On the start page they carry the “Focus” sign.</p><p>The app picks them by itself: what is taught in class right now and where practice helps. Under “🎯 Focus” you can switch to “Manual” and choose yourself.</p>'},
   calendar:{title:'Calendar reminder',text:'<p>Optional: creates a calendar file with a recurring, friendly invitation to practice. The app itself never sends messages.</p>'},
   storycap:{title:'Pisolala stories',text:'<p>Set how exciting a story may be at most. Your child chooses up to this limit. Every level stays kind.</p>'},
   profile:{title:'Profile details',text:'<p>Name, birthday (without year) and emoji that your child entered under “My profile”. Stored only on this device. Deleting removes only these details, no learning data.</p>'},
   version:{title:'App version',text:'<p>Shows the version on this device. The app updates itself when it starts and when you come back to it. “Check for a new version” compares it with the published page.</p>'},
   sheets:{title:'Entering practice sheets',text:'<p>For each task tap “Correct”, “With help” or “Not yet”. “With help” and “Not yet” are fine: the app then offers easier steps and brings the task back later.</p>'},
   testday:{title:'Test account: +1 day',text:'<p><b>+1 day</b> moves the app’s clock one day ahead, for this test account only. You see right away what would otherwise happen tomorrow: mistakes come back as reviews, the learning tree grows, and the summary in the grown-ups area collects practice days.</p><p>Your child’s data is not touched. <b>Delete test data</b> resets the test account completely (including the day).</p>'},
-  guidance:{title:'Supporting like the school',text:'<p>Short notes on how the school teaches a topic, plus three questions to ask instead of explaining. Please don’t show a second method next to it.</p>'}
+  guidance:{title:'Supporting your child',text:'<p>The key rules in brief. Concrete help for each topic – including how school shows it – is in the overview at every quest under “💡 How you can help”.</p>'}
 };
 const ADULT_H2=[['Einschätzung','overview'],['Summary','overview'],['Pisolala','storycap'],['Freiwillige Kalender','calendar'],['Optional calendar','calendar'],['Profilangaben','profile'],['Profile details','profile'],['App-Version','version'],['App version','version'],['Übungsblätter','sheets'],['Practice sheets','sheets'],['So unterstützen','guidance'],['Supporting','guidance']];
 function addAdultInfo(root){ root.querySelectorAll('h2').forEach(h=>{ const m=ADULT_H2.find(([t])=>h.textContent.trim().startsWith(t)); if(m && !h.querySelector('.info-btn')) h.insertAdjacentHTML('beforeend',` <button type="button" class="info-btn" data-help="${m[1]}" aria-label="Info">ⓘ</button>`); }); }
@@ -3348,7 +3376,8 @@ const LOGIN_HELP=`<details class="login-help"><summary>❓ Help / Hilfe</summary
 function renderLogin(role){
   const b=$('#loginBody'), T=loginTxt(role==='adult');
   if(!role){
-    b.innerHTML=`<h2>${T.who}</h2><div class="login-roles"><button class="btn primary" id="roleStudent" type="button">${T.student}</button><button class="btn" id="roleAdult" type="button">${T.adult}</button></div>${LOGIN_HELP}`;
+    // the version in short form on the login page (Peter, 01.11.)
+    b.innerHTML=`<h2>${T.who}</h2><div class="login-roles"><button class="btn primary" id="roleStudent" type="button">${T.student}</button><button class="btn" id="roleAdult" type="button">${T.adult}</button></div>${LOGIN_HELP}<p class="small app-version" id="loginVersion">${esc(versionLabel())}</p>`;
     $('#roleStudent').addEventListener('click',()=>renderLogin('student'));
     $('#roleAdult').addEventListener('click',()=>renderLogin('adult'));
     return;
@@ -3538,20 +3567,25 @@ function bindParentSettings(){
     }catch(err){$('#reminderMessage').textContent=de?'Bitte mindestens einen Tag und eine gültige Uhrzeit wählen.':'Please choose at least one day and a valid time.';}
   });
 }
-/* How the class teaches a topic (DE/EN, meaning-based translation, American English). */
-const PARENT_GUIDANCE=[
-  {de:{title:'Runden – wie in der Unterrichtsaufgabe',source:'Unterrichtsaufgabe der Schule (Lernplattform): Lesson 4, Zahlenstrahl, Nachbar-Hunderter, Mitte und Abstände.',text:'Beispiel 120: Markieren Sie 100 und 200, dann die Mitte 150. Lassen Sie das Kind 120 eintragen und die Abstände vergleichen.',questions:['Welche beiden Hunderter liegen direkt davor und danach?','Wo liegt die Mitte?','Wie weit ist deine Zahl von beiden Enden entfernt?']},
-   en:{title:'Rounding – as in the class assignment',source:'Class assignment (learning platform): Lesson 4 – number line, neighboring hundreds, halfway point and distances.',text:'Example 120: mark 100 and 200, then the halfway point 150. Let your child place 120 and compare the distances.',questions:['Which two hundreds come right before and after it?','Where is the halfway point?','How far is your number from each end?']}},
-  {de:{title:'Fehlende Teile und Rechenwege',source:'Unterrichtsaufgabe der Schule (Lernplattform): Travel for Work verlangt Zerlegungen, Zahlenstrahl und Gleichungen. Die konkreten Sprunggrößen unten sind eine passende Übungsdarstellung, keine bestätigte schulweite Methode.',text:'Beispiel 278 + ? = 503: erst klären, was Ganzes und Teil sind. Die Lücke lässt sich durch Sprünge 278 → 300 → 500 → 503 darstellen. Nicht ungefragt einen Spaltenalgorithmus danebenstellen.',questions:['Was ist das Ganze, was kennst du schon?','Wie habt ihr solche Aufgaben in der Klasse dargestellt?','Wie kannst du dein Ergebnis mit einer Gleichung prüfen?']},
-   en:{title:'Missing parts and strategies',source:'Class assignment (learning platform): “Travel for Work” asks for breaking numbers apart, number lines and equations. The jump sizes below are a fitting practice model, not a confirmed school-wide method.',text:'Example 278 + ? = 503: first make clear what the whole and the parts are. The gap can be shown with jumps 278 → 300 → 500 → 503. Don’t bring in the column method unless your child asks.',questions:['What is the whole, and what do you already know?','How did you show problems like this in class?','How can you check your answer with an equation?']}},
-  {de:{title:'OREO und Anleitung',source:'Unterrichtsaufgaben der Schule (Lernplattform): Persuade for the Park und Vorgangsbeschreibung/Anleitung.',text:'OREO: Meinung, Grund, konkretes Beispiel, Meinung zum Schluss. Anleitung: vollständige Schritte, passende Satzanfänge, Man-Form und die Vorsilbe des trennbaren Verbs am Satzende.',questions:['Was möchtest du sagen – und warum?','Kannst du ein eigenes Beispiel nennen?','Könnte jemand die Anleitung ohne Rückfrage ausführen?']},
-   en:{title:'OREO and writing instructions',source:'Class assignments (learning platform): “Persuade for the Park” and writing instructions in German class.',text:'OREO: Opinion, Reason, a specific Example, then the Opinion again. Instructions (German class): complete steps, fitting sentence starters, the impersonal “man” form, and the separable verb prefix at the end of the sentence.',questions:['What do you want to say – and why?','Can you give an example of your own?','Could someone follow your instructions without asking?']}}
-];
-function parentGuidanceHTML(){
-  const de=PL()==='de', L=de?'de':'en';
-  return (de?'<h2>So unterstützen wir wie im Unterricht</h2><p>Erst den Weg des Kindes zeigen lassen. Einen kleinen Hinweis anbieten, dann wieder selbst probieren lassen. Die Lehrkraft kann andere Modelle verwenden: Die Quellenangabe zeigt, ob etwas aus einer Unterrichtsaufgabe stammt oder eine allgemeine Übungsdarstellung ist.</p>'
-            :'<h2>Supporting the way the class does</h2><p>Let your child show their way first. Offer a small hint, then let them try again on their own. The teacher may use other models: the source line shows whether something comes from an actual class assignment or is a general practice model.</p>')
-    +PARENT_GUIDANCE.map(x=>{ const c=x[L]; return `<details class="parent-method"><summary>${esc(c.title)}</summary><p>${esc(c.text)}</p><ul>${c.questions.map(t=>`<li>${esc(t)}</li>`).join('')}</ul><p class="small">${esc(c.source)}</p></details>`; }).join('');
+/* How the class shows a topic (Peter, 01.11.: practical help belongs to the quest). These are shown
+   inside "How you can help" at the matching quests; the "why" is part of the concept. */
+const SCHOOL_WAY={
+  round:{de:{text:'Beispiel 120: Markieren Sie 100 und 200, dann die Mitte 150. Lassen Sie das Kind 120 eintragen und die Abstände vergleichen.',questions:['Welche beiden Hunderter liegen direkt davor und danach?','Wo liegt die Mitte?','Wie weit ist deine Zahl von beiden Enden entfernt?'],source:'Unterrichtsaufgabe Lesson 4 (Lernplattform): Zahlenstrahl, Nachbar-Hunderter, Mitte und Abstände.'},
+         en:{text:'Example 120: mark 100 and 200, then the halfway point 150. Let your child place 120 and compare the distances.',questions:['Which two hundreds come right before and after it?','Where is the halfway point?','How far is your number from each end?'],source:'Class assignment Lesson 4 (learning platform): number line, neighboring hundreds, halfway point and distances.'}},
+  wordprob:{de:{text:'Beispiel 278 + ? = 503: erst klären, was Ganzes und Teil sind. Die Lücke lässt sich mit Sprüngen 278 → 300 → 500 → 503 darstellen. Nicht ungefragt einen Spaltenalgorithmus danebenstellen.',questions:['Was ist das Ganze, was kennst du schon?','Wie habt ihr solche Aufgaben in der Klasse dargestellt?','Wie kannst du dein Ergebnis mit einer Gleichung prüfen?'],source:'Unterrichtsaufgabe „Travel for Work“ (Lernplattform): Zerlegungen, Zahlenstrahl, Gleichungen. Die Sprunggrößen sind eine passende Übungsdarstellung, keine bestätigte schulweite Methode.'},
+            en:{text:'Example 278 + ? = 503: first make clear what the whole and the parts are. The gap can be shown with jumps 278 → 300 → 500 → 503. Don’t bring in the column method unless your child asks.',questions:['What is the whole, and what do you already know?','How did you show problems like this in class?','How can you check your answer with an equation?'],source:'Class assignment “Travel for Work” (learning platform): breaking numbers apart, number lines, equations. The jump sizes are a fitting practice model, not a confirmed school-wide method.'}},
+  opinion:{de:{text:'OREO: Meinung, Grund, konkretes Beispiel, Meinung zum Schluss.',questions:['Was möchtest du sagen – und warum?','Kannst du ein eigenes Beispiel nennen?','Wie sagst du deine Meinung am Ende noch einmal?'],source:'Unterrichtsaufgabe „Persuade for the Park“ (Lernplattform).'},
+           en:{text:'OREO: Opinion, Reason, a specific Example, then the Opinion again.',questions:['What do you want to say – and why?','Can you give an example of your own?','How do you say your opinion again at the end?'],source:'Class assignment “Persuade for the Park” (learning platform).'}},
+  anleitung:{de:{text:'Vollständige Schritte, passende Satzanfänge, Man-Form und die Vorsilbe des trennbaren Verbs am Satzende.',questions:['Welcher Schritt kommt zuerst?','Könnte jemand die Anleitung ohne Rückfrage ausführen?','Wo steht die Vorsilbe des Verbs?'],source:'Unterrichtsaufgabe „Anleitung schreiben“ (Lernplattform).'},
+             en:{text:'Complete steps, fitting sentence starters, the impersonal “man” form, and the separable verb prefix at the end of the sentence.',questions:['Which step comes first?','Could someone follow your instructions without asking?','Where does the verb prefix go?'],source:'Class assignment “Anleitung schreiben” (learning platform).'}}
+};
+SCHOOL_WAY.combos=SCHOOL_WAY.wordprob;
+/* "Supporting your child": the general rules in one short chapter (practical, not concept). */
+function supportGuideHTML(){
+  const de=PL()==='de';
+  return de
+    ? '<h2>So unterstützen Sie Ihr Kind</h2><ol class="steps"><li><b>Erst fragen, dann helfen:</b> „Wie habt ihr das in der Klasse gemacht?“ Helfen Sie genau dort, wo der Weg Ihres Kindes stockt, und stellen Sie keinen eigenen, anderen Rechenweg daneben.</li><li><b>Fragen statt erklären:</b> „Zeig mir deinen ersten Schritt.“ – „Woher weißt du das?“ – „Was fehlt noch?“</li><li><b>Fehler sind normal:</b> ruhig bleiben, Dranbleiben loben statt „schlau sein“. Ein kleiner Tipp, dann selbst weiterprobieren lassen.</li><li><b>Kurz und mit Freude:</b> ein paar Minuten reichen. Die App ist ein Zusatz zu den Hausaufgaben, keine Pflicht und kein Zeitplan.</li><li><b>Konkretes zu jedem Thema:</b> In der Übersicht ein Fach antippen. Bei jeder Quest finden Sie „💡 So helfen Sie“ (mit „So zeigt es die Schule“ und „Daran hing es“) und „📄 Übungsblatt nur zu diesem Thema“.</li></ol>'
+    : '<h2>Supporting your child</h2><ol class="steps"><li><b>Ask first, then help:</b> “How did you do this in class?” Help exactly where your child’s own way gets stuck, and don’t add a different method of your own.</li><li><b>Ask instead of explaining:</b> “Show me your first step.” – “How do you know?” – “What is still missing?”</li><li><b>Mistakes are normal:</b> stay calm and praise sticking with it rather than “being smart”. Give a small tip, then let your child try again.</li><li><b>Short and fun:</b> a few minutes are enough. The app is an extra to homework – no requirement and no schedule.</li><li><b>Concrete help for each topic:</b> tap a subject in the overview. At every quest you will find “💡 How you can help” (with “How school shows it” and “Where it got stuck”) and “📄 Practice sheet on this topic only”.</li></ol>';
 }
 /* School website links: adults only (grown-ups area), neutral labels. The child-facing info pages
    never name or link the school. (The planning list of later topics was removed, Peter 31.10.:
@@ -3562,7 +3596,7 @@ const SCHOOL_SOURCES=[
   ['Website der Schule – Grundschule / School website – elementary school','https://www.bis-school.com/academic-life/primary-school-haimhausen'],
   ['Website der Schule – Elternmaterial / School website – resources','https://www.bis-school.com/admissions/resources']
 ];
-const schoolSourcesHTML=()=>{ const de=PL()==='de'; return `<h2>${de?'Website der Schule':'School website'}</h2><p class="small">${de?'Belege für die Leitgedanken der App.':'Evidence for the app’s guiding principles.'}</p><ol>`+SCHOOL_SOURCES.map(s=>{ const t=s[0].split(' / ')[de?0:1]; return `<li><a href="${s[1]}" target="_blank" rel="noopener">${esc(t)}</a></li>`; }).join('')+'</ol>'; };
+const schoolSourcesHTML=()=>{ const de=PL()==='de'; return `<h4>${de?'Website der Schule':'School website'}</h4><p class="small">${de?'Belege für die Leitgedanken der App.':'Evidence for the app’s guiding principles.'}</p><ol>`+SCHOOL_SOURCES.map(s=>{ const t=s[0].split(' / ')[de?0:1]; return `<li><a href="${s[1]}" target="_blank" rel="noopener">${esc(t)}</a></li>`; }).join('')+'</ol>'; };
 const ABOUT_SOURCES=[
   ['International Baccalaureate – PYP curriculum framework','https://www.ibo.org/programmes/primary-years-programme/curriculum/'],
   ['International Baccalaureate – PYP learning and teaching (ATL, assessment)','https://www.ibo.org/programmes/primary-years-programme/curriculum/learning-and-teaching/'],
@@ -3644,7 +3678,7 @@ const GUIDE_ADULT_DE=`<p><b>Das Wichtigste vorab:</b> Die App hat keinen Server.
 <li><b>Einrichten (einmalig):</b> Seite in Safari öffnen und das Familienpasswort eingeben („angemeldet bleiben“ angehakt lassen). Dann Teilen-Symbol → „Zum Home-Bildschirm“ → „Hinzufügen“ und künftig nur noch über das Symbol öffnen. Die Home-Bildschirm-App hat einen eigenen Speicher und fragt beim ersten Öffnen noch einmal nach dem Familienpasswort.</li>
 <li><b>Kind anmelden (einmalig je Gerät):</b> „🎒 Student“, Benutzername und Startcode eingeben, dann ein eigenes Passwort wählen (mindestens 4 Zeichen). Das Kind bleibt angemeldet, bis jemand „Log out“ tippt.</li>
 <li><b>Als Erwachsener anmelden:</b> auf dem Gerät des Kindes unten „👪 Grown-ups“ (das Kind bleibt angemeldet), Benutzername und Startcode, dann ein eigenes Passwort (mindestens 8 Zeichen). Sie bleiben angemeldet, bis Sie oben „Abmelden“ tippen – auch wenn das iPad in den Ruhezustand geht oder die App geschlossen wird. Auf dem Gerät des Kindes nach dem Nachsehen bitte abmelden; danach ist dort wieder das Kind angemeldet.</li>
-<li><b>Im Elternbereich:</b> oben die Übersicht wie auf der Kinderseite mit der Einschätzung in Worten (keine Schulbeurteilung). Fach antippen: bei jeder Quest Grundlage, Tipp und der Schalter „Im Fokus“. Den Fokus wählt die App selbst – was gerade im Unterricht dran ist und wo Übung hilft –, daraus nimmt „Practise Today“ seine Aufgaben; mit dem Schalter weichen Sie ab, „Automatik wiederherstellen“ nimmt das zurück. Darunter zum Aufklappen: Übungsblätter eintragen, „Für das Kind“ (Pisolala-Geschichten, Kalender-Erinnerung, Profilangaben) und diese Anleitung. Die Sprache wechseln Sie oben mit den Flaggen.</li>
+<li><b>Im Elternbereich:</b> oben die Übersicht wie auf der Kinderseite mit der Einschätzung in Worten (keine Schulbeurteilung). Fach antippen: bei jeder Quest Grundlage, Tipp und der Schalter „Im Fokus“. Den Fokus wählt die App selbst – was gerade im Unterricht dran ist und wo Übung hilft –, daraus nimmt „Practise Today“ seine Aufgaben; über „🎯 Fokus“ stellen Sie auf „Manuell“, um selbst zu wählen, und mit „Automatisch“ wieder zurück. Darunter zum Aufklappen: Übungsblätter, „Für das Kind“ (Pisolala-Geschichten, Kalender-Erinnerung, Profilangaben), „Ihr Kind unterstützen“ (die wichtigsten Regeln), „So funktioniert Big Quest“ (das Konzept, auch wie die App einstuft) und diese Bedienungshilfe. Die Sprache wechseln Sie oben mit den Flaggen.</li>
 <li><b>Für das Kind:</b> Practise Today oder ein Fach; bei Fehlern Hinweis, zweiter Versuch, dann Lösungsweg; Lese-Studio mit Aufnahme (Teilen/Sichern zum Hochladen auf die Lernplattform der Klasse); Übungsblatt als PDF; nach jeder Runde Witz, Rätsel oder Geschichte.</li>
 </ol>
 <p><b>Gut zu wissen:</b> Eigene Passwörter gelten nur auf dem Gerät, auf dem sie festgelegt wurden; auf einem weiteren Gerät einmal mit dem Startcode anmelden. Passwort vergessen? Der Startcode funktioniert immer. Nach 5 Fehlversuchen 30 Sekunden warten. Neue Versionen lädt die App beim Start und beim Zurückkehren selbst. Familienpasswort und Startcodes bitte nicht weitergeben. Admin: „🧪 Testkind“ öffnet das Testkonto mit eigenen Daten, „↩ Zurück zum Elternbereich“ führt zurück.</p>`;
@@ -3653,7 +3687,7 @@ const GUIDE_ADULT_EN=`<p><b>Most important first:</b> the app has no server. Eve
 <li><b>Set up (once):</b> open the page in Safari and enter the family password (keep “stay signed in” checked). Then tap Share → “Add to Home Screen” → “Add”, and from then on open it with the icon. The home-screen app has its own storage and asks for the family password once more.</li>
 <li><b>Log in your child (once per device):</b> “🎒 Student”, username and start code, then choose a personal password (at least 4 characters). Your child stays logged in until someone taps “Log out”.</li>
 <li><b>Log in as a grown-up:</b> on your child’s device tap “👪 Grown-ups” at the bottom (your child stays logged in), enter your username and start code, then a personal password (at least 8 characters). You stay logged in until you tap “Log out” at the top – even when the iPad goes to sleep or the app is closed. On your child’s device, please log out when you are done; your child is then logged in there again.</li>
-<li><b>In the grown-ups area:</b> at the top, an overview like your child’s start page with a summary in plain words (not a school assessment). Tap a subject: each quest shows what the summary is based on, a tip, and the “In focus” switch. The app picks the focus by itself – what is taught in class right now and where practice helps – and “Practise Today” takes its tasks from there; use the switch to change it, and “Back to automatic” undoes your changes. Below, open as needed: entering practice sheets, “For your child” (Pisolala stories, calendar reminder, profile details) and this guide. Switch the language with the flags at the top.</li>
+<li><b>In the grown-ups area:</b> at the top, an overview like your child’s start page with a summary in plain words (not a school assessment). Tap a subject: each quest shows what the summary is based on, a tip, and the “In focus” switch. The app picks the focus by itself – what is taught in class right now and where practice helps – and “Practise Today” takes its tasks from there; under “🎯 Focus” switch to “Manual” to choose yourself, and back with “Automatic”. Below, open as needed: practice sheets, “For your child” (Pisolala stories, calendar reminder, profile details), “Supporting your child” (the key rules), “How Big Quest works” (the concept, including how the app judges) and this guide to using the app. Switch the language with the flags at the top.</li>
 <li><b>For your child:</b> “Practise Today” or a subject; after a mistake a hint, a second try, then the worked solution; reading studio with recording (share/save to upload to the class learning platform); practice sheet as PDF; a joke, riddle or story after each round.</li>
 </ol>
 <p><b>Good to know:</b> personal passwords work only on the device where they were set; on another device, log in once with the start code. Forgot your password? The start code always works. After 5 wrong tries, wait 30 seconds. The app loads new versions by itself when it starts and when you come back to it. Please keep the family password and start codes private. Admin: “🧪 Test child” opens the test account with its own data; “↩ Back to grown-ups area” brings you back.</p>`;
@@ -3688,6 +3722,19 @@ const ABOUT_DE=()=>`
 </ol>
 <p><b>Ausnahmen:</b> Bei nur zwei Antwortmöglichkeiten (etwa AM/PM) erklärt die App sofort. Bei Eintipp-Aufgaben bleibt die Eingabe stehen, dazu kommt ein Hinweis. Beim Ordnen werden die richtigen Plätze markiert.</p>
 <p>Hilfe gibt es in zwei Stufen, wie es die Forschung zu Lernprogrammen empfiehlt: „Zeig mir, wie“ gibt einen kurzen Tipp zum Vorgehen, ohne die Lösung zu verraten; danach probiert das Kind selbst. Bei Runden, Stellenwert und fehlenden Teilen kann es sich außerdem ein leichteres, vorgerechnetes Beispiel mit anderen Zahlen ansehen („Zeig mir ein Beispiel“). Gelingt die Aufgabe danach, zählt sie als „mit Hilfe“ gelöst. Erst „Zeig mir die Lösung“ zeigt die Lösung mit kurzer Erklärung; die Aufgabe gilt dann als noch nicht geschafft und kommt später wieder. Um Hilfe zu bitten, ist nie ein Fehler. Eine Note oder Stufe sieht das Kind dabei nie.</p>
+<h3>Helfen wie die Schule</h3>
+<p>Eltern haben Rechnen, Lesen und Schreiben oft nach anderen Lehrplänen gelernt. Erklärt man dem Kind den eigenen Weg, ist er für das Kind neu und verwirrt. Die App nutzt deshalb die Modelle, die die Unterrichtsaufgaben der Schule zeigen – zum Beispiel den Zahlenstrahl mit Nachbar-Hundertern und Mitte, das Zerlegen von Zahlen und das Gerüst OREO beim Meinungstext –, und gibt Erwachsenen bei jeder Quest an, wie die Schule das Thema zeigt. Was aus einer Unterrichtsaufgabe stammt und was eine allgemeine, passende Übungsdarstellung ist, ist jeweils angegeben. Die Grundregel: erst fragen, wie es in der Klasse gemacht wird, dann genau dort helfen, wo der Weg des Kindes stockt; keinen zweiten Weg danebenstellen. Hilfe der Eltern wirkt vor allem, wenn sie gezielt und gelassen ist (Patall et al. 2008); eigene Mathe-Angst überträgt sich leicht (Maloney et al. 2015).</p>
+<h3>Wie die App einstuft – Titel, Lernbaum, Abzeichen und Stand</h3>
+<ul>
+<li><b>Titel des Kindes (Explorer …):</b> nach allen gesammelten Sternen. Explorer ab 0, Investigator ab 25, Scientist ab 60, Professor ab 120, Legend ab 250 Sternen. Einen Stern gibt es für jede richtig gelöste Aufgabe in der App, auch mit Tipp oder Beispiel; nach „Zeig mir die Lösung“ gibt es keinen. Ein Titel geht nie verloren. Beim Antippen des Titels sieht das Kind den Weg und wie viele Sterne der nächste braucht.</li>
+<li><b>Lernbaum:</b> wächst mit den Übungstagen (Tage mit mindestens einer Antwort in der App oder einem eingetragenen Übungsblatt): neue Stufen nach 1, 3, 6, 10, 15 und 25 Tagen. Er welkt nie, Pausen schaden nicht.</li>
+<li><b>Abzeichen:</b> zählen Verhalten, nicht Ergebnisse – Risk-taker (eine Challenge angenommen), Thinker (eine Herausforderungsaufgabe gelöst), Open-minded (eine Kombinationsaufgabe auf Herausforderungsniveau gelöst), Reflective (ein „Glow“ gewählt), Balanced (eine Idee ohne Bildschirm umgesetzt), Inquirer (ein Thema zum ersten Mal ausprobiert). Silber ab 5-mal, Gold ab 15-mal.</li>
+<li><b>Interner Stand je Quest</b> (nur zur Aufgabenwahl, das Kind sieht ihn nie): Grundlage sind die letzten 60 ersten Versuche dieser Quest, je mit Tag, Stufe (1 Grundlage, 2 Klassenniveau, 3 Herausforderung) und richtig/falsch. Mit Tipp, Beispiel oder Brücke gelöste Aufgaben zählen auf Stufe 1. Noch nicht einschätzbar: weniger als 6 Antworten oder weniger als 2 Tage. Sicher: unter den letzten 20 Antworten auf Klassenniveau mindestens 6, davon mindestens 80 % richtig, richtig an mindestens 3 Tagen. Darüber hinaus: zusätzlich unter den letzten 12 Herausforderungs-Antworten mindestens 4, davon mindestens 70 % richtig, an mindestens 2 Tagen. Wird sicherer: Klassenniveau mindestens 50 % richtig (ohne Klassenniveau: Grundlage mindestens 80 %). Sonst: braucht Unterstützung. Danach richtet sich die nächste Runde: bei „braucht Unterstützung“ keine Herausforderungen und mindestens zwei Grundlage-Aufgaben, bei „wird sicherer“ höchstens eine Herausforderung, bei „sicher“ zwei bis drei, darüber hinaus drei bis vier.</li>
+<li><b>Einschätzung im Elternbereich:</b> derselbe Stand, aber erst ab 8 ersten Versuchen an mindestens 3 Tagen; vorher „Noch nicht einschätzbar“. „Bestätigt“ ab 20 ersten Versuchen an 5 Tagen über mindestens 14 Tage, sonst „vorläufig“. Eine Tendenz steht erst ab 16 ersten Versuchen, wenn beide Hälften an mindestens 3 Tagen geübt wurden: steigend oder fallend, wenn sich der Anteil „selbst gelöst“ um mehr als 15 Prozentpunkte ändert. Liegt die letzte Übung mehr als 21 Tage zurück, steht „ältere Belege“ – Ferien sind kein Leistungsabfall.</li>
+<li><b>Fokus:</b> automatisch die Themen aus dem Unterricht plus jede Quest mit „braucht Unterstützung“ oder „wird sicherer“; Erwachsene können unter „🎯 Fokus“ auf „Manuell“ umstellen und selbst wählen.</li>
+<li><b>Wiederholung:</b> Eine falsch gelöste oder gezeigte Aufgabe kommt nach 1, 3 und 7 Tagen wieder und rückt erst nach einer selbstständigen richtigen Lösung weiter.</li>
+</ul>
+<p>Alle Schwellenwerte sind begründete Annahmen der Eltern, keine Vorgaben der Schule, und lassen sich anpassen.</p>
 <h3>Herkunft der Aufgaben</h3>
 <p>Themen und Erfolgskriterien folgen den Lerneinheiten der 3. Klasse im Schuljahr 2026/27, wie sie auf der Lernplattform der Schule veröffentlicht sind – darunter <i>Friction Frenzy</i> (How the World Works), <i>Persuade for the Park</i> (Who We Are), <i>Mastering Basic Numbers</i> mit <i>Travel for Work</i> und dem <i>Sticker Milestone</i>, das Runden auf Zehner und Hunderter, die <i>Anleitung</i> zur Traummaschine, die Leseaufnahme, die Bibliotheksstunden sowie die Primary Production <i>Pantastic</i>. Die Aufgaben selbst sind neu formuliert oder werden mit wechselnden Zahlen erzeugt; Arbeitsblätter der Schule werden nicht wiedergegeben. Die Geschichten um <i>Pisolala</i> sind eine Erfindung der Familie.</p>
 <h3>Datenschutz</h3>
@@ -3722,6 +3769,19 @@ const ABOUT_EN=()=>`
 </ol>
 <p><b>Exceptions:</b> with only two options (such as AM/PM) the app explains at once. In typing tasks the entry stays and a hint is added. In ordering tasks the correct places are marked.</p>
 <p>Help comes in two steps, as research on tutoring programs suggests: “Show me how” gives a short tip on how to go about it without giving the answer away; then the child tries. For rounding, place value and missing parts the child can also look at an easier worked example with other numbers (“Show me an example”). A success then counts as solved “with help”. Only “Show me the answer” shows the solution with a short explanation; the task then counts as not yet mastered and comes back later. Asking for help is never a mistake. The child never sees a grade or level.</p>
+<h3>Helping the way school does</h3>
+<p>Parents often learned math, reading and writing under different curricula. If they explain their own method, it is new to the child and confusing. The app therefore uses the models shown in the school’s class assignments – for example the number line with neighboring hundreds and the halfway point, breaking numbers apart, and the OREO frame for opinion writing – and tells grown-ups at every quest how school shows the topic. It always says whether something comes from a class assignment or is a general, fitting practice model. The basic rule: first ask how it is done in class, then help exactly where the child’s own way gets stuck; don’t add a second method. Parents’ help works best when it is targeted and calm (Patall et al. 2008); parents’ own math anxiety is easily passed on (Maloney et al. 2015).</p>
+<h3>How the app judges – titles, learning tree, badges and level</h3>
+<ul>
+<li><b>The child’s title (Explorer …):</b> based on all stars collected. Explorer from 0, Investigator from 25, Scientist from 60, Professor from 120, Legend from 250 stars. A star is given for every task solved correctly in the app, also with a tip or an example; there is none after “Show me the answer”. A title is never lost. Tapping the title shows the child the path and how many stars the next one needs.</li>
+<li><b>Learning tree:</b> grows with practice days (days with at least one answer in the app or an entered practice sheet): new stages after 1, 3, 6, 10, 15 and 25 days. It never wilts; breaks do no harm.</li>
+<li><b>Badges:</b> count behavior, not results – Risk-taker (took a challenge), Thinker (solved a challenge-level task), Open-minded (solved a challenge-level combination task), Reflective (chose a “Glow”), Balanced (did an idea without a screen), Inquirer (tried a topic for the first time). Silver from 5 times, gold from 15 times.</li>
+<li><b>Internal level per quest</b> (only for choosing tasks, never shown to the child): based on the last 60 first tries of this quest, each with day, level (1 support, 2 grade level, 3 challenge) and right/wrong. Tasks solved with a tip, an example or a bridge count at level 1. Not yet possible to judge: fewer than 6 answers or fewer than 2 days. Secure: among the last 20 grade-level answers at least 6, at least 80 % right, right on at least 3 days. Going beyond: in addition, among the last 12 challenge answers at least 4, at least 70 % right, on at least 2 days. Getting there: grade level at least 50 % right (without grade-level answers: support level at least 80 %). Otherwise: needs support. The next round follows from this: with “needs support” no challenges and at least two support tasks, with “getting there” at most one challenge, with “secure” two to three, going beyond three to four.</li>
+<li><b>Summary in the grown-ups area:</b> the same level, but only from 8 first tries on at least 3 days; before that “Not yet possible to judge”. “Confirmed” from 20 first tries on 5 days over at least 14 days, otherwise “provisional”. A trend is shown only from 16 first tries, when both halves were practiced on at least 3 days: rising or falling when the share solved on their own changes by more than 15 percentage points. If the last practice was more than 21 days ago, it says “older evidence” – vacations are not a drop in ability.</li>
+<li><b>Focus:</b> automatically the topics taught in class plus every quest with “needs support” or “getting there”; grown-ups can switch to “Manual” under “🎯 Focus” and choose themselves.</li>
+<li><b>Review:</b> a task answered wrongly or shown comes back after 1, 3 and 7 days and only moves on after a correct answer without help.</li>
+</ul>
+<p>All thresholds are reasoned assumptions by the parents, not requirements of the school, and can be adjusted.</p>
 <h3>Origin of the tasks</h3>
 <p>Topics and success criteria follow the Grade 3 units of the 2026/27 school year as published on the school's learning platform. The tasks themselves are rewritten or generated with varying numbers; school worksheets are not reproduced. The stories about <i>Pisolala</i> are a family invention.</p>
 <h3>Privacy</h3>
@@ -3745,7 +3805,8 @@ function aboutParts(lang){
   if(accountsOn() && studentSession() && !adultUser) sections=sections.filter(s=>!ADULT_GUIDE_TITLES.includes(s.title));
   return {main:parts[0], sections};
 }
-const aboutSectionsHTML = (lang, open, forAdults) => aboutParts(lang).sections.filter(s=>!(forAdults && (ADULT_GUIDE_TITLES.includes(s.title) || KID_GUIDE_TITLES.includes(s.title)))).map(s=>`<details class="about-sec"${s.title===open?' open':''}><summary>${s.title}</summary><div class="about-sec-body">${s.body}</div></details>`).join('');
+// grown-ups also get the school website under "Sources" (Peter, 01.11.); the child-reachable page never links the school
+const aboutSectionsHTML = (lang, open, forAdults) => aboutParts(lang).sections.filter(s=>!(forAdults && (ADULT_GUIDE_TITLES.includes(s.title) || KID_GUIDE_TITLES.includes(s.title)))).map(s=>`<details class="about-sec"${s.title===open?' open':''}><summary>${s.title}</summary><div class="about-sec-body">${s.body}${forAdults && (s.title==='Quellen'||s.title==='Sources')?schoolSourcesHTML():''}</div></details>`).join('');
 function renderAboutPage(open){
   if(kidView()){
     const g=aboutParts('en').sections.find(s=>s.title==='How to use Big Quest');

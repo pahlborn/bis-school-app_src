@@ -93,11 +93,11 @@ async function fokusSchalter(page,k){
 }
 test('parent-selected focus persists and controls Today, badges and paper worksheets',async()=>{
   const {ctx,page}=await open();
-  await page.evaluate(f=>localStorage.setItem('bq2_focusOff',JSON.stringify(f)),FOCUS);   // everything automatic switched off
+  await page.evaluate(()=>{localStorage.setItem('bq2_focusMode','"manual"');localStorage.setItem('bq2_focusManual','[]');});   // manual, nothing chosen
   await elternOeffnen(page);
   assert.equal(await page.locator('#focusForm').count(),0,'no second focus list');
   await fokusSchalter(page,'units');
-  assert.deepEqual((await data(page,'focusOff')).sort(),FOCUS.filter(k=>k!=='units').sort());
+  assert.deepEqual(await data(page,'focusManual'),['units']);
   await klick(page,'#parentClose');
   await zurStart(page);
   const signs=await page.$$eval('#subjects .focus',e=>e.map(x=>x.textContent));
@@ -109,19 +109,20 @@ test('parent-selected focus persists and controls Today, badges and paper worksh
   await ctx.close();
 });
 
-test('empty focus remains empty but allows mixed practice; "Back to automatic" restores it',async()=>{
+test('empty focus remains empty but allows mixed practice; "Automatic" restores it',async()=>{
   const {ctx,page}=await open();
   await page.evaluate(()=>localStorage.setItem('bq2_focus','["units"]'));   // list of an earlier version
   await elternOeffnen(page);
   await fokusSchalter(page,'units');
   assert.equal(await data(page,'focus'),null,'old list taken over once');
-  assert.deepEqual((await data(page,'focusOff')).sort(),[...FOCUS].sort());
+  assert.equal(await data(page,'focusMode'),'manual');
+  assert.deepEqual(await data(page,'focusManual'),[]);
   await klick(page,'#parentClose');
   await zurStart(page);await klick(page,'#todayBtn');assert.equal((await zustand(page)).round.length,8);
   await zurStart(page);await elternOeffnen(page);
-  await page.locator('[data-psubj]').first().click();await page.locator('#pRecommend').click();
-  assert.equal(await data(page,'focusOff'),null);assert.equal(await data(page,'focusOn'),null);
-  assert.equal(await page.locator('#pRecommend').count(),0,'button only when something was changed');
+  await page.locator('[data-psubj]').first().click();await page.locator('[data-fmode="auto"]').click();
+  assert.equal(await data(page,'focusMode'),null);assert.equal(await data(page,'focusManual'),null);
+  assert.equal(await page.getAttribute('[data-fmode="auto"]','aria-pressed'),'true');
   await klick(page,'#parentClose');await zurStart(page);
   const n=(await page.$$eval('#subjects .focus',e=>e.map(x=>+x.textContent.split(' ')[0]))).reduce((a,b)=>a+b,0);
   assert.equal(n,FOCUS.length);await ctx.close();

@@ -104,7 +104,7 @@ test('About (DE/EN) names no school, class or place and links no school website;
   await page.locator('#aboutBack').click();
   await elternOeffnen(page);
   await page.locator('.phdr [data-plang="de"]').click();
-  await elternSeite(page, 'guide');
+  await elternSeite(page, 'concept');
   const links = page.locator('#aboutBody a[href*="bis-school.com"]');
   assert.equal(await links.count(), 4);
   for (const t of await links.allTextContents()) { assert.match(t, /^Website der Schule/); assert.deepEqual(treffer(t), []); }

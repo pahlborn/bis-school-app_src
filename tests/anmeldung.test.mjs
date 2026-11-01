@@ -14,12 +14,12 @@ import { kontenEinsetzen, kontenPruefen, pbkdf2Hex, normCode, codeErzeugen } fro
 import { TEST_PW } from './hilfen.mjs';
 import { browserStarten, appOeffnen } from './app-hilfen.mjs';
 
-const CODES = { mia: 'ABCD-EFGH', papa: 'PAPA-2345', frau: 'TEAC-HER2', probe: 'TEST-2345', chef: 'CHEF-2345' };
+const CODES = { mia: 'ABCD-EFGH', papa: 'PAPA-2345', frau: 'TEAC-HER2', probe: 'TEST-2345', chef: 'CHEF-2345', lia: 'LIAA-2345' };
 async function konto(user, role, kinder) {
   const salt = Array.from({ length: 16 }, (_, i) => i + user.length);
   return { user, role, ...(kinder ? { kinder } : {}), start: { salt, hash: await pbkdf2Hex(normCode(CODES[user]), salt) } };
 }
-const KONTEN = { users: [await konto('mia', 'student'), await konto('papa', 'parent', ['mia']), await konto('frau', 'teacher', ['mia']), { ...(await konto('probe', 'student')), test: true }, { ...(await konto('chef', 'parent', ['mia'])), admin: true }] };
+const KONTEN = { users: [await konto('mia', 'student'), await konto('papa', 'parent', ['mia']), await konto('frau', 'teacher', ['mia']), { ...(await konto('probe', 'student')), test: true }, { ...(await konto('chef', 'parent', ['mia'])), admin: true }, await konto('lia', 'student')] };
 const app = kontenEinsetzen(await fs.readFile(path.join(WURZEL, QUELLEN.app)), KONTEN);
 
 let browser, server;
@@ -66,6 +66,7 @@ test('with accounts the app starts with the login: role choice, no list of names
   const { ctx, page, fehler } = await oeffnen({ viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true });
   assert.ok(await sichtbar(page, '#login')); assert.equal(await sichtbar(page, '#home'), false);
   assert.ok(await sichtbar(page, '#roleStudent')); assert.ok(await sichtbar(page, '#roleAdult'));
+  assert.equal((await page.textContent('#loginVersion')).trim(), 'Entwicklungsstand', 'version on the login page (unbuilt here)');
   const text = await page.evaluate(() => document.body.innerText.toLowerCase());
   for (const n of ['mia', 'papa', 'frau']) assert.ok(!text.includes(n), 'no user names shown: ' + n);
   await page.locator('.login-help summary').click();
@@ -169,17 +170,17 @@ test('grown-ups header: language flags, version and log out always in view; info
   assert.match(await page.textContent('.phdr'), /Grown-ups area/);
   assert.match(await page.textContent('#parentClose'), /Log out/);
   assert.deepEqual(await page.$$eval('#aboutBody details.psec > summary', (s) => s.map((x) => x.textContent.trim())),
-    ['📄 Practice sheets', '👧 For your child', '📖 Guide & background']);
+    ['📄 Practice sheets', '👧 For your child', '🤝 Supporting your child', '📖 How Big Quest works', '📱 Using the app']);
   // guide and info pages are one reading chapter: reading keeps the grown-up logged in
-  await page.locator('#aboutBody details.psec[data-psec="guide"] > summary').click();
-  const ab = page.locator('#aboutBody details.psec[data-psec="guide"] details.about-sec').first();
+  await page.locator('#aboutBody details.psec[data-psec="concept"] > summary').click();
+  const ab = page.locator('#aboutBody details.psec[data-psec="concept"] details.about-sec').first();
   await ab.locator('summary').click();
   assert.ok(await ab.locator('.about-sec-body').isVisible());
-  const kapitel = await page.$$eval('#aboutBody details.psec[data-psec="guide"] details.about-sec > summary', (s) => s.map((x) => x.textContent.trim()));
+  const kapitel = await page.$$eval('#aboutBody details.psec[data-psec="concept"] details.about-sec > summary', (s) => s.map((x) => x.textContent.trim()));
   assert.ok(!kapitel.some((t) => t.startsWith('How to use Big Quest')), 'no child guide in the grown-ups area');
   assert.ok(await page.locator('.psubject').count(), 'still logged in');
   await page.locator('.phdr [data-plang="de"]').click();
-  assert.ok(await page.locator('#aboutBody details.psec[data-psec="guide"]').evaluate((d) => d.open), 'opened chapter stays open after switching language');
+  assert.ok(await page.locator('#aboutBody details.psec[data-psec="concept"]').evaluate((d) => d.open), 'opened chapter stays open after switching language');
   assert.equal(await page.locator('#pPlayTest').count(), 0, 'no test child for a parent without admin');
   assert.deepEqual(fehler, []);
   await ctx.close();
@@ -191,7 +192,7 @@ test('grown-ups area: chapters open in place, no sub-pages', async () => {
   await page.waitForSelector('#parentClose');
   assert.equal(await page.locator('[data-ppage]').count(), 0, 'no page buttons any more');
   assert.equal(await page.locator('#aboutBody details.psec[open]').count(), 0, 'chapters closed at the start');
-  for (const id of ['sheets', 'settings', 'guide']) {
+  for (const id of ['sheets', 'settings', 'support', 'concept', 'app']) {
     const d = page.locator(`#aboutBody details.psec[data-psec="${id}"]`);
     await d.locator('summary').first().click();
     assert.ok(await d.locator('.psec-body').isVisible(), id);
@@ -332,7 +333,7 @@ test('grown-up stays logged in: no timer, not when the iPad sleeps, not when the
 
 /* Peter 31.10.: DE/EN must work everywhere in the grown-ups branch (meaning-based, American English). */
 async function allesSichtbar(page) {
-  for (const id of ['sheets', 'settings', 'guide']) { const d = page.locator(`#aboutBody details.psec[data-psec="${id}"]`); if (!(await d.evaluate((e) => e.open))) await d.locator('summary').first().click(); }
+  for (const id of ['sheets', 'settings', 'support', 'concept', 'app']) { const d = page.locator(`#aboutBody details.psec[data-psec="${id}"]`); if (!(await d.evaluate((e) => e.open))) await d.locator('summary').first().click(); }
   await page.$$eval('#aboutBody details', (d) => d.forEach((x) => (x.open = true)));
   const texte = [await page.locator('#about').innerText()];
   for (const s of await page.$$eval('[data-psubj]', (b) => [...new Set(b.map((x) => x.dataset.psubj))])) { await page.locator(`[data-psubj="${s}"]`).first().click(); texte.push(await page.locator('#about').innerText()); await page.locator('#pBack').click(); }
@@ -384,7 +385,7 @@ test('teacher sees observations read-only: no focus, settings, profile or sheet 
   await kindDann(page, 'frau', 'lehrkraft-123');
   const t = await page.textContent('#aboutBody');
   assert.ok(t.includes('Lehrkraft-Ansicht') && t.includes('Einschätzung'));
-  assert.ok(t.includes('Anleitung & Hintergrund'), 'grown-ups guide in the grown-ups area');
+  assert.ok(t.includes('Bedienung & Technik') && t.includes('Ihr Kind unterstützen') && t.includes('So funktioniert Big Quest'), 'support, concept and app guide in the grown-ups area');
   for (const sel of ['#focusForm', '#storyCap', '#profileDelete', '#reminderForm', 'button[data-res]']) assert.equal(await page.locator(sel).count(), 0, sel);
   await page.locator('[data-psubj="maths"]').click();
   assert.ok(await page.locator('details.phelpq').count(), 'teacher sees the help');
@@ -404,4 +405,40 @@ test('accounts file is checked; the build puts accounts only into the vault, nev
   assert.ok(klar.includes('"user":"papa"'));
   for (const c of Object.values(CODES)) assert.ok(!klar.includes(c) && !klar.includes(normCode(c)), 'no start code in the app');
   for (const n of ['papa', 'frau', '"mia"']) assert.ok(!ohneTresor(html).includes(n), 'no user name in the public shell');
+});
+
+test('choose the child in the grown-ups area: all children who use this device, the test account only for the admin', async () => {
+  const { ctx, page, fehler } = await oeffnen();
+  const tag = (b) => { const d = new Date(); d.setDate(d.getDate() - b); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const tage = (n) => Array.from({ length: n }, (_, i) => ({ day: tag(i + 1), skill: 'round', level: 2, attempt: 1, ok: true, help: false }));
+  await anmelden(page, 'student', 'mia', CODES.mia); await passwortSetzen(page, 'mond');
+  await page.evaluate((a) => localStorage.setItem('bq2_attempts', JSON.stringify(a)), tage(3));
+  await page.locator('#logoutBtn').click();
+  await anmelden(page, 'student', 'probe', CODES.probe); await passwortSetzen(page, 'probe1');
+  await page.locator('#logoutBtn').click();
+  await anmelden(page, 'student', 'lia', CODES.lia); await passwortSetzen(page, 'lia1');
+  await page.evaluate((a) => localStorage.setItem('bq2_lia__attempts', JSON.stringify(a)), tage(1));
+  await page.locator('#adultBtn').click();
+  await anmelden(page, 'adult', 'papa', CODES.papa); await passwortSetzen(page, 'langes-passwort');
+  await page.waitForSelector('#parentClose');
+  assert.deepEqual(await page.$$eval('[data-pkid]', (b) => b.map((x) => x.dataset.pkid)), ['mia', 'lia'], 'no test account for a parent');
+  assert.equal(await page.getAttribute('[data-pkid="lia"]', 'aria-pressed'), 'true', 'the child logged in now is shown first');
+  const zeile = async () => page.textContent('#pSummary');
+  assert.match(await zeile(), /an 1 Tag geübt|on 1 day/);
+  await page.locator('[data-pkid="mia"]').click();
+  assert.equal(await page.getAttribute('[data-pkid="mia"]', 'aria-pressed'), 'true');
+  assert.match(await zeile(), /an 3 Tagen geübt/);
+  // leaving: the device still belongs to the child logged in (lia), nothing was switched
+  await page.locator('#parentClose').click();
+  await page.waitForSelector('#home:not([hidden])');
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('bq2_session')).user), 'lia');
+  // the admin also sees the test account
+  await page.locator('#adultBtn').click();
+  await anmelden(page, 'adult', 'chef', CODES.chef); await passwortSetzen(page, 'langes-passwort');
+  await page.waitForSelector('#parentClose');
+  assert.deepEqual(await page.$$eval('[data-pkid]', (b) => b.map((x) => x.dataset.pkid)), ['mia', 'probe', 'lia']);
+  await page.locator('[data-pkid="probe"]').click();
+  assert.match(await page.textContent('.phdr-test'), /Testdaten/);
+  assert.deepEqual(fehler, []);
+  await ctx.close();
 });

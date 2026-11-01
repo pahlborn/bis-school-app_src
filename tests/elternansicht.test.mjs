@@ -80,7 +80,7 @@ test('subject page: status with school term, how sure, basis, trend, recency, ti
   await ctx.close();
 });
 
-test('focus is automatic (class topics + where support helps); the switch deviates; "Back to automatic" undoes it', async () => {
+test('focus: "Automatic" (class topics + where support helps) or "Manual", each explained; a switch starts manual mode', async () => {
   const { ctx, page } = await appOeffnen(browser, server.url);
   // detective is not a class topic, but needs support → in focus automatically
   await mitDaten(page, { ...SERIEN, detective: serie('detective', Array.from({ length: 10 }, (_, i) => [[5, 3, 1][i % 3], i % 5 === 0])) });
@@ -88,17 +88,27 @@ test('focus is automatic (class topics + where support helps); the switch deviat
   await page.locator('[data-psubj="maths"]').click();
   assert.equal(await page.getAttribute('[data-pfocus="detective"]', 'aria-pressed'), 'true', 'needs support → automatic focus');
   assert.equal(await page.getAttribute('[data-pfocus="round"]', 'aria-pressed'), 'true', 'class topic → automatic focus');
-  assert.equal(await page.locator('#pRecommend').count(), 0, 'nothing changed yet');
+  assert.equal(await page.getAttribute('[data-fmode="auto"]', 'aria-pressed'), 'true', 'automatic by default');
+  assert.match(await page.textContent('.pfmode'), /Die App wählt selbst/);
+  // a switch in automatic mode starts manual mode from the current choice
   await page.locator('[data-pfocus="round"]').click();
+  assert.equal(await page.getAttribute('[data-fmode="manual"]', 'aria-pressed'), 'true');
+  assert.match(await page.textContent('.pfmode'), /Sie legen selbst fest/);
   assert.equal(await page.getAttribute('[data-pfocus="round"]', 'aria-pressed'), 'false');
-  assert.match(await page.locator('[data-pfocus="round"]').locator('xpath=..').textContent(), /von Ihnen ausgeschaltet/);
-  assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('bq2_focusOff'))), ['round']);
+  assert.equal(await page.getAttribute('[data-pfocus="detective"]', 'aria-pressed'), 'true', 'the rest of the choice stays');
   await page.locator('[data-pfocus="numbers"]').click();
-  assert.match(await page.locator('[data-pfocus="numbers"]').locator('xpath=..').textContent(), /von Ihnen eingeschaltet/);
-  await page.locator('#pRecommend').click();
+  assert.equal(await page.getAttribute('[data-pfocus="numbers"]', 'aria-pressed'), 'true');
+  // back to automatic
+  await page.locator('[data-fmode="auto"]').click();
   assert.equal(await page.getAttribute('[data-pfocus="round"]', 'aria-pressed'), 'true');
   assert.equal(await page.getAttribute('[data-pfocus="numbers"]', 'aria-pressed'), 'false');
-  assert.equal(await page.locator('.pby').count(), 0);
+  // manual without changing anything keeps the current choice
+  await page.locator('[data-fmode="manual"]').click();
+  assert.equal(await page.getAttribute('[data-pfocus="detective"]', 'aria-pressed'), 'true');
+  // inside a subject no other chapters (Peter 01.11.)
+  assert.equal(await page.locator('#aboutBody .psecs').count(), 0);
+  await page.locator('#pBack').click();
+  assert.equal(await page.locator('#aboutBody .psecs').count(), 1);
   await ctx.close();
 });
 
