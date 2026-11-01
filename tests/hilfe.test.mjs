@@ -68,7 +68,7 @@ test('second error gives worked solution, two simpler tasks, then a parallel tas
 
 test('bridge at end of round continues next time without lengthening the round',async()=>{
   const {ctx,page}=await open(roundQ(),[]);
-  await klick(page,'#helpBtn');
+  await klick(page,'#helpBtn');await klick(page,'#helpBtn'); // tip, then the answer
   assert.equal((await data(page,'bridgeNext')).length,3);
   await klick(page,'#nextBtn');
   await klick(page,'#homeBtn');
@@ -81,7 +81,7 @@ test('bridge at end of round continues next time without lengthening the round',
 
 test('later review uses fresh numbers, keeps its identity, and advances only after an independent success',async()=>{
   const {ctx,page}=await open();
-  await klick(page,'#helpBtn');
+  await klick(page,'#helpBtn');await klick(page,'#helpBtn'); // tip, then the answer
   await page.evaluate(()=>{ const d=JSON.parse(localStorage.getItem('bq2_due'));d[0].at='2000-01-01';localStorage.setItem('bq2_due',JSON.stringify(d));localStorage.removeItem('bq2_bridgeNext'); });
   await klick(page,'#nextBtn');
   await klick(page,'#quitBtn');
@@ -102,7 +102,7 @@ test('place-value and two-step missing-part bridges keep the same family and val
   ];
   for(const q of cases){
     const {ctx,page,fehler}=await open(q);
-    await klick(page,'#helpBtn');
+    await klick(page,'#helpBtn');await klick(page,'#helpBtn'); // tip, then the answer
     const s=await zustand(page), bridge=s.round.slice(1,4);
     assert.ok(bridge.every(b=>b.coach.family===q.coach.family));
     assert.deepEqual(bridge.map(b=>b.level),[1,1,2]);

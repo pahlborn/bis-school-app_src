@@ -2071,7 +2071,7 @@ function renderQuestion(){
   const q=state.round[state.idx];
   state.answered=false; state.typed=''; state.picked=[];
   state.attempts=0; state.evidenceRecorded=false; state.firstResponse=null; state.locked=[];
-  state.rejected=[];
+  state.rejected=[]; state.hinted=false;
   state.challengeRewarded=false;
   window.scrollTo(0,0);
   const pn=$('#playNote'); pn.hidden=!state.pendingNote; pn.textContent=state.pendingNote||''; state.pendingNote=null;
@@ -2083,7 +2083,7 @@ function renderQuestion(){
   const A=$('#qAnswers'); A.innerHTML=''; A.className='answers'+(q.grid?' grid':'')+(q.grid3?' grid3':'');
   const fb=$('#feedback'); fb.hidden=true; fb.innerHTML=''; fb.className='feedback';
   const nb=$('#nextBtn'); nb.hidden=true; nb.textContent=state.idx===state.round.length-1?'See my stars':'Next question';
-  const help=$('#helpBtn'); help.hidden=false; help.textContent=q.world==='anleitung'?'Zeig mir, wie':'Show me how';
+  const help=$('#helpBtn'); help.hidden=false; help.textContent=helpLabels(q)[0];
   if(q.kind==='mc'){
     q.options.forEach((o,i)=>{
       const b=document.createElement('button'); b.type='button'; b.className='opt'+(q.vis?' vis':'');
@@ -2157,11 +2157,11 @@ function score(ok){
 function observeAttempt(q, ok, response){
   state.attempts++;
   if(!state.evidenceRecorded){
-    state.firstResponse=response; recordAnswer(q,ok); state.evidenceRecorded=true;
+    state.firstResponse=response; recordAnswer(state.hinted?Object.assign({},q,{assisted:true}):q,ok); state.evidenceRecorded=true;
     if(!ok) rememberWrong(q);
   }
   const log=store.get('attempts',[]);
-  log.push({day:dayKey(),skill:q.world,family:q.coach?q.coach.family:null,level:levelOf(q),attempt:state.attempts,ok:ok,response:response,qid:q.dueId||qId(q),help:state.attempts>1||!!q.assisted});
+  log.push({day:dayKey(),skill:q.world,family:q.coach?q.coach.family:null,level:levelOf(q),attempt:state.attempts,ok:ok,response:response,qid:q.dueId||qId(q),help:state.attempts>1||!!q.assisted||!!state.hinted});
   store.set('attempts',log.slice(-200));
 }
 function hintFeedback(q, response){
@@ -2169,18 +2169,43 @@ function hintFeedback(q, response){
   fb.className='feedback hint'; fb.hidden=false;
   fb.innerHTML=`<span class="mark">${q.world==='anleitung'?'Noch ein Versuch':'Try one more time'}</span><p>${esc(h.text)}</p>${h.visual?`<div class="visual">${h.visual}</div>`:''}`;
   $('#nextBtn').hidden=true;
+  state.hinted=true; $('#helpBtn').textContent=helpLabels(q)[1];   // the tip was given: the button now offers the answer
   fb.scrollIntoView({block:'nearest',behavior:'auto'});
   snapshot();
 }
-/* S1 (30.10.): asking "Show me how" BEFORE any own try is a learning strategy, not a failure.
-   It leaves no evidence (neither error nor mastery), stays neutral for the child (no star,
-   no red dot, no "Not quite", no error sound), and the task still returns for review with a
-   bridge. Help after a mistake is unchanged: the first wrong answer already counted. */
+/* Help in two steps (Peter, 01.11.; graduated hints as in tutoring research: first a hint, the
+   answer only on request):
+   1. "Show me how" gives a short tip how to go about it (the same model as after a first mistake,
+      e.g. the number line with the halfway point) - not the answer. The child then tries; a right
+      answer counts as "with help" (support level), a wrong one leads to the explained answer.
+      Asking for the tip before trying is not a mistake (no evidence by itself).
+   2. "Show me the answer" (offered after the tip or after a first mistake) shows the answer with a
+      short explanation, once. The task counts as not passed (yellow dot, no "Not quite" when the
+      child had not answered yet), comes back for review, and a bridge of easier tasks follows. */
+const helpLabels = q => q.world==='anleitung' ? ['Zeig mir, wie','Zeig mir die Lösung'] : ['Show me how','Show me the answer'];
+function onHelp(){
+  if(state.answered) return;
+  if(!state.hinted) showHint(); else showWorked();
+}
+function showHint(){
+  const q=state.round[state.idx], de=q.world==='anleitung', h=guidance(q,null,false), fb=$('#feedback');
+  state.hinted=true;
+  const log=store.get('attempts',[]); log.push({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,hintShown:true,qid:q.dueId||qId(q)}); store.set('attempts',log.slice(-200));
+  fb.className='feedback hint'; fb.hidden=false;
+  fb.innerHTML=`<span class="mark">${de?'So kannst du vorgehen':'Here’s a way to do it'}</span><p>${esc(h.text)}</p>${h.visual?`<div class="visual">${h.visual}</div>`:''}`;
+  $('#helpBtn').textContent=helpLabels(q)[1];
+  fb.scrollIntoView({block:'nearest',behavior:'auto'});
+  snapshot();
+}
 function showWorked(){
   if(state.answered) return;
-  const q=state.round[state.idx], beforeTry=state.attempts===0;
-  if(!state.evidenceRecorded){ state.evidenceRecorded=true; rememberWrong(q); }
-  const log=store.get('attempts',[]); log.push(Object.assign({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,solutionShown:true},beforeTry?{beforeTry:true}:{})); store.set('attempts',log.slice(-200));
+  const q=state.round[state.idx], beforeTry=state.attempts===0, de=q.world==='anleitung';
+  if(!state.evidenceRecorded){
+    state.evidenceRecorded=true; rememberWrong(q);
+    // asked for the tip and then for the answer without trying: not passed, at support level
+    if(state.hinted) recordAnswer(Object.assign({},q,{assisted:true}),false);
+  }
+  const log=store.get('attempts',[]); log.push(Object.assign({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,solutionShown:true,qid:q.dueId||qId(q)},beforeTry?{beforeTry:true}:{})); store.set('attempts',log.slice(-200));
   if(beforeTry){
     state.answered=true; state.results[state.idx]='seen'; queueBridge(q);
     $('#roundStars').textContent=state.stars; renderDots();
@@ -2189,9 +2214,12 @@ function showWorked(){
   else if(q.kind==='type') document.querySelectorAll('#qAnswers .key').forEach(b=>b.disabled=true);
   else { document.querySelectorAll('#qAnswers .ord').forEach(b=>b.disabled=true); $('#checkOrder').hidden=true; }
   const h=guidance(q,null,true);
-  const answer=q.kind==='mc'?(q.htmlOptions?'the highlighted answer':esc(q.options[q.answer])):q.kind==='type'?esc(q.answer):q.correct.map(i=>esc(q.items[i])).join(' → ');
-  feedback(false,q,`<div class="worked"><p>${esc(h.text)}</p>${h.visual?`<div class="visual">${h.visual}</div>`:''}<p><b>${q.world==='anleitung'?'So geht es':'Worked answer'}: ${answer}</b></p></div>`);
-  if(beforeTry){ const fb=$('#feedback'); fb.className='feedback hint'; fb.querySelector('.mark').textContent=q.world==='anleitung'?'Schauen wir es uns zusammen an':'Let’s look at it together'; }
+  const answer=q.kind==='mc'?(q.htmlOptions?(de?'die markierte Antwort':'the highlighted answer'):esc(q.options[q.answer])):q.kind==='type'?esc(q.answer):q.correct.map(i=>esc(q.items[i])).join(' → ');
+  // the explanation once, then the answer (Peter, 01.11.: no repetition)
+  const fb=$('#feedback'); fb.className='feedback '+(beforeTry?'hint':'bad'); fb.hidden=false;
+  fb.innerHTML=`<span class="mark">${beforeTry?(de?'Das ist die Lösung':'Here’s the answer'):(de?'Noch nicht ganz.':'Not quite.')}</span><div class="worked">${h.visual?`<div class="visual">${h.visual}</div>`:''}<p>${esc(h.text)}</p><p><b>${de?'Lösung':'Answer'}: ${answer}</b></p></div>`;
+  if(state.noteNow){ fb.insertAdjacentHTML('beforeend','<p class="note-banner" style="margin-top:8px">'+esc(state.noteNow)+'</p>'); state.noteNow=null; }
+  $('#nextBtn').hidden=false; $('#helpBtn').hidden=true; $('#nextBtn').focus({preventScroll:true}); revealNext();
   snapshot();
 }
 function answerMC(i){
@@ -2199,7 +2227,7 @@ function answerMC(i){
   if(state.rejected.includes(i)) return;
   const q=state.round[state.idx], ok=i===q.answer;
   observeAttempt(q,ok,q.options[i]);
-  if(!ok && state.attempts===1 && q.options.length>2){
+  if(!ok && state.attempts===1 && q.options.length>2 && !state.hinted){
     state.rejected.push(i);
     const selected=$(`#qAnswers .opt[data-i="${i}"]`); selected.disabled=true; selected.classList.add('wrong');
     let brave=null;
@@ -2222,7 +2250,7 @@ function answerTyped(){
   if(state.answered) return;
   const q=state.round[state.idx], ok=String(+state.typed)===q.answer;
   observeAttempt(q,ok,state.typed);
-  if(!ok && state.attempts===1){ hintFeedback(q,state.typed); return; }
+  if(!ok && state.attempts===1 && !state.hinted){ hintFeedback(q,state.typed); return; }
   if(!ok){ showWorked(); return; }
   score(ok);
   const out=$('#typedOut'); out.style.borderStyle='solid'; out.style.borderColor=ok?'var(--good)':'var(--bad)';
@@ -2246,7 +2274,7 @@ function checkOrder(){
   const q=state.round[state.idx];
   const ok=state.picked.every((v,k)=>v===q.correct[k]);
   observeAttempt(q,ok,state.picked.map(i=>q.items[i]));
-  if(!ok && state.attempts===1){
+  if(!ok && state.attempts===1 && !state.hinted){
     /* Keep the correct prefix fixed. Non-prefix matches are marked as clues,
        not locked out of a sequence which still needs to be rebuilt. */
     const before=state.picked.slice(); let prefix=0;
@@ -3183,7 +3211,7 @@ function showLogin(role){ $('#loginBody').innerHTML=''; renderLogin(role); show(
    "📖 Guide" opens the matching user guide in About (not offered inside the grown-ups area,
    because leaving it logs the grown-up out). */
 const HELP={
-  play:{kid:true,title:'How a question works',text:'<p>Choose or type your answer. Not right yet? You get a hint and can try again. After two tries you see how it works.</p><p>“Show me how” is always OK – it is not a mistake. A wrong first try is fine too: the question comes back later so you can practise it.</p>'},
+  play:{kid:true,title:'How a question works',text:'<p>Choose or type your answer. Not right yet? You get a tip and can try again. After two tries you see how it works.</p><p>“Show me how” gives you a tip – that is always OK, it is not a mistake. Still stuck? “Show me the answer” shows the solution, and the question comes back later so you can practise it.</p>'},
   tree:{kid:true,title:'Your learning tree',text:'<p>Your tree grows on every day you practise – in the app or on a practice sheet. It never wilts, even if you take a break.</p><p>Your badges show how you learn: trying a challenge, thinking hard, finishing a sheet.</p>'},
   record:{kid:true,title:'Recording yourself',text:'<p>Tap “● Aufnahme starten”, read aloud, tap “■ Stopp”. Then listen to yourself!</p><p>The last three recordings stay on this iPad. To hand one in, tap “Teilen / Sichern” together with a grown-up.</p>'},
   sheet:{kid:true,title:'Practice sheet',text:'<p>A sheet with 6 tasks and a writing task, plus an answer page for grown-ups.</p><p>Share it as a PDF (by mail, message or into Files) or print it. Afterwards a grown-up can enter how it went.</p>'},
@@ -3278,7 +3306,7 @@ function renderSetPassword(u){
 function renderWelcome(u){
   const kid=u.role==='student', de=store.get('parentLang','de')!=='en';
   $('#loginBody').innerHTML=kid
-    ? `<h2>Welcome to Big Quest! 🎉</h2><ul class="welcome"><li>🎯 <b>Practise Today</b> gives you 8 questions. Or pick a subject.</li><li>💡 <b>A mistake?</b> You get a hint and try again. “Show me how” is always OK.</li><li>⭐ Every solved task gives a star. Your <b>learning tree</b> grows on every practice day.</li><li>❓ <b>Help</b> is at the bottom of the start page. ⓘ explains things.</li><li>🔒 You stay logged in on this iPad. Tap <b>Log out</b> if someone else wants to use it.</li></ul><button class="btn primary" id="welcomeGo" type="button">Let’s go!</button>`
+    ? `<h2>Welcome to Big Quest! 🎉</h2><ul class="welcome"><li>🎯 <b>Practise Today</b> gives you 8 questions. Or pick a subject.</li><li>💡 <b>A mistake?</b> You get a tip and try again. “Show me how” gives you a tip any time.</li><li>⭐ Every solved task gives a star. Your <b>learning tree</b> grows on every practice day.</li><li>❓ <b>Help</b> is at the bottom of the start page. ⓘ explains things.</li><li>🔒 You stay logged in on this iPad. Tap <b>Log out</b> if someone else wants to use it.</li></ul><button class="btn primary" id="welcomeGo" type="button">Let’s go!</button>`
     : de
     ? `<h2>Willkommen, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 <b>Daten nur auf diesem Gerät:</b> Den Lernstand des Kindes sehen Sie auf dem Gerät, auf dem es übt.</li><li>🔑 Ihr Passwort gilt nur auf diesem Gerät. Auf einem weiteren Gerät einmal mit dem Startcode anmelden.</li><li>🚪 Sie bleiben angemeldet, bis Sie <b>Abmelden</b> tippen. Auf dem Gerät des Kindes nach dem Nachsehen bitte abmelden.</li><li>📖 Die Anleitung steht im Elternbereich unter <b>„📖 Anleitung & Hintergrund“</b>, ⓘ erklärt einzelne Abschnitte.</li></ul><button class="btn primary" id="welcomeGo" type="button">Los geht’s</button>`
     : `<h2>Welcome, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 <b>Data only on this device:</b> you see your child’s progress on the device where they practice.</li><li>🔑 Your password works only on this device. On another device, log in once with the start code.</li><li>🚪 You stay logged in until you tap <b>Log out</b>. On your child’s device, please log out when you are done.</li><li>📖 The guide is in the grown-ups area under <b>“📖 Guide & background”</b>; ⓘ explains each section.</li></ul><button class="btn primary" id="welcomeGo" type="button">Let’s go</button>`;
@@ -3459,6 +3487,8 @@ const ABOUT_SOURCES=[
   ['Shute (2008) – Formative feedback','https://doi.org/10.3102/0034654307313795'],
   ['Hattie & Timperley (2007) – The power of feedback','https://doi.org/10.3102/003465430298487'],
   ['Van der Kleij et al. (2015) – Feedback meta-analysis','https://doi.org/10.3102/0034654314564881'],
+  ['Aleven et al. (2003) – Help seeking and help design in interactive learning environments; bibliografisch geprüft','https://doi.org/10.3102/00346543073003277'],
+  ['Koedinger & Aleven (2007) – The assistance dilemma (when to give hints, when to let pupils try); bibliografisch geprüft','https://doi.org/10.1007/s10648-007-9049-0'],
   ['Epstein et al. (2002) – Immediate feedback','https://doi.org/10.1007/BF03395423'],
   ['Treagust (1988) – Diagnostic questions','https://doi.org/10.1080/0950069880100204'],
   ['Wood & Middleton (1975) – Assisted problem-solving; bibliografisch geprüft','https://doi.org/10.1111/j.2044-8295.1975.tb01454.x'],
@@ -3514,7 +3544,7 @@ const GUIDE_KID=`<p class="small">Hello, explorer! Here is how Big Quest works.<
 <ol class="steps">
 <li><b>Log in:</b> tap 🎒 Student, type your user name and your password. The very first time you use the start code from your grown-up and then choose your own password. Keep it a secret!</li>
 <li><b>Practise Today:</b> 8 questions from your focus topics. Or tap a subject and choose a quest.</li>
-<li><b>Oops, a mistake?</b> No problem! You get a hint and try again. Tap “Show me how” whenever you want – that is not a mistake.</li>
+<li><b>Oops, a mistake?</b> No problem! You get a tip and try again. Tap “Show me how” whenever you want – that is not a mistake. Still stuck? “Show me the answer” shows the solution.</li>
 <li><b>Stars and titles:</b> every solved task gives a star. With more stars you reach a new title – tap your title to see your explorer path. Your learning tree grows on every day you practise.</li>
 <li><b>After a round:</b> choose a joke, the Mystery Question or a Pisolala story.</li>
 <li><b>Lese-Studio:</b> read aloud, record yourself and listen. Your grown-up can help you share the best recording with your class.</li>
@@ -3560,7 +3590,7 @@ const ABOUT_DE=()=>`
 <h3>Aufbau</h3>
 <p>Die Inhalte sind nach Fächern wie in der Schule gegliedert (Maths, Science, English, Deutsch, Library &amp; Reading, Me as a Learner, Events). „Practise Today“ stellt eine kurze, abwechslungsreiche Runde zusammen; die Eltern legen fest, welche Themen derzeit im Fokus stehen. Übungsblätter zum Ausdrucken ergänzen das Angebot um das, was nur auf Papier sinnvoll geübt werden kann: beschriftete Rechenwege, Einheiten, ein zweiter Lösungsweg und eigene Texte.</p>
 <h3>Lernlogik</h3>
-<p>Nach einer falschen Antwort bietet die Anwendung einen Hinweis und einen zweiten Versuch an. „Zeig mir, wie“ führt jederzeit zur erklärten Lösung. Bei nur zwei Antwortmöglichkeiten wird direkt erklärt. Für Runden, Stellenwert und fehlende Teile folgt bei Bedarf eine Brücke aus zwei leichteren Aufgaben und einer neuen vergleichbaren Aufgabe. Reicht der Platz in einer Runde nicht, geht die Brücke beim nächsten Start weiter. Wiederholungen und unterstützte Versuche zählen nicht als unabhängiger Nachweis. Die genaue Hilfe-Leiter ist ein begründeter Entwurf, kein wissenschaftlich nachgewiesenes Optimum für dieses Kind.</p>
+<p>Nach einer falschen Antwort bietet die Anwendung einen Hinweis und einen zweiten Versuch an. „Zeig mir, wie“ gibt jederzeit zuerst einen kurzen Tipp zum Vorgehen, erst „Zeig mir die Lösung“ zeigt die Lösung. Bei nur zwei Antwortmöglichkeiten wird direkt erklärt. Für Runden, Stellenwert und fehlende Teile folgt bei Bedarf eine Brücke aus zwei leichteren Aufgaben und einer neuen vergleichbaren Aufgabe. Reicht der Platz in einer Runde nicht, geht die Brücke beim nächsten Start weiter. Wiederholungen und unterstützte Versuche zählen nicht als unabhängiger Nachweis. Die genaue Hilfe-Leiter ist ein begründeter Entwurf, kein wissenschaftlich nachgewiesenes Optimum für dieses Kind.</p>
 <p>Jede Aufgabe gehört zu einer Fähigkeit und zu einer von drei Stufen: <i>Grundlage</i> (ein Schritt, mit Hilfe), <i>Klassenniveau</i> und <i>Herausforderung</i> (erklären, prüfen, einen zweiten Weg finden). Die Anwendung merkt sich auf dem Gerät, wann welche Aufgaben gelöst wurden, und wählt danach die nächsten aus: Unsicheres wird mit Hilfen und kleineren Schritten geübt, Sicheres durch anspruchsvollere Aufgaben ergänzt. Fehler kehren nach dem Prinzip der Lernkartei (Leitner) am nächsten Übungstag sowie nach drei und sieben Tagen wieder.</p>
 <p>Zur Einordnung dient intern der Bewertungsschlüssel, den die Schule für ihre Standards verwendet. Er wird ausschließlich zur Auswahl der Aufgaben genutzt und dem Kind an keiner Stelle angezeigt; Einzelheiten stehen im Elternbereich. Die zugrunde gelegten Schwellenwerte sind Annahmen der Eltern, keine Vorgaben der Schule.</p>
 <h3>Exkurs: Was passiert bei einer falschen Antwort?</h3>
@@ -3571,7 +3601,7 @@ const ABOUT_DE=()=>`
 <li><b>Wiederholung:</b> Die Aufgabe kommt am nächsten Übungstag wieder, dann nach drei und nach sieben Tagen – wo möglich mit neuen Zahlen.</li>
 </ol>
 <p><b>Ausnahmen:</b> Bei nur zwei Antwortmöglichkeiten (etwa AM/PM) erklärt die App sofort. Bei Eintipp-Aufgaben bleibt die Eingabe stehen, dazu kommt ein Hinweis. Beim Ordnen werden die richtigen Plätze markiert.</p>
-<p>„Zeig mir, wie“ ist jederzeit möglich und führt direkt zum Lösungsweg. Wer sich den Weg zeigen lässt, bevor er selbst probiert, hat keinen Fehler gemacht: Das zählt weder als Fehler noch als Können, die Aufgabe kommt aber später wieder. Eine Note oder Stufe sieht das Kind dabei nie.</p>
+<p>Hilfe gibt es in zwei Stufen, wie es die Forschung zu Lernprogrammen empfiehlt: „Zeig mir, wie“ gibt einen kurzen Tipp zum Vorgehen, ohne die Lösung zu verraten; danach probiert das Kind selbst. Gelingt es, zählt es als „mit Hilfe“ gelöst. Erst „Zeig mir die Lösung“ zeigt die Lösung mit kurzer Erklärung; die Aufgabe gilt dann als noch nicht geschafft und kommt später wieder. Um Hilfe zu bitten, ist nie ein Fehler. Eine Note oder Stufe sieht das Kind dabei nie.</p>
 <h3>Herkunft der Aufgaben</h3>
 <p>Themen und Erfolgskriterien folgen den Lerneinheiten der 3. Klasse im Schuljahr 2026/27, wie sie auf der Lernplattform der Schule veröffentlicht sind – darunter <i>Friction Frenzy</i> (How the World Works), <i>Persuade for the Park</i> (Who We Are), <i>Mastering Basic Numbers</i> mit <i>Travel for Work</i> und dem <i>Sticker Milestone</i>, das Runden auf Zehner und Hunderter, die <i>Anleitung</i> zur Traummaschine, die Leseaufnahme, die Bibliotheksstunden sowie die Primary Production <i>Pantastic</i>. Die Aufgaben selbst sind neu formuliert oder werden mit wechselnden Zahlen erzeugt; Arbeitsblätter der Schule werden nicht wiedergegeben. Die Geschichten um <i>Pisolala</i> sind eine Erfindung der Familie.</p>
 <h3>Datenschutz</h3>
@@ -3595,7 +3625,7 @@ const ABOUT_EN=()=>`
 <li>The IB <i>Learner Profile</i> and <i>Approaches to Learning</i> – thinking, justifying, reflecting (“Glows and Grows”).</li>
 </ul>
 <h3>How it works</h3>
-<p>After a wrong answer, a hint supports a second attempt. “Show me how” always opens the worked explanation. Two-option tasks are explained directly. Rounding, place value and missing-part tasks can lead to two simpler practice tasks and a new parallel task. Unfinished bridges continue next time. Assisted successes are not independent evidence. This design is informed by research, not a proven optimum for this child.</p>
+<p>After a wrong answer, a hint supports a second attempt. “Show me how” first gives a short tip on how to go about it; only “Show me the answer” shows the solution. Two-option tasks are explained directly. Rounding, place value and missing-part tasks can lead to two simpler practice tasks and a new parallel task. Unfinished bridges continue next time. Assisted successes are not independent evidence. This design is informed by research, not a proven optimum for this child.</p>
 <p>Every task belongs to a skill and to one of three levels: <i>foundation</i> (one step, with support), <i>year level</i> and <i>challenge</i> (explain, check, find a second way). The app remembers on the device which tasks were solved and when, and selects the next ones accordingly. Mistakes return on the next practice day and after three and seven days (Leitner principle). Internally, the assessment key the school uses for its standards serves as orientation; it is used only to choose tasks and is never shown to the child. Details are in the parent area. Thresholds are the parents' assumptions, not school requirements.</p>
 <h3>Side note: what happens after a wrong answer?</h3>
 <ol class="steps">
@@ -3605,7 +3635,7 @@ const ABOUT_EN=()=>`
 <li><b>Review:</b> the task returns on the next practice day, then after three and seven days – with new numbers where possible.</li>
 </ol>
 <p><b>Exceptions:</b> with only two options (such as AM/PM) the app explains at once. In typing tasks the entry stays and a hint is added. In ordering tasks the correct places are marked.</p>
-<p>“Show me how” is always available and leads straight to the worked solution. Asking to be shown before trying is not a mistake: it counts neither as an error nor as mastery, but the task comes back later. The child never sees a grade or level.</p>
+<p>Help comes in two steps, as research on tutoring programs suggests: “Show me how” gives a short tip on how to go about it without giving the answer away; then the child tries. A success then counts as solved “with help”. Only “Show me the answer” shows the solution with a short explanation; the task then counts as not yet mastered and comes back later. Asking for help is never a mistake. The child never sees a grade or level.</p>
 <h3>Origin of the tasks</h3>
 <p>Topics and success criteria follow the Grade 3 units of the 2026/27 school year as published on the school's learning platform. The tasks themselves are rewritten or generated with varying numbers; school worksheets are not reproduced. The stories about <i>Pisolala</i> are a family invention.</p>
 <h3>Privacy</h3>
@@ -3813,7 +3843,7 @@ $('#studioBack').addEventListener('click',goBack);
 $('#subjectBack').addEventListener('click',()=>{ state.back='home'; goBack(); });
 $('#todayBtn').addEventListener('click',()=>{ state.back='home'; startRound('today'); });
 $('#nextBtn').addEventListener('click',next);
-$('#helpBtn').addEventListener('click',showWorked);
+$('#helpBtn').addEventListener('click',onHelp);
 $('#againBtn').addEventListener('click',()=>startRound(state.world));
 $('#homeBtn').addEventListener('click',goBack);
 $('#sheetBtn').addEventListener('click',printSheet);
