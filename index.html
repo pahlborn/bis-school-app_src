@@ -887,6 +887,21 @@ function placeValue(){
   return mc("What is <b>"+p[1]+" "+fmt(n)+"</b>?", fmt(right), wrongs.map(fmt),
     fmt(n)+" "+(p[0]>0?"+":"−")+" "+fmt(Math.abs(p[0]))+" = "+fmt(right)+".", Object.assign({grid:true}, NUM));
 }
+/* Gap (01.11.): expanded form when a digit is 0 - the 0 holds the place, the part is left out. */
+function expandedZeroQ(){
+  const z=1+rnd(2), d=[1+rnd(9),1+rnd(9),1+rnd(9),1+rnd(9)]; d[z]=0;
+  const n=d[0]*1000+d[1]*100+d[2]*10+d[3];
+  const parts=dd=>dd.map((x,i)=>x*10**(3-i)).filter(x=>x).map(fmt).join(' + ');
+  const right=parts(d), names=['thousands','hundreds','tens','ones'];
+  const why=fmt(n)+" has "+d.map((x,i)=>x+" "+names[i]).join(", ")+". The 0 holds the "+names[z]+" place: there are no "+names[z]+", so that part is left out.";
+  if(rnd(2)===0) return typed("What number is <b>"+right+"</b>? Type your answer.", n, why+" "+right+" = "+fmt(n)+".", Object.assign({}, NUM));
+  const nz=d.filter(x=>x), shifted=nz.slice(); while(shifted.length<4) shifted.unshift(0);
+  const sw=d.slice(); sw[z]=d[z+1]; sw[z+1]=0;
+  const last=right.split(' + '), tenfold=last.slice(0,-1).concat([fmt(Number(last[last.length-1].replace(/,/g,''))*10)]).join(' + ');
+  const sum=t=>t.split(' + ').reduce((a,b)=>a+Number(b.replace(/,/g,'')),0);
+  const cands=uniq([parts(shifted), parts(sw), tenfold]).filter(t=>t!==right && sum(t)!==n);
+  return mc("Which shows <b>"+fmt(n)+"</b> in expanded form?", right, cands, why, Object.assign({grid:true}, NUM));
+}
 function oddEven(){
   const n=pick([10+rnd(90), 100+rnd(900), 1000+rnd(9000)]);
   return two("Is <b>"+fmt(n)+"</b> odd or even?", ['Odd','Even'], n%2?0:1,
@@ -901,7 +916,7 @@ function mental(){
   const wrongs=fill3(right,[right+10,right-10,right+100,right-100,right+20,right-1]);
   return mc(prompt, fmt(right), wrongs.map(fmt), (plus?a+" + "+b:x+" − "+y)+" = "+right+". Add or take away the hundreds first, then the tens.", Object.assign({grid:true}, NUM));
 }
-function buildNumbers(){ return shuffle([clockRead(), clockRead(), clockPick(), ampm(), numberLine(), placeValue(), oddEven(), numberParts(), pick([mental,placeValue])()]).slice(0,8); }
+function buildNumbers(){ return shuffle([clockRead(), clockPick(), ampm(), numberLine(), placeValue(), expandedZeroQ(), oddEven(), numberParts(), pick([mental,placeValue,clockRead])()]).slice(0,8); }
 
 /* ======================= PAST · ROUNDING ROAD ======================= */
 const RND={label:'Rounding Road', world:'round'};
@@ -924,6 +939,16 @@ function roundWordQ(){
   const wrongs=fill3(near,[near===lo?hi:lo, round10(n), near+100, near-100]);
   return mc("Round <b>"+n+"</b> to the nearest hundred.", String(near), wrongs.map(String),
     n+" is between "+lo+" and "+hi+". Compare its distances from the two hundreds, or use the halfway point "+(lo+50)+".", Object.assign({grid:true, coach:{family:'round', n:n, step:100}}, RND));
+}
+/* Gap from the school standards (01.11.): round to the nearest 1,000 - same model as for 10 and 100
+   (neighbouring thousands, halfway point 500). */
+function roundThousandQ(){
+  let n; do { n=1000+rnd(8000); } while(n%1000===0 || n%1000===500);
+  const lo=Math.floor(n/1000)*1000, hi=lo+1000, near=(n-lo<500)?lo:hi;
+  const wrongs=fill3(near,[near===lo?hi:lo, round100(n), near+1000, near-1000].filter(x=>x>0));
+  return mc("Round <b>"+fmt(n)+"</b> to the nearest thousand.", fmt(near), wrongs.map(fmt),
+    fmt(n)+" is between "+fmt(lo)+" and "+fmt(hi)+". The halfway point is "+fmt(lo+500)+". "+fmt(n)+" comes "+(near===lo?"before":"after")+" it, so it rounds to "+fmt(near)+".",
+    Object.assign({grid:true, coach:{family:'round', n:n, step:1000}}, RND));
 }
 function addendsQ(){
   const target=pick([100,100,200,500,500,1000,300]);
@@ -954,7 +979,7 @@ const ROUND_MC=[
  ["Which number rounds to 600?","582",["549","651","509"],"582 is close to 600. Only 18 away."],
  ["Which number is exactly halfway between 300 and 400?","350",["310","390","305"],"350 is right in the middle. Middle numbers round up."]
 ];
-function buildRounding(){ return shuffle([nearestHundredQ(), nearestHundredQ(), benchmarkQ(), roundWordQ(), retag([roundTenQ()],RND)[0], estimateQ(), threeAddendsQ(), bankMC(ROUND_MC,RND)(pick(ROUND_MC))]); }
+function buildRounding(){ return shuffle([roundThousandQ(), nearestHundredQ(), benchmarkQ(), roundWordQ(), retag([roundTenQ()],RND)[0], estimateQ(), threeAddendsQ(), bankMC(ROUND_MC,RND)(pick(ROUND_MC))]); }
 
 /* ======================= PAST · WORD WORKSHOP (OREO + Persuade for the Park) ======================= */
 const WRD={label:'Word Building', world:'words'};
@@ -1183,6 +1208,43 @@ function tableConclusionQ(){
     [max.label+" has the most friction, because the car rolled the farthest.","All three surfaces have the same friction.","The car must be broken."],
     "Short distance = lots of friction. "+min.label+" stopped the car after only "+min.v+" cm.", Object.assign({visual:tbl}, UNT));
 }
+/* Gaps (01.11.): read a scale that counts in 2s, 5s or 10s (only every second mark is labelled),
+   and read a line graph. */
+function scaleSVG(step, mark){
+  const W=600, px=40, n=10, dx=(W-2*px)/n, x=v=>px+v/step*dx; let s='';
+  s+=`<line x1="${px}" y1="70" x2="${W-px}" y2="70" stroke="var(--ink)" stroke-width="3"/>`;
+  for(let i=0;i<=n;i++){ const big=i%2===0; s+=`<line x1="${(px+i*dx).toFixed(1)}" y1="${big?52:60}" x2="${(px+i*dx).toFixed(1)}" y2="${big?88:80}" stroke="var(--ink)" stroke-width="${big?2.5:1.5}"/>`;
+    if(big) s+=`<text x="${(px+i*dx).toFixed(1)}" y="112" text-anchor="middle" font-size="17" ${FD} fill="var(--ink)">${i*step}</text>`; }
+  if(mark!=null) s+=`<path d="M${(x(mark)-11).toFixed(1)} 14 L${(x(mark)+11).toFixed(1)} 14 L${x(mark).toFixed(1)} 46 Z" fill="var(--sun)" stroke="var(--ink)" stroke-width="2"/>`;
+  return `<svg viewBox="0 0 ${W} 125" width="100%" role="img" aria-label="Scale from 0 to ${n*step}">${s}</svg>`;
+}
+function scaleStepQ(){
+  const step=pick([2,5,10]), mark=step*(1+2*rnd(5)), below=mark-step;
+  const wrongs=fill3(mark,[below+1, mark+1, below, mark+step, mark-1].filter(x=>x>=0));
+  return mc("Only every second mark has a number. What number does the arrow show?", String(mark), wrongs.map(String),
+    "From "+below+" to "+(below+2*step)+" there are two steps, so each step is "+step+". The arrow is one step after "+below+": "+below+" + "+step+" = "+mark+".",
+    Object.assign({visual:scaleSVG(step,mark), grid:true, tip:"Look at two numbers next to each other. How many steps are between them? Work out how much one step is, then count on in those steps."}, UNT));
+}
+const DAYS5=['Mon','Tue','Wed','Thu','Fri'];
+function lineSVG(data, o){
+  o=o||{}; const W=600,H=320,pl=70,pr=30,pt=50,pb=60, top=o.top||30, step=o.step||5, ch=H-pt-pb, dx=(W-pl-pr)/(data.length-1);
+  const X=i=>pl+i*dx, Y=v=>H-pb-v/top*ch; let s='';
+  for(let v=0; v<=top; v+=step){ s+=`<line x1="${pl}" y1="${Y(v).toFixed(1)}" x2="${W-pr}" y2="${Y(v).toFixed(1)}" stroke="var(--line)" stroke-width="1.5"/><text x="${pl-10}" y="${Y(v).toFixed(1)}" text-anchor="end" dominant-baseline="central" font-size="15" ${FD} fill="var(--ink)">${v}</text>`; }
+  s+=`<line x1="${pl}" y1="${pt}" x2="${pl}" y2="${H-pb}" stroke="var(--ink)" stroke-width="2.5"/><line x1="${pl}" y1="${H-pb}" x2="${W-pr}" y2="${H-pb}" stroke="var(--ink)" stroke-width="2.5"/>`;
+  s+=`<polyline points="${data.map((d,i)=>X(i).toFixed(1)+','+Y(d.v).toFixed(1)).join(' ')}" fill="none" stroke="var(--world)" stroke-width="4"/>`;
+  data.forEach((d,i)=>{ s+=`<circle cx="${X(i).toFixed(1)}" cy="${Y(d.v).toFixed(1)}" r="7" fill="var(--world)"/><text x="${X(i).toFixed(1)}" y="${H-pb+28}" text-anchor="middle" font-size="16" font-weight="600" ${FD} fill="var(--ink)">${esc(d.label)}</text>`; });
+  s+=`<text x="${W/2}" y="28" text-anchor="middle" font-size="19" font-weight="700" ${FD} fill="var(--ink)">${esc(o.title||'')}</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Line graph">${s}</svg>`;
+}
+function lineGraphQ(){
+  let vals; do { vals=DAYS5.map(()=>5*(2+rnd(5))); } while(vals.filter(v=>v===Math.max(...vals)).length>1 || vals.filter(v=>v===Math.min(...vals)).length>1);
+  const d=DAYS5.map((l,i)=>({label:l,v:vals[i]})), vis=lineSVG(d,{title:'Temperature at noon (°C)'}), v=rnd(3);
+  const tip="Find the day at the bottom. Go straight up to the dot, then across to the numbers on the side.";
+  if(v<2){ const hot=v===0, t=d.reduce((p,c)=>(hot?c.v>p.v:c.v<p.v)?c:p);
+    return mc("Read the line graph. On which day was it <b>"+(hot?"warmest":"coldest")+"</b>?", t.label, shuffle(d.filter(x=>x!==t).map(x=>x.label)).slice(0,3), "The "+(hot?"highest":"lowest")+" dot is on "+t.label+": "+t.v+" °C.", Object.assign({visual:vis, grid:true, tip:tip}, GRA)); }
+  const t=pick(d);
+  return mc("Read the line graph. How warm was it on <b>"+t.label+"</b>?", t.v+" °C", fill3(t.v,[t.v+5,t.v-5,t.v+10,t.v-10].filter(x=>x>0)).map(x=>x+" °C"), "Go up from "+t.label+" to the dot, then across to the scale: "+t.v+" °C.", Object.assign({visual:vis, grid:true, tip:tip}, GRA));
+}
 function massRecordQ(){
   const g=55+rnd(110);
   return mc("The scale shows the car’s mass: <b>"+g+" g</b>. What do you write in the mass column of your table?", g+" g", [String(g), g+" cm", "about "+round100(g)], "Write the number AND the unit. Mass is in grams (g), distance is in centimetres (cm).", Object.assign({grid:true}, UNT));
@@ -1204,7 +1266,7 @@ const RESP_MC=[
  ["Who is responsible for recording your group’s data correctly?","Everyone in the group, taking turns",["Only the fastest writer","Only the teacher","Nobody"],"Everyone checks the numbers and the units."]
 ];
 function buildUnits(){ return shuffle([unitPickQ(), unitPickQ(), unitPickQ(), convertQ(), convertQ(), rulerQ(), rulerQ(), massRecordQ()]); }
-function buildGraphs(){ return retag(shuffle([barReadQ(), barReadQ(), barReadQ(), barMissingQ(), barMissingQ(), tableConclusionQ()].concat(fromBank(COMPLETE_MC,UNT,2))), GRA); }
+function buildGraphs(){ return retag(shuffle([barReadQ(), barReadQ(), scaleStepQ(), lineGraphQ(), barMissingQ(), tableConclusionQ()].concat(fromBank(COMPLETE_MC,UNT,2))), GRA); }
 function buildFinish(){ return fromBank(COMPLETE_MC.concat(RESP_MC), FIN, 8); }
 
 /* ======================= PRACTICE · SUPER SENTENCES ======================= */
@@ -1477,13 +1539,30 @@ function partQ(){
   const s=wpSetup();
   return typed("How many "+s.t[0]+" are "+s.t[1]+" or "+s.t[2]+" together? Type your answer.", s.a+s.b, s.a+" + "+s.b+" = "+(s.a+s.b)+". The question asks only about the two parts, not the total.", Object.assign({visual:quote(s.text)}, WPR));
 }
+/* Gaps (01.11.): subtract within 9,999 in two steps (thousands first, then the rest),
+   and use a calculator to check (the inverse operation). */
+const BIG_STORIES=[['A library has','books.','are lent out.','How many books are still on the shelves?'],['A stadium has','seats.','are taken.','How many seats are still free?'],['A driver has to travel','kilometres.','are done.','How many kilometres are left?'],['A school collected','bottle caps.','were used for art.','How many bottle caps are left?']];
+function subtract4Q(){
+  const a=3000+rnd(6000), th=1+rnd(Math.floor(a/1000)-1), rest=10*(1+rnd(80)), b=th*1000+rest, r=a-b, st=pick(BIG_STORIES);
+  return typed(st[3]+" Type your answer.", r, "Two steps: "+fmt(a)+" − "+fmt(th*1000)+" = "+fmt(a-th*1000)+". Then "+fmt(a-th*1000)+" − "+rest+" = "+fmt(r)+". Check: "+fmt(r)+" + "+fmt(b)+" = "+fmt(a)+".",
+    Object.assign({visual:quote(st[0]+" "+fmt(a)+" "+st[1]+" "+fmt(b)+" "+st[2]), tip:"Take it away in two steps: first the thousands ("+fmt(a)+" − "+fmt(th*1000)+"), write the middle result, then take away the rest ("+rest+")."}, WPR));
+}
+function calcCheckQ(){
+  const a=2000+rnd(7000), b=1000+rnd(Math.min(4000,a-1100)), r=a-b;
+  if(rnd(2)===0) return mc("You worked out <b>"+fmt(a)+" − "+fmt(b)+" = "+fmt(r)+"</b>. Which calculator keys check your answer?", r+" + "+b+" =", [r+" − "+b+" =", a+" + "+b+" =", b+" − "+r+" ="],
+    "Adding undoes taking away: "+fmt(r)+" + "+fmt(b)+" must give "+fmt(a)+" again. If it does, your answer is right.", Object.assign({tip:"Which calculation undoes taking away? Start with your answer."}, WPR));
+  const ok=rnd(2)===0, wrote=ok?r:r+pick([10,100,-10,-100]);
+  return mc("You wrote <b>"+fmt(a)+" − "+fmt(b)+" = "+fmt(wrote)+"</b>. To check, you type <b>"+wrote+" + "+b+" =</b> and the calculator shows <b>"+fmt(wrote+b)+"</b>. What does that tell you?",
+    ok?"My answer is right":"My answer is wrong – find the mistake and work it out again", ok?["My answer is wrong – find the mistake and work it out again","The calculator is broken","I should round my answer"]:["My answer is right","The calculator is broken","It is close enough"],
+    ok?"The check gives "+fmt(a)+" again – the number you started with. So the answer is right.":"The check should give "+fmt(a)+", but it gives "+fmt(wrote+b)+". So something went wrong: the right answer is "+fmt(r)+".", Object.assign({tip:"A check must give back the number you started with. Compare the calculator number with it."}, WPR));
+}
 const WPR_MC=[
  ["A word problem is a short story with numbers. What is a good FIRST step?","Read it carefully: what is the question, and which numbers do I need?",["Add up all the numbers I can see","Start calculating with the first number","Write down the biggest number"],"First understand the story: What does the question ask? Which numbers do you need – the whole or a part? Then calculate. Adding every number you see often gives a wrong answer."],
  ["The problem says 905 stickers, but you wrote 902. What happens?","Every next step uses the wrong number, so the answer is wrong",["Only the last step is wrong","It is fine, 902 is close","The estimate fixes it"],"One wrong number at the start makes every step wrong. Check your numbers against the text."],
  ["A problem has two steps. What is a good strategy?","Do one step, write the result, then do the next step",["Add all the numbers at once","Stop after the first step","Only write the final answer"],"Writing the middle result keeps problems with two steps clear."],
  ["How do you check a subtraction like 905 − 600 = 305?","Add 305 + 600 and see if you get 905",["Subtract 600 from 905 again","Add 905 + 600","Round 305 to 300"],"Adding undoes taking away: 305 + 600 must give 905 again."]
 ];
-function buildWordProb(){ return shuffle([findTotalQ(), findTotalQ(), twoStepQ(), twoStepQ(), operationQ(), operationQ(), partQ()].concat(fromBank(WPR_MC,WPR,1))); }
+function buildWordProb(){ return shuffle([findTotalQ(), subtract4Q(), twoStepQ(), twoStepQ(), operationQ(), calcCheckQ(), partQ()].concat(fromBank(WPR_MC,WPR,1))); }
 
 /* ======================= NOW · ANLEITUNG-WERKSTATT (Deutsch) ======================= */
 const ANL={label:'Anleitung-Werkstatt', world:'anleitung'};
@@ -1602,6 +1681,7 @@ function guidance(q, wrong, solved){
     const ds=String(c.n).padStart(4,'0').split(''), names=['Thousands','Hundreds','Tens','Ones'];
     return {text:solved?q.explain:'Match each digit with its column. A digit has a different value in each column. Start with the ones on the right.',visual:tableHTML(names,[ds])};
   }
+  if(q.tip) return {text:solved?(q.explain||q.tip):q.tip, visual:''};   // task-specific tip (new topics, 01.11.)
   const hints={
     round:'Locate the number between its neighbouring tens or hundreds. Mark the halfway point before choosing.',
     numbers:/clock/i.test(q.prompt)?'Look at the short hand for the hour. Then count the long hand’s minutes in steps of five.':/odd|even/i.test(q.prompt)?'Try making pairs. Is anything left over?':'Check the place values and the direction of each jump. Work one step at a time.',
@@ -1625,7 +1705,7 @@ function roundedQuestion(world, level, family, step, n, less){
   let q;
   if(family==='benchmark') q=mc(`Which neighbouring multiple of ${step} is just <b>${less?'below':'above'} ${n}</b>?`,String(less?lo:hi),[String(less?hi:lo),String(lo-step),String(hi+step)],`${n} lies between ${lo} and ${hi}.`,{grid:true});
   else if(family==='round-explain') q=mc(`Which reason explains how to round <b>${n}</b> to the nearest ${step}?`,`${right} is nearer: compare ${n-lo} and ${hi-n}.`,[`${right===lo?hi:lo} is nearer: choose the larger distance.`,'Choose the number you like most.','Always choose the higher number.'],`Compare both distances; at halfway choose the higher multiple.`,{});
-  else q=mc(`Round <b>${n}</b> to the nearest <b>${step===10?'ten':'hundred'}</b>.`,String(right),[String(right===lo?hi:lo),String(lo-step),String(hi+step)],`${n} is ${n-lo} from ${lo} and ${hi-n} from ${hi}.`,{grid:true});
+  else q=mc(`Round <b>${fmt(n)}</b> to the nearest <b>${({10:'ten',100:'hundred',1000:'thousand'})[step]}</b>.`,String(right),[String(right===lo?hi:lo),String(lo-step),String(hi+step)],`${n} is ${n-lo} from ${lo} and ${hi-n} from ${hi}.`,{grid:true});
   return Object.assign(q,{world:world,label:WORLDS[world].name,level:level,coach:{family:family,n:n,step:step,less:less},visual:level===1?roundingModel(n,step,false):''});
 }
 function missingPartQuestion(world, level, params){
@@ -1849,15 +1929,15 @@ const ICONS={
 };
 const WORLDS={
   /* Maths */
-  numbers:{name:'Time & Numbers', sub:'Clocks, number lines, place value', color:'var(--w-numbers)', build:buildNumbers},
-  round:{name:'Rounding Road', sub:'Nearest 10 and 100, and explain how you know', color:'var(--w-round)', build:buildRoundingAll},
+  numbers:{name:'Time & Numbers', sub:'Clocks, number lines, place value, expanded form', color:'var(--w-numbers)', build:buildNumbers},
+  round:{name:'Rounding Road', sub:'Nearest 10, 100 and 1,000 – and explain how you know', color:'var(--w-round)', build:buildRoundingAll},
   combos:{name:'Number Combinations', sub:'More than one way to make a number', color:'var(--w-explain)', icon:'round', build:buildCombos},
-  wordprob:{name:'Word Problems', sub:'Find the right numbers, then calculate step by step', color:'var(--w-stickers)', icon:'stickers', build:buildWordProblems},
+  wordprob:{name:'Word Problems', sub:'Find the right numbers, calculate step by step, check', color:'var(--w-stickers)', icon:'stickers', build:buildWordProblems},
   detective:{name:'Data Detective', sub:'Read tables, estimate, compare with > and <', color:'var(--w-detective)', build:buildDetective},
   /* Science */
   forces:{name:'Forces & Friction', sub:'Ramps, fair tests, friction in real life', color:'var(--w-forces)', build:buildForcesAll},
   units:{name:'Units & Measuring', sub:'cm, m and g: write the unit every time', color:'var(--w-units)', build:buildUnits},
-  graphs:{name:'Bar Graphs & Worksheets', sub:'Finish the graph, answer every question', color:'var(--w-units)', icon:'units', build:buildGraphs},
+  graphs:{name:'Bar Graphs & Worksheets', sub:'Bar and line graphs, scales, answer every question', color:'var(--w-units)', icon:'units', build:buildGraphs},
   /* English */
   opinion:{name:'Opinion Writing', sub:'OREO: opinion, reason, example, opinion', color:'var(--w-words)', icon:'words', build:buildOpinion},
   sentences:{name:'Capital Letters & Full Stops', sub:'Start big, end with . ? or !', color:'var(--w-sentences)', build:buildSentences},
@@ -2224,6 +2304,8 @@ const MATH_EXAMPLES=[
   [/thousands, .*hundreds, .*tens and .*ones/, ()=>ex1('2 hundreds, 3 tens and 5 ones. What number is that?', 235, 'Write each digit in its column: 2 | 3 | 5. That makes 235.', tableHTML(['Hundreds','Tens','Ones'],[['2','3','5']]))],
   [/(more|less) than [\d,]+\?/, q=>{ const more=/more than/.test(strip(q.prompt)); return ex1(`What is 10 ${more?'more':'less'} than 25?`, more?35:15, `Only the tens change: 2 tens ${more?'+':'−'} 1 ten = ${more?3:1} tens. 25 ${more?'+':'−'} 10 = ${more?35:15}.`); }],
   [/^[\d,]+ [+−] [\d,]+ = \?$/, q=>{ const plus=/\+/.test(strip(q.prompt)); return plus?ex1('40 + 30 = ?', 70, 'Add the tens: 4 tens + 3 tens = 7 tens = 70.'):ex1('70 − 20 = ?', 50, 'Take away the tens: 7 tens − 2 tens = 5 tens = 50.'); }],
+  [/in expanded form\?/, ()=>ex1('Which shows 305 in expanded form?', '300 + 5', '305 has 3 hundreds, 0 tens and 5 ones. The 0 holds the tens place – there are no tens, so that part is left out: 300 + 5.', tableHTML(['Hundreds','Tens','Ones'],[['3','0','5']]))],
+  [/^What number is [\d,]+ \+/, ()=>ex1('What number is 300 + 5?', 305, 'Put each part in its column: 3 hundreds, 0 tens, 5 ones. The 0 holds the tens place: 305.', tableHTML(['Hundreds','Tens','Ones'],[['3','0','5']]))],
   // Rounding Road (tasks without a coach family)
   [/Round each number to the nearest hundred, then add|estimate .* by rounding each number to the nearest hundred/, ()=>ex1('About how much is 210 + 390?', 600, '210 is about 200. 390 is about 400. 200 + 400 = 600.')],
   [/Which estimate is closer to the exact answer/, ()=>ex1('Which estimate is closer to 32 + 47 (exactly 79)?', 'nearest ten: 30 + 50 = 80', 'Nearest ten: 30 + 50 = 80, only 1 away from 79. Nearest hundred: 0 + 0 = 0, far away. Rounding to tens is closer.')],
@@ -2241,6 +2323,9 @@ const MATH_EXAMPLES=[
   [/Which calculation finds how many stickers/, ()=>ex1('Ana has 5 stickers. She gets 3 more. Which calculation?', '5 + 3', 'She gets more, so we add: 5 + 3 = 8.')],
   [/together\? Type your answer/, ()=>ex1('3 red marbles and 4 blue marbles. How many together?', 7, 'Together means add: 3 + 4 = 7.')],
   [/Which number is the total number/, ()=>ex1('There are 12 marbles. 5 of them are red. Which number is the total?', 12, '12 is all the marbles together – the whole. 5 is only a part.')],
+  [/still on the shelves|still free|kilometres are left|bottle caps are left/, ()=>ex1('A shelf has 5,400 books. 1,200 are lent out. How many are left?', 4200, 'Step 1: take away the thousands: 5,400 − 1,000 = 4,400. Step 2: take away the rest: 4,400 − 200 = 4,200.')],
+  [/Which calculator keys check your answer/, ()=>ex1('You worked out 50 − 20 = 30. Which keys check it?', '30 + 20 =', 'Adding undoes taking away: 30 + 20 should give 50 again – the number you started with.')],
+  [/and the calculator shows/, q=>/right/.test(qAns(q))?ex1('You wrote 50 − 20 = 40. The check 40 + 20 = shows 60. What does that tell you?', 'My answer is wrong', 'The check should give 50 – the number you started with. 60 is not 50, so 40 is wrong. The right answer is 30.'):ex1('You wrote 50 − 20 = 30. The check 30 + 20 = shows 50. What does that tell you?', 'My answer is right', 'The check gives 50 again – the number you started with. So 30 is right.')],
   // Data Detective
   [/Which symbol makes this true/, q=>qAns(q)==='<'?ex1('52 ___ 25', '>', 'Compare the tens first: 5 tens are more than 2 tens, so 52 > 25. The open side faces the bigger number.'):ex1('25 ___ 52', '<', 'Compare the tens first: 2 tens are less than 5 tens, so 25 < 52. The open side faces the bigger number.')],
   [/on which day did the driver travel the (most|least)/, q=>{ const most=/most/.test(strip(q.prompt)); return ex1(`On which day did the driver travel the ${most?'most':'least'}?`, most?'Day 3':'Day 2', `Compare the three numbers: 120, 80 and 200. The ${most?'biggest is 200 (Day 3)':'smallest is 80 (Day 2)'}.`, tableHTML(['Day','Kilometres'],[['Day 1','120 km'],['Day 2','80 km'],['Day 3','200 km']])); }],
@@ -2254,6 +2339,9 @@ const MATH_EXAMPLES=[
   [/^[\d,]+ m = how many cm\?/, q=>qAns(q)==='100'?ex1('2 m = how many cm?', 200, 'Every metre has 100 centimetres. 2 m = 100 cm + 100 cm = 200 cm.'):ex1('1 m = how many cm?', 100, 'Every metre has 100 centimetres. So 1 m = 100 cm.')],
   [/A box holds .* stickers\. You have about/, ()=>ex1('A box holds 10 stickers. You have 12. What is true?', 'All but 2 fit', '10 fit in the box, 12 − 10 = 2 stay outside.')],
   [/How much is that in metres and centimetres/, ()=>ex1('120 cm = ? m ? cm', '1 m 20 cm', '100 cm make 1 m. 120 cm = 100 cm + 20 cm = 1 m 20 cm.')],
+  [/Only every second mark has a number/, q=>qAns(q)==='6'?ex1('The scale counts in 2s. What number is one step after 10?', 12, 'Each step is 2. One step after 10: 10 + 2 = 12.', scaleSVG(2,12)):ex1('The scale counts in 2s. What number is one step after 4?', 6, 'From 4 to 8 there are two steps, so each step is 2. One step after 4: 4 + 2 = 6.', scaleSVG(2,6))],
+  [/Read the line graph\. On which day was it/, q=>{ const hot=/warmest/.test(strip(q.prompt)); return ex1(`On which day was it ${hot?'warmest':'coldest'}?`, hot?'Day 2':'Day 3', `Look for the ${hot?'highest':'lowest'} dot: ${hot?'Day 2 at 20 °C':'Day 3 at 10 °C'}.`, lineSVG([{label:'Day 1',v:15},{label:'Day 2',v:20},{label:'Day 3',v:10}],{top:20,title:'Example: temperature (°C)'})); }],
+  [/Read the line graph\. How warm was it on/, q=>qAns(q)==='15 °C'?ex1('How warm was it on Day 3?', '10 °C', 'Go up from Day 3 to the dot, then across to the numbers on the side: 10 °C.', lineSVG([{label:'Day 1',v:15},{label:'Day 2',v:20},{label:'Day 3',v:10}],{top:20,title:'Example: temperature (°C)'})):ex1('How warm was it on Day 1?', '15 °C', 'Go up from Day 1 to the dot, then across: it sits halfway between 10 and 20 – that is 15 °C.', lineSVG([{label:'Day 1',v:15},{label:'Day 2',v:20},{label:'Day 3',v:10}],{top:20,title:'Example: temperature (°C)'}))],
   // Bar Graphs
   [/Read the graph\. How far did the car roll on/, ()=>ex1('How far did the car roll on Ramp A?', '40 cm', 'Find the bar for Ramp A. Follow its top to the numbers on the side: 40.', barChartSVG([{label:'Ramp A',v:40},{label:'Ramp B',v:20}],{titleText:'Example: how far the car rolled (cm)'}))],
   [/Read the graph\. On which surface did the car roll the farthest/, ()=>ex1('On which ramp did the car roll the farthest?', 'Ramp A', 'The tallest bar shows the farthest distance: Ramp A.', barChartSVG([{label:'Ramp A',v:40},{label:'Ramp B',v:20}],{titleText:'Example: how far the car rolled (cm)'}))],
