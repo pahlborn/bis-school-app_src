@@ -161,10 +161,13 @@ test('parent guidance and new research sources are included; unconfirmed methods
   await aboutAbschnitt(page,'Quellen');
   assert.ok(await page.locator('#aboutBody a[href="https://doi.org/10.3102/0034654314564881"]').isVisible());
   await page.locator('#aboutBack').click();
-  await elternOeffnen(page);await elternSeite(page,'help');
+  await elternOeffnen(page);await elternSeite(page,'guide');
   assert.ok((await page.textContent('#aboutBody')).includes('keine bestätigte schulweite Methode'));
   assert.equal(await page.locator('#aboutBody details.parent-method').count(),3);
-  assert.ok((await page.textContent('#aboutBody')).includes('noch keine neuen Aufgaben'));
+  // Peter 31.10.: the planning list of later topics (no links, no use) is gone
+  assert.ok(!(await page.textContent('#aboutBody')).includes('Lernlandkarte'));
+  await page.locator('.phdr [data-plang="en"]').click();
+  assert.ok((await page.textContent('#aboutBody')).includes('not a confirmed school-wide method'), 'cards in English too');
   await ctx.close();
 });
 
