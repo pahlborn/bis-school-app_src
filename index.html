@@ -154,6 +154,8 @@ button{font:inherit;color:inherit}
 .ptag{border-radius:999px;padding:2px 8px;font-size:.78rem;font-weight:700}
 .ptag.school{background:#DDF4FF;color:#0B5876}.ptag.need{background:#FFF1DC;color:#8A4B00}
 .phelp{background:#F4F7FF;border-radius:10px;padding:8px 10px;margin:8px 0;font-size:.92rem}
+.pv-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.ppreview h3{margin:0 0 4px}
 .psw{display:inline-flex;align-items:center;gap:8px;border:0;background:none;cursor:pointer;font-weight:700;min-height:44px;font-family:inherit;color:var(--ink)}
 .psw i{width:46px;height:26px;border-radius:13px;background:var(--line);position:relative;display:inline-block}
 .psw i::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.15s}
@@ -1633,6 +1635,112 @@ function buildRoundingAll(){ return retag(shuffle(half(buildRounding,4).concat(h
 function buildWordProblems(){ return retag(shuffle(half(buildWordProb,4).concat(half(buildStickers,4))), WPR); }
 function buildForcesAll(){ return retag(shuffle(half(buildForces,5).concat(half(buildChampion,3))), FOR); }
 
+/* ======================= COMING UP · topics for later (Peter, 01.11.) =======================
+   Maths topics that usually come later in Grade 3. They stay invisible to the child until a grown-up
+   turns them on for this child (grown-ups area, Maths, "Coming up"). Not part of the focus, the mixes
+   or practice sheets while they are off. */
+const TIM={label:'Times Tables', world:'times'}, FRA={label:'Fractions', world:'fractions'}, ARE={label:'Area & Perimeter', world:'area'}, ELA={label:'Time Passes', world:'elapsed'}, MAS={label:'Mass & Capacity', world:'mass'};
+const GROUP_THINGS=[['bags','apples'],['boxes','pencils'],['plates','cookies'],['vases','flowers'],['nests','eggs'],['cars','wheels']];
+function groupsQ(){
+  const g=2+rnd(4), n=pick([2,3,4,5,10]), it=pick(GROUP_THINGS);
+  return typed("There are <b>"+g+" "+it[0]+"</b> with <b>"+n+" "+it[1]+"</b> in each. How many "+it[1]+" are there? Type your answer.", g*n,
+    g+" groups of "+n+": "+Array(g).fill(n).join(" + ")+" = "+(g*n)+". That is "+g+" × "+n+" = "+(g*n)+".", Object.assign({tip:"Draw "+g+" circles and put "+n+" dots in each. Then count in "+n+"s."}, TIM));
+}
+function arraySVG(r,c){
+  const s=34, W=c*s+20, H=r*s+20; let h='';
+  for(let i=0;i<r;i++) for(let j=0;j<c;j++) h+=`<circle cx="${10+j*s+s/2}" cy="${10+i*s+s/2}" r="11" fill="var(--world)"/>`;
+  return `<svg viewBox="0 0 ${W} ${H}" width="${Math.min(100,W/3.2)}%" role="img" aria-label="${r} rows of ${c} dots">${h}</svg>`;
+}
+function arrayQ(){
+  const r=2+rnd(4), c=3+rnd(4);
+  return mc("Which multiplication fits the dots?", r+" × "+c, [r+" + "+c, r+" × "+(c+1), (r+1)+" × "+c],
+    r+" rows with "+c+" dots in each row: "+r+" × "+c+" = "+(r*c)+".", Object.assign({visual:arraySVG(r,c), grid:true, tip:"Count the rows. Then count the dots in one row."}, TIM));
+}
+function factQ(){
+  const a=pick([2,5,10,3,4]), b=1+rnd(10);
+  return typed("<b>"+b+" × "+a+"</b> = ? Type your answer.", a*b, b+" groups of "+a+": count in "+a+"s "+b+" times – "+Array.from({length:b},(_,i)=>a*(i+1)).join(", ")+".", Object.assign({tip:"Count in "+a+"s, "+b+" times. Use your fingers to keep track."}, TIM));
+}
+function skipQ(){
+  const s=pick([2,5,10,3,4]), k=1+rnd(5), seq=[s*k,s*(k+1),s*(k+2)];
+  return typed("Count in "+s+"s: <b>"+seq.join(", ")+", …</b> What comes next? Type your answer.", s*(k+3), "Each number is "+s+" more: "+seq[2]+" + "+s+" = "+(s*(k+3))+".", Object.assign({tip:"How much bigger is each number than the one before?"}, TIM));
+}
+function buildTimes(){ return shuffle([groupsQ(), groupsQ(), arrayQ(), arrayQ(), factQ(), factQ(), skipQ(), skipQ()]); }
+
+function fracSVG(n,k){
+  const W=320, H=70, w=(W-20)/n; let h='';
+  for(let i=0;i<n;i++) h+=`<rect x="${(10+i*w).toFixed(1)}" y="10" width="${w.toFixed(1)}" height="50" fill="${i<k?'var(--world)':'none'}" stroke="var(--ink)" stroke-width="2.5"/>`;
+  return `<svg viewBox="0 0 ${W} ${H}" width="70%" role="img" aria-label="A bar in ${n} equal parts, ${k} coloured">${h}</svg>`;
+}
+function shadedQ(){
+  const n=pick([2,3,4,6,8]), k=1+rnd(n-1), right=k+"/"+n;
+  const cands=uniq([(n-k)+"/"+n, n+"/"+k, k+"/"+(n-k), "1/"+n, (k+1)+"/"+n, k+"/"+(n+1)]).filter(t=>t!==right && t.split('/')[1]!=='0').slice(0,3);
+  return mc("What fraction of the bar is coloured?", right, cands, "The bar has "+n+" equal parts. "+k+" of them are coloured: "+right+".", Object.assign({visual:fracSVG(n,k), grid:true, tip:"Count all the equal parts first – that is the bottom number. Then count the coloured parts – the top number."}, FRA));
+}
+function ofSetQ(){
+  const d=pick([2,3,4]), n=d*(2+rnd(5)), name={2:'Half',3:'One third',4:'One quarter'}[d];
+  return typed("What is <b>"+name.toLowerCase()+" of "+n+"</b>? Type your answer.", n/d, "Share "+n+" fairly into "+d+" equal groups: "+Array(d).fill(n/d).join(" + ")+" = "+n+". One group is "+(n/d)+".", Object.assign({tip:"Share "+n+" fairly into "+d+" equal groups. How many are in one group?"}, FRA));
+}
+function unitCompareQ(){
+  const [a,b]=shuffle([2,3,4,8]).slice(0,2), lo=Math.min(a,b), hi=Math.max(a,b);
+  return two("Which is bigger: <b>1/"+a+"</b> or <b>1/"+b+"</b>?", ["1/"+a,"1/"+b], a<b?0:1,
+    "Cut the same bar into "+lo+" and into "+hi+" parts. Fewer parts means bigger pieces, so 1/"+lo+" is bigger.", Object.assign({visual:fracSVG(a,1)+fracSVG(b,1), tip:"Picture the same chocolate bar. Do you get a bigger piece when you share it with fewer or with more people?"}, FRA));
+}
+function buildFractions(){ return shuffle([shadedQ(), shadedQ(), shadedQ(), ofSetQ(), ofSetQ(), ofSetQ(), unitCompareQ(), unitCompareQ()]); }
+
+function rectSVG(w,h,grid){
+  const s=grid?40:28, W=w*s+90, H=h*s+70; let g='';
+  if(grid) for(let i=0;i<w;i++) for(let j=0;j<h;j++) g+=`<rect x="${45+i*s}" y="${20+j*s}" width="${s}" height="${s}" fill="var(--world)" fill-opacity=".35" stroke="var(--ink)" stroke-width="1.5"/>`;
+  else g+=`<rect x="45" y="20" width="${w*s}" height="${h*s}" fill="var(--world)" fill-opacity=".25" stroke="var(--ink)" stroke-width="3"/>`
+    +`<text x="${45+w*s/2}" y="${20+h*s+30}" text-anchor="middle" font-size="18" ${FD} fill="var(--ink)">${w} cm</text>`
+    +`<text x="${45+w*s+10}" y="${20+h*s/2}" dominant-baseline="central" font-size="18" ${FD} fill="var(--ink)">${h} cm</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" width="${Math.min(100,W/4.5)}%" role="img" aria-label="Rectangle ${w} by ${h}">${g}</svg>`;
+}
+function areaQ(){
+  const w=2+rnd(5), h=2+rnd(4);
+  return typed("How many squares cover the rectangle? (That is its <b>area</b>.) Type your answer.", w*h, h+" rows of "+w+" squares: "+h+" × "+w+" = "+(w*h)+" squares.", Object.assign({visual:rectSVG(w,h,true), tip:"Count the squares in one row. Then count the rows."}, ARE));
+}
+function perimQ(){
+  const w=3+rnd(7), h=2+rnd(5);
+  return typed("How far is it all the way around the rectangle? (That is its <b>perimeter</b>, in cm.) Type your answer.", 2*(w+h), w+" + "+h+" + "+w+" + "+h+" = "+(2*(w+h))+" cm.", Object.assign({visual:rectSVG(w,h,false), tip:"Walk around the edge: add all four sides – two long ones and two short ones."}, ARE));
+}
+const AREA_WHICH=[["You put a fence all the way around a garden.","Perimeter"],["You cover a floor with a carpet.","Area"],["You put a ribbon around the edge of a card.","Perimeter"],["You paint a whole wall.","Area"],["You tile a bathroom floor.","Area"],["You walk once around the playground.","Perimeter"]];
+function areaWhichQ(){
+  const r=pick(AREA_WHICH);
+  return two(r[0]+" Do you need the <b>area</b> or the <b>perimeter</b>?", ['Area','Perimeter'], r[1]==='Area'?0:1, r[1]==='Area'?"You cover the whole inside – that is the area.":"You go around the edge – that is the perimeter.", Object.assign({tip:"Around the edge = perimeter. Covering the inside = area."}, ARE));
+}
+function buildArea(){ return shuffle([areaQ(), areaQ(), areaQ(), perimQ(), perimQ(), perimQ(), areaWhichQ(), areaWhichQ()]); }
+
+function elapsedQ(){
+  const h=1+rnd(11), m1=5*rnd(6), d=pick([10,15,20,25,30]), m2=m1+d;
+  return typed("How many minutes from <b>"+h+":"+pad(m1)+"</b> to <b>"+h+":"+pad(m2)+"</b>? Type your answer.", d, "Count on in 5s from "+h+":"+pad(m1)+" to "+h+":"+pad(m2)+": that is "+d+" minutes.", Object.assign({visual:clockSVG(h,m1,170), tip:"Start at the first time and count on in 5s until you reach the second time."}, ELA));
+}
+function laterQ(){
+  const h=1+rnd(12), m=5*rnd(12), d=pick([10,15,20,30,45]), t=m+d, eh=(h+Math.floor(t/60)-1)%12+1, em=t%60, right=eh+":"+pad(em);
+  const cands=uniq([h+":"+pad(em), eh+":"+pad((em+5)%60), (h%12+1)+":"+pad(m), h+":"+pad(d)]).filter(x=>x!==right).slice(0,3);
+  return mc("It is <b>"+h+":"+pad(m)+"</b>. What time is it <b>"+d+" minutes later</b>?", right, cands, h+":"+pad(m)+" + "+d+" minutes = "+right+(eh!==h?" – the hour changes when you pass the full hour.":"."), Object.assign({visual:clockSVG(h,m,170), grid:true, tip:"Jump to the next full hour first if you pass it. Then add the minutes that are left."}, ELA));
+}
+const TIME_FACTS=[["How many minutes are in one hour?",60],["How many minutes are in half an hour?",30],["How many minutes are in a quarter of an hour?",15],["How many hours are in one day?",24],["How many seconds are in one minute?",60]];
+function timeFactQ(){ const r=pick(TIME_FACTS); return typed(r[0]+" Type your answer.", r[1], "Remember: 1 hour = 60 minutes, half an hour = 30 minutes, a quarter of an hour = 15 minutes, 1 day = 24 hours, 1 minute = 60 seconds.", Object.assign({tip:"Think of the clock: the long hand goes once around in one hour."}, ELA)); }
+function buildElapsed(){ return shuffle([elapsedQ(), elapsedQ(), elapsedQ(), laterQ(), laterQ(), laterQ(), timeFactQ(), timeFactQ()]); }
+
+const MASS_UNITS=[["An apple weighs about 150 ___.","g"],["A dog weighs about 20 ___.","kg"],["A big bottle of water holds about 1 ___.","l"],["A spoon of medicine is about 5 ___.","ml"],["A bag of potatoes weighs about 2 ___.","kg"],["A cup of tea holds about 250 ___.","ml"],["A bathtub holds about 150 ___.","l"],["A pencil weighs about 5 ___.","g"]];
+function massUnitQ(){
+  const r=pick(MASS_UNITS), opts=['g','kg','ml','l'];
+  return two(r[0]+" Which unit is right?", opts, opts.indexOf(r[1]), "g and kg tell how heavy something is; ml and l tell how much fits inside. Small amounts: g or ml. Big amounts: kg or l.", Object.assign({tip:"Is it about how heavy it is (g, kg) or how much fits inside (ml, l)? Is it small or big?"}, MAS));
+}
+function kgQ(){
+  const v=rnd(3), k=1+rnd(5);
+  if(v===0) return typed("<b>"+k+" kg</b> = how many g? Type your answer.", k*1000, "1 kg = 1,000 g, so "+k+" kg = "+fmt(k*1000)+" g.", Object.assign({tip:"1 kg is 1,000 g. How many thousands do you need?"}, MAS));
+  if(v===1) return typed("<b>"+k+" l</b> = how many ml? Type your answer.", k*1000, "1 l = 1,000 ml, so "+k+" l = "+fmt(k*1000)+" ml.", Object.assign({tip:"1 l is 1,000 ml. How many thousands do you need?"}, MAS));
+  return typed("<b>500 g + 500 g</b> = how many kg? Type your answer.", 1, "500 g + 500 g = 1,000 g = 1 kg.", Object.assign({tip:"Add the grams first. How many grams are in 1 kg?"}, MAS));
+}
+function kitchenScaleQ(){
+  const mark=100*(1+2*rnd(5)), below=mark-100;
+  return mc("The kitchen scale counts in grams. Only every second mark has a number. How heavy is the flour?", mark+" g", [(below+1)+" g", below+" g", (mark+100)+" g"],
+    "From "+below+" to "+(below+200)+" there are two steps, so each step is 100 g. The arrow is one step after "+below+": "+mark+" g.", Object.assign({visual:scaleSVG(100,mark), grid:true, tip:"How many steps are between two numbers? How much is one step?"}, MAS));
+}
+function buildMass(){ return shuffle([massUnitQ(), massUnitQ(), massUnitQ(), kgQ(), kgQ(), kgQ(), kitchenScaleQ(), kitchenScaleQ()]); }
+
 /* ======================= MIXES ======================= */
 /* Round-robin over the given quests: one question from each in turn, 8 in total. Every question keeps its own quest colour. */
 function mixFrom(keys){
@@ -1641,7 +1749,7 @@ function mixFrom(keys){
   while(out.length<8 && pools.some(p=>p.length)){ const p=pools[i%pools.length]; if(p.length) out.push(p.shift()); i++; }
   return shuffle(out);
 }
-const questsIn = s => s.items.filter(k=>k.indexOf('studio:')!==0 && !isArchived(WORLDS[k]));
+const questsIn = s => s.items.filter(k=>k.indexOf('studio:')!==0 && !isArchived(WORLDS[k]) && !isLocked(k));
 /* ======================= LEARNING LOGIC (hidden from the child) ======================= */
 /* Guidance follows the representations found on the class learning platform. Other subject hints
    are supporting practice, not a claim about an unverified school teaching method. */
@@ -1935,6 +2043,11 @@ const WORLDS={
   wordprob:{name:'Word Problems', sub:'Find the right numbers, calculate step by step, check', color:'var(--w-stickers)', icon:'stickers', build:buildWordProblems},
   detective:{name:'Data Detective', sub:'Read tables, estimate, compare with > and <', color:'var(--w-detective)', build:buildDetective},
   /* Science */
+  times:{name:'Times Tables', sub:'Equal groups, arrays, counting in 2s, 5s and 10s', color:'var(--w-numbers)', icon:'numbers', preview:true, build:buildTimes},
+  fractions:{name:'Fractions', sub:'Halves, thirds and quarters', color:'var(--w-round)', icon:'round', preview:true, build:buildFractions},
+  area:{name:'Area & Perimeter', sub:'Count the squares, go around the edge', color:'var(--w-detective)', icon:'detective', preview:true, build:buildArea},
+  elapsed:{name:'Time Passes', sub:'How long does it take? Minutes and hours', color:'var(--w-numbers)', icon:'numbers', preview:true, build:buildElapsed},
+  mass:{name:'Mass & Capacity', sub:'g and kg, ml and l', color:'var(--w-units)', icon:'units', preview:true, build:buildMass},
   forces:{name:'Forces & Friction', sub:'Ramps, fair tests, friction in real life', color:'var(--w-forces)', build:buildForcesAll},
   units:{name:'Units & Measuring', sub:'cm, m and g: write the unit every time', color:'var(--w-units)', build:buildUnits},
   graphs:{name:'Bar Graphs & Worksheets', sub:'Bar and line graphs, scales, answer every question', color:'var(--w-units)', icon:'units', build:buildGraphs},
@@ -1960,7 +2073,7 @@ const WORLDS={
 };
 /* Subjects as at school. A subject page lists its quests and studios. A quest with archived:true or past its until date (YYYY-MM-DD) moves to the archive at the bottom of its subject. */
 const SUBJECTS=[
-  {key:'maths', name:'Maths', sub:'Time, rounding, problems, data', color:'var(--w-numbers)', icon:'numbers', items:['numbers','round','combos','wordprob','detective']},
+  {key:'maths', name:'Maths', sub:'Time, rounding, problems, data', color:'var(--w-numbers)', icon:'numbers', items:['numbers','round','combos','wordprob','detective','times','fractions','area','elapsed','mass']},
   {key:'science', name:'Science', sub:'Forces, measuring, graphs', color:'var(--w-forces)', icon:'forces', items:['forces','units','graphs']},
   {key:'english', name:'English', sub:'Opinions, sentences, words', color:'var(--w-words)', icon:'words', items:['opinion','sentences','examples','words']},
   {key:'deutsch', name:'Deutsch', sub:'Anleitung, Lesen', color:'var(--w-anleitung)', icon:'anleitung', items:['anleitung','studio:read']},
@@ -1989,7 +2102,7 @@ function classTopics(){
   const list=uniq((recent.length?recent:done).flatMap(t=>t.focusNext)).filter(k=>WORLDS[k]);
   return list.length?list:FOCUS;
 }
-const cleanFocus = l => uniq(l).filter(k=>WORLDS[k] && !k.startsWith('mix_') && k!=='today' && !isArchived(WORLDS[k]));
+const cleanFocus = l => uniq(l).filter(k=>WORLDS[k] && !k.startsWith('mix_') && k!=='today' && !isArchived(WORLDS[k]) && !isLocked(k));
 function migrateFocus(){
   const saved=store.get('focus',null), on=store.get('focusOn',null), off=store.get('focusOff',null);
   if(Array.isArray(saved)){ store.set('focusMode','manual'); store.set('focusManual',cleanFocus(saved)); store.del('focus'); }
@@ -2004,7 +2117,7 @@ function focusTopics(){
   migrateFocus();
   const raw=k=>{ try{ return localStorage.getItem(storeKey(k))||''; }catch(e){ return ''; } };
   // computed once per change of the data (the start page asks for it many times)
-  const key=[storeKey('x'),raw('attempts').length,raw('ev').length,raw('focusMode'),raw('focusManual'),dayKey()].join('|');
+  const key=[storeKey('x'),raw('attempts').length,raw('ev').length,raw('focusMode'),raw('focusManual'),raw('unlocked'),dayKey()].join('|');
   if(focusMemo.key!==key) focusMemo={key, val:cleanFocus(focusManualMode()?store.get('focusManual',[]):focusAuto())};
   return focusMemo.val.slice();
 }
@@ -2018,6 +2131,8 @@ function toggleFocus(k){
 }
 const todayISO=new Date().toISOString().slice(0,10);
 const isArchived = d => !!d && (d.archived===true || (!!d.until && todayISO>d.until));
+/* Coming up (01.11.): a preview quest stays hidden from the child until grown-ups turn it on for this child. */
+const isLocked = k => !!(WORLDS[k] && WORLDS[k].preview) && !store.get('unlocked',[]).includes(k);
 SUBJECTS.forEach(s=>{ if(questsIn(s).length>1) WORLDS['mix_'+s.key]={name:s.name+' Mix', sub:'A bit of everything in '+s.name, color:s.color, icon:'mix', build:()=>mixFrom(questsIn(s))}; });
 const STUDIOS={
   grow:{name:'My Work Checklist', sub:'Tick what you did in your work this week', color:'var(--w-grow)', icon:'grow',
@@ -2129,7 +2244,7 @@ function openSubject(key){
   const body=$('#subjectBody'); body.innerHTML='';
   const old=k=>k.indexOf('studio:')!==0 && isArchived(WORLDS[k]);
   const list=document.createElement('div'); list.className='worlds';
-  s.items.filter(k=>!old(k)).forEach(k=>list.appendChild(questCard(k,key)));
+  s.items.filter(k=>!old(k) && !isLocked(k)).forEach(k=>list.appendChild(questCard(k,key)));
   if(WORLDS['mix_'+key]) list.appendChild(questCard('mix_'+key,key));
   body.appendChild(list);
   const archived=s.items.filter(old);
@@ -3148,7 +3263,7 @@ const PT={
     howSheets:'<b>So geht’s:</b> Blatt antippen (die Nummer steht auch auf dem Papier) und pro Aufgabe wählen, wie es lief. Vertippt? Einfach den richtigen Knopf antippen. „Mit Hilfe“ und „Noch nicht“ sind gut so: Die App bietet dann leichtere Schritte an und wiederholt die Aufgabe später. Ein Blatt, das nicht eingetragen wird, zählt einfach nicht.',
     howSettings:'<b>Was kann ich hier tun?</b> Fokus-Themen als Liste, Spannung der Pisolala-Geschichten, eine freiwillige Kalender-Erinnerung, Profilangaben des Kindes und die App-Version. Nichts davon ist Pflicht.',
     howHelp:'<b>Was kann ich hier tun?</b> Kurz nachlesen, wie die Schule ein Thema zeigt, und mit drei Fragen helfen statt vorzurechnen.',
-    back:'← Alle Fächer',focus:'Im Fokus',fm:'🎯 Fokus',fAuto:'Automatisch',fMan:'Manuell',fAutoTxt:'Die App wählt selbst: die Themen, die die Lehrkraft in ihren Bewertungen als nächste Schritte nennt, und dazu alles, wo die Einschätzung Unterstützung nahelegt. Das passt sich von selbst an. Tippen Sie bei einer Quest auf „Im Fokus“, wechselt die Wahl auf „Manuell“.',fManTxt:'Sie legen selbst fest, woraus „Practise Today“ und das Übungsblatt Aufgaben nehmen – zum Beispiel vor einem Test. Mit „Automatisch“ übernimmt wieder die App.',fNote:'Alle Quests bleiben für das Kind spielbar; der Fokus bestimmt nur, was „Practise Today“ und das Übungsblatt bevorzugen.',school:'nächster Schritt laut Schule',need:'braucht Übung',how:'💡 So helfen Sie',
+    back:'← Alle Fächer',focus:'Im Fokus',fm:'🎯 Fokus',pvT:'Ausblick: Themen für später',pvTxt:'Diese Themen kommen meist später im Schuljahr. Ihr Kind sieht sie erst, wenn Sie sie hier freigeben – zum Beispiel, wenn sie in der Schule drankommen oder Ihr Kind neugierig ist.',pvBtn:'Für das Kind freigegeben',pvOn:'freigegeben',pvOff:'nicht freigegeben',fAuto:'Automatisch',fMan:'Manuell',fAutoTxt:'Die App wählt selbst: die Themen, die die Lehrkraft in ihren Bewertungen als nächste Schritte nennt, und dazu alles, wo die Einschätzung Unterstützung nahelegt. Das passt sich von selbst an. Tippen Sie bei einer Quest auf „Im Fokus“, wechselt die Wahl auf „Manuell“.',fManTxt:'Sie legen selbst fest, woraus „Practise Today“ und das Übungsblatt Aufgaben nehmen – zum Beispiel vor einem Test. Mit „Automatisch“ übernimmt wieder die App.',fNote:'Alle Quests bleiben für das Kind spielbar; der Fokus bestimmt nur, was „Practise Today“ und das Übungsblatt bevorzugen.',school:'nächster Schritt laut Schule',need:'braucht Übung',how:'💡 So helfen Sie',
     basis:'Worauf beruht das?',trend:'Tendenz',recent:'Aktualität',sure:'Wie sicher?',when:'Belastbar ab etwa 20 Aufgaben an 5 Tagen über zwei Wochen.',
     tasks:(n,d)=>`${n} Aufgaben an ${d} ${d===1?'Tag':'Tagen'}`,self:'selbst gelöst',hint:'mit Hilfe',ex:n=>`davon ${n} mit Beispiel`,seen:'Lösungsweg angesehen',due:n=>`${n} Wiederholung${n===1?'':'en'} offen`,
     none:'noch nicht geübt',ago:n=>n===0?'heute geübt':n===1?'gestern geübt':`vor ${n} Tagen geübt`,old:'Ältere Belege – bei Gelegenheit neu prüfen',
@@ -3165,7 +3280,7 @@ const PT={
     howSheets:'<b>How it works:</b> tap a sheet (its number is also on the paper) and choose for each task how it went. Tapped the wrong one? Just tap the right button. “With help” and “Not yet” are fine: the app then offers easier steps and brings the task back later. A sheet that isn’t entered simply doesn’t count.',
     howSettings:'<b>What can I do here?</b> Focus topics as a list, how exciting Pisolala stories may be, an optional calendar reminder, the child\'s profile details and the app version. None of this is required.',
     howHelp:'<b>What can I do here?</b> Read briefly how the school teaches a topic and help with three questions instead of calculating for the child.',
-    back:'← All subjects',focus:'In focus',fm:'🎯 Focus',fAuto:'Automatic',fMan:'Manual',fAutoTxt:'The app chooses by itself: the topics the teacher names as next steps in the evaluations, plus everything where the summary suggests support. It adapts by itself. Tapping “In focus” at a quest switches to “Manual”.',fManTxt:'You decide where “Practise Today” and the practice sheet take their tasks from – for example before a test. Choose “Automatic” to let the app take over again.',fNote:'All quests stay playable for your child; the focus only decides what “Practise Today” and the practice sheet prefer.',school:'next step per school',need:'needs practice',how:'💡 How you can help',
+    back:'← All subjects',focus:'In focus',fm:'🎯 Focus',pvT:'Coming up: topics for later',pvTxt:'These topics usually come later in the school year. Your child only sees them once you turn them on here – for example when they come up at school or your child is curious.',pvBtn:'Visible to your child',pvOn:'turned on',pvOff:'turned off',fAuto:'Automatic',fMan:'Manual',fAutoTxt:'The app chooses by itself: the topics the teacher names as next steps in the evaluations, plus everything where the summary suggests support. It adapts by itself. Tapping “In focus” at a quest switches to “Manual”.',fManTxt:'You decide where “Practise Today” and the practice sheet take their tasks from – for example before a test. Choose “Automatic” to let the app take over again.',fNote:'All quests stay playable for your child; the focus only decides what “Practise Today” and the practice sheet prefer.',school:'next step per school',need:'needs practice',how:'💡 How you can help',
     basis:'What is this based on?',trend:'Trend',recent:'How recent',sure:'How sure?',when:'Reliable from about 20 tasks on 5 days over two weeks.',
     tasks:(n,d)=>`${n} tasks on ${d} ${d===1?'day':'days'}`,self:'on own',hint:'with help',ex:n=>`${n} of them with an example`,seen:'solution viewed',due:n=>`${n} review${n===1?'':'s'} open`,
     none:'not practiced yet',ago:n=>n===0?'practiced today':n===1?'practiced yesterday':`practiced ${n} days ago`,old:'Older evidence – check again when convenient',
@@ -3201,7 +3316,12 @@ const QUEST_INFO={
   team:{de:['Zusammenarbeit: zuhören, teilen, abwechseln.','Ein Spiel zu zweit spielen und vorher ausmachen, wer wann dran ist.'],en:['Teamwork: listen, share, take turns.','Play a game for two and agree beforehand who goes when.']},
   school:{de:['Glows & Grows: sich selbst einschätzen, Lernstrategien.','Fragen: „Was ist dir heute gut gelungen? Was übst du als Nächstes?“'],en:['Glows & Grows: self-assessment, learning strategies.','Ask: “What went well today? What will you practice next?”']},
   music:{de:['Rhythmus, Schlagwerk und die Aufführung.','Gemeinsam einen Rhythmus klatschen und nachmachen lassen.'],en:['Rhythm, percussion and the show.','Clap a rhythm together and let her copy it.']},
-  trip:{de:['Der Schulausflug (Archiv).','–'],en:['The school trip (archive).','–']}
+  trip:{de:['Der Schulausflug (Archiv).','–'],en:['The school trip (archive).','–']},
+  times:{de:['Malnehmen als gleich große Gruppen und Punktefelder (Ausblick).','Beim Tischdecken fragen: „4 Teller, je 2 Gabeln – wie viele Gabeln?“'],en:['Multiplication as equal groups and arrays (coming up).','When setting the table: “4 plates, 2 forks each – how many forks?”']},
+  fractions:{de:['Halbe, Drittel und Viertel (Ausblick).','Eine Pizza oder Schokolade gerecht teilen und benennen: „Jeder bekommt ein Viertel.“'],en:['Halves, thirds and quarters (coming up).','Share a pizza or a chocolate bar fairly and name it: “Everyone gets a quarter.”']},
+  area:{de:['Fläche (Kästchen zählen) und Umfang (einmal rundherum) (Ausblick).','Einen Tisch mit Bierdeckeln auslegen (Fläche) und mit einer Schnur umfahren (Umfang).'],en:['Area (count the squares) and perimeter (once around) (coming up).','Cover a table with coasters (area) and go around it with a string (perimeter).']},
+  elapsed:{de:['Zeitspannen: Wie lange dauert es? Minuten und Stunden (Ausblick).','„Wir fahren um 3:15 los und sind um 3:45 da – wie lange fahren wir?“'],en:['Elapsed time: how long does it take? Minutes and hours (coming up).','“We leave at 3:15 and arrive at 3:45 – how long is the trip?”']},
+  mass:{de:['Gewicht in g und kg, Rauminhalt in ml und l (Ausblick).','Beim Backen abwiegen und abmessen lassen und die Einheit dazu sagen lassen.'],en:['Mass in g and kg, capacity in ml and l (coming up).','When baking, let your child weigh and measure and say the unit.']}
 };
 const qInfo = (k,i) => { const x=QUEST_INFO[k]; return x?x[PL()][i]:(i===0?(WORLDS[k]&&WORLDS[k].sub)||'':''); };
 /* "How you can help" per quest (Peter, 01.11.: build now, review later through a real test with child,
@@ -3331,9 +3451,12 @@ function parentSubjectHTML(key){
       <div class="ptags">${tags}</div>
       ${helpHTML(a)}
       ${teacher?'':`<button type="button" class="psw" data-pfocus="${k}" aria-pressed="${focus.includes(k)}"><i></i>${T.focus}</button>`}</div>`; }).join('');
+  // Coming up (Peter, 01.11.): topics for later, invisible to the child until switched on here - one place only.
+  const pv=s.items.filter(k=>WORLDS[k] && WORLDS[k].preview);
+  const pvHTML=pv.length?`<div class="pcard ppreview"><h3>${T.pvT}</h3><p class="small">${T.pvTxt}</p>${pv.map(k=>{ const on=!isLocked(k); return `<div class="pv-row"><div><b>${esc(WORLDS[k].name)}</b><div class="small">${esc(qInfo(k,0))}</div></div>${teacher?`<span class="small">${on?T.pvOn:T.pvOff}</span>`:`<button type="button" class="psw" data-punlock="${k}" aria-pressed="${on}"><i></i>${T.pvBtn}</button>`}</div>`; }).join('')}</div>`:'';
   return `<button type="button" class="btn small" id="pBack">${T.back}</button><h2 class="psubjtitle">${esc(s.name)} <span class="small">· ${T.quests(list.length)}</span></h2>
     <p class="phow">${T.howSubj}</p>${teacher?'':`<div class="pfmode"><div class="phdr-row"><b>${T.fm}:</b><span class="plang" role="group" aria-label="${T.fm}"><button type="button" data-fmode="auto" class="${man?'':'on'}" aria-pressed="${!man}">${T.fAuto}</button><button type="button" data-fmode="manual" class="${man?'on':''}" aria-pressed="${man}">${T.fMan}</button></span></div><p class="small">${man?T.fManTxt:T.fAutoTxt} ${T.fNote}</p></div>`}
-    <div class="playout"><div class="pquests">${cards}</div><aside class="pside"><div class="pcard">${summaryHTML(list, s.name)}</div></aside></div>`;
+    <div class="playout"><div class="pquests">${cards}${pvHTML}</div><aside class="pside"><div class="pcard">${summaryHTML(list, s.name)}</div></aside></div>`;
 }
 const sheetDay = d => PL()==='de' ? d.split('-').reverse().join('.') : new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
 const sheetName = sh => (sh.no?(PL()==='de'?'Blatt ':'Sheet ')+sh.no+' · ':'')+sheetDay(sh.day);
@@ -3387,6 +3510,7 @@ function renderSheets(){
   body.querySelectorAll('[data-psubj]').forEach(b=>b.addEventListener('click',()=>{ state.psubj=b.dataset.psubj; renderSheets(); window.scrollTo(0,0); }));
   const back=$('#pBack'); if(back) back.addEventListener('click',()=>{ state.psubj=null; renderSheets(); window.scrollTo(0,0); });
   body.querySelectorAll('[data-pfocus]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; toggleFocus(b.dataset.pfocus); renderHome(); renderSheets(); }));
+  body.querySelectorAll('[data-punlock]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; const k=b.dataset.punlock, u=store.get('unlocked',[]); store.set('unlocked', u.includes(k)?u.filter(x=>x!==k):u.concat([k])); renderHome(); renderSheets(); }));
   body.querySelectorAll('[data-fmode]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; setFocusMode(b.dataset.fmode); renderHome(); renderSheets(); }));
   body.querySelectorAll('button[data-res]').forEach(b=>b.addEventListener('click',()=>enterResult(b.dataset.sheet, +b.dataset.i, b.dataset.res)));
   body.querySelectorAll('[data-psheetq]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; printSheet([b.dataset.psheetq]); renderSheets(); }));
