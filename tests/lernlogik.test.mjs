@@ -31,7 +31,7 @@ async function falschBeantworten(page, q) {
   if (q.kind === 'mc') await klick(page, `#qAnswers .opt[data-i="${(q.answer + 1) % q.options.length}"]`);
   else if (q.kind === 'type') { for (const z of String(+q.answer + 1)) await klick(page, `#qAnswers .key[aria-label="${z}"]`); await klick(page, '#qAnswers .key.go'); }
   else { for (const k of [...q.correct].reverse()) await klick(page, `#qAnswers .ord[data-i="${k}"]`); await klick(page, '#checkOrder'); }
-  if (!(await page.isVisible('#nextBtn'))) await klick(page, '#helpBtn');
+  if (!(await page.isVisible('#nextBtn'))) await klick(page, '#answerBtn');
 }
 
 test('jede Antwort wird mit Tag, Stufe und Ergebnis gemerkt', async () => {

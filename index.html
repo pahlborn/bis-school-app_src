@@ -345,6 +345,8 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 .badge-chip.silver{border-color:#9aa5b1}.badge-chip.gold{border-color:var(--sun)}
 .treat{display:flex;flex-direction:column;gap:10px;width:100%;text-align:left}
 .treat .row .btn{flex:1 1 120px}
+.help-row{gap:8px}
+.help-row .btn{flex:1 1 140px}
 .story{background:var(--soft);border-radius:14px;padding:14px 16px;line-height:1.6;white-space:pre-line}
 .advent{background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:12px}
 .doors{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-top:8px}
@@ -524,7 +526,7 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
       <div class="visual" id="qVisual" hidden></div>
       <div id="qAnswers" class="answers"></div>
       <div id="feedback" class="feedback" hidden aria-live="polite"></div>
-      <button class="btn ghost" id="helpBtn" type="button">Show me how</button>
+      <div class="row help-row" id="helpRow"><button class="btn ghost" id="helpBtn" type="button">Show me how</button><button class="btn ghost" id="answerBtn" type="button">Show me the answer</button></div>
       <button class="btn primary" id="nextBtn" type="button" hidden>Next</button>
     </div>
   </section>
@@ -2083,7 +2085,7 @@ function renderQuestion(){
   const A=$('#qAnswers'); A.innerHTML=''; A.className='answers'+(q.grid?' grid':'')+(q.grid3?' grid3':'');
   const fb=$('#feedback'); fb.hidden=true; fb.innerHTML=''; fb.className='feedback';
   const nb=$('#nextBtn'); nb.hidden=true; nb.textContent=state.idx===state.round.length-1?'See my stars':'Next question';
-  const help=$('#helpBtn'); help.hidden=false; help.textContent=helpLabels(q)[0];
+  $('#helpRow').hidden=false; $('#helpBtn').textContent=helpLabels(q)[0]; $('#answerBtn').textContent=helpLabels(q)[1]; $('#answerBtn').hidden=true;   // the answer only after the tip (Peter, 01.11.)
   if(q.kind==='mc'){
     q.options.forEach((o,i)=>{
       const b=document.createElement('button'); b.type='button'; b.className='opt'+(q.vis?' vis':'');
@@ -2129,7 +2131,7 @@ function feedback(ok, q, wrongText){
     : `<span class="mark">Not quite.</span>${wrongText}${esc(q.explain)}`;
   if(state.noteNow){ fb.insertAdjacentHTML('beforeend', '<p class="note-banner" style="margin-top:8px">'+esc(state.noteNow)+'</p>'); state.noteNow=null; }
   $('#nextBtn').hidden=false;
-  $('#helpBtn').hidden=true;
+  $('#helpRow').hidden=true;
   $('#nextBtn').focus({preventScroll:true});
   revealNext();
 }
@@ -2169,7 +2171,7 @@ function hintFeedback(q, response){
   fb.className='feedback hint'; fb.hidden=false;
   fb.innerHTML=`<span class="mark">${q.world==='anleitung'?'Noch ein Versuch':'Try one more time'}</span><p>${esc(h.text)}</p>${h.visual?`<div class="visual">${h.visual}</div>`:''}`;
   $('#nextBtn').hidden=true;
-  state.hinted=true; $('#helpBtn').textContent=helpLabels(q)[1];   // the tip was given: the button now offers the answer
+  state.hinted=true; $('#answerBtn').hidden=false;   // the tip was given: now the answer may be asked for
   fb.scrollIntoView({block:'nearest',behavior:'auto'});
   snapshot();
 }
@@ -2183,17 +2185,12 @@ function hintFeedback(q, response){
       short explanation, once. The task counts as not passed (yellow dot, no "Not quite" when the
       child had not answered yet), comes back for review, and a bridge of easier tasks follows. */
 const helpLabels = q => q.world==='anleitung' ? ['Zeig mir, wie','Zeig mir die Lösung'] : ['Show me how','Show me the answer'];
-function onHelp(){
-  if(state.answered) return;
-  if(!state.hinted) showHint(); else showWorked();
-}
 function showHint(){
   const q=state.round[state.idx], de=q.world==='anleitung', h=guidance(q,null,false), fb=$('#feedback');
-  state.hinted=true;
-  const log=store.get('attempts',[]); log.push({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,hintShown:true,qid:q.dueId||qId(q)}); store.set('attempts',log.slice(-200));
+  if(!state.hinted){ const log=store.get('attempts',[]); log.push({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,hintShown:true,qid:q.dueId||qId(q)}); store.set('attempts',log.slice(-200)); }
+  state.hinted=true; $('#answerBtn').hidden=false;
   fb.className='feedback hint'; fb.hidden=false;
   fb.innerHTML=`<span class="mark">${de?'So kannst du vorgehen':'Here’s a way to do it'}</span><p>${esc(h.text)}</p>${h.visual?`<div class="visual">${h.visual}</div>`:''}`;
-  $('#helpBtn').textContent=helpLabels(q)[1];
   fb.scrollIntoView({block:'nearest',behavior:'auto'});
   snapshot();
 }
@@ -2202,8 +2199,8 @@ function showWorked(){
   const q=state.round[state.idx], beforeTry=state.attempts===0, de=q.world==='anleitung';
   if(!state.evidenceRecorded){
     state.evidenceRecorded=true; rememberWrong(q);
-    // asked for the tip and then for the answer without trying: not passed, at support level
-    if(state.hinted) recordAnswer(Object.assign({},q,{assisted:true}),false);
+    // answer shown without an own try: not passed, at support level (Peter, 01.11.)
+    recordAnswer(Object.assign({},q,{assisted:true}),false);
   }
   const log=store.get('attempts',[]); log.push(Object.assign({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,solutionShown:true,qid:q.dueId||qId(q)},beforeTry?{beforeTry:true}:{})); store.set('attempts',log.slice(-200));
   if(beforeTry){
@@ -2219,7 +2216,7 @@ function showWorked(){
   const fb=$('#feedback'); fb.className='feedback '+(beforeTry?'hint':'bad'); fb.hidden=false;
   fb.innerHTML=`<span class="mark">${beforeTry?(de?'Das ist die Lösung':'Here’s the answer'):(de?'Noch nicht ganz.':'Not quite.')}</span><div class="worked">${h.visual?`<div class="visual">${h.visual}</div>`:''}<p>${esc(h.text)}</p><p><b>${de?'Lösung':'Answer'}: ${answer}</b></p></div>`;
   if(state.noteNow){ fb.insertAdjacentHTML('beforeend','<p class="note-banner" style="margin-top:8px">'+esc(state.noteNow)+'</p>'); state.noteNow=null; }
-  $('#nextBtn').hidden=false; $('#helpBtn').hidden=true; $('#nextBtn').focus({preventScroll:true}); revealNext();
+  $('#nextBtn').hidden=false; $('#helpRow').hidden=true; $('#nextBtn').focus({preventScroll:true}); revealNext();
   snapshot();
 }
 function answerMC(i){
@@ -2585,7 +2582,7 @@ function renderChallengeOffer(){
   $('#qLabel').textContent='Challenge';
   $('#qPrompt').textContent='Ready for a challenge? You choose!';
   $('#qVisual').hidden=true; $('#feedback').hidden=true; $('#nextBtn').hidden=true;
-  $('#helpBtn').hidden=true;
+  $('#helpRow').hidden=true;
   const A=$('#qAnswers'); A.className='answers';
   A.innerHTML='<button class="btn primary" id="takeChallenge" type="button">⚡ Take the challenge</button><button class="btn" id="skipChallenge" type="button">Not today</button>';
   $('#takeChallenge').addEventListener('click',()=>{ state.round[state.idx].accepted=true; renderQuestion(); });
@@ -3843,7 +3840,9 @@ $('#studioBack').addEventListener('click',goBack);
 $('#subjectBack').addEventListener('click',()=>{ state.back='home'; goBack(); });
 $('#todayBtn').addEventListener('click',()=>{ state.back='home'; startRound('today'); });
 $('#nextBtn').addEventListener('click',next);
-$('#helpBtn').addEventListener('click',onHelp);
+// two buttons side by side (Peter, 01.11.: "Show me how" must not disappear)
+$('#helpBtn').addEventListener('click',()=>{ if(!state.answered) showHint(); });
+$('#answerBtn').addEventListener('click',showWorked);
 $('#againBtn').addEventListener('click',()=>startRound(state.world));
 $('#homeBtn').addEventListener('click',goBack);
 $('#sheetBtn').addEventListener('click',printSheet);
