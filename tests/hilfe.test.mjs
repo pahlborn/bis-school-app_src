@@ -161,13 +161,20 @@ test('parent guidance and new research sources are included; unconfirmed methods
   await aboutAbschnitt(page,'Quellen');
   assert.ok(await page.locator('#aboutBody a[href="https://doi.org/10.3102/0034654314564881"]').isVisible());
   await page.locator('#aboutBack').click();
-  await elternOeffnen(page);await elternSeite(page,'guide');
-  assert.ok((await page.textContent('#aboutBody')).includes('keine bestätigte schulweite Methode'));
-  assert.equal(await page.locator('#aboutBody details.parent-method').count(),3);
+  // Peter 01.11.: how school shows a topic sits at the matching quest (practical help), the why in the concept
+  await elternOeffnen(page);
+  await page.locator('[data-psubj="maths"]').click();
+  const wp=page.locator('.pquest',{has:page.locator('[data-pfocus="wordprob"]')});
+  assert.ok((await wp.textContent()).includes('keine bestätigte schulweite Methode'));
+  for(const k of ['round','wordprob','combos']) assert.ok((await page.locator('.pquest',{has:page.locator(`[data-pfocus="${k}"]`)}).textContent()).includes('So zeigt es die Schule'),k);
+  await page.locator('#pBack').click();
+  await elternSeite(page,'concept');
+  assert.ok((await page.textContent('#aboutBody')).includes('Helfen wie die Schule'));
   // Peter 31.10.: the planning list of later topics (no links, no use) is gone
   assert.ok(!(await page.textContent('#aboutBody')).includes('Lernlandkarte'));
   await page.locator('.phdr [data-plang="en"]').click();
-  assert.ok((await page.textContent('#aboutBody')).includes('not a confirmed school-wide method'), 'cards in English too');
+  await page.locator('[data-psubj="maths"]').click();
+  assert.ok((await page.textContent('#aboutBody')).includes('not a confirmed school-wide method'), 'in English too');
   await ctx.close();
 });
 

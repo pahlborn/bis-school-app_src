@@ -11,8 +11,8 @@ before(async () => { server = await appServer(); browser = await browserStarten(
 after(async () => { await browser?.close(); server?.close(); });
 
 const MENUE = {
-  '#tabDe': ['Anleitung für Erwachsene', 'How to use Big Quest (für Kinder)', 'Grundidee', 'Leitgedanken', 'Aufbau', 'Lernlogik', 'Exkurs: Was passiert bei einer falschen Antwort?', 'Herkunft der Aufgaben', 'Datenschutz', 'Quellen'],
-  '#tabEn': ['Guide for grown-ups', 'How to use Big Quest', 'Idea', 'Guiding principles', 'How it works', 'Side note: what happens after a wrong answer?', 'Origin of the tasks', 'Privacy', 'Sources']
+  '#tabDe': ['Anleitung für Erwachsene', 'How to use Big Quest (für Kinder)', 'Grundidee', 'Leitgedanken', 'Aufbau', 'Lernlogik', 'Exkurs: Was passiert bei einer falschen Antwort?', 'Helfen wie die Schule', 'Wie die App einstuft – Titel, Lernbaum, Abzeichen und Stand', 'Herkunft der Aufgaben', 'Datenschutz', 'Quellen'],
+  '#tabEn': ['Guide for grown-ups', 'How to use Big Quest', 'Idea', 'Guiding principles', 'How it works', 'Side note: what happens after a wrong answer?', 'Helping the way school does', 'How the app judges – titles, learning tree, badges and level', 'Origin of the tasks', 'Privacy', 'Sources']
 };
 const titel = (page) => page.$$eval('#aboutBody details.about-sec > summary', (s) => s.map((x) => x.textContent.trim()));
 
@@ -76,5 +76,16 @@ test('the language choice is kept (flags) and switching shows the topics in the 
   assert.deepEqual(await titel(page), MENUE['#tabEn']);
   await page.locator('#tabDe').click();
   assert.deepEqual(await titel(page), MENUE['#tabDe']);
+  await ctx.close();
+});
+
+test('the concept explains how titles, tree, badges and levels are worked out (Peter, 01.11.)', async () => {
+  const { ctx, page } = await appOeffnen(browser, server.url);
+  await page.locator('#aboutBtn').click();
+  await page.locator('#tabDe').click();
+  const d = await aboutAbschnitt(page, 'Wie die App einstuft');
+  const t = await d.textContent();
+  for (const w of ['Explorer ab 0', 'Investigator ab 25', 'Scientist ab 60', 'Professor ab 120', 'Legend ab 250', '1, 3, 6, 10, 15 und 25 Tagen', 'Silber ab 5-mal', 'mindestens 80 %', '8 ersten Versuchen an mindestens 3 Tagen', '15 Prozentpunkte', '1, 3 und 7 Tagen']) assert.ok(t.includes(w), w);
+  assert.ok(!/Requires support|Consolidating|Meeting expectations|Extending/.test(t), 'no school terms on a child-reachable page');
   await ctx.close();
 });

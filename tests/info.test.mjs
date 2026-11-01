@@ -64,7 +64,8 @@ test('grown-ups area: every section has ⓘ with a German explanation; no guide 
   const infos = async () => page.$$eval('#aboutBody h2 .info-btn', (b) => b.map((x) => x.dataset.help));
   assert.ok((await infos()).includes('overview'), 'info at the summary');
   await elternSeite(page, 'settings');
-  await elternSeite(page, 'guide');
+  await elternSeite(page, 'support');
+  await elternSeite(page, 'app');
   const keys = await infos();
   for (const k of ['guidance', 'calendar', 'storycap', 'profile', 'version', 'sheets']) assert.ok(keys.includes(k), 'info at ' + k);
   const t = await hilfe(page, '#aboutBody .info-btn[data-help="storycap"]', 'Pisolala-Geschichten');
