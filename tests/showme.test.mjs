@@ -31,8 +31,8 @@ test('"Show me how" gives a short tip, not the answer: no evidence, no review, t
   assert.equal(await data(page, 'ev'), null, 'no evidence yet');
   assert.equal(await data(page, 'due'), null, 'no review yet');
   assert.ok(await page.locator('#qAnswers .opt[data-i="1"]').isEnabled(), 'answers still open');
-  assert.ok(await page.isVisible('#helpBtn'), '"Show me how" stays');
-  assert.equal(await page.textContent('#helpBtn'), 'Show me how');
+  assert.ok(await page.isVisible('#helpBtn'), 'the tip button stays, with a new job');
+  assert.equal(await page.textContent('#helpBtn'), 'Show me an example');
   assert.ok(await page.isVisible('#answerBtn'), 'now the answer can be asked for');
   assert.equal(await page.textContent('#answerBtn'), 'Show me the answer');
   assert.equal(await page.isVisible('#nextBtn'), false);
@@ -102,7 +102,7 @@ test('after a first mistake the tip comes by itself; the button then offers the 
   const { ctx, page } = await open();
   await page.locator('#qAnswers .opt[data-i="0"]').click();
   assert.match(await page.textContent('#feedback'), /Try one more time/);
-  assert.ok(await page.isVisible('#helpBtn'), '"Show me how" stays');
+  assert.equal(await page.textContent('#helpBtn'), 'Show me an example');
   assert.ok(await page.isVisible('#answerBtn'));
   await page.locator('#answerBtn').click();
   const ev = (await data(page, 'ev')).round;
@@ -129,8 +129,45 @@ test('German quest: "Zeig mir, wie" and "Zeig mir die Lösung"', async () => {
   assert.equal(await page.isVisible('#answerBtn'), false);
   await page.locator('#helpBtn').click();
   assert.match(await page.textContent('#feedback'), /So kannst du vorgehen/);
+  assert.equal(await page.isVisible('#helpBtn'), false, 'no easier example for this task: no button without a job');
   assert.equal(await page.textContent('#answerBtn'), 'Zeig mir die Lösung');
   await page.locator('#answerBtn').click();
   assert.match(await page.textContent('#feedback'), /Das ist die Lösung.*Lösung: Dann schneidet man das Papier aus\./s);
+  await ctx.close();
+});
+
+test('"Show me an example": an EASIER worked example with other numbers; then the child solves its own task (with help)', async () => {
+  const { ctx, page, fehler } = await open();
+  await page.locator('#helpBtn').click();
+  await page.locator('#helpBtn').click();          // Show me an example
+  const text = await page.textContent('#feedback');
+  assert.match(text, /An easier example/);
+  assert.match(text, /Now you – your question above\./);
+  const m = text.match(/Round (\d+) to the nearest hundred/);
+  assert.ok(m, 'a rounding example: ' + text.slice(0, 120));
+  assert.notEqual(+m[1], 470, 'other numbers');
+  assert.ok(await page.locator('#feedback .visual').count(), 'with the number line (support level)');
+  assert.match(text, /Answer: \d+/);
+  assert.ok(!/Answer: 500/.test(text), 'the example does not give away the answer of the task');
+  assert.equal(await page.isVisible('#helpBtn'), false, 'no third help button');
+  assert.ok(await page.isVisible('#answerBtn'));
+  assert.ok(await page.locator('#qAnswers .opt[data-i="1"]').isEnabled(), 'own task still open');
+  await page.locator('#qAnswers .opt[data-i="1"]').click();
+  assert.equal(await page.textContent('#roundStars'), '1');
+  assert.deepEqual((await data(page, 'ev')).round.map((e) => [e[1], e[2]]), [[1, 1]], 'with help: support level');
+  const log = await data(page, 'attempts');
+  assert.ok(log.some((a) => a.exampleShown));
+  const versuch = log.find((a) => a.attempt === 1);
+  assert.deepEqual([versuch.ok, versuch.help, versuch.example], [true, true, true]);
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
+
+test('no easier example for a task that is already at the support level', async () => {
+  const q = { ...roundQ(), level: 1 };
+  const { ctx, page } = await open(q);
+  await page.locator('#helpBtn').click();
+  assert.equal(await page.isVisible('#helpBtn'), false, 'nothing easier exists – no example button');
+  assert.ok(await page.isVisible('#answerBtn'));
   await ctx.close();
 });
