@@ -1672,7 +1672,7 @@ const levelOf = q => q.level||2;
 /* BIS standards each quest practises (from Toddle, Grade 3). Used for the parent view; never shown to the child. */
 const STANDARDS={
   numbers:['M-N1','M-N2'], round:['M-N3','M-N6'], combos:['M-N4','M-N6'], wordprob:['M-N4','M-N5'], detective:['M-N2','M-N3','M-D1'],
-  forces:['S-F1'], units:['M-M1'], graphs:['M-D1'], opinion:['E-W1'], sentences:['E-W1'], examples:['E-W1'], words:['E-R1'],
+  forces:['S-F1'], units:['M-M1'], graphs:['M-D1'], opinion:['E-W1','E-S2'], sentences:['E-W1'], examples:['E-W1'], words:['E-R1'],
   anleitung:['D-W1'], library:['E-W2']
 };
 
@@ -1695,7 +1695,8 @@ const KEY={minAnswers:6, minDays:2, meetsAcc:.8, meetsDays:3, meetsN:6, extAcc:.
 function standOf(skill){
   const e=(store.get('ev',{})[skill])||[];
   const days=new Set(e.map(x=>x[0])).size;
-  if(e.length<KEY.minAnswers || days<KEY.minDays) return 'NA';
+  // too little own practice: start from the school's latest rating of this quest's main standard (Peter, 01.11.)
+  if(e.length<KEY.minAnswers || days<KEY.minDays){ const sch=schoolStandFor(skill); return sch?sch.st:'NA'; }
   const at=l=>e.filter(x=>x[1]===l), acc=a=>a.length?a.reduce((s,x)=>s+x[2],0)/a.length:null, dayCount=a=>new Set(a.map(x=>x[0])).size;
   const l1=at(1), l2=at(2).slice(-20), l3=at(3).slice(-12);
   const meets=l2.length>=KEY.meetsN && acc(l2)>=KEY.meetsAcc && dayCount(l2.filter(x=>x[2]))>=KEY.meetsDays;
@@ -3140,6 +3141,7 @@ function legendHTML(){
   const T=PT[PL()], de=PL()==='de';
   return `<h2>${de?'Was bedeuten die Farben?':'What do the colors mean?'}</h2>`+['m','e','c','rs','na'].map(l=>`<p class="pleg"><span class="pdots"><i class="${l}"></i></span> <b>${PSTAND[PL()][l]}</b>${SCHOOLTERM[l]?` <i>(${SCHOOLTERM[l]})</i>`:''}</p>`).join('')+`<p class="small">${de?'„Vorläufig“ heißt: genug für eine erste Einschätzung, noch nicht über längere Zeit bestätigt. „Bestätigt“: etwa 20 Aufgaben an 5 Tagen über zwei Wochen.':'“Provisional” means enough for a first judgment, not yet confirmed over a longer time. “Confirmed”: about 20 tasks on 5 days over two weeks.'}</p>`;
 }
+function schoolLine(k){ const s=schoolStandFor(k); if(!s) return ''; return `<p class="pline"><b>${PL()==='de'?'🏫 Schule':'🏫 School'}:</b> ${pChip(SL[s.st]||'rs')} <span class="small">${fmtDay(s.day)}</span></p>`; }
 function parentSubjectHTML(key){
   if(accountsOn() && !viewedKid()) return parentHomeHTML();
   const T=PT[PL()], s=SUBJECTS.find(x=>x.key===key), focus=focusTopics(), list=questsIn(s).map(assessQuest), teacher=isTeacher(), man=focusManualMode();
@@ -3148,6 +3150,7 @@ function parentSubjectHTML(key){
       <p class="pline"><b>${T.basis}</b> ${a.n?`${T.tasks(a.n,a.days)}: ${a.self} ${T.self}, ${a.hint} ${T.hint}${a.ex?` (${T.ex(a.ex)})`:''}, ${a.seen}× ${T.seen}.`:T.none+'.'} ${a.due?T.due(a.due)+'.':''}</p>
       ${a.n?`<p class="pline"><b>${T.trend}:</b> ${T.tr[a.trend]} · <b>${T.recent}:</b> ${a.old?`<span class="pold">${T.old}</span>`:T.ago(a.age)}</p>`:''}
       ${a.sure!=='confirmed'&&a.n?`<p class="pline small">${T.when}</p>`:''}
+      ${schoolLine(k)}
       <div class="ptags">${tags}</div>
       ${helpHTML(a)}
       ${teacher?'':`<button type="button" class="psw" data-pfocus="${k}" aria-pressed="${focus.includes(k)}"><i></i>${T.focus}</button>`}</div>`; }).join('');
@@ -3190,6 +3193,7 @@ function renderSheets(){
   // the chapters only on the overview, not again inside a subject (Peter, 01.11.)
   const onOverview=!state.psubj || (accountsOn() && !viewedKid());
   const secs=[];
+  if(accountsOn()) secs.push(['school', de?'🏫 Einstufungen der Schule':'🏫 School ratings', schoolHTML()]);
   if(!teacher) secs.push(['sheets', T.sheets, sheetsPageHTML()]);
   if(!teacher) secs.push(['settings', T.settings, storyCapHTML()+reminderHTML()+profileAdminHTML()]);
   // Peter, 01.11.: three kinds of reading matter, kept apart - practical support, the concept, using the app
@@ -3331,6 +3335,7 @@ const HELP={
   sheet:{kid:true,title:'Practice sheet',text:'<p>A sheet with 6 tasks and a writing task, plus an answer page for grown-ups.</p><p>Share it as a PDF (by mail, message or into Files) or print it. Afterwards a grown-up can enter how it went.</p>'},
   overview:{title:'Wie entsteht die Einschätzung?',text:'<p>Gezählt wird nur der <b>erste Versuch</b> jeder Aufgabe: selbst gelöst, mit Hinweis oder Lösungsweg angesehen. Eine Einschätzung gibt es erst ab <b>8 Aufgaben an 3 Tagen</b> – vorher „Noch nicht einschätzbar“, das sagt nichts Schlechtes.</p><p><b>Vorläufig</b> heißt: erste Einschätzung. <b>Bestätigt</b> erst nach etwa 20 Aufgaben an 5 Tagen über zwei Wochen. Eine <b>Tendenz</b> steht nur da, wenn zwei Zeiträume genug Aufgaben haben. Nach mehr als 3 Wochen Pause steht „ältere Belege“ – Ferien sind kein Leistungsabfall.</p><p>Das ist <b>keine schulische Bewertung</b> und wird dem Kind nie gezeigt.</p>'},
   focus:{title:'Fokus-Themen',text:'<p>Aus diesen Themen stellt „Practise Today“ die 8 Fragen zusammen; auch die Übungsblätter nutzen sie. Auf der Startseite tragen sie das Zeichen „Focus“.</p><p>Die App wählt sie selbst: was gerade im Unterricht dran ist und wo Übung hilft. Unter „🎯 Fokus“ können Sie auf „Manuell“ umstellen und selbst wählen.</p>'},
+  school:{title:'Einstufungen der Schule',text:'<p>Die Einstufungen stammen aus den bewerteten Aufgaben auf der Lernplattform der Schule. Solange in der App für eine Quest noch zu wenig geübt wurde (weniger als 6 Antworten oder 2 Tage), richtet die App die Schwierigkeit der Aufgaben danach aus. Danach zählt die eigene Übung.</p><p>Die Einschätzung im Elternbereich beruht nur auf der Übung in der App. Neue Bewertungen der Schule werden bei Gelegenheit übernommen.</p>'},
   calendar:{title:'Kalender-Erinnerung',text:'<p>Freiwillig: erzeugt eine Kalenderdatei mit einer wiederkehrenden, freundlichen Einladung zum Üben. Die App selbst schickt keine Nachrichten.</p>'},
   storycap:{title:'Pisolala-Geschichten',text:'<p>Hier legen Sie fest, wie spannend eine Geschichte höchstens sein darf. Das Kind wählt selbst bis zu dieser Grenze. Jede Stufe bleibt freundlich.</p>'},
   profile:{title:'Profilangaben',text:'<p>Name, Geburtstag (ohne Jahr) und Emoji, die das Kind unter „My profile“ eingetragen hat. Sie liegen nur auf diesem Gerät. Löschen entfernt nur diese Angaben, keine Lerndaten.</p>'},
@@ -3343,6 +3348,7 @@ const HELP={
 const HELP_EN={
   overview:{title:'How is the summary made?',text:'<p>Only the <b>first try</b> at each task counts: solved on their own, with a hint, or after viewing the solution. A judgment appears only after <b>8 tasks on 3 days</b> – until then it says “not enough to tell yet”, which says nothing bad.</p><p><b>Provisional</b> means a first judgment. <b>Confirmed</b> only after about 20 tasks on 5 days over two weeks. A <b>trend</b> is shown only when two periods have enough tasks. After a break of more than 3 weeks it says “older evidence” – vacations are not a drop in ability.</p><p>This is <b>not a school assessment</b> and is never shown to your child.</p>'},
   focus:{title:'Focus topics',text:'<p>“Practise Today” builds its 8 questions from these topics; practice sheets use them too. On the start page they carry the “Focus” sign.</p><p>The app picks them by itself: what is taught in class right now and where practice helps. Under “🎯 Focus” you can switch to “Manual” and choose yourself.</p>'},
+  school:{title:'School ratings',text:'<p>The ratings come from the evaluated assignments on the school’s learning platform. While there is too little practice in the app for a quest (fewer than 6 answers or 2 days), the app sets the difficulty of the tasks by them. After that, the app’s own practice counts.</p><p>The summary in the grown-ups area is based only on practice in the app. New school evaluations are added from time to time.</p>'},
   calendar:{title:'Calendar reminder',text:'<p>Optional: creates a calendar file with a recurring, friendly invitation to practice. The app itself never sends messages.</p>'},
   storycap:{title:'Pisolala stories',text:'<p>Set how exciting a story may be at most. Your child chooses up to this limit. Every level stays kind.</p>'},
   profile:{title:'Profile details',text:'<p>Name, birthday (without year) and emoji that your child entered under “My profile”. Stored only on this device. Deleting removes only these details, no learning data.</p>'},
@@ -3351,7 +3357,7 @@ const HELP_EN={
   testday:{title:'Test account: +1 day',text:'<p><b>+1 day</b> moves the app’s clock one day ahead, for this test account only. You see right away what would otherwise happen tomorrow: mistakes come back as reviews, the learning tree grows, and the summary in the grown-ups area collects practice days.</p><p>Your child’s data is not touched. <b>Delete test data</b> resets the test account completely (including the day).</p>'},
   guidance:{title:'Supporting your child',text:'<p>The key rules in brief. Concrete help for each topic – including how school shows it – is in the overview at every quest under “💡 How you can help”.</p>'}
 };
-const ADULT_H2=[['Einschätzung','overview'],['Summary','overview'],['Pisolala','storycap'],['Freiwillige Kalender','calendar'],['Optional calendar','calendar'],['Profilangaben','profile'],['Profile details','profile'],['App-Version','version'],['App version','version'],['Übungsblätter','sheets'],['Practice sheets','sheets'],['So unterstützen','guidance'],['Supporting','guidance']];
+const ADULT_H2=[['Einstufungen der Schule','school'],['School ratings','school'],['Einschätzung','overview'],['Summary','overview'],['Pisolala','storycap'],['Freiwillige Kalender','calendar'],['Optional calendar','calendar'],['Profilangaben','profile'],['Profile details','profile'],['App-Version','version'],['App version','version'],['Übungsblätter','sheets'],['Practice sheets','sheets'],['So unterstützen','guidance'],['Supporting','guidance']];
 function addAdultInfo(root){ root.querySelectorAll('h2').forEach(h=>{ const m=ADULT_H2.find(([t])=>h.textContent.trim().startsWith(t)); if(m && !h.querySelector('.info-btn')) h.insertAdjacentHTML('beforeend',` <button type="button" class="info-btn" data-help="${m[1]}" aria-label="Info">ⓘ</button>`); }); }
 function openHelp(key){
   const base=HELP[key]; if(!base) return;
@@ -3506,6 +3512,81 @@ const STANDARD_TEXT={
   'D-W1':'Anleitung schreiben (Lernziele aus der Unterrichtsaufgabe)'
 };
 const PARENT_STAND={NA:'Noch zu wenige Belege',RS:'Requires support',C:'Consolidating',M:'Meeting expectations',E:'Extending'};
+const STANDARD_TEXT_EN={
+  'M-N1':'Place value and writing numbers to 9,999, zero as a placeholder',
+  'M-N2':'Comparing, sorting and ordering numbers to 9,999 (< and >)',
+  'M-N3':'Rounding to the nearest 10, 100 and 1,000',
+  'M-N4':'Addition strategies and two-step word problems',
+  'M-N5':'Subtraction strategies and two-step word problems',
+  'M-N6':'Estimating and checking answers',
+  'M-D1':'Collecting data; bar and line graphs with scale and labels',
+  'M-M1':'Estimating, comparing and measuring length in cm and m',
+  'S-F1':'Forces and applying scientific understanding',
+  'E-W1':'Writing: ideas in a logical order',
+  'E-W2':'Finding and presenting information from reliable sources',
+  'E-R1':'Word building and reading comprehension (practice mapping)',
+  'D-W1':'Writing instructions (German class)',
+  'E-S1':'Speaking and listening: thinking about the audience',
+  'E-S2':'Speaking and listening: expressing and discussing opinions'
+};
+STANDARD_TEXT['E-S1']='Sprechen und Zuhören: an das Publikum denken';
+STANDARD_TEXT['E-S2']='Sprechen und Zuhören: Meinungen äußern und besprechen';
+/* Ratings the school gave the child (Peter, 01.11.: the tasks should build on them). Read on 01.11.2026
+   from the class learning platform (child account, read only): all evaluated assignments and the one
+   awaiting evaluation. Kept per account; only inside the encrypted app; the child never sees it.
+   Letters: C = Consolidating, M = Meeting expectations (school legend). ATL/Learner profile:
+   ES = emerging with support, Obs. = observed, Ind. = independent. */
+const SCHOOL_DATA={kathie:{asOf:'2026-11-01', tasks:[
+  {day:'2026-10-27', area:'math', title:'Mastering Basic Numbers and Calculations – Milestone', std:{'M-N1':'C','M-N2':'M','M-N3':'M','M-N4':'C','M-N5':'C','M-N6':'C'}, quests:['wordprob','combos','round'],
+   good:{de:'Auf Zehner runden sicher; mit dem Überschlag begründet, warum die Sticker nicht in die Schachtel passen.',en:'Rounding to the nearest ten is secure; used the estimate to explain why the stickers would not fit in the box.'},
+   next:{de:'Zahlen in Sachaufgaben genau lesen (die Gesamtzahl wurde verlesen); klare Strategien für Plus- und Minusaufgaben mit mehreren Schritten.',en:'Read the numbers in word problems carefully (the total was misread); clear strategies for multi-step addition and subtraction.'}},
+  {day:'2026-10-15', area:'english', title:'Persuade for the Park! (opinion writing)', std:{'E-S1':'C','E-S2':'M'}, atl:{'Caring':'Ind.','Thinkers':'Obs.','Connection':'Ind.'}, quests:['opinion','examples','sentences'],
+   good:{de:'Meinung am Anfang und am Ende klar formuliert; gute Gründe (Bewegung, Natur erleben).',en:'Opinion stated clearly at the beginning and the end; good reasons (exercise, learning about nature).'},
+   next:{de:'Beispiele genauer und persönlicher; Großbuchstaben am Satzanfang und bei Namen, Satzzeichen prüfen.',en:'Make examples more specific and personal; capital letters at the start of sentences and for names, check punctuation.'}},
+  {day:'2026-10-15', area:'math', title:'Lesson 4 – rounding to the nearest hundred', std:{}, quests:['round'],
+   good:{de:'Nachbar-Hunderter 100 und 200 und die Mitte 150 richtig; 120 richtig eingetragen und auf 100 gerundet.',en:'Benchmark hundreds 100 and 200 and the halfway point 150 correct; placed 120 correctly and rounded it to 100.'},
+   next:{de:'Genauer erklären, woran man erkennt, welcher Hunderter näher ist (Abstände, Mitte).',en:'Explain in more detail how you know which hundred is closer (distances, halfway point).'}},
+  {day:'2026-10-04', area:'science', title:'Friction Frenzy (friction experiment)', std:{'E-W1':'C','E-W2':'C','M-D1':'C','M-M1':'C','S-F1':'C'}, atl:{'Research skills':'Obs.','Critical thinking: giving reasons':'Ind.','Transfer: generalising':'Ind.','Function':'Ind.','Responsibility':'ES'}, quests:['forces','units','graphs','finish','examples'],
+   good:{de:'Versteht Reibung (mehr Reibung = kürzere Strecke) und begründet klar; arbeitet gut in der Gruppe mit.',en:'Understands friction (more friction = shorter distance) and explains it clearly; works well in the group.'},
+   next:{de:'Genauere Hypothese; Messwerte vollständig und mit richtiger Einheit (cm statt m), Masse notieren; Balkendiagramm vollständig beschriften; jede Frage beantworten.',en:'More specific hypothesis; record all measurements with the right unit (cm, not m) and the mass; label the bar graph completely; answer every question.'}},
+  {day:'2026-10-03', area:'math', title:'Mastering Basic Numbers – Apprentice (Travel for Work)', std:{'M-N1':'C','M-N3':'C','M-N4':'C'}, quests:['combos','round','detective'],
+   good:{de:'Tabelle richtig gelesen (wenigste und meiste Fahrt); Überschlag durch Runden auf Hunderter richtig; 900 am Zahlenstrahl und mit Gleichungen zerlegt.',en:'Read the table correctly (least and most travel); estimate by rounding to hundreds correct; broke 900 apart on a number line and with equations.'},
+   next:{de:'Verschiedene Zerlegungen von 900 finden statt dreimal dieselbe Zahl; begründen, warum auf Hunderter oder auf Zehner gerundet wird.',en:'Find different ways to break 900 apart instead of the same number three times; explain why to round to hundreds or to tens.'}},
+  {day:'2026-10-21', pending:true, area:'learner', title:'Glows and Grows (self-assessment)', std:{}, quests:['school'],
+   good:{de:'Eingereicht am 21.10.; die Bewertung steht noch aus.',en:'Turned in on Oct 21; the evaluation is still pending.'}, next:{de:'',en:''}}
+]}};
+const schoolUser = () => { if(viewUser) return viewUser; try{ return (JSON.parse(localStorage.getItem('bq2_session')||'null')||{}).user||null; }catch(e){ return null; } };
+const schoolData = () => accountsOn() ? (SCHOOL_DATA[schoolUser()]||null) : null;
+const SL={C:'c',M:'m',E:'e',RS:'rs',N:'rs'};
+/* latest rating per standard: [{day, r}] newest first */
+function schoolRatings(d){
+  const per={};
+  (d?d.tasks:[]).filter(t=>!t.pending).forEach(t=>Object.entries(t.std).forEach(([s,r])=>{ (per[s]=per[s]||[]).push({day:t.day,r}); }));
+  Object.values(per).forEach(l=>l.sort((a,b)=>a.day<b.day?1:-1));
+  return per;
+}
+/* the school's starting value for a quest: the latest rating of its first (main) standard */
+function schoolStandFor(k){
+  const d=schoolData(), s=(STANDARDS[k]||[])[0]; if(!d || !s) return null;
+  const l=schoolRatings(d)[s]; return l&&l.length?{st:l[0].r==='N'?'RS':l[0].r, day:l[0].day}:null;
+}
+const fmtDay = d => PL()==='de' ? d.split('-').reverse().join('.') : new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+function schoolHTML(){
+  const d=schoolData(), de=PL()==='de', L=de?'de':'en';
+  const T=de?{h:'Einstufungen der Schule',intro:'Von der Lernplattform übernommen (Stand {d}). Die App nutzt sie als <b>Startwert für die Aufgabenwahl</b>, solange in der App noch zu wenig geübt wurde; danach zählt die eigene Übung. Das Kind sieht davon nichts.',std:'Standards – zuletzt',area:'Bereich',now:'Einstufung',before:'vorher',quests:'Übt in der App',atl:'Lernkompetenzen und Learner Profile',atlKey:'ES = mit Unterstützung, Obs. = beobachtet, Ind. = selbstständig',tasks:'Bewertete Aufgaben',good:'Das gelingt',next:'Nächste Schritte',pend:'Wartet auf Bewertung',none:'Für dieses Kind liegen noch keine Einstufungen der Schule vor.',areas:{math:'Mathe',english:'Englisch',science:'Science',learner:'Lernen'}}
+                :{h:'School ratings',intro:'Taken from the learning platform (as of {d}). The app uses them as a <b>starting point for choosing tasks</b> while there is too little practice in the app; after that the app’s own practice counts. Your child never sees them.',std:'Standards – latest',area:'Area',now:'Rating',before:'before',quests:'Practiced in the app',atl:'Learning skills and learner profile',atlKey:'ES = emerging with support, Obs. = observed, Ind. = independent',tasks:'Evaluated assignments',good:'Going well',next:'Next steps',pend:'Awaiting evaluation',none:'There are no school ratings for this child yet.',areas:{math:'Math',english:'English',science:'Science',learner:'Learning'}};
+  if(!d) return `<h2>${T.h}</h2><p>${T.none}</p>`;
+  const per=schoolRatings(d), area=s=>s.startsWith('M-')?T.areas.math:s.startsWith('E-')?T.areas.english:s.startsWith('S-')?T.areas.science:'Deutsch';
+  const rows=Object.keys(per).sort().map(s=>{ const l=per[s], k=SL[l[0].r]||'na', qs=Object.keys(STANDARDS).filter(q=>STANDARDS[q].includes(s)&&WORLDS[q]).map(q=>esc(WORLDS[q].name)).join(', ');
+    return `<tr><td>${area(s)}</td><td>${esc((de?STANDARD_TEXT:STANDARD_TEXT_EN)[s]||s)}</td><td>${pChip(k)} <span class="small">${fmtDay(l[0].day)}</span>${l[1]?`<br><span class="small">${T.before}: ${PSTAND[L][SL[l[1].r]]} (${fmtDay(l[1].day)})</span>`:''}</td><td class="small">${qs||'–'}</td></tr>`; }).join('');
+  const atl=d.tasks.filter(t=>t.atl).map(t=>Object.entries(t.atl).map(([a,v])=>`<li>${esc(a)}: <b>${esc(v)}</b> <span class="small">(${esc(t.title)}, ${fmtDay(t.day)})</span></li>`).join('')).join('');
+  const done=d.tasks.filter(t=>!t.pending).sort((a,b)=>a.day<b.day?1:-1), pend=d.tasks.filter(t=>t.pending);
+  const task=t=>`<details class="about-sec"><summary>${fmtDay(t.day)} · ${esc(t.title)}</summary><div class="about-sec-body">${Object.keys(t.std).length?`<p>${Object.entries(t.std).map(([s,r])=>`${esc((de?STANDARD_TEXT:STANDARD_TEXT_EN)[s]||s)}: ${pChip(SL[r])}`).join('<br>')}</p>`:''}<p><b>${T.good}:</b> ${esc(t.good[L])}</p>${t.next[L]?`<p><b>${T.next}:</b> ${esc(t.next[L])}</p>`:''}<p class="small">${T.quests}: ${t.quests.filter(q=>WORLDS[q]).map(q=>esc(WORLDS[q].name)).join(', ')}</p></div></details>`;
+  return `<h2>${T.h}</h2><p class="small">${T.intro.replace('{d}',fmtDay(d.asOf))}</p><h3 class="psub">${T.std}</h3><div class="tablewrap"><table class="dt"><thead><tr><th>${T.area}</th><th>Standard</th><th>${T.now}</th><th>${T.quests}</th></tr></thead><tbody>${rows}</tbody></table></div>`
+    +(atl?`<h3 class="psub">${T.atl}</h3><p class="small">${T.atlKey}</p><ul>${atl}</ul>`:'')
+    +`<h3 class="psub">${T.tasks}</h3><div class="about-menu">${done.map(task).join('')}</div>`
+    +(pend.length?`<h3 class="psub">${T.pend}</h3><div class="about-menu">${pend.map(task).join('')}</div>`:'');
+}
 function parentOverviewHTML(){
   const ev=store.get('ev',{}), attempts=store.get('attempts',[]);
   const standards=uniq(Object.values(STANDARDS).flat());
@@ -3730,6 +3811,7 @@ const ABOUT_DE=()=>`
 <li><b>Lernbaum:</b> wächst mit den Übungstagen (Tage mit mindestens einer Antwort in der App oder einem eingetragenen Übungsblatt): neue Stufen nach 1, 3, 6, 10, 15 und 25 Tagen. Er welkt nie, Pausen schaden nicht.</li>
 <li><b>Abzeichen:</b> zählen Verhalten, nicht Ergebnisse – Risk-taker (eine Challenge angenommen), Thinker (eine Herausforderungsaufgabe gelöst), Open-minded (eine Kombinationsaufgabe auf Herausforderungsniveau gelöst), Reflective (ein „Glow“ gewählt), Balanced (eine Idee ohne Bildschirm umgesetzt), Inquirer (ein Thema zum ersten Mal ausprobiert). Silber ab 5-mal, Gold ab 15-mal.</li>
 <li><b>Interner Stand je Quest</b> (nur zur Aufgabenwahl, das Kind sieht ihn nie): Grundlage sind die letzten 60 ersten Versuche dieser Quest, je mit Tag, Stufe (1 Grundlage, 2 Klassenniveau, 3 Herausforderung) und richtig/falsch. Mit Tipp, Beispiel oder Brücke gelöste Aufgaben zählen auf Stufe 1. Noch nicht einschätzbar: weniger als 6 Antworten oder weniger als 2 Tage. Sicher: unter den letzten 20 Antworten auf Klassenniveau mindestens 6, davon mindestens 80 % richtig, richtig an mindestens 3 Tagen. Darüber hinaus: zusätzlich unter den letzten 12 Herausforderungs-Antworten mindestens 4, davon mindestens 70 % richtig, an mindestens 2 Tagen. Wird sicherer: Klassenniveau mindestens 50 % richtig (ohne Klassenniveau: Grundlage mindestens 80 %). Sonst: braucht Unterstützung. Danach richtet sich die nächste Runde: bei „braucht Unterstützung“ keine Herausforderungen und mindestens zwei Grundlage-Aufgaben, bei „wird sicherer“ höchstens eine Herausforderung, bei „sicher“ zwei bis drei, darüber hinaus drei bis vier.</li>
+<li><b>Startwert aus der Schule:</b> Solange es für eine Quest noch zu wenig eigene Übung gibt (weniger als 6 Antworten oder weniger als 2 Tage), nimmt die App für die Aufgabenwahl die letzte Einstufung der Schule im Hauptstandard dieser Quest. Die Einschätzung im Elternbereich beruht dagegen nur auf eigener Übung.</li>
 <li><b>Einschätzung im Elternbereich:</b> derselbe Stand, aber erst ab 8 ersten Versuchen an mindestens 3 Tagen; vorher „Noch nicht einschätzbar“. „Bestätigt“ ab 20 ersten Versuchen an 5 Tagen über mindestens 14 Tage, sonst „vorläufig“. Eine Tendenz steht erst ab 16 ersten Versuchen, wenn beide Hälften an mindestens 3 Tagen geübt wurden: steigend oder fallend, wenn sich der Anteil „selbst gelöst“ um mehr als 15 Prozentpunkte ändert. Liegt die letzte Übung mehr als 21 Tage zurück, steht „ältere Belege“ – Ferien sind kein Leistungsabfall.</li>
 <li><b>Fokus:</b> automatisch die Themen aus dem Unterricht plus jede Quest mit „braucht Unterstützung“ oder „wird sicherer“; Erwachsene können unter „🎯 Fokus“ auf „Manuell“ umstellen und selbst wählen.</li>
 <li><b>Wiederholung:</b> Eine falsch gelöste oder gezeigte Aufgabe kommt nach 1, 3 und 7 Tagen wieder und rückt erst nach einer selbstständigen richtigen Lösung weiter.</li>
@@ -3777,6 +3859,7 @@ const ABOUT_EN=()=>`
 <li><b>Learning tree:</b> grows with practice days (days with at least one answer in the app or an entered practice sheet): new stages after 1, 3, 6, 10, 15 and 25 days. It never wilts; breaks do no harm.</li>
 <li><b>Badges:</b> count behavior, not results – Risk-taker (took a challenge), Thinker (solved a challenge-level task), Open-minded (solved a challenge-level combination task), Reflective (chose a “Glow”), Balanced (did an idea without a screen), Inquirer (tried a topic for the first time). Silver from 5 times, gold from 15 times.</li>
 <li><b>Internal level per quest</b> (only for choosing tasks, never shown to the child): based on the last 60 first tries of this quest, each with day, level (1 support, 2 grade level, 3 challenge) and right/wrong. Tasks solved with a tip, an example or a bridge count at level 1. Not yet possible to judge: fewer than 6 answers or fewer than 2 days. Secure: among the last 20 grade-level answers at least 6, at least 80 % right, right on at least 3 days. Going beyond: in addition, among the last 12 challenge answers at least 4, at least 70 % right, on at least 2 days. Getting there: grade level at least 50 % right (without grade-level answers: support level at least 80 %). Otherwise: needs support. The next round follows from this: with “needs support” no challenges and at least two support tasks, with “getting there” at most one challenge, with “secure” two to three, going beyond three to four.</li>
+<li><b>Starting point from school:</b> while there is too little own practice for a quest (fewer than 6 answers or fewer than 2 days), the app uses the school’s latest rating of the quest’s main standard to choose tasks. The summary in the grown-ups area, on the other hand, is based only on own practice.</li>
 <li><b>Summary in the grown-ups area:</b> the same level, but only from 8 first tries on at least 3 days; before that “Not yet possible to judge”. “Confirmed” from 20 first tries on 5 days over at least 14 days, otherwise “provisional”. A trend is shown only from 16 first tries, when both halves were practiced on at least 3 days: rising or falling when the share solved on their own changes by more than 15 percentage points. If the last practice was more than 21 days ago, it says “older evidence” – vacations are not a drop in ability.</li>
 <li><b>Focus:</b> automatically the topics taught in class plus every quest with “needs support” or “getting there”; grown-ups can switch to “Manual” under “🎯 Focus” and choose themselves.</li>
 <li><b>Review:</b> a task answered wrongly or shown comes back after 1, 3 and 7 days and only moves on after a correct answer without help.</li>
