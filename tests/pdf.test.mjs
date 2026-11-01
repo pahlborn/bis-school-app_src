@@ -33,7 +33,7 @@ test('practice sheet: dialog with PDF first; PDF has tasks, writing task and the
   assert.ok(await page.isVisible('#sheetDlg'));
   assert.ok(await page.isVisible('#sheetPdf'));
   const [download] = await Promise.all([page.waitForEvent('download'), page.locator('#sheetPdf').click()]);
-  assert.match(download.suggestedFilename(), /^Practice sheet \d{4}-\d{2}-\d{2}\.pdf$/);
+  assert.match(download.suggestedFilename(), /^Practice sheet \d+ \d{4}-\d{2}-\d{2}\.pdf$/);
   const buf = await fs.readFile(await download.path());
   const pdf = pruefePdf(buf);
   assert.ok(pdf.seiten >= 2, 'task page(s) and answer page: ' + pdf.seiten);

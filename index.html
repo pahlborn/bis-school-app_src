@@ -173,6 +173,12 @@ button{font:inherit;color:inherit}
 .about-sec[open]>summary::after,.psec[open]>summary::after{transform:rotate(90deg)}
 .about-sec-body,.psec-body{padding:0 16px 12px}
 .psecs{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+.psheet{border:2px solid var(--line);border-radius:14px;margin:8px 0;background:var(--surface)}
+.psheet>summary{cursor:pointer;min-height:48px;padding:8px 12px;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+.psheet>.sheetrow,.psheet>p{margin:0 12px 10px}
+.psheet-st{font-size:.85rem;color:var(--muted);font-weight:700}
+.psheet.open .psheet-st,.psheet.part .psheet-st{color:#8A4B00}
+.psheet.done .psheet-st{color:#0F6B43}
 .flags{display:inline-flex;gap:4px;margin-left:auto}
 .flag{min-width:48px;min-height:44px;border-radius:12px;border:2px solid var(--line);background:var(--surface);line-height:0;cursor:pointer;padding:0 8px;opacity:.5;display:inline-flex;align-items:center;justify-content:center}
 .flagsvg{width:28px;height:17px;border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
@@ -359,7 +365,7 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 .sheetrow{display:flex;flex-direction:column;gap:6px;border-top:2px solid var(--line);padding:10px 0}
 .sheetrow .q{font-size:.95rem}
 .sheetrow .row .btn{flex:1 1 90px}
-.sheetrow .btn.on{background:var(--soft);border-color:var(--accent)}
+.sheetrow .btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
 /* printing: only the practice sheet goes on paper, always in light colours */
 #printArea{display:none}
 @media print{
@@ -2573,7 +2579,9 @@ function buildSheet(){
   const items=[]; let i=0;
   while(items.length<6 && pools.some(p=>p.length)){ const p=pools[i%pools.length]; if(p.length) items.push(p.shift()); i++; }
   const german=topics.indexOf('anleitung')>=0 || (!topics.some(k=>['opinion','sentences','examples'].includes(k)) && Math.random()<.5);
-  const sheet={id:dayKey()+'-'+Date.now().toString(36), day:dayKey(), items:items.map(q=>({q:q, res:null})), writing:german?'de':'en'};
+  // a running number makes paper and app match, also for two sheets on the same day
+  const no=(+store.get('sheetNo',0)||0)+1; store.set('sheetNo',no);
+  const sheet={id:dayKey()+'-'+Date.now().toString(36), day:dayKey(), no, items:items.map(q=>({q:q, res:null})), writing:german?'de':'en'};
   const all=store.get('sheets',[]); all.push(sheet); store.set('sheets', all.slice(-8));
   return sheet;
 }
@@ -2600,11 +2608,11 @@ function renderSheet(sheet){
   const writing=sheet.writing==='de'
     ? `<div class="task"><span class="nr">${sheet.items.length+1}.</span><b>Schreibe eine Anleitung für deine Traummaschine</b> in 4 Schritten. Benutze die Man-Form und die Satzanfänge <i>Als Erstes, Als Nächstes, Danach, Zum Schluss</i>.<div class="lines"><div></div><div></div><div></div><div></div></div></div>`
     : `<div class="task"><span class="nr">${sheet.items.length+1}.</span><b>Write an OREO paragraph:</b> Should our class have a reading corner? <i>I think… One reason is… For example… That is why…</i> Capital letters and full stops!<div class="lines"><div></div><div></div><div></div><div></div></div></div>`;
-  const page1=`<section class="sheet"><h1>My Practice Sheet</h1><div class="meta"><span>Name: ${name}</span><span>Date: ${sheet.day}</span><span>Believe. Inspire. Succeed.</span></div>
+  const page1=`<section class="sheet"><h1>My Practice Sheet</h1><div class="meta"><span>Name: ${name}</span><span>${sheet.no?'Sheet '+sheet.no+' · ':''}Date: ${sheet.day}</span><span>Believe. Inspire. Succeed.</span></div>
     ${sheet.items.map((it,i)=>paperTask(it.q, i+1, i===mathsIdx)).join('')}${writing}
     <div class="task ticks">☐ I answered every question &nbsp; ☐ I checked my units &nbsp; ☐ I explained one task to a grown-up &nbsp; ☐ I worked with someone<br>
     Today I am proud of: ______________________________ &nbsp; Next I will practise: ______________________________</div></section>`;
-  const page2=`<section class="sheet answers-page"><h1>Answers – for grown-ups</h1><div class="meta"><span>Sheet of ${sheet.day}</span><span>Enter results in the app: 👪 Grown-ups → Practice sheets</span></div>
+  const page2=`<section class="sheet answers-page"><h1>Answers – for grown-ups</h1><div class="meta"><span>${sheet.no?'Sheet '+sheet.no+' · '+sheet.day:'Sheet of '+sheet.day}</span><span>Enter results in the app: 👪 Grown-ups → Practice sheets</span></div>
     <ol>${sheet.items.map(it=>`<li>${keyFor(it.q)}<br><span class="small">${esc(it.q.explain||'')}</span></li>`).join('')}<li>Writing: look for order words, complete sentences, capitals and full stops.</li></ol>
     <p class="small">Working shown and units written = what the class rubric asks for. A second way to check = the next step up.</p></section>`;
   return page1+page2;
@@ -2626,7 +2634,7 @@ async function sharePdf(){
   if(!currentSheet) return;
   const msg=$('#sheetMsg'); msg.textContent='PDF wird erstellt …';
   try{
-    const bytes=await sheetPdf(currentSheet), name='Practice sheet '+currentSheet.day+'.pdf', file=new File([bytes],name,{type:'application/pdf'});
+    const bytes=await sheetPdf(currentSheet), name='Practice sheet '+(currentSheet.no?currentSheet.no+' ':'')+currentSheet.day+'.pdf', file=new File([bytes],name,{type:'application/pdf'});
     if(navigator.canShare && navigator.share && navigator.canShare({files:[file]})){
       try{ await navigator.share({files:[file], title:'Practice sheet'}); msg.textContent='PDF geteilt.'; return; }catch(e){ if(e && e.name==='AbortError'){ msg.textContent=''; return; } }
     }
@@ -2717,7 +2725,7 @@ async function pdfVisual(doc, html){
 async function sheetPdf(sheet){
   const doc=new PdfDoc(), name=store.get('name','')||'________________';
   doc.text('My Practice Sheet',{size:20,bold:true,gap:6});
-  doc.text(`Name: ${name}     Date: ${sheet.day}     Believe. Inspire. Succeed.`,{size:10,gap:10});
+  doc.text(`Name: ${name}     ${sheet.no?'Sheet '+sheet.no+'  -  ':''}Date: ${sheet.day}     Believe. Inspire. Succeed.`,{size:10,gap:10});
   let mathsIdx=sheet.items.findIndex(it=>MATHS.indexOf(it.q.world)>=0 && !it.q.visual); if(mathsIdx<0) mathsIdx=sheet.items.findIndex(it=>MATHS.indexOf(it.q.world)>=0);
   for(let i=0;i<sheet.items.length;i++){
     const q=sheet.items[i].q;
@@ -2737,7 +2745,7 @@ async function sheetPdf(sheet){
   doc.text('Today I am proud of: ______________________________   Next I will practise: ______________________________',{size:10});
   doc.newPage();
   doc.text('Answers – for grown-ups',{size:18,bold:true,gap:6});
-  doc.text(`Sheet of ${sheet.day}. Enter the results in the app afterwards (grown-ups area).`,{size:10,gap:10});
+  doc.text(`${sheet.no?'Sheet '+sheet.no+' of '+sheet.day:'Sheet of '+sheet.day}. Enter the results in the app afterwards: Grown-ups > Practice sheets.`,{size:10,gap:10});
   sheet.items.forEach((it,i)=>{ const q=it.q, key=q.kind==='mc'?`${LETTERS[q.answer]}${q.htmlOptions?'':' – '+strip(q.options[q.answer])}`:q.kind==='type'?String(q.answer):q.correct.map((k,j)=>`${j+1}. ${strip(q.items[k])}`).join(' · ');
     doc.text(`${i+1}. ${key}`,{size:11,bold:true}); if(q.explain) doc.text(strip(q.explain),{size:10,x:12}); doc.space(3); });
   doc.text(`${sheet.items.length+1}. Writing: look for order words, complete sentences, capitals and full stops.`,{size:11,bold:true});
@@ -2745,18 +2753,41 @@ async function sheetPdf(sheet){
   return doc.bytes();
 }
 
-/* grown-ups: enter the results of a printed sheet; they count like answers in the app (with help = support level) */
-/* grown-ups: enter the results of a printed sheet; they count like answers in the app (with help = support level) */
+/* Grown-ups enter the results of a printed sheet (Peter, 31.10./01.11.). Each result counts like a first
+   try in the app (with help = support level) - also in the grown-ups' summary - and can be corrected:
+   tapping another button takes the old entry back exactly. Results of older versions (without a
+   record) stay as they are. A sheet without any entry can be discarded; it never counts. */
 const RES_T={de:{ok:'✓ Richtig', help:'🤝 Mit Hilfe', no:'↻ Noch nicht'}, en:{ok:'✓ Correct', help:'🤝 With help', no:'↻ Not yet'}};
 const RES=RES_T.en;
+const sameEv = (a,b) => a && b && a[0]===b[0] && a[1]===b[1] && a[2]===b[2];
+function undoResult(it){
+  const r=it.rec; if(!r) return false;
+  const ev=store.get('ev',{}), list=ev[it.q.world]||[];
+  for(let i=list.length-1;i>=0;i--) if(sameEv(list[i],r.ev)){ list.splice(i,1); break; }
+  ev[it.q.world]=list; store.set('ev',ev);
+  store.set('attempts', store.get('attempts',[]).filter(a=>a.sheet!==r.key));
+  if(r.due) store.set('due', store.get('due',[]).filter(d=>d.id!==r.due));
+  it.rec=null; it.res=null; return true;
+}
 function enterResult(sheetId, idx, res){
-  if(!parentAccess) return;
-  const all=store.get('sheets',[]), sh=all.find(s=>s.id===sheetId); if(!sh || sh.items[idx].res) return;
-  const q=sh.items[idx].q; sh.items[idx].res=res; store.set('sheets',all);
+  if(!parentAccess || !RES_T.en[res]) return;
+  const all=store.get('sheets',[]), sh=all.find(s=>s.id===sheetId), it=sh && sh.items[idx]; if(!it || it.res===res) return;
+  if(it.res && !undoResult(it)) return;            // an old result without a record stays locked
+  const q=it.q, key=sheetId+':'+idx;
   if(res==='ok') recordAnswer(q,true);
   else if(res==='help') recordAnswer(Object.assign({},q,{level:1}),true);
   else { recordAnswer(q,false); rememberWrong(q); }
-  renderSheets();
+  const list=(store.get('ev',{})[q.world])||[];
+  it.rec={ev:list[list.length-1]||null, key, due:res==='no'?(q.dueId||qId(q)):null};
+  const log=store.get('attempts',[]); log.push({day:dayKey(), skill:q.world, level:levelOf(q), attempt:1, ok:res!=='no', help:res==='help', sheet:key}); store.set('attempts',log.slice(-200));
+  it.res=res; store.set('sheets',all);
+  state.psheetOpen=sheetId; renderSheets();
+}
+function discardSheet(sheetId){
+  if(!parentAccess) return;
+  const all=store.get('sheets',[]), sh=all.find(s=>s.id===sheetId); if(!sh || sh.items.some(i=>i.res)) return;
+  if(!confirm(PL()==='de'?'Dieses Blatt verwerfen? Es zählt dann einfach nicht.':'Discard this sheet? It simply won’t count.')) return;
+  store.set('sheets', all.filter(s=>s!==sh)); renderSheets();
 }
 const EXCITE_DE={1:'🌙 gemütlich', 2:'⭐ ein bisschen spannend', 3:'⚡ abenteuerlich'};
 const storyCapHTML = () => { const de=PL()==='de', X=de?EXCITE_DE:EXCITE;
@@ -2777,7 +2808,7 @@ const PT={
   de:{home:'🏠 Übersicht',sheets:'📄 Übungsblätter',settings:'👧 Für das Kind',help:'💡 Helfen wie die Schule',
     howHome:'<b>So lesen Sie diese Seite:</b> Links sehen Sie dieselben Fächer wie das Kind; jedes Kästchen ist eine Quest. Rechts steht die Einschätzung in Worten. Tippen Sie auf ein Fach, um zu sehen, was geübt wird, worauf die Einschätzung beruht und wie Sie helfen können.',
     howSubj:'<b>Was kann ich hier tun?</b> Sie sehen jede Quest dieses Fachs mit Stand, Grundlage und einem Tipp. Mit <b>„Im Fokus“</b> legen Sie fest, woraus „Practise Today“ und das Übungsblatt Aufgaben nehmen – alles andere bleibt für das Kind trotzdem spielbar. <b>Empfehlung:</b> 2–4 Themen insgesamt: was gerade im Unterricht dran ist und wo Übung hilft.',
-    howSheets:'<b>Was kann ich hier tun?</b> Nach einem Übungsblatt tragen Sie pro Aufgabe ein, wie es lief. „Mit Hilfe“ und „Noch nicht“ sind gut so: Die App bietet dann leichtere Schritte an und wiederholt die Aufgabe später.',
+    howSheets:'<b>So geht’s:</b> Blatt antippen (die Nummer steht auch auf dem Papier) und pro Aufgabe wählen, wie es lief. Vertippt? Einfach den richtigen Knopf antippen. „Mit Hilfe“ und „Noch nicht“ sind gut so: Die App bietet dann leichtere Schritte an und wiederholt die Aufgabe später. Ein Blatt, das nicht eingetragen wird, zählt einfach nicht.',
     howSettings:'<b>Was kann ich hier tun?</b> Fokus-Themen als Liste, Spannung der Pisolala-Geschichten, eine freiwillige Kalender-Erinnerung, Profilangaben des Kindes und die App-Version. Nichts davon ist Pflicht.',
     howHelp:'<b>Was kann ich hier tun?</b> Kurz nachlesen, wie die Schule ein Thema zeigt, und mit drei Fragen helfen statt vorzurechnen.',
     back:'← Alle Fächer',rec:'Empfehlung übernehmen',focus:'Im Fokus',school:'im Unterricht',need:'braucht Übung',how:'💡 So helfen Sie',
@@ -2794,7 +2825,7 @@ const PT={
   en:{home:'🏠 Overview',sheets:'📄 Practice sheets',settings:'👧 For your child',help:'💡 Help like the school',
     howHome:'<b>How to read this page:</b> on the left are the same subjects your child sees; each small square is a quest. On the right is a summary in plain words. Tap a subject to see what is practiced, what the summary is based on, and how you can help.',
     howSubj:'<b>What can I do here?</b> You see every quest of this subject with its status, basis and a tip. <b>“In focus”</b> decides where “Practise Today” and the practice sheet take their tasks from – everything else stays playable. <b>Recommendation:</b> 2–4 topics in total: what is taught right now and where practice helps.',
-    howSheets:'<b>What can I do here?</b> After a practice sheet, enter for each task how it went. “With help” and “Not yet” are fine: the app then offers easier steps and repeats the task later.',
+    howSheets:'<b>How it works:</b> tap a sheet (its number is also on the paper) and choose for each task how it went. Tapped the wrong one? Just tap the right button. “With help” and “Not yet” are fine: the app then offers easier steps and brings the task back later. A sheet that isn’t entered simply doesn’t count.',
     howSettings:'<b>What can I do here?</b> Focus topics as a list, how exciting Pisolala stories may be, an optional calendar reminder, the child\'s profile details and the app version. None of this is required.',
     howHelp:'<b>What can I do here?</b> Read briefly how the school teaches a topic and help with three questions instead of calculating for the child.',
     back:'← All subjects',rec:'Use recommendation',focus:'In focus',school:'in class now',need:'needs practice',how:'💡 How you can help',
@@ -2875,10 +2906,13 @@ function summaryHTML(list, scope){
 }
 const isTeacher = () => !!(accountsOn() && adultUser && adultUser.role==='teacher');
 function parentHomeHTML(){
-  const T=PT[PL()], focus=focusTopics(), all=[];
+  const T=PT[PL()], de=PL()==='de', focus=focusTopics(), all=[];
   const tiles=SUBJECTS.map(s=>{ const qs=questsIn(s), list=qs.map(assessQuest); all.push(...list); const f=qs.filter(k=>focus.includes(k)).length;
     return `<button type="button" class="psubject" data-psubj="${s.key}"><span class="prow"><span class="pico" style="background:${s.color}">${ICONS[s.icon]||''}</span><span class="pname">${esc(s.name)}</span></span><span class="pdots">${list.map(a=>`<i class="${a.level}" title="${esc(WORLDS[a.k].name)}"></i>`).join('')}</span><span>${pChip(subjectLevel(list))}${f?` <span class="focus">${T.focusN(f)}</span>`:''}</span></button>`; }).join('');
-  return `<p class="phow">${T.howHome}</p><div class="playout"><div class="psubjects">${tiles}</div><aside class="pside"><div class="pcard" id="pSummary">${summaryHTML(all)}</div><div class="pcard">${legendHTML()}</div></aside></div>`;
+  // A waiting practice sheet is mentioned once, calmly, with a way straight to it (not for teachers).
+  const wait=isTeacher()?[]:waitingSheets(), w=wait[wait.length-1];
+  const note=w?`<p class="phow psheet-note">📄 ${wait.length===1?(de?`${sheetName(w)} wartet aufs Eintragen.`:`${sheetName(w)} is waiting to be entered.`):(de?`${wait.length} Übungsblätter warten aufs Eintragen.`:`${wait.length} practice sheets are waiting to be entered.`)} <button type="button" class="btn small" data-opensheet="${w.id}">${de?'Jetzt eintragen':'Enter now'}</button></p>`:'';
+  return `${note}<p class="phow">${T.howHome}</p><div class="playout"><div class="psubjects">${tiles}</div><aside class="pside"><div class="pcard" id="pSummary">${summaryHTML(all)}</div><div class="pcard">${legendHTML()}</div></aside></div>`;
 }
 function legendHTML(){
   const T=PT[PL()], de=PL()==='de';
@@ -2899,9 +2933,27 @@ function parentSubjectHTML(key){
     <div class="playout"><div class="pquests">${cards}</div><aside class="pside"><div class="pcard">${summaryHTML(list, s.name)}</div></aside></div>`;
 }
 const sheetDay = d => PL()==='de' ? d.split('-').reverse().join('.') : new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+const sheetName = sh => (sh.no?(PL()==='de'?'Blatt ':'Sheet ')+sh.no+' · ':'')+sheetDay(sh.day);
+/* State of a sheet: open (nothing entered), part, done, or stale (open and older than 14 days). */
+function sheetState(sh){
+  const n=sh.items.filter(i=>i.res).length;
+  if(n===sh.items.length) return 'done';
+  if(n) return 'part';
+  return daysBetween(sh.day, dayKey())>14 ? 'stale' : 'open';
+}
+const waitingSheets = () => store.get('sheets',[]).filter(sh=>['open','part'].includes(sheetState(sh)));
 function sheetsPageHTML(){
-  const T=PT[PL()], de=PL()==='de', R=RES_T[PL()], all=store.get('sheets',[]).slice().reverse();
-  return `<h2>${de?'Übungsblätter':'Practice sheets'}</h2><p class="phow">${T.howSheets}</p>`+(all.length?all.map(sh=>`<h3>${de?'Blatt vom':'Sheet from'} ${sheetDay(sh.day)}</h3>`+sh.items.map((it,i)=>`<div class="sheetrow"><div class="q"><b>${i+1}.</b> ${esc(strip(sheetPrompt(it.q)).slice(0,140))}</div><div class="row">${Object.keys(R).map(r=>`<button type="button" class="btn small${it.res===r?' on':''}" data-sheet="${sh.id}" data-i="${i}" data-res="${r}"${it.res?' disabled':''}>${R[r]}</button>`).join('')}</div></div>`).join('')).join(''):`<p>${de?'Noch kein Übungsblatt. Auf der Startseite „📄 Practice sheet (PDF / print)“ antippen.':'No practice sheet yet. Tap “📄 Practice sheet (PDF / print)” on the start page.'}</p>`);
+  const T=PT[PL()], de=PL()==='de', R=RES_T[PL()], rank={open:0,part:0,stale:1,done:2};
+  const all=store.get('sheets',[]).slice().reverse().sort((a,b)=>rank[sheetState(a)]-rank[sheetState(b)]);
+  if(!all.length) return `<h2>${de?'Übungsblätter':'Practice sheets'}</h2><p>${de?'Noch kein Übungsblatt. Auf der Startseite „📄 Practice sheet (PDF / print)“ antippen.':'No practice sheet yet. Tap “📄 Practice sheet (PDF / print)” on the start page.'}</p>`;
+  const label={de:{open:'noch offen',part:'teilweise eingetragen',done:'eingetragen ✓',stale:'nicht eingetragen – zählt nicht, ist in Ordnung'},en:{open:'not entered yet',part:'partly entered',done:'entered ✓',stale:'not entered – doesn’t count, and that’s fine'}}[de?'de':'en'];
+  return `<h2>${de?'Übungsblätter':'Practice sheets'}</h2><p class="phow">${T.howSheets}</p>`+all.map(sh=>{
+    const st=sheetState(sh), n=sh.items.filter(i=>i.res).length;
+    return `<details class="psheet ${st}" data-sheetid="${sh.id}"${state.psheetOpen===sh.id?' open':''}><summary><b>${sheetName(sh)}</b> <span class="psheet-st">${label[st]}${st==='part'?` (${n}/${sh.items.length})`:''}</span></summary>`
+      +sh.items.map((it,i)=>{ const locked=it.res && !it.rec;
+        return `<div class="sheetrow"><div class="q"><b>${i+1}.</b> ${esc(strip(sheetPrompt(it.q)).slice(0,140))}</div><div class="row">${Object.keys(R).map(r=>`<button type="button" class="btn small${it.res===r?' on':''}" data-sheet="${sh.id}" data-i="${i}" data-res="${r}" aria-pressed="${it.res===r}"${locked?' disabled':''}>${R[r]}</button>`).join('')}</div></div>`; }).join('')
+      +(n?'':`<p><button type="button" class="btn small" data-discard="${sh.id}">${de?'Blatt verwerfen':'Discard sheet'}</button></p>`)+'</details>';
+  }).join('');
 }
 /* Grown-ups area (Peter, 31.10.): fixed header (language flags, version, log out); overview on top;
    below, chapters that open in place. Each thing can be set in one place only: focus at the quest
@@ -2927,6 +2979,9 @@ function renderSheets(){
   body.querySelectorAll('[data-pfocus]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; const k=b.dataset.pfocus, f=focusTopics().slice(), i=f.indexOf(k); if(i>=0) f.splice(i,1); else f.push(k); store.set('focus',f); renderHome(); renderSheets(); }));
   const rec=$('#pRecommend'); if(rec) rec.addEventListener('click',()=>{ if(!parentAccess) return; const all=SUBJECTS.flatMap(questsIn).map(assessQuest); const f=uniq(FOCUS.concat(all.filter(a=>a.level==='rs'||a.level==='c').map(a=>a.k))); store.set('focus',f); renderHome(); renderSheets(); });
   body.querySelectorAll('button[data-res]').forEach(b=>b.addEventListener('click',()=>enterResult(b.dataset.sheet, +b.dataset.i, b.dataset.res)));
+  body.querySelectorAll('[data-discard]').forEach(b=>b.addEventListener('click',()=>discardSheet(b.dataset.discard)));
+  body.querySelectorAll('details.psheet').forEach(d=>d.addEventListener('toggle',()=>{ if(d.open) state.psheetOpen=d.dataset.sheetid; else if(state.psheetOpen===d.dataset.sheetid) state.psheetOpen=null; }));
+  body.querySelectorAll('[data-opensheet]').forEach(b=>b.addEventListener('click',()=>{ state.psheetOpen=b.dataset.opensheet; if(!open.includes('sheets')) open.push('sheets'); renderSheets(); const d=$('#aboutBody details.psheet[open]'); if(d) d.scrollIntoView({block:'start'}); }));
   bindParentSettings();
 }
 
