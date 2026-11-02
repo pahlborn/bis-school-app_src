@@ -1,4 +1,4 @@
-# 2026-11-02 – Stufe 2, P1: Modul krypto (nur Testbau, v59)
+# 2026-11-02 – Stufe 2, P1: Modul krypto (nur Testbau, v61)
 
 ## Auftrag
 Spezifikation S12, Phase P1 (EP6, US6.1–US6.6): Schlüssel und Verschlüsselung als abgeschlossenes Modul, einzeln ohne Browser testbar. Das Modul ist **nur im Testbau** (`module.json`: `bau: test`); die Live-App ändert sich nicht.
@@ -17,7 +17,7 @@ Spezifikation S12, Phase P1 (EP6, US6.1–US6.6): Schlüssel und Verschlüsselun
 - `tests/module/krypto.test.mjs` (10 Tests, unter 1 s): Prüfwert AES-GCM gegen Node-`crypto` (unabhängige Umsetzung), PBKDF2 gegen bekannte Referenzwerte, US6.1–US6.6 (Vertauschen, Byte-Änderung, falsches Passwort, Dritter ohne Schlüssel, Unterschrift, Fingerabdruck, Widerruf: alt lesbar, neu nicht), kein `Math.random` im Modul.
 - `tests/module/rahmen.test.mjs` (+1): Testbau setzt sich ohne Namenskonflikt zusammen; der Live-Bau enthält kein Stufe-2-Modul und keinen Stufe-2-Text (`sealEntry`, `wrapKeyFor`, `api.github.com`, `bqt_`).
 - `tests/testbau.test.mjs` (Browser): Testbau startet ohne Fehler; Verschlüsseln, Sperren, Verpacken und Schlüsselwechsel liefern in Chromium dasselbe wie in Node, aktuelle Version nach dem Wechsel ist 2. Safari folgt im Feldtest (Konzept S12, D3).
-- Live-Bau byte-gleich: SHA-256 der Live-App von `main` (v58) und von diesem Zweig sind identisch (`a4b02ce3…e5a0`).
+- Live-Bau byte-gleich: SHA-256 der Live-App von `main` (nach Elternbereich A1, #59) und von diesem Zweig sind identisch (`bd415f0c…44f8f2`; vor dem Einmergen von `main` war es der Stand v58, `a4b02ce3…e5a0`).
 
 ## Gegenproben
 Je ein absichtlicher Fehler im Modul, das Modul-Testfeld muss rot werden (alle 10 erkannt):
@@ -43,7 +43,8 @@ Die Gegenprobe „alter Schlüssel“ war im ersten Anlauf falsch gebaut (der Fe
 | Modultests (krypto + rahmen, 15 Tests) | 0,3 s |
 | Bereich `krypto` (Module + Browser-Test, gesamt mit Start) | 7 s |
 | PBKDF2 600 000 Runden (Node, dieser Rechner) | ca. 90 ms |
-| volle Reihe (259 Tests) | 223 s |
+| volle Reihe auf dem zusammengeführten Stand (260 Tests, `main` mit A1 eingemergt) | 218 s |
+| volle Reihe davor (259 Tests, auf v58) | 223 s |
 
 PBKDF2 im Browser (besonders Safari auf dem iPad) ist noch nicht gemessen; das gehört in den Feldtest und in P4.
 
