@@ -18,15 +18,16 @@ import { checkEvent } from './ereignisse.mjs';
 export const ANNAHME_GRUENDE = ['format', 'autor-unbekannt', 'geraet-fremd', 'unterschrift', 'rolle-darf-nicht'];
 
 /* ---------- who may write which type (concept 6 "Schreiben", table 7.2, 5.2, 9.3) ----------
-   child:   learning progress, profile, own sheets, day hints, checklist; registers its own device
-   parent:  profile (correct), sheets (create, enter, discard), settings, school data, grants, members, devices,
-            key change, snapshot - but no answers, rounds or day hints of the child (concept 6: "Antwort ... Elternteil ❌").
-            Exception: entering a sheet result makes the app write a review and, when the sheet is complete, the badge
-            "principled" (index.html enterResult; 3a: "Was 3b schreiben muss"), so parents may write review and that badge.
+   child:   learning progress, profile, own sheets (create, enter the results), day hints, checklist; registers its own device
+   parent:  profile (correct), sheets (create, discard), settings, school data, grants, members, devices,
+            key change, snapshot - but no answers, rounds, sheet results or day hints of the child (concept 6: "Antwort ... Elternteil ❌").
+            A9/A10 (02.11.): the child enters its sheet itself (index.html sheetResult); grown-ups only see the state.
+            So "sheet_result" - and the review and the badge "principled" it causes - are the child's; the former
+            exception for parents (review, badge "principled") is gone.
    teacher, admin: only the protocol entry "opened" for their own grant (5.2); they never write into child data */
 const ANN_RIGHTS = {
-  child: ['answer', 'round_done', 'badge', 'review', 'practice_day', 'profile_set', 'rank_seen', 'sheet_created', 'checklist_set', 'day_flag', 'device_added'],
-  parent: ['badge', 'review', 'profile_set', 'sheet_created', 'sheet_result', 'sheet_discarded', 'setting_set', 'school_import', 'grant_set', 'grant_revoked', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated', 'snapshot'],
+  child: ['answer', 'round_done', 'badge', 'review', 'practice_day', 'profile_set', 'rank_seen', 'sheet_created', 'sheet_result', 'checklist_set', 'day_flag', 'device_added'],
+  parent: ['profile_set', 'sheet_created', 'sheet_discarded', 'setting_set', 'school_import', 'grant_set', 'grant_revoked', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated', 'snapshot'],
   teacher: ['grant_opened'],
   admin: ['grant_opened'],
 };
@@ -36,7 +37,6 @@ export const ANNAHME_RECHTE = Object.freeze(Object.fromEntries(Object.entries(AN
 const ANN_LIMITS = {
   device_added: (e) => e.payload.device === e.device,                         // a device registers itself, nobody adds a foreign device
   grant_opened: (e) => e.payload.grantee === e.author,                        // the recipient logs his own opening, nobody else's
-  badge: (e, role) => role !== 'parent' || e.payload.badge === 'principled',  // parents: only the badge of a finished sheet
 };
 
 /* ---------- helpers ---------- */

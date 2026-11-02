@@ -195,6 +195,8 @@ test('Blatt-Nummer steht auf dem Papier und in der PDF-Datei', async () => {
   const text = await page.evaluate(() => document.querySelector('#printArea').innerText);
   assert.match(text, /Sheet 1 · Date:/);
   assert.match(text, /Sheet 1 · \d{4}-\d{2}-\d{2}/);
+  assert.match(text, /Your child enters the answers: Practice sheet → My sheets/, 'A10: the answer page says who enters');
+  assert.doesNotMatch(text, /Grown-ups → Practice sheets/);
   await ctx.close();
 });
 
