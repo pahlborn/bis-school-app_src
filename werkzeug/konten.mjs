@@ -4,10 +4,11 @@
 // accounts (they live in the child's profile on the device).
 //
 //   { "version": 2,
-//     "users": [ { "id", "user", "kind": "child"|"adult", "teacher", "admin", "test", "teacherOf", "start": {salt, hash} } ],
+//     "users": [ { "id", "user", "kind": "child"|"adult", "teacher", "admin", "test", "start": {salt, hash} } ],
 //     "guardians": [ { "adult": "p_...", "child": "p_...", "since": "YYYY-MM-DD" } ] }
 //
-// "teacherOf" (IDs) is an interim field until local grants arrive (S11 P4) and then removed.
+// Teachers and the admin see a child only through a grant given by its parents in the app (S11 P4);
+// assignments in this file ("teacherOf", "kinder" of a teacher) are not used any more.
 //
 // werkzeug/konten.json holds only a salted PBKDF2 hash of each start code - never the code itself.
 // The build inserts the list into the ENCRYPTED app (marker below). Start codes and start links are
@@ -75,8 +76,8 @@ const heute = () => new Date().toISOString().slice(0, 10);
 /**
  * Account list v1 (name, role student|parent|teacher, kinder by name) -> v2. Keeps the order of the
  * accounts and the start code hashes (nobody has to start over). Admin accounts do NOT become
- * parents (finding B3: the admin sees a child only with a grant). Teacher assignments become the
- * interim field teacherOf.
+ * parents (finding B3: the admin sees a child only with a grant). Teacher assignments are dropped:
+ * teachers see a child only through a grant from its parents (S11 P4).
  */
 export function ausV1(k1) {
   if (k1 && k1.version === 2) return k1;
@@ -89,7 +90,6 @@ export function ausV1(k1) {
   const guardians = [];
   k1.users.forEach((u, i) => {
     if (u.role === 'parent' && !u.admin) for (const kid of u.kinder || []) if (id(kid)) guardians.push({ adult: users[i].id, child: id(kid), since: heute() });
-    if (u.role === 'teacher' && (u.kinder || []).length) users[i].teacherOf = u.kinder.map(id).filter(Boolean);
   });
   return { version: 2, users, guardians };
 }
@@ -109,7 +109,7 @@ export function kontenPruefen(k) {
     if (!['child', 'adult'].includes(u.kind)) throw new Error(`Konto "${u.user}": Art muss child oder adult sein.`);
     if (u.kind === 'child' && (u.teacher || u.admin)) throw new Error(`Konto "${u.user}": ein Kind kann nicht Lehrkraft oder Admin sein.`);
     if (u.kind === 'adult' && u.test) throw new Error(`Konto "${u.user}": nur Kinder koennen Testkonten sein.`);
-    if (u.teacherOf && !u.teacher) throw new Error(`Konto "${u.user}": teacherOf nur fuer Lehrkraefte.`);
+    if ('teacherOf' in u) throw new Error(`Konto "${u.user}": teacherOf gibt es nicht mehr - Lehrkraefte bekommen Einblick nur ueber eine Freigabe der Eltern in der App.`);
     if (!u.start || !/^[0-9a-f]{64}$/.test(u.start.hash) || !Array.isArray(u.start.salt) || u.start.salt.length < 16) throw new Error(`Konto "${u.user}": Startcode-Hash fehlt.`);
     ids.add(u.id); namen.add(u.user); byId.set(u.id, u);
   }
@@ -120,9 +120,6 @@ export function kontenPruefen(k) {
     if (a.kind !== 'adult' || c.kind !== 'child') throw new Error(`Beziehung ${a.user} -> ${c.user}: nur Erwachsener -> Kind.`);
     if (a.teacher) throw new Error(`Beziehung ${a.user} -> ${c.user}: eine Lehrkraft ist nicht zugleich Elternteil.`);
     const key = g.adult + g.child; if (paare.has(key)) throw new Error(`Beziehung ${a.user} -> ${c.user} doppelt.`); paare.add(key);
-  }
-  for (const u of k.users) for (const c of u.teacherOf || []) {
-    if (!byId.has(c) || byId.get(c).kind !== 'child') throw new Error(`Konto "${u.user}": zugeordnetes Kind ${c} fehlt.`);
   }
   if (!k.users.some((u) => u.kind === 'child')) throw new Error('konten.json: mindestens ein Kinderkonto noetig.');
   if (!k.users.some((u) => u.kind === 'adult')) throw new Error('konten.json: mindestens ein Erwachsenenkonto noetig.');
@@ -138,7 +135,7 @@ export function kontenEinsetzen(app, konten) {
   const k = kontenPruefen(konten);
   const daten = {
     version: 2,
-    users: k.users.map((u) => ({ id: u.id, user: u.user, kind: u.kind, ...(u.teacher ? { teacher: true } : {}), ...(u.admin ? { admin: true } : {}), ...(u.test ? { test: true } : {}), ...(u.teacherOf ? { teacherOf: u.teacherOf } : {}), start: u.start })),
+    users: k.users.map((u) => ({ id: u.id, user: u.user, kind: u.kind, ...(u.teacher ? { teacher: true } : {}), ...(u.admin ? { admin: true } : {}), ...(u.test ? { test: true } : {}), start: u.start })),
     guardians: k.guardians.map((g) => ({ adult: g.adult, child: g.child }))
   };
   return Buffer.from(teile[0] + JSON.stringify(daten) + teile[1], 'utf8');
@@ -242,7 +239,6 @@ async function main() {
     const u = muss(name);
     k.users = k.users.filter((x) => x !== u);
     k.guardians = k.guardians.filter((g) => g.adult !== u.id && g.child !== u.id);
-    k.users.forEach((x) => { if (x.teacherOf) { x.teacherOf = x.teacherOf.filter((c) => c !== u.id); if (!x.teacherOf.length) delete x.teacherOf; } });
     await speichern(); console.log(`Konto entfernt: ${u.user} (Kennung wird nie wieder vergeben)`);
     return;
   }

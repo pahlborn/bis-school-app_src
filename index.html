@@ -236,6 +236,7 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 .rank-path li.now .need{color:inherit}
 .chipstat{display:flex;align-items:center;gap:6px;background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:6px 12px;font-family:var(--display);font-weight:600;white-space:nowrap;min-height:44px;font-variant-numeric:tabular-nums}
 .chipstat svg{width:20px;height:20px;fill:var(--sun)}
+.pgrants{margin:6px 0 10px;padding-left:18px}.pgrants li{margin:4px 0}.pgrantlog ul{font-size:.9rem}
 .whos-here{margin:4px 0 10px}.whos-here .row{flex-wrap:wrap;gap:8px}.pw-suggest{margin:6px 0 10px}.pw-suggest b{font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:.02em}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .today{display:grid;grid-template-columns:48px 1fr;gap:12px;align-items:center;text-align:left;width:100%;padding:14px 16px;border-radius:20px;border:0;background:var(--w-mix);color:#172033;cursor:pointer;box-shadow:var(--shadow);font:inherit}
@@ -605,7 +606,7 @@ function normAccounts(raw){
   const byId=new Map(raw.users.map(u=>[u.id,u])), name=id=>byId.get(id)&&byId.get(id).user;
   const users=raw.users.map(u=>Object.assign({},u,{
     role:u.kind==='child'?'student':(u.teacher?'teacher':'parent'), admin:!!u.admin,
-    kinder:(u.teacher?(u.teacherOf||[]):(raw.guardians||[]).filter(g=>g.adult===u.id).map(g=>g.child)).map(name).filter(Boolean)
+    kinder:(u.teacher?[]:(raw.guardians||[]).filter(g=>g.adult===u.id).map(g=>g.child)).map(name).filter(Boolean)
   }));
   return {version:2, users, guardians:raw.guardians||[]};
 }
@@ -626,7 +627,7 @@ const TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4
    bq2_<id>__<key>; passwords under bq2_pw_<id>. Before (and as a fallback if the move on this device
    failed): the FIRST student account used bq2_<key>, every other one bq2_<user>__<key>. Device-wide keys
    stay shared. */
-const GLOBAL_KEYS=/^(session|sessionPrev|adultSession|pw_.+|parentPin|muted|parentLang|migr|kidsHere)$/;
+const GLOBAL_KEYS=/^(session|sessionPrev|adultSession|pw_.+|parentPin|muted|parentLang|migr|kidsHere|lastSeen)$/;
 let ID_STORAGE=false;
 /* account for a stored reference {id} or {user} (id first: login names may change, IDs never do) */
 function accByRef(r){
@@ -3537,7 +3538,7 @@ function subjectLevel(list){
 }
 const pChip = (lv,sure) => `<span class="pst ${lv}">${PSTAND[PL()][lv]}${SCHOOLTERM[lv]?` <i>(${SCHOOLTERM[lv]})</i>`:''}</span>${sure&&lv!=='na'?` <span class="psure">${PT[PL()].sw[sure]}</span>`:''}`;
 function summaryHTML(list, scope){
-  const T=PT[PL()], nm=playerName()||T.child;
+  const T=PT[PL()], nm=(viewerGrant() ? viewedKid() : playerName())||T.child;
   const recentDays=new Set(store.get('attempts',[]).filter(a=>a.day && daysBetween(a.day,dayKey())<14).map(a=>a.day)).size;
   const good=list.filter(a=>a.level==='m'||a.level==='e').sort((x,y)=>y.n-x.n).slice(0,3);
   const need=list.filter(a=>a.level==='rs'||a.level==='c').sort((x,y)=>(x.level==='rs'?0:1)-(y.level==='rs'?0:1)||y.n-x.n).slice(0,2);
@@ -3551,7 +3552,7 @@ function summaryHTML(list, scope){
   if(old.length) h+=`<p class="ph">${T.oldT}</p><p>${old.map(a=>esc(WORLDS[a.k].name)).join(', ')} – ${T.old}.</p>`;
   return h+`<div class="pdisc">${T.disc}</div>`;
 }
-const isTeacher = () => !!(accountsOn() && adultUser && adultUser.role==='teacher');
+const isTeacher = () => !!(accountsOn() && adultUser && (adultUser.role==='teacher' || viewerGrant()));
 function parentHomeHTML(){
   const T=PT[PL()], de=PL()==='de', focus=focusTopics(), all=[];
   const tiles=SUBJECTS.map(s=>{ const qs=questsIn(s), list=qs.map(assessQuest); all.push(...list); const f=qs.filter(k=>focus.includes(k)).length;
@@ -3619,12 +3620,101 @@ function migrNote(){
     : (de?'Die Aufnahmen konnten nicht übernommen werden. Sie bleiben 30 Tage im bisherigen Speicher.':'The recordings could not be moved. They stay in the old storage for 30 days.');
   return `<p class="phow pmigr-note">⚠️ ${text} <button type="button" class="btn small" data-migrretry>${de?'Erneut versuchen':'Try again'}</button></p>`;
 }
+/* ---------- grants (S11 Stufe 1, P4, 02.11.) ----------
+   Teachers and the admin see a child only with a GRANT from one of the child's parents: chosen scope
+   (learning progress; optionally school ratings), limited in time (1-90 days, default 14), read-only,
+   revocable at any time, every step in a log the parents see. Stored in the child's area (grants,
+   grantlog). Stage 1 has no syncing: the grantee sees the child only on a device that holds its data. */
+const kidKey = (acc,k) => ID_STORAGE && acc ? 'bq2_'+acc.id+'__'+k : null;
+function kidRead(acc,k,d){ const lk=kidKey(acc,k); if(!lk) return d; try{ const v=localStorage.getItem(lk); return v===null?d:JSON.parse(v); }catch(e){ return d; } }
+function kidWrite(acc,k,v){ const lk=kidKey(acc,k); if(lk) try{ localStorage.setItem(lk, JSON.stringify(v)); }catch(e){} }
+const grantActive = g => !g.revokedAt && dayKey()>=g.from && dayKey()<=g.until;
+function grantLog(acc, entry){ const log=kidRead(acc,'grantlog',[]); log.push(Object.assign({at:new Date().toISOString()}, entry)); kidWrite(acc,'grantlog',log.slice(-200)); }
+/* expired grants get their log entry once */
+function grantsExpire(acc){
+  const gs=kidRead(acc,'grants',[]); let ch=false;
+  for(const g of gs) if(!g.revokedAt && !g.expiredLogged && dayKey()>g.until){ g.expiredLogged=true; ch=true; grantLog(acc,{ev:'abgelaufen', grant:g.id, grantee:g.grantee, scope:g.scope}); }
+  if(ch) kidWrite(acc,'grants',gs);
+  return gs;
+}
+function myGrantFor(acc){
+  if(!adultUser) return null;
+  const me=APP_ACCOUNTS.users.find(u=>u.user===adultUser.user); if(!me) return null;
+  return grantsExpire(acc).find(g=>g.grantee===me.id && grantActive(g)) || null;
+}
+/* the grant through which the current grown-up looks at the shown child (null for its parents) */
+function viewerGrant(){
+  if(!accountsOn() || !adultUser) return null;
+  const k=viewedKid(), acc=k && APP_ACCOUNTS.users.find(u=>u.user===k); if(!acc || acc.test) return null;
+  const me=APP_ACCOUNTS.users.find(u=>u.user===adultUser.user)||{};
+  if(me.role==='parent' && (me.kinder||[]).includes(acc.user)) return null;
+  return myGrantFor(acc);
+}
+const grantPeople = () => APP_ACCOUNTS.users.filter(u=>u.role!=='student' && (u.teacher || u.admin));
+function grantsHTML(){
+  const de=PL()==='de', acc=kidAccount(); if(!acc) return '';
+  const gs=grantsExpire(acc), log=kidRead(acc,'grantlog',[]), name=id=>(APP_ACCOUNTS.users.find(u=>u.id===id)||{}).user||'?';
+  const sc=s=>s.map(x=>x==='school'?(de?'Schuldaten':'school ratings'):(de?'Lernstand':'progress')).join(' + ');
+  const state=g=>g.revokedAt?(de?'widerrufen':'revoked'):grantActive(g)?(de?`läuft bis ${fmtDay(g.until)}`:`until ${fmtDay(g.until)}`):(de?'abgelaufen':'expired');
+  const list=gs.length?`<ul class="pgrants">${gs.slice().reverse().map(g=>`<li><b>${esc(name(g.grantee))}</b> · ${sc(g.scope)} · ${state(g)}${grantActive(g)?` <button type="button" class="btn small" data-grantrevoke="${esc(g.id)}">${de?'Beenden':'End'}</button>`:''}</li>`).join('')}</ul>`:`<p class="small">${de?'Bisher hat niemand Einblick.':'Nobody has access so far.'}</p>`;
+  const evText={erteilt:de?'erteilt':'granted', 'geöffnet':de?'angesehen':'viewed', widerrufen:de?'beendet':'ended', abgelaufen:de?'abgelaufen':'expired'};
+  const protokoll=log.length?`<details class="pgrantlog"><summary>${de?'Protokoll':'Log'} (${log.length})</summary><ul>${log.slice().reverse().slice(0,30).map(e=>`<li>${fmtDay(e.at.slice(0,10))} · ${esc(name(e.grantee))} · ${esc(evText[e.ev]||e.ev)}${e.scope?` · ${sc(e.scope)}`:''}</li>`).join('')}</ul></details>`:'';
+  return `<h2>${de?'Zugriff & Freigaben':'Access & grants'}</h2>
+    <p class="phow">${de?'Eine Lehrkraft oder der Admin sieht den Lernstand Ihres Kindes nur, wenn Sie es hier freigeben – befristet, nur lesend, jederzeit beendbar.':'A teacher or the admin sees your child’s progress only if you allow it here – for a limited time, read-only, and you can end it any time.'}</p>
+    ${list}${protokoll}
+    <form id="pGrantForm" class="login-form">
+      <div class="field"><label for="pGrantWho">${de?'Anmeldename der Person':'Login name of the person'}</label><input id="pGrantWho" autocomplete="off" autocapitalize="off" spellcheck="false" required></div>
+      <p><label><input type="checkbox" id="pGrantLearn" checked disabled> ${de?'Lernstand':'Learning progress'}</label> <label><input type="checkbox" id="pGrantSchool"> ${de?'Schuldaten':'School ratings'}</label></p>
+      <div class="field"><label for="pGrantDays">${de?'Dauer in Tagen (1–90)':'Days (1–90)'}</label><input id="pGrantDays" type="number" min="1" max="90" value="14" required></div>
+      <p class="small" id="pGrantConsent"></p>
+      <button class="btn small primary" type="submit">${de?'Freigeben':'Allow'}</button>
+      <p id="pGrantMsg" class="small" role="status"></p>
+    </form>`;
+}
+function grantConsentText(who, days, scope){
+  const de=PL()==='de', sc=scope.map(x=>x==='school'?(de?'Schuldaten':'school ratings'):(de?'Lernstand':'learning progress')).join(de?' und ':' and ');
+  return de?`Sie geben ${who} für ${days} Tage Einblick in: ${sc}. ${who} kann nichts ändern. Sie können das jederzeit beenden. Was ${who} bis dahin gesehen hat, kann man nicht ungesehen machen.`
+           :`You give ${who} access for ${days} days to: ${sc}. ${who} cannot change anything. You can end this at any time. What ${who} has seen until then cannot be unseen.`;
+}
+function bindGrants(body){
+  const f=$('#pGrantForm'); if(!f) return;
+  const upd=()=>{ const who=$('#pGrantWho').value.trim()||'…', days=Math.max(1,Math.min(90,+$('#pGrantDays').value||14)), scope=['learning'].concat($('#pGrantSchool').checked?['school']:[]); $('#pGrantConsent').textContent=grantConsentText(who, days, scope); };
+  ['input','change'].forEach(ev=>f.addEventListener(ev,upd)); upd();
+  f.addEventListener('submit',e=>{
+    e.preventDefault(); if(!canBackup()) return;
+    const de=PL()==='de', acc=kidAccount(), name=$('#pGrantWho').value.trim().toLowerCase(), p=grantPeople().find(u=>u.user===name), msg=$('#pGrantMsg');
+    if(!p){ msg.textContent=de?'Zu diesem Namen gibt es keine Lehrkraft und keinen Admin.':'There is no teacher or admin with this name.'; return; }
+    const days=Math.max(1,Math.min(90,Math.round(+$('#pGrantDays').value||14))), scope=['learning'].concat($('#pGrantSchool').checked?['school']:[]);
+    const until=new Date(Date.parse(dayKey()+'T12:00:00')+(days-1)*864e5).toISOString().slice(0,10);
+    const me=APP_ACCOUNTS.users.find(u=>u.user===adultUser.user), g={id:'g'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), grantee:p.id, scope, from:dayKey(), until, by:me.id};
+    const gs=kidRead(acc,'grants',[]); gs.forEach(x=>{ if(x.grantee===p.id && grantActive(x)){ x.revokedAt=new Date().toISOString(); grantLog(acc,{ev:'widerrufen', grant:x.id, grantee:x.grantee, by:me.id}); } });
+    gs.push(g); kidWrite(acc,'grants',gs); grantLog(acc,{ev:'erteilt', grant:g.id, grantee:p.id, scope, until, by:me.id, text:grantConsentText(p.user, days, scope)});
+    renderSheets();
+  });
+  body.querySelectorAll('[data-grantrevoke]').forEach(b=>b.addEventListener('click',()=>{
+    if(!canBackup()) return; const acc=kidAccount(), me=APP_ACCOUNTS.users.find(u=>u.user===adultUser.user), gs=kidRead(acc,'grants',[]), g=gs.find(x=>x.id===b.dataset.grantrevoke); if(!g || g.revokedAt) return;
+    g.revokedAt=new Date().toISOString(); kidWrite(acc,'grants',gs); grantLog(acc,{ev:'widerrufen', grant:g.id, grantee:g.grantee, by:me.id}); renderSheets();
+  }));
+}
+/* "viewed" once a day per grantee and child */
+function grantOpened(){
+  const g=viewerGrant(); if(!g) return; const acc=kidAccount(); if(!acc) return;
+  const log=kidRead(acc,'grantlog',[]); if(log.some(e=>e.ev==='geöffnet' && e.grantee===g.grantee && e.at.slice(0,10)===new Date().toISOString().slice(0,10))) return;
+  grantLog(acc,{ev:'geöffnet', grant:g.id, grantee:g.grantee, scope:g.scope});
+}
+/* admin without a grant: only metadata of the accounts, no contents, no display names */
+function accountsAdminHTML(){
+  const de=PL()==='de', seen=store.get('lastSeen',{});
+  const art=u=>[u.role==='student'?(de?'Kind':'child'):(de?'Erwachsen':'adult'), u.teacher&&(de?'Lehrkraft':'teacher'), u.admin&&'Admin', u.test&&(de?'Testkind':'test child')].filter(Boolean).join(', ');
+  return `<h2>${de?'Konten':'Accounts'}</h2><p class="phow">${de?'Nur Verwaltungsangaben – keine Inhalte. Den Lernstand eines Kindes sehen Sie nur mit Freigabe der Eltern.':'Administrative details only – no contents. You see a child’s progress only with a grant from the parents.'}</p>
+    <table class="dt"><thead><tr><th>${de?'Anmeldename':'Login name'}</th><th>${de?'Art':'Kind'}</th><th>${de?'Zuletzt auf diesem Gerät':'Last on this device'}</th></tr></thead><tbody>${APP_ACCOUNTS.users.map(u=>`<tr><td>${esc(u.user)}</td><td>${esc(art(u))}</td><td>${seen[u.id]?fmtDay(seen[u.id].slice(0,10)):'–'}</td></tr>`).join('')}</tbody></table>`;
+}
 /* ---------- backup (S11 Stufe 1, 02.11.): the child's data as a file, and back ----------
    Only parents of the child. Keys are stored WITHOUT the device namespace, so a backup made now can be
    restored after the move to IDs (S11 P2). Which keys belong to a child is fixed in
    werkzeug/speicherstellen.json (checked by tests/stufe1-p1.test.mjs). Never in a backup: passwords,
    sessions, device keys. Recordings are included (the file stays with the family). */
-const BACKUP_KEYS={exact:['attempts','ev','due','total','badges','tried','treeStage','rankSeen','name','birthday','emoji','bdayParty','sheets','sheetNo','focusMode','focusManual','unlocked','storyCap','focus','focusOn','focusOff','greetDay','mysteryDone','kidLang'], prefix:['best_','chk_','advent']};
+const BACKUP_KEYS={exact:['grants','grantlog','attempts','ev','due','total','badges','tried','treeStage','rankSeen','name','birthday','emoji','bdayParty','sheets','sheetNo','focusMode','focusManual','unlocked','storyCap','focus','focusOn','focusOff','greetDay','mysteryDone','kidLang'], prefix:['best_','chk_','advent']};
 const isBackupKey = k => BACKUP_KEYS.exact.includes(k) || BACKUP_KEYS.prefix.some(p=>k.startsWith(p));
 function childStoreKeys(){
   const pre=storeKey('x').slice(0,-1), plain=pre==='bq2_', out=[];
@@ -3722,15 +3812,17 @@ function undoRestore(){
 function renderSheets(){
   if(!parentAccess){ renderParentGate(); return; }
   aboutChrome();
-  syncViewUser();
+  syncViewUser(); grantOpened();
   const body=$('#aboutBody'), lang=PL(), T=PT[lang], de=lang==='de', teacher=isTeacher(), open=state.popen||(state.popen=[]), kidOk=!accountsOn() || !!viewedKid();
   let html=parentHeaderHTML()+(state.psubj ? parentSubjectHTML(state.psubj) : parentHomeHTML());
   // the chapters only on the overview, not again inside a subject (Peter, 01.11.)
   const onOverview=!state.psubj || (accountsOn() && !viewedKid());
   const secs=[];
-  if(accountsOn() && kidOk) secs.push(['school', de?'🏫 Einstufungen der Schule':'🏫 School ratings', schoolHTML()]);
+  if(accountsOn() && kidOk && !(viewerGrant() && !viewerGrant().scope.includes('school'))) secs.push(['school', de?'🏫 Einstufungen der Schule':'🏫 School ratings', schoolHTML()]);
   if(!teacher && kidOk) secs.push(['sheets', T.sheets, sheetsPageHTML()]);
   if(canBackup()) secs.push(['backup', de?'💾 Sicherung':'💾 Backup', backupHTML()]);
+  if(canBackup()) secs.push(['grants', de?'🔐 Zugriff & Freigaben':'🔐 Access & grants', grantsHTML()]);
+  if(accountsOn() && adultUser && adultUser.admin) secs.push(['accounts', de?'🛠 Konten':'🛠 Accounts', accountsAdminHTML()]);
   if(!teacher && kidOk) secs.push(['settings', T.settings, storyCapHTML()+reminderHTML()+profileAdminHTML()]);
   // Peter, 01.11.: three kinds of reading matter, kept apart - practical support, the concept, using the app
   secs.push(['support', de?'🤝 Ihr Kind unterstützen':'🤝 Supporting your child', supportGuideHTML()]);
@@ -3757,6 +3849,7 @@ function renderSheets(){
   const rf=$('#pRestoreFile'); if(rf) rf.addEventListener('change',()=>{ if(rf.files && rf.files[0]) readRestoreFile(rf.files[0]); });
   body.querySelectorAll('[data-restoreundo]').forEach(b=>b.addEventListener('click',undoRestore));
   body.querySelectorAll('[data-migrretry]').forEach(b=>b.addEventListener('click',()=>{ try{ localStorage.removeItem('bq2_migr'); }catch(e){} location.reload(); }));
+  bindGrants(body);
   bindParentSettings();
 }
 
@@ -3788,7 +3881,7 @@ const flagsHTML = () => `<span class="flags" role="group" aria-label="Sprache / 
 const myKids = () => {
   if(!accountsOn() || !adultUser) return [];
   const me=APP_ACCOUNTS.users.find(u=>u.user===adultUser.user)||{};
-  return APP_ACCOUNTS.users.filter(u=>u.role==='student' && (u.test ? !!adultUser.admin : (me.kinder||[]).includes(u.user)));
+  return APP_ACCOUNTS.users.filter(u=>u.role==='student' && (u.test ? !!adultUser.admin : ((me.role==='parent' && (me.kinder||[]).includes(u.user)) || !!myGrantFor(u))));
 };
 function kidHasData(u){
   if(((studentSession()||{}).user)===u.user || store.get(pwKey(u),null)) return true;
@@ -3816,7 +3909,7 @@ function syncViewUser(){
 }
 function myKidsNote(){
   const de=PL()==='de', kids=myKids().filter(u=>!u.test);
-  if(!kids.length) return `<p class="phow pnokid">👧 ${de?'Ihnen ist noch kein Kind zugeordnet.':'No child is assigned to you yet.'}</p>`;
+  if(!kids.length) return `<p class="phow pnokid">👧 ${adultUser && (adultUser.role==='teacher' || adultUser.admin) ? (de?'Noch keine Freigabe: Den Lernstand eines Kindes sehen Sie, sobald seine Eltern Ihnen Einblick geben – auf dem Gerät, auf dem das Kind übt.':'No grant yet: you see a child’s progress once its parents give you access – on the device where the child practices.') : (de?'Ihnen ist noch kein Kind zugeordnet.':'No child is assigned to you yet.')}</p>`;
   return `<div class="pcard pnokid"><h2>${de?'Meine Kinder':'My children'}</h2>${kids.map(u=>`<p>👧 <b>${esc(u.user)}</b> – ${de?'Daten auf dem Gerät des Kindes. Sie sehen sie dort; der Abgleich zwischen Geräten folgt mit Stufe 2.':'data on your child’s device. You can see them there; syncing between devices follows with stage 2.'}</p>`).join('')}</div>`;
 }
 const testUserFor = () => accountsOn() && adultUser && adultUser.admin ? APP_ACCOUNTS.users.find(u=>u.role==='student' && u.test) || null : null;
@@ -4064,6 +4157,7 @@ function renderWelcome(u){
 }
 function loginDone(u, welcomed){
   $('#loginBody').innerHTML='';
+  const seen=store.get('lastSeen',{}); seen[u.id]=new Date().toISOString(); store.set('lastSeen',seen);
   if(u.role==='student'){ store.set('session',sessionOf(u)); const here=store.get('kidsHere',[]); if(!here.includes(u.id)) store.set('kidsHere',here.concat([u.id])); adultUser=null; if(welcomed) store.set('greetDay',dayKey()); renderHome(); show('home'); }
   else { store.set('adultSession',sessionOf(u)); adultUser={user:u.user, role:u.role, admin:!!u.admin}; parentAccess=true; state.psubj=null; state.popen=state.popen||[]; openAbout('sheets'); }
 }
@@ -4168,7 +4262,7 @@ STANDARD_TEXT['E-S2']='Sprechen und Zuhören: Meinungen äußern und besprechen'
    ES = emerging with support, Obs. = observed, Ind. = independent. */
 const SCHOOL_DATA=/*BQ_SCHULE*/null||{};
 const schoolKid = () => { const n=viewedKid(), a=n && APP_ACCOUNTS.users.find(u=>u.user===n && u.role==='student'); return a ? a.id : null; };
-const schoolData = () => accountsOn() ? (SCHOOL_DATA[schoolKid()]||null) : null;
+const schoolData = () => { if(!accountsOn()) return null; const g=viewerGrant(); if(g && !g.scope.includes('school')) return null; return SCHOOL_DATA[schoolKid()]||null; };
 const SL={C:'c',M:'m',E:'e',RS:'rs',N:'rs'};
 /* latest rating per standard: [{day, r}] newest first */
 function schoolRatings(d){
@@ -4375,6 +4469,7 @@ const GUIDE_ADULT_DE=`<p><b>Das Wichtigste vorab:</b> Die App hat keinen Server.
 <li><b>Im Elternbereich:</b> oben die Übersicht wie auf der Kinderseite mit der Einschätzung in Worten (keine Schulbeurteilung). Fach antippen: bei jeder Quest Grundlage, Tipp und der Schalter „Im Fokus“. Den Fokus wählt die App selbst – was die Lehrkraft als nächste Schritte nennt und wo Übung hilft –, daraus nimmt „Practise Today“ seine Aufgaben; über „🎯 Fokus“ stellen Sie auf „Manuell“, um selbst zu wählen, und mit „Automatisch“ wieder zurück. Darunter zum Aufklappen: Übungsblätter, „Für das Kind“ (Pisolala-Geschichten, Kalender-Erinnerung, Profilangaben), „Ihr Kind unterstützen“ (die wichtigsten Regeln), „So funktioniert Big Quest“ (das Konzept, auch wie die App einstuft) und diese Bedienungshilfe. Die Sprache wechseln Sie oben mit den Flaggen.</li>
 <li><b>Für das Kind:</b> Practise Today oder ein Fach; bei Fehlern Hinweis, zweiter Versuch, dann Lösungsweg; Lese-Studio mit Aufnahme (Teilen/Sichern zum Hochladen auf die Lernplattform der Klasse); Übungsblatt als PDF; nach jeder Runde Witz, Rätsel oder Geschichte.</li>
 </ol>
+<p><b>Zugriff & Freigaben:</b> Eine Lehrkraft oder der Admin sieht den Lernstand Ihres Kindes nur, wenn Sie es im Elternbereich unter „🔐 Zugriff & Freigaben“ freigeben: Anmeldename der Person eintragen, Umfang (Lernstand, auf Wunsch auch Schuldaten) und Dauer wählen (1–90 Tage). Die Person kann nichts ändern; Sie können die Freigabe jederzeit beenden. Das Protokoll zeigt, wann sie erteilt, angesehen, beendet oder abgelaufen ist.</p>
 <p><b>Sicherung:</b> Im Elternbereich unter „💾 Sicherung“ speichern Sie den Lernstand Ihres Kindes als Datei und können ihn auf jedem Gerät zurückspielen. Sichern Sie dort, wo Ihr Kind übt (auf seinem Gerät, in der App vom Home-Bildschirm, nicht in Safari) – am besten einmal im Monat. Die Übersicht zeigt, wann zuletzt gesichert wurde. Ein neues Konto kommt per Startlink oder QR-Code vom Admin: einmal öffnen, die Anmeldung ist schon ausgefüllt.</p>
 <p><b>Gut zu wissen:</b> Eigene Passwörter gelten nur auf dem Gerät, auf dem sie festgelegt wurden; auf einem weiteren Gerät einmal mit dem Startcode anmelden. Passwort vergessen? Der Startcode funktioniert immer. Nach 5 Fehlversuchen 30 Sekunden warten. Neue Versionen lädt die App beim Start und beim Zurückkehren selbst. Familienpasswort und Startcodes bitte nicht weitergeben. Admin: „🧪 Testkind“ öffnet das Testkonto mit eigenen Daten, „↩ Zurück zum Elternbereich“ führt zurück.</p>`;
 const GUIDE_ADULT_EN=`<p><b>Most important first:</b> the app has no server. Everything your child practices (stars, progress, reviews, reading recordings, practice sheets) stays <b>only on the device where they practice</b>. So your child should always use the same device, through the icon on the home screen. Grown-ups see the progress on that device.</p>
@@ -4385,6 +4480,7 @@ const GUIDE_ADULT_EN=`<p><b>Most important first:</b> the app has no server. Eve
 <li><b>In the grown-ups area:</b> at the top, an overview like your child’s start page with a summary in plain words (not a school assessment). Tap a subject: each quest shows what the summary is based on, a tip, and the “In focus” switch. The app picks the focus by itself – what the teacher names as next steps and where practice helps – and “Practise Today” takes its tasks from there; under “🎯 Focus” switch to “Manual” to choose yourself, and back with “Automatic”. Below, open as needed: practice sheets, “For your child” (Pisolala stories, calendar reminder, profile details), “Supporting your child” (the key rules), “How Big Quest works” (the concept, including how the app judges) and this guide to using the app. Switch the language with the flags at the top.</li>
 <li><b>For your child:</b> “Practise Today” or a subject; after a mistake a hint, a second try, then the worked solution; reading studio with recording (share/save to upload to the class learning platform); practice sheet as PDF; a joke, riddle or story after each round.</li>
 </ol>
+<p><b>Access & grants:</b> A teacher or the admin sees your child’s progress only if you allow it in the grown-ups area under “🔐 Access & grants”: enter the person’s login name, choose what they may see (progress, optionally school ratings) and for how long (1–90 days). They cannot change anything; you can end the grant at any time. The log shows when it was given, viewed, ended or expired.</p>
 <p><b>Backup:</b> In the grown-ups area under “💾 Backup” you save your child’s progress as a file and can restore it on any device. Back up where your child practices (on their device, in the app from the Home Screen, not in Safari) – ideally once a month. The overview shows when the last backup was made. A new account comes as a start link or QR code from the admin: open it once and the login is already filled in.</p>
 <p><b>Good to know:</b> personal passwords work only on the device where they were set; on another device, log in once with the start code. Forgot your password? The start code always works. After 5 wrong tries, wait 30 seconds. The app loads new versions by itself when it starts and when you come back to it. Please keep the family password and start codes private. Admin: “🧪 Test child” opens the test account with its own data; “↩ Back to grown-ups area” brings you back.</p>`;
 const ABOUT_DE=()=>`
