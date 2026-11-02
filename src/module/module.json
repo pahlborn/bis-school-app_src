@@ -3,6 +3,6 @@
   "module": [
     { "name": "rechte", "bau": "live", "browserTests": ["stufe1-p4", "stufe1-p3", "stufe1-ist", "anmeldung", "schule"] },
     { "name": "passwort", "bau": "live", "browserTests": ["stufe1-p3", "anmeldung", "hilfe-rollen"] },
-    { "name": "krypto", "bau": "test", "browserTests": [] }
+    { "name": "krypto", "bau": "test", "browserTests": ["testbau"] }
   ]
 }

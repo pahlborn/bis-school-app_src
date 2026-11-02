@@ -26,8 +26,9 @@ test('Testbau startet ohne Fehler; Verschluesseln, Sperren, Verpacken und Schlue
     ({ ring, key } = await K.rotateKeyring(ring, [peter]));
     const neu = await K.sealEntry(key, 'new', K.entryAad('kid:p_k1', 2, 'e_2'));
     const kp = await K.keysForHolder(ring, offen, 'p_e1'), kf = await K.keysForHolder(ring, frau.keys, 'p_l1');
-    return { falsch, peterNeu: await K.openEntryText(kp.get(2), neu, K.entryAad('kid:p_k1', 2, 'e_2')), frauAlt: await K.openEntryText(kf.get(1), alt, K.entryAad('kid:p_k1', 1, 'e_1')), frauVersionen: [...kf.keys()], fp: await K.keyFingerprint(peter.pub) };
+    return { aktuell: ring.current, falsch, peterNeu: await K.openEntryText(kp.get(2), neu, K.entryAad('kid:p_k1', 2, 'e_2')), frauAlt: await K.openEntryText(kf.get(1), alt, K.entryAad('kid:p_k1', 1, 'e_1')), frauVersionen: [...kf.keys()], fp: await K.keyFingerprint(peter.pub) };
   });
+  assert.equal(r.aktuell, 2, 'nach dem Schluesselwechsel ist Version 2 die aktuelle');
   assert.equal(r.falsch, 'Anmeldung fehlgeschlagen');
   assert.equal(r.peterNeu, 'new');
   assert.equal(r.frauAlt, 'old');
