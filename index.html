@@ -2020,12 +2020,16 @@ function standOf(skill){
 }
 
 /* Adapt a single-quest round to the hidden stand: fewer extending questions while it is shaky, more once it sits. */
-const WANT={NA:{l3:[0,8]}, RS:{l3:[0,0], l1:2}, C:{l3:[0,1]}, M:{l3:[2,3]}, E:{l3:[3,4]}};
+const WANT={NA:{l3:[0,8]}, RS:{l3:[0,0], l1:2}, C:{l3:[0,1]}, M:{l3:[2,3]}, E:{l3:[3,4]}}, ADAPT_BUILDS=12;
 function adaptRound(k, round){
   const st=standOf(k), want=WANT[st];
   if(st==='NA') return round;
-  const pool=[]; for(let i=0;i<4 && pool.length<40;i++) pool.push(...WORLDS[k].build());
-  const take=lvl=>{ const i=pool.findIndex(q=>levelOf(q)===lvl && !out.some(r=>qId(r)===qId(q))); return i<0?null:pool.splice(i,1)[0]; };
+  // pool of spare questions; when a level is missing, build more rounds (at most ADAPT_BUILDS) instead of
+  // giving up - before, about 1 in 140 rounds for a shaky skill had fewer supported questions than planned (02.11.)
+  const pool=[]; let builds=0;
+  const refill=()=>{ if(builds>=ADAPT_BUILDS) return false; pool.push(...WORLDS[k].build()); builds++; return true; };
+  while(builds<4 && pool.length<40) refill();
+  const take=lvl=>{ for(;;){ const i=pool.findIndex(q=>levelOf(q)===lvl && !out.some(r=>qId(r)===qId(q))); if(i>=0) return pool.splice(i,1)[0]; if(!refill()) return null; } };
   let out=round.slice();
   const count=lvl=>out.filter(q=>levelOf(q)===lvl).length;
   // too many extending questions: swap for year-level (or support) ones
