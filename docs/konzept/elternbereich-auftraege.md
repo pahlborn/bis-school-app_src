@@ -12,7 +12,7 @@ Erst verschieben (B), dann neu bauen (C–E), zuletzt umschreiben (F). So wird k
 | A1 | ☑ (#59) |
 | B1 · B2 · B3 · B4 · B5 | ☑ (#61) ☑ (#63) ☑ (#64) ☑ (#66) ☑ (#68) |
 | C1 | ☑ (#70) |
-| D1 · D2 · D3 · D4 | ☑ (#72, #74) ☑ (#76) ☐ ☐ |
+| D1 · D2 · D3 · D4 | ☑ (#72, #74) ☑ (#76) ☑ (#77, nur Überspringen) ☐ |
 | E1 · E2a · E2b · E2c · E2d · E2e · E3 | ☐ ☐ ☐ ☐ ☐ ☐ ☐ |
 | F1 · F2 · F3 · F4 · F5 · F6 | ☐ ☐ ☐ ☐ ☐ ☐ |
 
