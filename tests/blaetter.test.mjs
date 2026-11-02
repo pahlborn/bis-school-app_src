@@ -1,4 +1,4 @@
-// Uebungsblaetter zum Ausdrucken, Eingabe der Ergebnisse, Seite "About".
+// Uebungsblaetter zum Ausdrucken, Eintragen durch das Kind (A9), Stand fuer Erwachsene (A10), Seite "About".
 //   node --test tests/blaetter.test.mjs
 
 import { test, before, after } from 'node:test';
@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { WURZEL, QUELLEN } from '../werkzeug/bauen.mjs';
-import { appServer, browserStarten, appOeffnen, klick, zurStart, elternOeffnen, elternSeite, aboutAbschnitt } from './app-hilfen.mjs';
+import { appServer, browserStarten, appOeffnen, klick, zurStart, elternOeffnen, elternSeite, aboutAbschnitt, zustand, sichtbar, frageBeantworten } from './app-hilfen.mjs';
 
 const quelltext = await appLesen('utf8');
 const FOCUS = new Function('return ' + quelltext.match(/const FOCUS=(\[[^\]]*\]);/)[1])();
@@ -63,104 +63,112 @@ test('beim Drucken erscheint nur das Blatt, hell', async () => {
   await ctx.close();
 });
 
-const blattKnopf = (page, i, res) => page.locator(`#aboutBody details.psheet[open] button[data-i="${i}"][data-res="${res}"]`);
 const gesamtEv = async (page) => Object.values((await lies(page, 'ev')) || {}).reduce((s, l) => s + l.length, 0);
 
-test('Ergebnisse eintragen: richtig, mit Hilfe, noch nicht – zählen auch in der Einschätzung', async () => {
+/* A9 (02.11.): the child enters its sheet itself - with real clicks, like Practise Today */
+async function falschGeben(page, q) {
+  if (q.kind === 'mc') await klick(page, `#qAnswers .opt[data-i="${(q.answer + 1) % q.options.length}"]`);
+  else if (q.kind === 'type') { for (const z of String(+q.answer + 1)) await klick(page, `#qAnswers .key[aria-label="${z}"]`); await klick(page, '#qAnswers .key.go'); }
+  else { for (const k of [...q.correct].reverse()) await klick(page, `#qAnswers .ord[data-i="${k}"]`); await klick(page, '#checkOrder'); }
+}
+/** one task of the running sheet round; returns the result the app should write */
+async function blattAufgabe(page, wie) {
+  const z = await zustand(page), q = z.round[z.idx];
+  let erwartet;
+  if (wie === 'richtig') { await frageBeantworten(page, q); erwartet = 'ok'; }
+  else if (wie === 'tipp') { await klick(page, '#helpBtn'); await frageBeantworten(page, q); erwartet = 'help'; }
+  else if (wie === 'loesung') { await falschGeben(page, q); if (!(await sichtbar(page, '#nextBtn'))) await klick(page, '#answerBtn'); erwartet = 'no'; }
+  else { await falschGeben(page, q); if (await sichtbar(page, '#nextBtn')) erwartet = 'no'; else { await frageBeantworten(page, q); erwartet = 'help'; } }   // second try
+  assert.ok(await sichtbar(page, '#nextBtn'), 'task decided: ' + wie);
+  await klick(page, '#nextBtn');
+  return erwartet;
+}
+async function neuesBlatt(page) { await klick(page, '#sheetBtn'); await page.locator('#sheetClose').click(); await zurStart(page); }
+
+test('A9: Kind traegt sein Blatt selbst ein – Ansicht wie Practise Today, Nummer vom Blatt, nur das Blatt-Ergebnis', async () => {
   const { ctx, page, fehler } = await app();
-  await klick(page, '#sheetBtn');
-  await page.locator('#sheetClose').click();
-  await zurStart(page);
-  await elternOeffnen(page);
-  await elternSeite(page, 'sheets');
+  assert.equal(await sichtbar(page, '#mySheets'), false, 'no open sheet: no "My sheets"');
+  await neuesBlatt(page);
   const blatt = (await lies(page, 'sheets'))[0];
   assert.equal(blatt.no, 1, 'running number');
-  await page.locator(`details.psheet[data-sheetid="${blatt.id}"] > summary`).click();
-  assert.match(await page.textContent(`details.psheet[data-sheetid="${blatt.id}"] > summary`), /Blatt 1 · .*noch offen/);
-  await blattKnopf(page, 0, 'ok').click();
-  await blattKnopf(page, 1, 'help').click();
-  await blattKnopf(page, 2, 'no').click();
+  assert.ok(await sichtbar(page, '#mySheets'), '"My sheets" under the sheet button');
+  assert.match(await page.textContent('#mySheets'), /My sheets.*Sheet 1 · .*enter my answers/s);
+  const vorher = { attempts: (await lies(page, 'attempts')) || [], total: (await lies(page, 'total')) || 0 };
+  await page.locator('#mySheets [data-mysheet]').click();
+  let z = await zustand(page);
+  assert.ok(await sichtbar(page, '#play'));
+  assert.equal(z.round.length, 6);
+  assert.deepEqual(z.round.map((q) => q.prompt), blatt.items.map((i) => i.q.prompt), 'same tasks in the order of the paper');
+  assert.match(await page.textContent('#qLabel'), /^Task 1 of 6 – on your sheet: number 1$/);
+  if (z.round[0].kind === 'mc') assert.equal(await page.textContent('#qAnswers .opt[data-i="1"] .optletter'), 'B', 'the letter from the paper');
+  // four tasks: right, with the tip, answer shown, wrong then a second try - then interrupted
+  const erwartet = [];
+  for (const wie of ['richtig', 'tipp', 'loesung', 'zweiter']) erwartet.push(await blattAufgabe(page, wie));
+  await klick(page, '#quitBtn');
+  let s = (await lies(page, 'sheets'))[0];
+  assert.deepEqual(s.items.map((i) => i.res), [...erwartet, null, null]);
+  const neu = ((await lies(page, 'attempts')) || []).slice(vorher.attempts.length);
+  assert.deepEqual(neu.filter((a) => !a.sheet), [], 'no normal answers on top (would count twice)');
+  assert.deepEqual(neu.map((a) => [a.ok, a.help]), erwartet.map((r) => [r !== 'no', r === 'help']), 'one line per task, like before');
+  assert.equal(await gesamtEv(page), 4, 'one piece of evidence per task');
   const ev = await lies(page, 'ev');
-  const q = (i) => blatt.items[i].q;
-  assert.ok(ev[q(0).world].some((e) => e[2] === 1));
-  assert.ok(ev[q(1).world].some((e) => e[1] === 1 && e[2] === 1), 'mit Hilfe zaehlt als Grundlage');
-  assert.ok(ev[q(2).world].some((e) => e[2] === 0));
-  assert.ok((await lies(page, 'due')).some((d) => d.q.prompt === q(2).prompt), 'noch nicht -> wird wiederholt');
-  const versuche = (await lies(page, 'attempts')).filter((a) => a.sheet);
-  assert.deepEqual(versuche.map((a) => [a.ok, a.help]), [[true, false], [true, true], [false, false]], 'counts in the grown-ups summary too');
-  assert.deepEqual((await lies(page, 'sheets'))[0].items.map((i) => i.res).slice(0, 3), ['ok', 'help', 'no']);
-  assert.match(await page.textContent(`details.psheet[data-sheetid="${blatt.id}"] > summary`), /teilweise eingetragen \(3\/6\)/);
+  erwartet.forEach((r, i) => { const w = blatt.items[i].q.world; assert.ok(ev[w].some((e) => e[2] === (r === 'no' ? 0 : 1) && (r !== 'help' || e[1] === 1)), `task ${i + 1}: ${r}`); });
+  assert.ok((await lies(page, 'due')).some((d) => d.q.prompt === blatt.items[2].q.prompt), 'not yet -> comes back later');
+  assert.deepEqual(Object.keys((await lies(page, 'badges')) || {}), [], 'no badges on top while the sheet is not finished');
+  assert.equal(((await lies(page, 'bridgeNext')) || []).length, 0, 'no bridge tasks');
+  // later: go on with the rest
+  assert.match(await page.textContent('#mySheets'), /4 of 6 done, go on/);
+  await page.locator('#mySheets [data-mysheet]').click();
+  z = await zustand(page);
+  assert.equal(z.round.length, 2);
+  assert.match(await page.textContent('#qLabel'), /^Task 1 of 2 – on your sheet: number 5$/);
+  for (let i = 0; i < 2; i++) erwartet.push(await blattAufgabe(page, 'richtig'));
+  assert.ok(await sichtbar(page, '#results'));
+  assert.equal(await sichtbar(page, '#againBtn'), false, 'a sheet is entered once');
+  s = (await lies(page, 'sheets'))[0];
+  assert.deepEqual(s.items.map((i) => i.res), erwartet);
+  assert.equal((await lies(page, 'badges')).principled, 1, 'Principled: the whole sheet');
+  assert.ok((await lies(page, 'total')) > vorher.total, 'the stars count');
+  await zurStart(page);
+  assert.equal(await sichtbar(page, '#mySheets'), false, 'finished sheet leaves "My sheets"');
+  const text = (await page.evaluate(() => document.body.innerText)).toLowerCase();
+  assert.deepEqual(VERBOTEN.filter((w) => text.includes(w)), []);
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
 
-test('Vertippt: ein anderer Knopf korrigiert genau – nichts doppelt, Wiederholung passt', async () => {
+test('A10: Elternseite zeigt nur den Stand – keine Eingabeknoepfe; leeres Blatt verwerfen; Hinweis in der Uebersicht', async () => {
   const { ctx, page, fehler } = await app();
-  await klick(page, '#sheetBtn'); await page.locator('#sheetClose').click(); await zurStart(page);
-  await elternOeffnen(page); await elternSeite(page, 'sheets');
-  const blatt = (await lies(page, 'sheets'))[0], q0 = blatt.items[0].q;
-  await page.locator(`details.psheet[data-sheetid="${blatt.id}"] > summary`).click();
-  await blattKnopf(page, 0, 'ok').click();
-  await blattKnopf(page, 0, 'no').click();            // correction
-  assert.equal(await gesamtEv(page), 1, 'only one entry for the task');
-  assert.equal((await lies(page, 'ev'))[q0.world].slice(-1)[0][2], 0);
-  assert.ok((await lies(page, 'due')).some((d) => d.q.prompt === q0.prompt), 'now repeated');
-  assert.equal((await lies(page, 'attempts')).filter((a) => a.sheet).length, 1);
-  await blattKnopf(page, 0, 'ok').click();            // and back again
-  assert.equal(await gesamtEv(page), 1);
-  assert.equal((await lies(page, 'ev'))[q0.world].slice(-1)[0][2], 1);
-  assert.ok(!(await lies(page, 'due')).some((d) => d.q.prompt === q0.prompt), 'no longer repeated');
-  assert.deepEqual((await lies(page, 'attempts')).filter((a) => a.sheet).map((a) => a.ok), [true]);
-  assert.equal(await blattKnopf(page, 0, 'ok').getAttribute('aria-pressed'), 'true');
-  assert.deepEqual(fehler, []);
-  await ctx.close();
-});
-
-// Abzeichen Principled (01.11.): ein Blatt bis zum Ende bearbeitet, genau einmal je Blatt.
-test('Abzeichen Principled: erst wenn jede Aufgabe des Blatts ein Ergebnis hat, einmal je Blatt', async () => {
-  const { ctx, page, fehler } = await app();
-  await klick(page, '#sheetBtn'); await page.locator('#sheetClose').click(); await zurStart(page);
-  await elternOeffnen(page); await elternSeite(page, 'sheets');
-  const blatt = (await lies(page, 'sheets'))[0], n = blatt.items.length;
-  await page.locator(`details.psheet[data-sheetid="${blatt.id}"] > summary`).click();
-  for (let i = 0; i < n - 1; i++) await blattKnopf(page, i, i % 2 ? 'help' : 'ok').click();
-  assert.equal(((await lies(page, 'badges')) || {}).principled || 0, 0, 'not yet - one task still open');
-  await blattKnopf(page, n - 1, 'no').click();       // "not yet" also counts as worked on
-  assert.equal((await lies(page, 'badges')).principled, 1);
-  await blattKnopf(page, 0, 'no').click();           // correction
-  await blattKnopf(page, 0, 'ok').click();
-  assert.equal((await lies(page, 'badges')).principled, 1, 'a correction does not count twice');
-  await page.reload();
-  await page.waitForSelector('#home');
-  assert.match(await page.textContent('#badges'), /Principled/);
-  assert.deepEqual(fehler, []);
-  await ctx.close();
-});
-
-test('alte Eintraege ohne Protokoll bleiben gesperrt; leeres Blatt verwerfen; Hinweis in der Uebersicht fuehrt hin', async () => {
-  const { ctx, page, fehler } = await app();
-  await klick(page, '#sheetBtn'); await page.locator('#sheetClose').click(); await zurStart(page);
-  await klick(page, '#sheetBtn'); await page.locator('#sheetClose').click(); await zurStart(page);
+  await neuesBlatt(page);
+  await page.clock.setFixedTime(new Date(Date.now() + 60000));   // the sheet id contains the time
+  await neuesBlatt(page);
   const [b1, b2] = await lies(page, 'sheets');
   assert.deepEqual([b1.no, b2.no], [1, 2], 'two sheets on the same day are told apart');
-  // an old sheet (earlier version): result without record
-  await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('bq2_sheets')); s[0].items[0].res = 'ok'; localStorage.setItem('bq2_sheets', JSON.stringify(s)); });
+  // the child enters three tasks of sheet 1
+  await page.locator(`#mySheets [data-mysheet="${b1.id}"]`).click();
+  for (const wie of ['richtig', 'tipp', 'loesung']) await blattAufgabe(page, wie);
+  await zurStart(page);
   await elternOeffnen(page);
-  // calm note on the overview, straight to the newest waiting sheet
-  assert.match(await page.textContent('.psheet-note'), /2 Übungsblätter warten/);
+  // calm note on the overview, says where the child enters; the button only shows the state
+  assert.match(await page.textContent('.psheet-note'), /2 Übungsblätter sind noch offen.*Ihr Kind trägt die Antworten selbst ein: Startseite → „My sheets“/);
   await page.locator('.psheet-note button').click();
-  assert.ok(await page.locator(`details.psheet[data-sheetid="${b2.id}"]`).evaluate((d) => d.open), 'sheet opened');
-  assert.ok(await page.locator(`details.psheet[data-sheetid="${b2.id}"] button[data-res="ok"]`).first().isVisible());
-  // discard the empty sheet 2
+  const d2 = page.locator(`details.psheet[data-sheetid="${b2.id}"]`);
+  assert.ok(await d2.evaluate((d) => d.open), 'sheet opened');
+  assert.equal(await page.locator('#aboutBody button[data-res]').count(), 0, 'no entering by grown-ups');
+  assert.match(await page.textContent('#aboutBody'), /Ihr Kind trägt seine Antworten selbst in der App ein/);
+  assert.match(await d2.locator('summary').textContent(), /Blatt 2 · .*noch nicht angefangen/);
+  const d1 = page.locator(`details.psheet[data-sheetid="${b1.id}"]`);
+  assert.match(await d1.locator('summary').textContent(), /Blatt 1 · .*3 von 6 erledigt/);
+  await d1.locator('summary').click();
+  assert.deepEqual(await d1.locator('.sres').allTextContents(), ['✓ Richtig', '🤝 Mit Hilfe', '↻ Noch nicht', '○ noch offen', '○ noch offen', '○ noch offen']);
+  assert.equal(await d1.locator('[data-discard]').count(), 0, 'a sheet with entries stays');
+  // discard the empty sheet 2 - only grown-ups, only here
   page.once('dialog', (d) => d.accept());
-  await page.locator(`details.psheet[data-sheetid="${b2.id}"] [data-discard]`).click();
+  await d2.locator('[data-discard]').click();
   assert.deepEqual((await lies(page, 'sheets')).map((s) => s.id), [b1.id]);
-  assert.equal(await gesamtEv(page), 0, 'discarding counts nothing');
-  // sheet 1 has an old entry: no discard button, old result locked, others open
-  await page.locator(`details.psheet[data-sheetid="${b1.id}"] > summary`).click();
-  assert.equal(await page.locator(`details.psheet[data-sheetid="${b1.id}"] [data-discard]`).count(), 0);
-  assert.ok(await blattKnopf(page, 0, 'no').isDisabled(), 'old entry stays locked');
-  assert.ok(!(await blattKnopf(page, 1, 'no').isDisabled()));
+  await page.locator('.phdr [data-plang="en"]').click();
+  assert.match(await page.textContent(`details.psheet[data-sheetid="${b1.id}"] > summary`), /Sheet 1 · .*3 of 6 done/);
+  assert.match(await page.textContent('#aboutBody'), /your child enters the answers in the app – on the start page under “My sheets”/);
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
@@ -169,6 +177,8 @@ test('nicht eingetragen nach 14 Tagen: zaehlt nicht, ruhiger Vermerk, kein Hinwe
   const { ctx, page } = await app();
   await klick(page, '#sheetBtn'); await page.locator('#sheetClose').click(); await zurStart(page);
   await page.evaluate(() => { const s = JSON.parse(localStorage.getItem('bq2_sheets')); s[0].day = '2026-09-01'; localStorage.setItem('bq2_sheets', JSON.stringify(s)); });
+  await page.reload(); await page.waitForSelector('#home h1');
+  assert.equal(await sichtbar(page, '#mySheets'), false, 'an old, never entered sheet is not offered any more');
   await elternOeffnen(page);
   assert.equal(await page.locator('.psheet-note').count(), 0);
   await elternSeite(page, 'sheets');

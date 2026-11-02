@@ -386,6 +386,8 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 .bday select{font:inherit;padding:8px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--ink);min-height:44px}
 /* about page */
 #sheetBtn{width:100%}
+.mysheets{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.mysheets .btn{width:100%;justify-content:flex-start;text-align:left}
 .about{background:var(--surface);border:2px solid var(--line);border-radius:22px;padding:20px 18px;line-height:1.55}
 .about h2{margin:18px 0 6px}.about h2:first-child{margin-top:0}
 .about h3{margin:14px 0 4px}
@@ -403,8 +405,8 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 #parentForm input{min-height:48px;font-size:18px}
 .sheetrow{display:flex;flex-direction:column;gap:6px;border-top:2px solid var(--line);padding:10px 0}
 .sheetrow .q{font-size:.95rem}
-.sheetrow .row .btn{flex:1 1 90px}
-.sheetrow .btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.sheetrow .sres{font-size:.9rem;font-weight:700;color:var(--muted)}
+.sheetrow .sres.ok{color:#0F6B43}.sheetrow .sres.help{color:#8A4B00}
 /* printing: only the practice sheet goes on paper, always in light colours */
 #printArea{display:none}
 @media print{
@@ -455,6 +457,7 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
     <div id="subjects" class="subjects"></div>
     <div class="growrow"><div id="tree" class="tree"></div><div><div class="eyebrow">My learning tree <button type="button" class="info-btn" data-help="tree" aria-label="Help: learning tree">ⓘ</button></div><div id="treeText" class="muted"></div><div id="badges" class="badges"></div></div></div>
     <button class="btn" id="sheetBtn" type="button">📄 Practice sheet (PDF / print)</button>
+    <div id="mySheets" class="mysheets" hidden></div>
     <div class="foot">
       <span>Topics from class, updated 30 October.</span>
       <span class="row foot-buttons">
@@ -2506,7 +2509,7 @@ function renderHome(){
     b.addEventListener('click',()=>openSubject(s.key)); c.appendChild(b);
   });
   $('#soundBtn').textContent='Sound: '+(muted?'off':'on');
-  renderFun();
+  renderFun(); renderMySheets();
 }
 function openSubject(key){
   const s=SUBJECTS.find(x=>x.key===key); state.subject=key; state.back='home';
@@ -2535,6 +2538,7 @@ function goBack(){
 }
 
 function startRound(k){
+  state.sheet=null;
   state.world=k; state.round=(k==='today'||k.indexOf('mix_')===0)?WORLDS[k].build():adaptRound(k, WORLDS[k].build()); state.idx=0; state.stars=0; state.streak=0;
   state.results=state.round.map(()=>null);
   const pending=store.get('bridgeNext',[]).filter(q=>q && WORLDS[q.world]);
@@ -2550,6 +2554,30 @@ function startRound(k){
   $('#roundStars').textContent='0';
   show('play'); renderQuestion();
 }
+/* A9 (Peter, 02.11.): the child enters its own practice sheet - the same view as Practise Today, the open
+   tasks of the sheet in the order of the paper. The app checks as usual (tip and second try, "Show me how",
+   the worked answer). Only the sheet result is written (sheetResult): first try right = ok, right after a
+   tip, an example or a second try = help, otherwise = no. No normal answers, reviews of their own, bridges
+   or badges on top - otherwise the task would count twice. Stars count like in every round. */
+function startSheetRound(id){
+  const sh=store.get('sheets',[]).find(s=>s.id===id); if(!sh) return;
+  const open=[];
+  sh.items.forEach((it,i)=>{ if(it.res || !it.q) return; const q=neutralQ(it.q); if(!q) return;   // a stored copy that cannot be shown without private names stays open
+    const c=JSON.parse(JSON.stringify(q)); ['challenge','accepted','warmup','bridge','bridgePart','bridgeSource','retry'].forEach(k=>delete c[k]); c.sheetIndex=i; open.push(c); });
+  if(!open.length) return;
+  state.world='sheet'; state.sheet={id:sh.id, no:sh.no||0, n:sh.items.length};
+  state.round=open; state.idx=0; state.stars=0; state.streak=0; state.results=open.map(()=>null);
+  state.noteShown=false; state.noteNow=null; state.pendingNote=null; state.back='home';
+  $('#worldChip').textContent=kidSheetName(sh);
+  $('#roundStars').textContent='0';
+  show('play'); renderQuestion();
+}
+/* the result of the current sheet task, once (a task already entered stays as it is) */
+function sheetDecide(ok){
+  const q=state.round[state.idx]; if(!state.sheet || !q || q.sheetDone) return;
+  q.sheetDone=true;
+  sheetResult(state.sheet.id, q.sheetIndex, !ok ? 'no' : (state.attempts===1 && !state.hinted && !state.exampled && !q.assisted) ? 'ok' : 'help');
+}
 function renderDots(){
   const d=$('#dots'); d.innerHTML='';
   state.round.forEach((_,i)=>{ const s=document.createElement('span'); s.className='dot'+(state.results[i]===true?' good':state.results[i]===false?' bad':state.results[i]==='seen'?' seen':i===state.idx?' cur':''); d.appendChild(s); });
@@ -2564,7 +2592,9 @@ function renderQuestion(){
   const pn=$('#playNote'); pn.hidden=!state.pendingNote; pn.textContent=state.pendingNote||''; state.pendingNote=null;
   if(q.challenge && !q.accepted){ renderChallengeOffer(); return; }
   play.style.setProperty('--world', (WORLDS[q.world]||WORLDS[state.world]).color); // repeats saved by an older version may name a quest that no longer exists
-  $('#qLabel').textContent=q.label+' · Question '+(state.idx+1)+' of '+state.round.length;
+  $('#qLabel').textContent=state.sheet
+    ? 'Task '+(state.idx+1)+' of '+state.round.length+' – on your sheet: number '+(q.sheetIndex+1)
+    : q.label+' · Question '+(state.idx+1)+' of '+state.round.length;
   $('#qPrompt').innerHTML=q.prompt;
   const vis=$('#qVisual'); vis.innerHTML=q.visual||''; vis.hidden=!q.visual;
   const A=$('#qAnswers'); A.innerHTML=''; A.className='answers'+(q.grid?' grid':'')+(q.grid3?' grid3':'');
@@ -2574,7 +2604,7 @@ function renderQuestion(){
   if(q.kind==='mc'){
     q.options.forEach((o,i)=>{
       const b=document.createElement('button'); b.type='button'; b.className='opt'+(q.vis?' vis':'');
-      b.innerHTML=q.htmlOptions?o:esc(o); b.dataset.i=i;
+      b.innerHTML=(state.sheet?`<b class="optletter">${LETTERS[i]}</b> `:'')+(q.htmlOptions?o:esc(o)); b.dataset.i=i;   // on a sheet: the letter from the paper
       b.addEventListener('click',()=>answerMC(i)); A.appendChild(b);
     });
   } else if(q.kind==='type'){
@@ -2631,9 +2661,12 @@ function score(ok){
   state.answered=true; state.results[state.idx]=ok;
   if(ok){ state.stars++; state.streak++; } else state.streak=0;
   const q=state.round[state.idx];
-  if(ok && q.dueId && state.attempts===1 && !q.assisted && !state.hinted) advanceDue(q);   // only a success without help moves a review on
-  if(!ok) queueBridge(q);
-  if(ok && levelOf(q)===3){ addBadge('thinker'); if(q.world==='combos') addBadge('openMinded'); }
+  if(state.sheet) sheetDecide(ok);    // a sheet task: only its sheet result (A9)
+  else {
+    if(ok && q.dueId && state.attempts===1 && !q.assisted && !state.hinted) advanceDue(q);   // only a success without help moves a review on
+    if(!ok) queueBridge(q);
+    if(ok && levelOf(q)===3){ addBadge('thinker'); if(q.world==='combos') addBadge('openMinded'); }
+  }
   if(q.challenge && !state.challengeRewarded){ addBadge('riskTaker'); state.challengeRewarded=true; state.noteNow=maybeNote('brave',1); }
   else if(!ok) state.noteNow=maybeNote('wrong',.4);
   $('#roundStars').textContent=state.stars;
@@ -2643,6 +2676,7 @@ function score(ok){
    second independent success. Keep attempt details separately from legacy evidence. */
 function observeAttempt(q, ok, response){
   state.attempts++;
+  if(state.sheet){ if(!state.evidenceRecorded){ state.firstResponse=response; state.evidenceRecorded=true; } return; }   // a sheet task writes only its sheet result
   if(!state.evidenceRecorded){
     state.firstResponse=response; recordAnswer(state.hinted?Object.assign({},q,{assisted:true}):q,ok); state.evidenceRecorded=true;
     if(!ok) rememberWrong(q);
@@ -2833,7 +2867,7 @@ function showExample(){
   if(state.answered || !state.example) return;
   const q=state.round[state.idx], ex=state.example, de=q.world==='anleitung', h=ex.coach?guidance(ex,null,true):{text:ex.explain,visual:ex.visual||''}, fb=$('#feedback');
   state.exampled=true;
-  const log=store.get('attempts',[]); log.push({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,exampleShown:true,qid:q.dueId||qId(q)}); store.set('attempts',log.slice(-200));
+  if(!state.sheet){ const log=store.get('attempts',[]); log.push({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,exampleShown:true,qid:q.dueId||qId(q)}); store.set('attempts',log.slice(-200)); }
   const answer=ex.kind==='mc'?esc(strip(ex.options[ex.answer])):esc(ex.answer);
   fb.className='feedback hint'; fb.hidden=false;
   fb.innerHTML=`<span class="mark">${de?'Ein leichteres Beispiel':'An easier example'}</span><div class="worked"><p>${ex.prompt}</p>${h.visual?`<div class="visual">${h.visual}</div>`:''}<p>${esc(h.text)}</p><p><b>${de?'Lösung':'Answer'}: ${answer}</b></p></div><p><b>${de?'Jetzt du – deine Aufgabe oben.':'Now you – your question above.'}</b></p>`;
@@ -2843,7 +2877,7 @@ function showExample(){
 }
 function showHint(){
   const q=state.round[state.idx], de=q.world==='anleitung', h=guidance(q,null,false), fb=$('#feedback');
-  if(!state.hinted){ const log=store.get('attempts',[]); log.push({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,hintShown:true,qid:q.dueId||qId(q)}); store.set('attempts',log.slice(-200)); }
+  if(!state.hinted && !state.sheet){ const log=store.get('attempts',[]); log.push({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,hintShown:true,qid:q.dueId||qId(q)}); store.set('attempts',log.slice(-200)); }
   state.hinted=true; afterTip(q);
   fb.className='feedback hint'; fb.hidden=false;
   fb.innerHTML=`<span class="mark">${de?'So kannst du vorgehen':'Here’s a way to do it'}</span><p>${esc(h.text)}</p>${h.visual?`<div class="visual">${h.visual}</div>`:''}`;
@@ -2853,14 +2887,17 @@ function showHint(){
 function showWorked(){
   if(state.answered) return;
   const q=state.round[state.idx], beforeTry=state.attempts===0, de=q.world==='anleitung';
-  if(!state.evidenceRecorded){
-    state.evidenceRecorded=true; rememberWrong(q);
-    // answer shown without an own try: not passed, at support level (Peter, 01.11.)
-    recordAnswer(Object.assign({},q,{assisted:true}),false);
+  if(state.sheet){ state.evidenceRecorded=true; sheetDecide(false); }   // a sheet task: "not yet", nothing else is written
+  else {
+    if(!state.evidenceRecorded){
+      state.evidenceRecorded=true; rememberWrong(q);
+      // answer shown without an own try: not passed, at support level (Peter, 01.11.)
+      recordAnswer(Object.assign({},q,{assisted:true}),false);
+    }
+    const log=store.get('attempts',[]); log.push(Object.assign({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,solutionShown:true,qid:q.dueId||qId(q)},beforeTry?{beforeTry:true}:{})); store.set('attempts',log.slice(-200));
   }
-  const log=store.get('attempts',[]); log.push(Object.assign({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,solutionShown:true,qid:q.dueId||qId(q)},beforeTry?{beforeTry:true}:{})); store.set('attempts',log.slice(-200));
   if(beforeTry){
-    state.answered=true; state.results[state.idx]='seen'; queueBridge(q);
+    state.answered=true; state.results[state.idx]='seen'; if(!state.sheet) queueBridge(q);
     $('#roundStars').textContent=state.stars; renderDots();
   } else score(false);
   if(q.kind==='mc') document.querySelectorAll('#qAnswers .opt').forEach(b=>{ b.disabled=true; b.classList.toggle('correct',+b.dataset.i===q.answer); });
@@ -2956,7 +2993,8 @@ function showResults(){
   const n=state.round.length, s=state.stars, k=state.world, name=playerName();
   const total=store.get('total',0)+s; store.set('total',total);
   const best=store.get('best_'+k,0); if(s>best) store.set('best_'+k,s);
-  $('#resWorld').textContent=WORLDS[k].name;
+  $('#resWorld').textContent=state.sheet?$('#worldChip').textContent:WORLDS[k].name;
+  $('#againBtn').hidden=!!state.sheet;   // a sheet is entered once
   $('#resScore').textContent=s;
   $('#resCount').textContent=n;
   $('#bigStars').innerHTML=state.round.map((_,i)=>STAR.replace('<svg', i<s?'<svg class="on"':'<svg')).join('');
@@ -2966,7 +3004,9 @@ function showResults(){
   else if(s>=6){ head='Fantastic work'+who+'!'; msg='Nearly perfect. One more round and you will have them all.'; }
   else if(s>=4){ head='Good job'+who+'!'; msg='You are getting there. Read the explanations and try again.'; }
   else { head='Nice try'+who+'!'; msg='Every game makes your brain stronger. Have another go!'; }
-  if(s>best && best>0) msg+=' New best score for this quest!';
+  if(state.sheet){ const left=((store.get('sheets',[]).find(x=>x.id===state.sheet.id)||{items:[]}).items).filter(i=>!i.res).length;
+    msg=left?'Well done! The other tasks of this sheet wait under “My sheets”.':'Your whole sheet is in the app. Tricky tasks come back later – that is how your brain grows.'; }
+  else if(s>best && best>0) msg+=' New best score for this quest!';
   $('#resHead').textContent=head; $('#resMsg').textContent=msg;
   show('results'); renderAfterRound(k); snapshot();
   if(s>=6){ beep('win'); confetti(); }
@@ -3346,6 +3386,7 @@ let currentSheet=null;
 const isStandalone = () => window.navigator.standalone===true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
 function printSheet(only){
   currentSheet=buildSheet(Array.isArray(only)?only:null);   // grown-ups: a sheet on one topic only
+  renderMySheets();
   $('#printArea').innerHTML=renderSheet(currentSheet);
   $('#sheetPrint').hidden=isStandalone();
   $('#sheetMsg').textContent='';
@@ -3476,26 +3517,14 @@ async function sheetPdf(sheet){
   return doc.bytes();
 }
 
-/* Grown-ups enter the results of a printed sheet (Peter, 31.10./01.11.). Each result counts like a first
-   try in the app (with help = support level) - also in the grown-ups' summary - and can be corrected:
-   tapping another button takes the old entry back exactly. Results of older versions (without a
-   record) stay as they are. A sheet without any entry can be discarded; it never counts. */
+/* The result of a sheet task (A9, Peter, 02.11.: the child enters its sheet itself in a round like Practise
+   Today; before, grown-ups entered it). Each result counts like a first try in the app (with help = support
+   level) - also in the grown-ups' summary. Every task counts once; there is no correcting afterwards.
+   A sheet without any entry can be discarded by a grown-up; it never counts. */
 const RES_T={de:{ok:'✓ Richtig', help:'🤝 Mit Hilfe', no:'↻ Noch nicht'}, en:{ok:'✓ Correct', help:'🤝 With help', no:'↻ Not yet'}};
-const RES=RES_T.en;
-const sameEv = (a,b) => a && b && a[0]===b[0] && a[1]===b[1] && a[2]===b[2];
-function undoResult(it){
-  const r=it.rec; if(!r) return false;
-  const ev=store.get('ev',{}), list=ev[it.q.world]||[];
-  for(let i=list.length-1;i>=0;i--) if(sameEv(list[i],r.ev)){ list.splice(i,1); break; }
-  ev[it.q.world]=list; store.set('ev',ev);
-  store.set('attempts', store.get('attempts',[]).filter(a=>a.sheet!==r.key));
-  if(r.due) store.set('due', store.get('due',[]).filter(d=>d.id!==r.due));
-  it.rec=null; it.res=null; return true;
-}
-function enterResult(sheetId, idx, res){
-  if(!parentAccess || !RES_T.en[res]) return;
-  const all=store.get('sheets',[]), sh=all.find(s=>s.id===sheetId), it=sh && sh.items[idx]; if(!it || it.res===res) return;
-  if(it.res && !undoResult(it)) return;            // an old result without a record stays locked
+function sheetResult(sheetId, idx, res){
+  if(!RES_T.en[res]) return;
+  const all=store.get('sheets',[]), sh=all.find(s=>s.id===sheetId), it=sh && sh.items[idx]; if(!it || !it.q || it.res) return;
   const q=it.q, key=sheetId+':'+idx;
   if(res==='ok') recordAnswer(q,true);
   else if(res==='help') recordAnswer(Object.assign({},q,{level:1}),true);
@@ -3504,9 +3533,8 @@ function enterResult(sheetId, idx, res){
   it.rec={ev:list[list.length-1]||null, key, due:res==='no'?(q.dueId||qId(q)):null};
   const log=store.get('attempts',[]); log.push({day:dayKey(), skill:q.world, level:levelOf(q), attempt:1, ok:res!=='no', help:res==='help', sheet:key}); store.set('attempts',log.slice(-200));
   it.res=res;
-  /* Principled (01.11.): a practice sheet finished to the end – every task has a result. Counts once per sheet, also after a correction. */
+  /* Principled (01.11.): a practice sheet finished to the end – every task has a result. Counts once per sheet. */
   if(!sh.principled && sh.items.every(i=>i.res)){ sh.principled=true; store.set('sheets',all); addBadge('principled'); } else store.set('sheets',all);
-  state.psheetOpen=sheetId; renderSheets();
 }
 function discardSheet(sheetId){
   if(!parentAccess) return;
@@ -3533,7 +3561,7 @@ const PT={
   de:{home:'🏠 Übersicht',sheets:'📄 Übungsblätter',settings:'👧 Für das Kind',help:'💡 Helfen wie die Schule',
     howHome:'<b>So lesen Sie diese Seite:</b> Links sehen Sie dieselben Fächer wie das Kind; jedes Kästchen ist eine Quest. Rechts steht die Einschätzung in Worten. Tippen Sie auf ein Fach, um zu sehen, was geübt wird, worauf die Einschätzung beruht und wie Sie helfen können.',
     howSubj:'<b>Was kann ich hier tun?</b> Jede Quest mit Stand, Grundlage und Tipp. Darüber legen Sie fest, wie der Fokus gewählt wird.',
-    howSheets:'<b>So geht’s:</b> Blatt antippen (die Nummer steht auch auf dem Papier) und pro Aufgabe wählen, wie es lief. Vertippt? Einfach den richtigen Knopf antippen. „Mit Hilfe“ und „Noch nicht“ sind gut so: Die App bietet dann leichtere Schritte an und wiederholt die Aufgabe später. Ein Blatt, das nicht eingetragen wird, zählt einfach nicht.',
+    howSheets:'<b>So geht’s:</b> Ihr Kind trägt seine Antworten selbst in der App ein – auf der Startseite unter „My sheets“. Hier sehen Sie, wie jede Aufgabe lief. „Mit Hilfe“ und „Noch nicht“ sind gut so: Die App bietet dann leichtere Schritte an und wiederholt die Aufgabe später. Ein Blatt, das nicht eingetragen wird, zählt einfach nicht.',
     howSettings:'<b>Was kann ich hier tun?</b> Fokus-Themen als Liste, Spannung der Pisolala-Geschichten, eine freiwillige Kalender-Erinnerung, Profilangaben des Kindes und die App-Version. Nichts davon ist Pflicht.',
     howHelp:'<b>Was kann ich hier tun?</b> Kurz nachlesen, wie die Schule ein Thema zeigt, und mit drei Fragen helfen statt vorzurechnen.',
     back:'← Alle Fächer',focus:'Im Fokus',fm:'🎯 Fokus',pvT:'Ausblick: Themen für später',pvTxt:'Diese Themen kommen meist später im Schuljahr. Ihr Kind sieht sie erst, wenn Sie sie hier freigeben – zum Beispiel, wenn sie in der Schule drankommen oder Ihr Kind neugierig ist.',pvBtn:'Für das Kind freigegeben',pvOn:'freigegeben',pvOff:'nicht freigegeben',fAuto:'Automatisch',fMan:'Manuell',fAutoTxt:'Die App wählt selbst: die Themen, die die Lehrkraft in ihren Bewertungen als nächste Schritte nennt, und dazu alles, wo die Einschätzung Unterstützung nahelegt. Das passt sich von selbst an. Tippen Sie bei einer Quest auf „Im Fokus“, wechselt die Wahl auf „Manuell“.',fManTxt:'Sie legen selbst fest, woraus „Practise Today“ und das Übungsblatt Aufgaben nehmen – zum Beispiel vor einem Test. Mit „Automatisch“ übernimmt wieder die App.',fNote:'Alle Quests bleiben für das Kind spielbar; der Fokus bestimmt nur, was „Practise Today“ und das Übungsblatt bevorzugen.',school:'nächster Schritt laut Schule',need:'braucht Übung',gap:d=>'Lücke laut Schule ('+d+')',gapWait:'wartet',how:'💡 So helfen Sie',
@@ -3550,7 +3578,7 @@ const PT={
   en:{home:'🏠 Overview',sheets:'📄 Practice sheets',settings:'👧 For your child',help:'💡 Help like the school',
     howHome:'<b>How to read this page:</b> on the left are the same subjects your child sees; each small square is a quest. On the right is a summary in plain words. Tap a subject to see what is practiced, what the summary is based on, and how you can help.',
     howSubj:'<b>What can I do here?</b> Every quest with its status, basis and a tip. Above, you choose how the focus is set.',
-    howSheets:'<b>How it works:</b> tap a sheet (its number is also on the paper) and choose for each task how it went. Tapped the wrong one? Just tap the right button. “With help” and “Not yet” are fine: the app then offers easier steps and brings the task back later. A sheet that isn’t entered simply doesn’t count.',
+    howSheets:'<b>How it works:</b> your child enters the answers in the app – on the start page under “My sheets”. Here you see how each task went. “With help” and “Not yet” are fine: the app then offers easier steps and brings the task back later. A sheet that isn’t entered simply doesn’t count.',
     howSettings:'<b>What can I do here?</b> Focus topics as a list, how exciting Pisolala stories may be, an optional calendar reminder, the child\'s profile details and the app version. None of this is required.',
     howHelp:'<b>What can I do here?</b> Read briefly how the school teaches a topic and help with three questions instead of calculating for the child.',
     back:'← All subjects',focus:'In focus',fm:'🎯 Focus',pvT:'Coming up: topics for later',pvTxt:'These topics usually come later in the school year. Your child only sees them once you turn them on here – for example when they come up at school or your child is curious.',pvBtn:'Visible to your child',pvOn:'turned on',pvOff:'turned off',fAuto:'Automatic',fMan:'Manual',fAutoTxt:'The app chooses by itself: the topics the teacher names as next steps in the evaluations, plus everything where the summary suggests support. It adapts by itself. Tapping “In focus” at a quest switches to “Manual”.',fManTxt:'You decide where “Practise Today” and the practice sheet take their tasks from – for example before a test. Choose “Automatic” to let the app take over again.',fNote:'All quests stay playable for your child; the focus only decides what “Practise Today” and the practice sheet prefer.',school:'next step per school',need:'needs practice',gap:d=>'gap per school ('+d+')',gapWait:'waiting',how:'💡 How you can help',
@@ -3703,7 +3731,8 @@ function parentHomeHTML(){
     return `<button type="button" class="psubject" data-psubj="${s.key}"><span class="prow"><span class="pico" style="background:${s.color}">${ICONS[s.icon]||''}</span><span class="pname">${esc(s.name)}</span></span><span class="pdots">${list.map(a=>`<i class="${a.level}" title="${esc(WORLDS[a.k].name)}"></i>`).join('')}</span><span>${pChip(subjectLevel(list))}${(()=>{ const sl=schoolSubjectLevel(s.key); return sl?` <span class="pschooldot" title="${PL()==='de'?'Schule':'School'}: ${esc(PSTAND[PL()][sl])}"><span class="small">🏫</span><span class="pdots"><i class="${sl}"></i></span></span>`:''; })()}${f?` <span class="focus">${T.focusN(f)}</span>`:''}</span></button>`; }).join('');
   // A waiting practice sheet is mentioned once, calmly, with a way straight to it (not for teachers).
   const wait=isTeacher()?[]:waitingSheets(), w=wait[wait.length-1];
-  const note=w?`<p class="phow psheet-note">📄 ${wait.length===1?(de?`${sheetName(w)} wartet aufs Eintragen.`:`${sheetName(w)} is waiting to be entered.`):(de?`${wait.length} Übungsblätter warten aufs Eintragen.`:`${wait.length} practice sheets are waiting to be entered.`)} <button type="button" class="btn small" data-opensheet="${w.id}">${de?'Jetzt eintragen':'Enter now'}</button></p>`:'';
+  // A10 (02.11.): the child enters the sheet itself - the note says where, the button only shows the state
+  const note=w?`<p class="phow psheet-note">📄 ${wait.length===1?(de?`${sheetName(w)} ist noch offen.`:`${sheetName(w)} is still open.`):(de?`${wait.length} Übungsblätter sind noch offen.`:`${wait.length} practice sheets are still open.`)} ${de?'Ihr Kind trägt die Antworten selbst ein: Startseite → „My sheets“.':'Your child enters the answers: start page → “My sheets”.'} <button type="button" class="btn small" data-opensheet="${w.id}">${de?'Stand ansehen':'See progress'}</button></p>`:'';
   const noKid=accountsOn() && !viewedKid() ? myKidsNote() : '';
   if(noKid) return noKid;   // nothing to show: without a logged-in child the data on this device are not the child's
   // concept 5.3 (B4): notes only when something is to do - data move, backup, waiting sheet, "new here?"
@@ -3750,14 +3779,24 @@ function sheetsPageHTML(){
   const T=PT[PL()], de=PL()==='de', R=RES_T[PL()], rank={open:0,part:0,stale:1,done:2};
   const all=store.get('sheets',[]).slice().reverse().sort((a,b)=>rank[sheetState(a)]-rank[sheetState(b)]);
   if(!all.length) return `<h2>${de?'Übungsblätter':'Practice sheets'}</h2><p>${de?'Noch kein Übungsblatt. Auf der Startseite „📄 Practice sheet (PDF / print)“ antippen.':'No practice sheet yet. Tap “📄 Practice sheet (PDF / print)” on the start page.'}</p>`;
-  const label={de:{open:'noch offen',part:'teilweise eingetragen',done:'eingetragen ✓',stale:'nicht eingetragen – zählt nicht, ist in Ordnung'},en:{open:'not entered yet',part:'partly entered',done:'entered ✓',stale:'not entered – doesn’t count, and that’s fine'}}[de?'de':'en'];
+  // A10 (02.11.): grown-ups only see the state - the child enters the answers itself (startSheetRound)
+  const label={de:{open:'noch nicht angefangen',part:(n,N)=>`${n} von ${N} erledigt`,done:'fertig ✓',stale:'nicht eingetragen – zählt nicht, ist in Ordnung'},en:{open:'not started yet',part:(n,N)=>`${n} of ${N} done`,done:'done ✓',stale:'not entered – doesn’t count, and that’s fine'}}[de?'de':'en'];
   return `<h2>${de?'Übungsblätter':'Practice sheets'}</h2><p class="phow">${T.howSheets}</p>`+all.map(sh=>{
     const st=sheetState(sh), n=sh.items.filter(i=>i.res).length;
-    return `<details class="psheet ${st}" data-sheetid="${sh.id}"${state.psheetOpen===sh.id?' open':''}><summary><b>${sheetName(sh)}</b> <span class="psheet-st">${label[st]}${st==='part'?` (${n}/${sh.items.length})`:''}</span></summary>`
-      +sh.items.map((it,i)=>{ const locked=it.res && !it.rec;
-        return `<div class="sheetrow"><div class="q"><b>${i+1}.</b> ${esc(strip(sheetPrompt(it.q)).slice(0,140))}</div><div class="row">${Object.keys(R).map(r=>`<button type="button" class="btn small${it.res===r?' on':''}" data-sheet="${sh.id}" data-i="${i}" data-res="${r}" aria-pressed="${it.res===r}"${locked?' disabled':''}>${R[r]}</button>`).join('')}</div></div>`; }).join('')
+    return `<details class="psheet ${st}" data-sheetid="${sh.id}"${state.psheetOpen===sh.id?' open':''}><summary><b>${sheetName(sh)}</b> <span class="psheet-st">${st==='part'?label.part(n,sh.items.length):label[st]}</span></summary>`
+      +sh.items.map((it,i)=>`<div class="sheetrow"><div class="q"><b>${i+1}.</b> ${esc(strip(sheetPrompt(it.q)).slice(0,140))}</div><div class="sres${it.res?' '+it.res:''}">${it.res&&R[it.res]?R[it.res]:(de?'○ noch offen':'○ still open')}</div></div>`).join('')
       +(n?'':`<p><button type="button" class="btn small" data-discard="${sh.id}">${de?'Blatt verwerfen':'Discard sheet'}</button></p>`)+'</details>';
   }).join('');
+}
+/* A9: the child's open sheets on its start page, under "Practice sheet" (only when there is one) */
+const kidSheetName = sh => (sh.no?'Sheet '+sh.no+' · ':'Sheet · ')+new Date(sh.day+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+function renderMySheets(){
+  const box=$('#mySheets'); if(!box) return;
+  const list=waitingSheets().slice().reverse();
+  box.hidden=!list.length;
+  box.innerHTML=list.length?`<div class="eyebrow">📝 My sheets</div>`+list.map(sh=>{ const n=sh.items.filter(i=>i.res).length;
+    return `<button type="button" class="btn" data-mysheet="${esc(sh.id)}">📝 ${esc(kidSheetName(sh))} – ${n?`${n} of ${sh.items.length} done, go on`:'enter my answers'}</button>`; }).join(''):'';
+  box.querySelectorAll('[data-mysheet]').forEach(b=>b.addEventListener('click',()=>startSheetRound(b.dataset.mysheet)));
 }
 /* The move to IDs failed on this device: grown-ups see it calmly, with a way to try again. */
 function migrNote(){
@@ -4095,7 +4134,6 @@ function renderSheets(){
   body.querySelectorAll('[data-pfocus]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; toggleFocus(b.dataset.pfocus); renderHome(); renderSheets(); }));
   body.querySelectorAll('[data-punlock]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; const k=b.dataset.punlock, u=store.get('unlocked',[]); store.set('unlocked', u.includes(k)?u.filter(x=>x!==k):u.concat([k])); renderHome(); renderSheets(); }));
   body.querySelectorAll('[data-fmode]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; setFocusMode(b.dataset.fmode); renderHome(); renderSheets(); }));
-  body.querySelectorAll('button[data-res]').forEach(b=>b.addEventListener('click',()=>enterResult(b.dataset.sheet, +b.dataset.i, b.dataset.res)));
   body.querySelectorAll('[data-psheetq]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; printSheet([b.dataset.psheetq]); renderSheets(); }));
   body.querySelectorAll('[data-discard]').forEach(b=>b.addEventListener('click',()=>discardSheet(b.dataset.discard)));
   body.querySelectorAll('details.psheet').forEach(d=>d.addEventListener('toggle',()=>{ if(d.open) state.psheetOpen=d.dataset.sheetid; else if(state.psheetOpen===d.dataset.sheetid) state.psheetOpen=null; }));
