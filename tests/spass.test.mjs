@@ -26,7 +26,8 @@ async function rundeSpielen(page, falsch = false) {
 }
 
 test('nach einer Runde: Leckerli waehlen – Witz mit Aufloesung, Mystery Question einmal am Tag, freigegebene Pisolala-Geschichte', async () => {
-  const { ctx, page, fehler } = await app();
+  // a normal school day (no theme, no birthday): A6 brings the first everyday story
+  const { ctx, page, fehler } = await app({ zeit: '2026-11-10T10:00:00' });
   await karteOeffnen(page, (await alleKarten(page)).find((k) => k.item === 'numbers'));
   await rundeSpielen(page);
   assert.ok(await page.isVisible('#results'));
@@ -34,16 +35,15 @@ test('nach einer Runde: Leckerli waehlen – Witz mit Aufloesung, Mystery Questi
   // Pisolala-Knopf nur, wenn eine Geschichte freigegeben ist (approved:true); Spannung bis zur Obergrenze (Voreinstellung 2)
   assert.deepEqual(knoepfe, ['joke', 'mystery', 'story']);
   await klick(page, '#treat [data-treat="story"]');
-  assert.deepEqual(await page.$$eval('#treatBody [data-story]', (b) => b.map((x) => x.dataset.l)), ['1', '2']);
-  await klick(page, '#treatBody [data-story][data-l="1"]');
+  assert.deepEqual(await page.$$eval('#treatBody [data-story]', (b) => b.map((x) => x.dataset.l)), ['1', '2'], 'up to the limit (default 2)');
+  await klick(page, '#treatBody [data-story][data-l="2"]');
   const geschichte = await page.textContent('#storyText');
   assert.ok(geschichte.includes('Pisolala'));
   // Peter 30.10.: stories in English, German only in the Deutsch subject (here: Maths round)
-  assert.ok(geschichte.includes('Nobody can see Pisolala'), 'English after a Maths round');
-  assert.equal(await page.textContent('#treatBody p b'), 'Pisolala and the Giggling Pumpkins');
-  for (const w of ['Ohren', 'Augen', 'Fell', 'groß wie', 'aussah', 'ears', 'eyes', 'fur', 'as big as', 'looked like']) assert.ok(!geschichte.includes(w), 'Pisolala bleibt unsichtbar: ' + w);
+  assert.ok(geschichte.includes('Moonlight Trampoline'), 'English after a Maths round');
+  assert.equal(await page.textContent('#treatBody p b'), 'The Star on the Trampoline');
   // A5: one story per round, remembered as read (the choice of the next one is tested in tests/module/geschichten.test.mjs)
-  assert.deepEqual(await lies(page, 'storyRead'), ['halloween-2026']);
+  assert.deepEqual(await lies(page, 'storyRead'), ['alltag-stern-trampolin']);
   assert.equal(await page.$$eval('#treatBody p b', (b) => b.length), 1, 'one story, not a list');
   await klick(page, '#treat [data-treat="joke"]');
   const witz = await page.textContent('#treatBody .story');
@@ -55,7 +55,7 @@ test('nach einer Runde: Leckerli waehlen – Witz mit Aufloesung, Mystery Questi
   for (let i = 0; i < 3; i++) { await klick(page, '#treat [data-treat="joke"]'); assert.equal(await page.textContent('#treatBody .story'), witz); }
   await klick(page, '#treat [data-treat="mystery"]');
   await klick(page, '#treatBody [data-m]');
-  assert.equal(await lies(page, 'mysteryDone'), tag(0));
+  assert.equal(await lies(page, 'mysteryDone'), '2026-11-10');
   await klick(page, '#treat [data-treat="mystery"]');
   assert.ok((await page.textContent('#treatBody')).includes('A new one comes tomorrow'));
   assert.deepEqual(fehler, []);
@@ -63,7 +63,7 @@ test('nach einer Runde: Leckerli waehlen – Witz mit Aufloesung, Mystery Questi
 });
 
 test('Pisolala auf Deutsch nur nach einer Runde im Fach Deutsch (Anleitung)', async () => {
-  const { ctx, page, fehler } = await app();
+  const { ctx, page, fehler } = await app({ zeit: '2026-10-30T10:00:00' });   // Halloween: the Halloween story comes first
   await karteOeffnen(page, (await alleKarten(page)).find((k) => k.item === 'anleitung'));
   await rundeSpielen(page);
   await page.locator('#treat [data-treat="story"]').click();
