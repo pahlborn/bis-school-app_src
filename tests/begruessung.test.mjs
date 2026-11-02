@@ -99,7 +99,7 @@ test('Begruessung: Name aus dem Profil (als Text), Stimmung nur Antwortzeile, ni
   const alles = await page.evaluate(() => JSON.stringify(Object.entries(localStorage)).toLowerCase());
   for (const w of ['mood', 'great', 'tired', '"sad"', 'okay']) assert.ok(!alles.includes(w), 'stored: ' + w);
   const neu = (await page.evaluate(() => Object.keys(localStorage))).filter((k) => !vorher.includes(k));
-  assert.ok(neu.every((k) => /name|greetDay|ev|attempts/.test(k)), 'new keys: ' + neu.join(', '));
+  assert.ok(neu.every((k) => /name|greetDay|ev|attempts|jokeSeen/.test(k)), 'new keys: ' + neu.join(', '));   // jokeSeen: A3, shown jokes (no mood)
   const text = (await page.textContent('#greetDlg')).toLowerCase();
   for (const w of ['grade', 'level', 'score', 'rating', 'wrong', 'bad mood', 'diagnos', 'therap', 'streak', 'in a row', "haven't been", 'missed', 'believe. inspire', 'birthday']) assert.ok(!text.includes(w), w);
   assert.deepEqual(fehler, []);

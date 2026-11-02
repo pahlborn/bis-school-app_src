@@ -29,6 +29,7 @@
     { "key": "focusOff", "bereich": "kind", "abgleich": "lokal", "sicherung": true, "hinweis": "alte Fokus-Form" },
     { "key": "greetDay", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true },
     { "key": "mysteryDone", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true },
+    { "key": "jokeSeen", "bereich": "kind", "abgleich": "lokal", "sicherung": false, "hinweis": "A3: schon gezeigte Witze (keine Wiederholung, bis alle dran waren)" },
     { "key": "chk_", "praefix": true, "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true },
     { "key": "advent", "praefix": true, "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true },
     { "key": "kidLang", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true },

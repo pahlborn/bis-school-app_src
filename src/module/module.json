@@ -3,6 +3,7 @@
   "module": [
     { "name": "rechte", "bau": "live", "browserTests": ["stufe1-p4", "stufe1-p3", "stufe1-ist", "anmeldung", "schule"] },
     { "name": "passwort", "bau": "live", "browserTests": ["stufe1-p3", "anmeldung", "hilfe-rollen"] },
+    { "name": "witze", "bau": "live", "browserTests": ["spass", "begruessung"] },
     { "name": "krypto", "bau": "test", "browserTests": ["testbau"] },
     { "name": "ereignisse", "bau": "test", "browserTests": ["testbau"] },
     { "name": "ableitung", "bau": "test", "browserTests": ["ableitung-vergleich"] },
