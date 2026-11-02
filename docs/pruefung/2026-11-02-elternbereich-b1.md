@@ -35,7 +35,7 @@ Seltene Funktionen (Einstellungen für das Kind, Sicherung, Freigaben, Konten, V
 - Gegenproben (rot):
   - T1–T3 mit der App von `main`: alle drei rot.
   - T3 ohne das Merken des Ziels über die Anmeldung: rot (so beim Bauen aufgefallen und behoben).
-- `npm test`: 251 bestanden.
+- `npm test`: 251 bestanden; nach dem Merge von `main` (Stufe 2 P1, #60) 263 bestanden.
 - Bildschirmfotos auf 320 px und auf dem Desktop durchgesehen. Das schlichte ⚙ war auf dem blauen „aktiv“-Hintergrund kaum sichtbar, deshalb jetzt das Emoji ⚙️.
 
 ## Gefunden, nicht geändert
