@@ -2062,7 +2062,8 @@ function advanceDue(q){
   store.set('due',due);
 }
 /* Stored copies of older questions (reviews, bridges, sheets) may still name the class,
-   school, teachers or places. They are rewritten when shown, never in storage. If an old
+   school, teachers or places. They are rewritten when shown and, since A1 (02.11.), also in storage
+   (cleanStoredPrivate below). If an old
    copy cannot be rewritten exactly (e.g. capital-letter variants), a fresh question of the
    same quest and kind takes its place; the review keeps its id and runs out as usual. */
 /* The old wording (names of the class, school, teachers and places) is stored only base64-encoded
@@ -2111,6 +2112,49 @@ function neutralQ(q){
     if(fresh){ ['dueId','bridge','bridgePart','bridgeSource','assisted'].forEach(k=>{ if(q[k]!==undefined) fresh[k]=q[k]; }); return fresh; }
   }
   return null;
+}
+/* A1 (Peter, 02.11.): the old wording is now also removed from the storage itself - once at start and after
+   a restore. Otherwise it would stay on the device, travel into backups and, with Stufe 2, into the shared log.
+   Only the keys that hold question texts are touched (passwords, grants and sessions never). A stored question
+   becomes the same neutral question as on screen (neutralQ); every other text gets the rewrite table, and
+   names that are still left become "[name]". A review id built from an old question text becomes
+   "alt-<hash>" - the same in every place, so reviews, answer log and sheets stay linked. */
+const CLEAN_KEYS=['due','sheets','bridgeNext','attempts'];
+const CLEAN_KEY_RE=/^bq2_(?:.+__)?(due|sheets|bridgeNext|attempts|vorRueckspielen)$/;
+const privHash = s => { let h=5381; for(let i=0;i<s.length;i++) h=((h*33)^s.charCodeAt(i))>>>0; return h.toString(36); };
+function cleanText(s){
+  if(!PRIVATE_RE.test(s)) return s;
+  let r=s; LEGACY_TEXT.forEach(([a,b])=>{ r=r.split(a).join(b); });
+  if(!PRIVATE_RE.test(r)) return r;
+  if(s.includes('|')) return 'alt-'+privHash(s);
+  return r.replace(new RegExp(PRIVATE_RE.source,'gi'),'[name]');
+}
+function cleanDeep(v){
+  if(typeof v==='string') return cleanText(v);
+  if(Array.isArray(v)) return v.map(cleanDeep);
+  if(!v || typeof v!=='object') return v;
+  let o=v;
+  if(typeof v.kind==='string' && 'prompt' in v && isPrivate(v)){
+    o=Object.assign({}, neutralQ(v)||v);
+    if(v.dueId!==undefined) o.dueId=v.dueId;   // cleaned below exactly like the id of the review itself
+  }
+  const out={}; for(const k of Object.keys(o)) out[k]=cleanDeep(o[k]); return out;
+}
+function cleanStoredPrivate(){
+  const keys=[]; for(let i=0;i<localStorage.length;i++) keys.push(localStorage.key(i));
+  let n=0;
+  for(const k of keys){
+    const m=k && CLEAN_KEY_RE.exec(k); if(!m) continue;
+    const raw=localStorage.getItem(k); if(raw===null || !PRIVATE_RE.test(raw)) continue;
+    let v; try{ v=JSON.parse(raw); }catch(e){ continue; }
+    if(m[1]==='vorRueckspielen'){   // the copy from before a restore: raw values per key, only the question keys
+      const d=(v && v.data)||{};
+      for(const dk of CLEAN_KEYS) if(typeof d[dk]==='string' && PRIVATE_RE.test(d[dk])){ try{ d[dk]=JSON.stringify(cleanDeep(JSON.parse(d[dk]))); }catch(e){} }
+    } else v=cleanDeep(v);
+    const out=JSON.stringify(v);
+    if(out!==raw){ try{ localStorage.setItem(k,out); n++; }catch(e){} }
+  }
+  return n;
 }
 const dueToday = () => store.get('due',[]).filter(d=>d.at<=dayKey() && d.q && WORLDS[d.q.world]).map(d=>{
   const q=neutralQ(Object.assign({},d.q,{dueId:d.id}));
@@ -3500,10 +3544,11 @@ const responseText = r => Array.isArray(r) ? r.join(' → ') : strip(String(r==n
 /* "Where it got stuck": up to two tasks of this quest that are still waiting for review, with the right
    answer and - recorded since v35 - the child's first answer. */
 function stuckHTML(k){
-  const L=HQ_T[PL()], due=store.get('due',[]).filter(d=>d.q && d.q.world===k).slice(-2); if(!due.length) return '';
+  // A1: never show a stored copy that still names someone (the right answer and the first answer were shown unchanged before)
+  const L=HQ_T[PL()], due=store.get('due',[]).filter(d=>d.q && d.q.world===k && !isPrivate(d.q)).slice(-2); if(!due.length) return '';
   const log=store.get('attempts',[]);
-  return `<p class="ph">${L.stuck}</p><ul class="pstuck">`+due.map(d=>{ const f=log.find(a=>a.qid===d.id && a.attempt===1 && !a.ok);
-    return `<li>${esc(strip(sheetPrompt(d.q)).slice(0,160))}<br><span class="small">${L.right}: <b>${esc(answerText(d.q))}</b>${f && f.response!=null && f.response!==''?` · ${L.first}: ${esc(responseText(f.response))}`:''}</span></li>`; }).join('')+'</ul>';
+  return `<p class="ph">${L.stuck}</p><ul class="pstuck">`+due.map(d=>{ const f=log.find(a=>a.qid===d.id && a.attempt===1 && !a.ok), fr=f && f.response!=null && f.response!=='' ? responseText(f.response) : '';
+    return `<li>${esc(strip(sheetPrompt(d.q)).slice(0,160))}<br><span class="small">${L.right}: <b>${esc(answerText(d.q))}</b>${fr && !PRIVATE_RE.test(fr)?` · ${L.first}: ${esc(fr)}`:''}</span></li>`; }).join('')+'</ul>';
 }
 function schoolWayHTML(k){
   const w=SCHOOL_WAY[k], L=HQ_T[PL()]; if(!w) return '';
@@ -3826,6 +3871,7 @@ async function applyRestore(){
   for(const k of childStoreKeys()) localStorage.removeItem(storeKey(k));
   for(const [k,v] of Object.entries(body.data)) if(isBackupKey(k) && typeof v==='string') localStorage.setItem(storeKey(k), v);
   for(const r of body.audio||[]){ try{ await recPut({id:r.id, created:r.created, durationMs:r.durationMs, mime:r.mime, blob:new Blob([fromB64(r.base64)],{type:r.mime})}); }catch(e){} }
+  cleanStoredPrivate();
   restoreCandidate=null; backupNote=(de?'Zurückgespielt: ':'Restored: ')+countsText(backupCounts(body.data, body.audio));
   renderHome(); renderSheets();
 }
@@ -3833,7 +3879,7 @@ function undoRestore(){
   const v=store.get('vorRueckspielen',null), de=PL()==='de'; if(!v || !canBackup()) return;
   for(const k of childStoreKeys()) localStorage.removeItem(storeKey(k));
   for(const [k,val] of Object.entries(v.data||{})) localStorage.setItem(storeKey(k), val);
-  store.del('vorRueckspielen'); backupNote=de?'Der Stand vor dem Zurückspielen ist wiederhergestellt.':'The progress from before the restore is back.';
+  store.del('vorRueckspielen'); cleanStoredPrivate(); backupNote=de?'Der Stand vor dem Zurückspielen ist wiederhergestellt.':'The progress from before the restore is back.';
   renderHome(); renderSheets();
 }
 /* ⚙ Settings (concept "Elternbereich" 5.5, package B1): everything that is set up rarely, in one view of its own.
@@ -5063,6 +5109,7 @@ window.addEventListener('hashchange',()=>{
 });
 
 function boot(data){
+  cleanStoredPrivate();
   renderHome();
   if(data && data.screen==='play' && Array.isArray(data.round) && data.round.length && WORLDS[data.world]){
     Object.assign(state, data); state.answered=false; state.typed=''; state.picked=[];
