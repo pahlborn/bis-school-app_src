@@ -169,6 +169,9 @@ button{font:inherit;color:inherit}
 .ptag{border-radius:999px;padding:2px 8px;font-size:.78rem;font-weight:700}
 .ptag.school{background:#DDF4FF;color:#0B5876}.ptag.need{background:#FFF1DC;color:#8A4B00}
 .ptag.gap{background:#FDE7EC;color:#8A1C33}.ptag.gapwait{background:var(--soft);color:var(--muted)}
+.phpart{margin:8px 0;padding:8px 10px;border-radius:12px;background:var(--soft)}.phpart .ph{margin:0 0 4px;font-weight:800}.phpart ul{margin:4px 0;padding-left:18px}.phpart p{margin:4px 0}.pfoot{color:var(--muted);margin-top:6px}
+.pq2{margin:6px 0;font-weight:700}.pq3{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.pbasis{margin:6px 0}.pbasis>summary{cursor:pointer;font-weight:700}.pbasis-t th{text-align:left;font-weight:600;padding-right:10px}
 .pgaps{list-style:none;padding:0;margin:6px 0}.pgap{margin:6px 0;padding:8px 10px;border-radius:12px;background:var(--soft)}.pgap.on{background:#FDE7EC}.pgap.done{background:#E3F6EA}
 .pgapbar{display:inline-block;vertical-align:middle;width:120px;height:10px;border-radius:999px;background:var(--line);overflow:hidden}.pgapbar i{display:block;height:100%;background:#C2364F}
 .phelp{background:#F4F7FF;border-radius:10px;padding:8px 10px;margin:8px 0;font-size:.92rem}
@@ -2321,7 +2324,7 @@ function gapProgressHTML(g){
   const de=PL()==='de', p=gapProgress(g);
   const txt=p.left>0 ? (de?`noch etwa ${p.left} Aufgaben`:`about ${p.left} more tasks`)
     : p.moreDays>0 ? (de?`noch an ${p.moreDays} weiteren Übungstagen`:`on ${p.moreDays} more practice days`)
-    : (de?'noch nicht ganz sicher – weiter üben':'not quite secure yet – keep practising');
+    : (de?'noch nicht ganz sicher – weiter üben':'not quite secure yet – keep practicing');
   return `<span class="pgapbar" role="img" aria-label="${txt}"><i style="width:${Math.round(p.frac*100)}%"></i></span> <span class="small">${txt}</span>`;
 }
 /* the gaps of a subject (by the subject of their standard) for the block "From school": open (active / waiting),
@@ -2342,7 +2345,7 @@ function gapsSubjectHTML(key){
   for(const [s,c] of Object.entries(d.closed)){
     const r=stdRating(s); if(!r || stdSubject(s)!==key || c.schoolDay<r.day || !GAP_WEAK.includes(r.st)) continue;
     rows.push(`<li class="pgap done"><b>${de?'Lücke geschlossen':'Gap closed'} ✓</b> ${name(s)} <span class="small">(${fmtDay(c.at)} · ${c.by==='parents'?(de?'von Ihnen geschlossen':'closed by you'):(de?'laut den Antworten in der App':'according to the answers in the app')})</span>`
-      +(c.by==='app'?btn('hold',s,de?'Weiter üben':'Keep practising'):'')+`</li>`);
+      +(c.by==='app'?btn('hold',s,de?'Weiter üben':'Keep practicing'):'')+`</li>`);
   }
   if(!rows.length) return '';
   return `<h4 class="psub">${de?'Lücken laut Schule':'Gaps per school'} <button type="button" class="info-btn" data-help="gaps" aria-label="Info">ⓘ</button></h4><ul class="pgaps">${rows.join('')}</ul>`;
@@ -3548,11 +3551,11 @@ const PL = () => store.get(langKey(), langKey()==='kidLang'?'en':'de')==='en'?'e
 const PT={
   de:{home:'🏠 Übersicht',sheets:'📄 Übungsblätter',settings:'👧 Für das Kind',help:'💡 Helfen wie die Schule',
     howHome:'<b>So lesen Sie diese Seite:</b> Links sehen Sie dieselben Fächer wie das Kind; jedes Kästchen ist eine Quest. Rechts steht die Einschätzung in Worten. Tippen Sie auf ein Fach, um zu sehen, was geübt wird, worauf die Einschätzung beruht und wie Sie helfen können.',
-    howSubj:'<b>Was kann ich hier tun?</b> Jede Quest mit Stand, Grundlage und Tipp. Darüber legen Sie fest, wie der Fokus gewählt wird.',
+    
     howSheets:'<b>So geht’s:</b> Blatt antippen (die Nummer steht auch auf dem Papier) und pro Aufgabe wählen, wie es lief. Vertippt? Einfach den richtigen Knopf antippen. „Mit Hilfe“ und „Noch nicht“ sind gut so: Die App bietet dann leichtere Schritte an und wiederholt die Aufgabe später. Ein Blatt, das nicht eingetragen wird, zählt einfach nicht.',
     howSettings:'<b>Was kann ich hier tun?</b> Fokus-Themen als Liste, Spannung der Pisolala-Geschichten, eine freiwillige Kalender-Erinnerung, Profilangaben des Kindes und die App-Version. Nichts davon ist Pflicht.',
     howHelp:'<b>Was kann ich hier tun?</b> Kurz nachlesen, wie die Schule ein Thema zeigt, und mit drei Fragen helfen statt vorzurechnen.',
-    back:'← Alle Fächer',focus:'Im Fokus',fm:'🎯 Fokus',pvT:'Ausblick: Themen für später',pvTxt:'Diese Themen kommen meist später im Schuljahr. Ihr Kind sieht sie erst, wenn Sie sie hier freigeben – zum Beispiel, wenn sie in der Schule drankommen oder Ihr Kind neugierig ist.',pvBtn:'Für das Kind freigegeben',pvOn:'freigegeben',pvOff:'nicht freigegeben',fAuto:'Automatisch',fMan:'Manuell',fAutoTxt:'Die App wählt selbst: die Themen, die die Lehrkraft in ihren Bewertungen als nächste Schritte nennt, und dazu alles, wo die Einschätzung Unterstützung nahelegt. Das passt sich von selbst an. Tippen Sie bei einer Quest auf „Im Fokus“, wechselt die Wahl auf „Manuell“.',fManTxt:'Sie legen selbst fest, woraus „Practise Today“ und das Übungsblatt Aufgaben nehmen – zum Beispiel vor einem Test. Mit „Automatisch“ übernimmt wieder die App.',fNote:'Alle Quests bleiben für das Kind spielbar; der Fokus bestimmt nur, was „Practise Today“ und das Übungsblatt bevorzugen.',school:'nächster Schritt laut Schule',need:'braucht Übung',gap:d=>'Lücke laut Schule ('+d+')',gapWait:'wartet',how:'💡 So helfen Sie',
+    back:'← Alle Fächer',focus:'Im Fokus',fm:'🎯 Fokus',pvT:'Ausblick: Themen für später',pvTxt:'Diese Themen kommen meist später im Schuljahr. Ihr Kind sieht sie erst, wenn Sie sie hier freigeben – zum Beispiel, wenn sie in der Schule drankommen oder Ihr Kind neugierig ist.',pvBtn:'Für das Kind freigegeben',pvOn:'freigegeben',pvOff:'nicht freigegeben',fAuto:'Automatisch',fMan:'Manuell',school:'nächster Schritt laut Schule',need:'braucht Übung',gap:d=>'Lücke laut Schule ('+d+')',gapWait:'wartet',how:'💡 So helfen Sie',
     basis:'Worauf beruht das?',trend:'Tendenz',recent:'Aktualität',sure:'Wie sicher?',when:'Belastbar ab etwa 20 Aufgaben an 5 Tagen über zwei Wochen.',
     tasks:(n,d)=>`${n} Aufgaben an ${d} ${d===1?'Tag':'Tagen'}`,self:'selbst gelöst',hint:'mit Hilfe',ex:n=>`davon ${n} mit Beispiel`,seen:'Lösungsweg angesehen',due:n=>`${n} Wiederholung${n===1?'':'en'} offen`,
     none:'noch nicht geübt',ago:n=>n===0?'heute geübt':n===1?'gestern geübt':`vor ${n} Tagen geübt`,old:'Ältere Belege – bei Gelegenheit neu prüfen',
@@ -3565,11 +3568,11 @@ const PT={
     disc:'Übungsstand der App, keine schulische Beurteilung. Das Kind sieht diese Einschätzung nicht.',child:'Ihr Kind',focusN:n=>`${n} im Fokus`,quests:n=>`${n} Quests`},
   en:{home:'🏠 Overview',sheets:'📄 Practice sheets',settings:'👧 For your child',help:'💡 Help like the school',
     howHome:'<b>How to read this page:</b> on the left are the same subjects your child sees; each small square is a quest. On the right is a summary in plain words. Tap a subject to see what is practiced, what the summary is based on, and how you can help.',
-    howSubj:'<b>What can I do here?</b> Every quest with its status, basis and a tip. Above, you choose how the focus is set.',
+    
     howSheets:'<b>How it works:</b> tap a sheet (its number is also on the paper) and choose for each task how it went. Tapped the wrong one? Just tap the right button. “With help” and “Not yet” are fine: the app then offers easier steps and brings the task back later. A sheet that isn’t entered simply doesn’t count.',
     howSettings:'<b>What can I do here?</b> Focus topics as a list, how exciting Pisolala stories may be, an optional calendar reminder, the child\'s profile details and the app version. None of this is required.',
     howHelp:'<b>What can I do here?</b> Read briefly how the school teaches a topic and help with three questions instead of calculating for the child.',
-    back:'← All subjects',focus:'In focus',fm:'🎯 Focus',pvT:'Coming up: topics for later',pvTxt:'These topics usually come later in the school year. Your child only sees them once you turn them on here – for example when they come up at school or your child is curious.',pvBtn:'Visible to your child',pvOn:'turned on',pvOff:'turned off',fAuto:'Automatic',fMan:'Manual',fAutoTxt:'The app chooses by itself: the topics the teacher names as next steps in the evaluations, plus everything where the summary suggests support. It adapts by itself. Tapping “In focus” at a quest switches to “Manual”.',fManTxt:'You decide where “Practise Today” and the practice sheet take their tasks from – for example before a test. Choose “Automatic” to let the app take over again.',fNote:'All quests stay playable for your child; the focus only decides what “Practise Today” and the practice sheet prefer.',school:'next step per school',need:'needs practice',gap:d=>'gap per school ('+d+')',gapWait:'waiting',how:'💡 How you can help',
+    back:'← All subjects',focus:'In focus',fm:'🎯 Focus',pvT:'Coming up: topics for later',pvTxt:'These topics usually come later in the school year. Your child only sees them once you turn them on here – for example when they come up at school or your child is curious.',pvBtn:'Visible to your child',pvOn:'turned on',pvOff:'turned off',fAuto:'Automatic',fMan:'Manual',school:'next step per school',need:'needs practice',gap:d=>'gap per school ('+d+')',gapWait:'waiting',how:'💡 How you can help',
     basis:'What is this based on?',trend:'Trend',recent:'How recent',sure:'How sure?',when:'Reliable from about 20 tasks on 5 days over two weeks.',
     tasks:(n,d)=>`${n} tasks on ${d} ${d===1?'day':'days'}`,self:'on own',hint:'with help',ex:n=>`${n} of them with an example`,seen:'solution viewed',due:n=>`${n} review${n===1?'':'s'} open`,
     none:'not practiced yet',ago:n=>n===0?'practiced today':n===1?'practiced yesterday':`practiced ${n} days ago`,old:'Older evidence – check again when convenient',
@@ -3662,17 +3665,40 @@ function stuckHTML(k){
   return `<p class="ph">${L.stuck}</p><ul class="pstuck">`+due.map(d=>{ const f=log.find(a=>a.qid===d.id && a.attempt===1 && !a.ok), fr=f && f.response!=null && f.response!=='' ? responseText(f.response) : '';
     return `<li>${esc(strip(sheetPrompt(d.q)).slice(0,160))}<br><span class="small">${L.right}: <b>${esc(answerText(d.q))}</b>${fr && !PRIVATE_RE.test(fr)?` · ${L.first}: ${esc(fr)}`:''}</span></li>`; }).join('')+'</ul>';
 }
-function schoolWayHTML(k){
-  const w=SCHOOL_WAY[k], L=HQ_T[PL()]; if(!w) return '';
-  const x=w[PL()==='de'?'de':'en'];
-  return `<p><b>${L.way}:</b> ${esc(x.text)}</p><p><b>${L.ask}:</b></p><ul>${x.questions.map(t=>`<li>${esc(t)}</li>`).join('')}</ul><p class="small">${esc(x.source)}</p>`;
-}
+/* concept 5.11 (E1): one part of "How to help" - an icon, a title, the content */
+const helpPart = (cls, icon, title, body) => `<div class="phpart ${cls}"><p class="ph">${icon} ${title}</p>${body}</div>`;
+/* "💡 How to help" (concept 5.11, E1): always these parts in this order - (where it got stuck) · goal · stumbling
+   block (with "better not") · how school shows it · ask instead of explaining · ideas for home; the source as a
+   grey footer. The texts are today's (E2 sorts and shortens them per subject). */
 function helpHTML(a){
-  const k=a.k, h=HELP_Q[k], L=HQ_T[PL()], T=PT[PL()], need=a.level==='rs'||a.level==='c';
-  const sheet=isTeacher()?'':`<p><button type="button" class="btn small" data-psheetq="${k}">${L.sheet}</button></p>`;
-  if(!h){ const tip=qInfo(k,1); return (tip&&tip!=='–'?`<p class="phelp">${T.how}: ${esc(tip)}</p>`:'')+stuckHTML(k)+sheet; }
-  const [exp,trip,home,avoid,src]=h[PL()];
-  return `<details class="phelpq${need?' need':''}"${need?' open':''}><summary>${T.how}</summary><div class="phelpq-body"><p><b>${L.exp}:</b> ${esc(exp)}</p><p><b>${L.trip}:</b> ${esc(trip)}</p><p><b>${L.home}:</b></p><ul>${home.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>${schoolWayHTML(k)}<p><b>${L.avoid}:</b> ${esc(avoid)}</p><p class="small">${L.src}: ${esc(src)}</p></div></details>`+stuckHTML(k)+sheet;
+  const k=a.k, h=HELP_Q[k], L=HQ_T[PL()], T=PT[PL()], de=PL()==='de', need=a.level==='rs'||a.level==='c';
+  if(!h){ const tip=qInfo(k,1); return (tip&&tip!=='–'?`<p class="phelp">${T.how}: ${esc(tip)}</p>`:'')+stuckHTML(k); }
+  const [exp,trip,home,avoid,src]=h[PL()], w=SCHOOL_WAY[k] && SCHOOL_WAY[k][de?'de':'en'], stuck=stuckHTML(k);
+  const parts=[
+    stuck ? `<div class="phpart stuck">${stuck}</div>` : '',
+    helpPart('goal','🎯', de?'Ziel':'Goal', `<p>${esc(exp)}</p>`),
+    helpPart('trip','⚠️', de?'Stolperstein':'Stumbling block', `<ul><li>${esc(trip)}</li><li><b>${L.avoid}:</b> ${esc(avoid)}</li></ul>`),
+    w ? helpPart('way','🏫', L.way, `<p>${esc(w.text)}</p><p class="small">${esc(w.source)}</p>`) : '',
+    w ? helpPart('ask','💬', L.ask, `<ul>${w.questions.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`) : '',
+    helpPart('home','💡', L.home, `<ul>${home.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`)
+  ].join('');
+  return `<details class="phelpq${need?' need':''}"${need||stuck?' open':''}><summary>💡 ${T.how.replace(/^💡\s*/,'')}</summary><div class="phelpq-body">${parts}<p class="small pfoot">${L.src}: ${esc(src)}</p></div></details>`;
+}
+/* "ⓘ What is this based on?" (concept 5.11, E1): the details of the assessment as a small table */
+function basisHTML(a){
+  const T=PT[PL()], de=PL()==='de';
+  if(!a.n) return `<details class="pbasis"><summary>ⓘ ${T.basis}</summary><p class="small">${de?'Noch nicht geübt.':'Not practiced yet.'}</p></details>`;
+  const row=(l,v)=>`<tr><th>${l}</th><td>${v}</td></tr>`;
+  return `<details class="pbasis"><summary>ⓘ ${T.basis}</summary><table class="dt pbasis-t"><tbody>`
+    +row(de?'Aufgaben (erster Versuch)':'Tasks (first try)', T.tasks(a.n,a.days))
+    +row(T.self, a.self)
+    +row(T.hint, a.hint+(a.ex?` (${T.ex(a.ex)})`:''))
+    +row(T.seen, a.seen+'×')
+    +row(T.trend, T.tr[a.trend])
+    +row(T.recent, a.old?`<span class="pold">${T.old}</span>`:T.ago(a.age))
+    +row(T.sure, PT[PL()].sw[a.sure]+(a.sure!=='confirmed'?`<br><span class="small">${T.when}</span>`:''))
+    +(a.due?row(de?'Wiederholungen':'Reviews', T.due(a.due)):'')
+    +`</tbody></table></details>`;
 }
 const daysBetween = (a,b) => Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/864e5);
 function assessQuest(k){
@@ -3739,17 +3765,16 @@ function parentSubjectHTML(key){
     const tags=[classTopics().includes(k)?`<span class="ptag school">${T.school}</span>`:'', g?`<span class="ptag ${on?'gap':'gapwait'}">${on?'🎯 ':''}${T.gap(fmtDay(g.day))}${on?'':' · '+T.gapWait}</span>`:'', (a.level==='rs'||a.level==='c')?`<span class="ptag need">${T.need}</span>`:''].join('');
     const sch=schoolStandFor(k);
     return `<div class="pquest"><div class="phead"><div><div class="pqn">${esc(WORLDS[k].name)}</div><div class="small">${esc(qInfo(k,0))}</div></div><div class="pqchips"><span class="pqchip"><span class="small">${PL()==='de'?'App':'App'}</span> ${pChip(a.level,a.sure)}</span>${sch?`<span class="pqchip pqschool"><span class="small">🏫 ${PL()==='de'?'Schule':'School'}</span> ${pChip(SL[sch.st]||'rs')} <span class="small">${fmtDay(sch.day)}</span></span>`:''}</div></div>
-      <p class="pline"><b>${T.basis}</b> ${a.n?`${T.tasks(a.n,a.days)}: ${a.self} ${T.self}, ${a.hint} ${T.hint}${a.ex?` (${T.ex(a.ex)})`:''}, ${a.seen}× ${T.seen}.`:T.none+'.'} ${a.due?T.due(a.due)+'.':''}</p>
-      ${a.n?`<p class="pline"><b>${T.trend}:</b> ${T.tr[a.trend]} · <b>${T.recent}:</b> ${a.old?`<span class="pold">${T.old}</span>`:T.ago(a.age)}</p>`:''}
-      ${a.sure!=='confirmed'&&a.n?`<p class="pline small">${T.when}</p>`:''}
       <div class="ptags">${tags}</div>
+      <p class="pline pq2">${a.n?(PL()==='de'?`${a.n} Aufgaben · ${a.self} selbst gelöst`:`${a.n} tasks · ${a.self} on own`):(PL()==='de'?'Noch nicht geübt':'Not practiced yet')}${on?` · ${gapProgressHTML(g)}`:''}</p>
       ${helpHTML(a)}
-      ${teacher?'':`<button type="button" class="psw" data-pfocus="${k}" aria-pressed="${focus.includes(k)}"><i></i>${T.focus}</button>`}</div>`; }).join('');
+      ${basisHTML(a)}
+      <div class="pq3">${teacher?'':`<button type="button" class="btn small" data-psheetq="${k}" title="${HQ_T[PL()].sheet}">📄 ${PL()==='de'?'Übungsblatt':'Sheet'}</button><button type="button" class="psw" data-pfocus="${k}" aria-pressed="${focus.includes(k)}"><i></i>${T.focus}</button>`}</div></div>`; }).join('');
   // Coming up (Peter, 01.11.): topics for later, invisible to the child until switched on here - one place only.
   const pv=s.items.filter(k=>WORLDS[k] && WORLDS[k].preview);
   const pvHTML=pv.length?`<div class="pcard ppreview"><h3>${T.pvT}</h3><p class="small">${T.pvTxt}</p>${pv.map(k=>{ const on=!isLocked(k); return `<div class="pv-row"><div><b>${esc(WORLDS[k].name)}</b><div class="small">${esc(qInfo(k,0))}</div></div>${teacher?`<span class="small">${on?T.pvOn:T.pvOff}</span>`:`<button type="button" class="psw" data-punlock="${k}" aria-pressed="${on}"><i></i>${T.pvBtn}</button>`}</div>`; }).join('')}</div>`:'';
   return `<button type="button" class="btn small" id="pBack">${T.back}</button><h2 class="psubjtitle">${esc(s.name)} <span class="small">· ${T.quests(list.length)}</span></h2>${schoolSubjectHTML(key)}
-    <p class="phow">${T.howSubj}</p>${teacher?'':`<div class="pfmode"><div class="phdr-row"><b>${T.fm}:</b><span class="plang" role="group" aria-label="${T.fm}"><button type="button" data-fmode="auto" class="${man?'':'on'}" aria-pressed="${!man}">${T.fAuto}</button><button type="button" data-fmode="manual" class="${man?'on':''}" aria-pressed="${man}">${T.fMan}</button></span></div><p class="small">${man?T.fManTxt:T.fAutoTxt} ${T.fNote}</p></div>`}
+    ${teacher?'':`<div class="pfmode"><div class="phdr-row"><b>${T.fm}:</b><span class="plang" role="group" aria-label="${T.fm}"><button type="button" data-fmode="auto" class="${man?'':'on'}" aria-pressed="${!man}">${T.fAuto}</button><button type="button" data-fmode="manual" class="${man?'on':''}" aria-pressed="${man}">${T.fMan}</button></span></div><p class="small">${PL()==='de'?'Automatisch: die App wählt. Manuell: Sie wählen.':'Automatic: the app chooses. Manual: you choose.'} <button type="button" class="info-btn" data-help="focusmode" aria-label="Info">ⓘ</button></p></div>`}
     <div class="playout"><div class="pquests">${cards}${pvHTML}</div><aside class="pside"><div class="pcard">${summaryHTML(list, s.name)}</div></aside></div>`;
 }
 const sheetDay = d => PL()==='de' ? d.split('-').reverse().join('.') : new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
@@ -4292,6 +4317,7 @@ const HELP={
   sheet:{kid:true,title:'Practice sheet',text:'<p>A sheet with 6 tasks and a writing task, plus an answer page for grown-ups.</p><p>Share it as a PDF (by mail, message or into Files) or print it. Afterwards a grown-up can enter how it went.</p>'},
   gaps:{title:'Lücken laut Schule',text:'<p>Hat die Schule einen Standard mit „Requires support“ oder „Consolidating“ eingestuft, übt die App ihn als <b>Lücke</b>: immer eine zur Zeit, höchstens 2 von 8 Aufgaben pro Runde. Lücken, die ohnehin aktuelles Thema sind, werden übersprungen.</p><p>Geschlossen ist eine Lücke, wenn eine ihrer Quests in der App <b>bestätigt sicher</b> ist. Das heißt: sicher bei den Antworten in der App. Wer geantwortet hat und mit welchen Hilfsmitteln, weiß die App nicht; ob die Aufgaben den Standard so abdecken, wie die Schule ihn prüft, ist je Thema verschieden.</p><p>Sie entscheiden: <b>Jetzt angehen</b>, <b>Als geschlossen markieren</b> oder – nach dem Schließen durch die App – <b>Weiter üben</b>.</p>'},
   overview:{title:'Wie entsteht die Einschätzung?',text:'<p>Gezählt wird nur der <b>erste Versuch</b> jeder Aufgabe: selbst gelöst, mit Hinweis oder Lösungsweg angesehen. Eine Einschätzung gibt es erst ab <b>8 Aufgaben an 3 Tagen</b> – vorher „Noch nicht einschätzbar“, das sagt nichts Schlechtes.</p><p><b>Vorläufig</b> heißt: erste Einschätzung. <b>Bestätigt</b> erst nach etwa 20 Aufgaben an 5 Tagen über zwei Wochen. Eine <b>Tendenz</b> steht nur da, wenn zwei Zeiträume genug Aufgaben haben. Nach mehr als 3 Wochen Pause steht „ältere Belege“ – Ferien sind kein Leistungsabfall.</p><p>Das ist <b>keine schulische Bewertung</b> und wird dem Kind nie gezeigt.</p><p>Die App weiß nicht, wer eine Aufgabe gelöst hat und mit welchen Hilfsmitteln. Die Einschätzung ist ein Hinweis; die Verantwortung liegt bei den Eltern.</p>'},
+  focusmode:{title:'Fokus: Automatisch oder Manuell',text:'<p><b>Automatisch:</b> Die App wählt selbst: die Themen, die die Lehrkraft in ihren Bewertungen als nächste Schritte nennt, dazu alles, wo die Einschätzung Unterstützung nahelegt, und die aktive Lücke laut Schule. Das passt sich von selbst an. Tippen Sie bei einer Quest auf „Im Fokus“, wechselt die Wahl auf „Manuell“.</p><p><b>Manuell:</b> Sie legen selbst fest, woraus „Practise Today“ und das Übungsblatt Aufgaben nehmen – zum Beispiel vor einem Test. Mit „Automatisch“ übernimmt wieder die App.</p><p>Alle Quests bleiben für das Kind spielbar; der Fokus bestimmt nur, was „Practise Today“ und das Übungsblatt bevorzugen. Mehr dazu in „📖 So funktioniert Big Quest → Wie die App einstuft“.</p>'},
   focus:{title:'Fokus-Themen',text:'<p>Aus diesen Themen stellt „Practise Today“ die 8 Fragen zusammen; auch die Übungsblätter nutzen sie. Auf der Startseite tragen sie das Zeichen „Focus“.</p><p>Die App wählt sie selbst: was die Lehrkraft als nächste Schritte nennt und wo Übung hilft. Unter „🎯 Fokus“ können Sie auf „Manuell“ umstellen und selbst wählen.</p>'},
   school:{title:'Einstufungen der Schule',text:'<p>Die Einstufungen stammen aus den bewerteten Aufgaben auf der Lernplattform der Schule. Solange in der App für eine Quest noch zu wenig geübt wurde (weniger als 6 Antworten oder 2 Tage), richtet die App die Schwierigkeit der Aufgaben danach aus. Danach zählt die eigene Übung.</p><p>Die Einschätzung im Elternbereich beruht nur auf der Übung in der App. Neue Bewertungen der Schule werden bei Gelegenheit übernommen.</p>'},
   calendar:{title:'Kalender-Erinnerung',text:'<p>Freiwillig: erzeugt eine Kalenderdatei mit einer wiederkehrenden, freundlichen Einladung zum Üben. Die App selbst schickt keine Nachrichten.</p>'},
@@ -4304,8 +4330,9 @@ const HELP={
 };
 /* Grown-ups help in English: meaning-based, American English (Peter, 31.10.). */
 const HELP_EN={
-  gaps:{title:'Gaps per school',text:'<p>When the school rated a standard “requires support” or “consolidating”, the app practises it as a <b>gap</b>: one at a time, at most 2 of 8 tasks per round. Gaps that are a current topic anyway are skipped.</p><p>A gap is closed when one of its quests is <b>confirmed secure</b> in the app. That means: secure in the answers in the app. The app does not know who answered or with what help; whether the tasks cover the standard the way the school tests it differs from topic to topic.</p><p>You decide: <b>Work on it now</b>, <b>Mark as closed</b> or – after the app closed it – <b>Keep practising</b>.</p>'},
+  gaps:{title:'Gaps per school',text:'<p>When the school rated a standard “requires support” or “consolidating”, the app practices it as a <b>gap</b>: one at a time, at most 2 of 8 tasks per round. Gaps that are a current topic anyway are skipped.</p><p>A gap is closed when one of its quests is <b>confirmed secure</b> in the app. That means: secure in the answers in the app. The app does not know who answered or with what help; whether the tasks cover the standard the way the school tests it differs from topic to topic.</p><p>You decide: <b>Work on it now</b>, <b>Mark as closed</b> or – after the app closed it – <b>Keep practicing</b>.</p>'},
   overview:{title:'How is the summary made?',text:'<p>Only the <b>first try</b> at each task counts: solved on their own, with a hint, or after viewing the solution. A judgment appears only after <b>8 tasks on 3 days</b> – until then it says “not enough to tell yet”, which says nothing bad.</p><p><b>Provisional</b> means a first judgment. <b>Confirmed</b> only after about 20 tasks on 5 days over two weeks. A <b>trend</b> is shown only when two periods have enough tasks. After a break of more than 3 weeks it says “older evidence” – vacations are not a drop in ability.</p><p>This is <b>not a school assessment</b> and is never shown to your child.</p><p>The app does not know who solved a task or with what help. The summary is a hint; responsibility lies with the parents.</p>'},
+  focusmode:{title:'Focus: automatic or manual',text:'<p><b>Automatic:</b> the app chooses by itself: the topics the teacher names as next steps in the evaluations, everything where the summary suggests support, and the active gap per school. It adapts by itself. Tapping “In focus” at a quest switches to “Manual”.</p><p><b>Manual:</b> you decide where “Practise Today” and the practice sheet take their tasks from – for example before a test. Choose “Automatic” to let the app take over again.</p><p>All quests stay playable for your child; the focus only decides what “Practise Today” and the practice sheet prefer. More in “📖 How Big Quest works → How the app judges”.</p>'},
   focus:{title:'Focus topics',text:'<p>“Practise Today” builds its 8 questions from these topics; practice sheets use them too. On the start page they carry the “Focus” sign.</p><p>The app picks them by itself: what the teacher names as next steps and where practice helps. Under “🎯 Focus” you can switch to “Manual” and choose yourself.</p>'},
   school:{title:'School ratings',text:'<p>The ratings come from the evaluated assignments on the school’s learning platform. While there is too little practice in the app for a quest (fewer than 6 answers or 2 days), the app sets the difficulty of the tasks by them. After that, the app’s own practice counts.</p><p>The summary in the grown-ups area is based only on practice in the app. New school evaluations are added from time to time.</p>'},
   calendar:{title:'Calendar reminder',text:'<p>Optional: creates a calendar file with a recurring, friendly invitation to practice. The app itself never sends messages.</p>'},
