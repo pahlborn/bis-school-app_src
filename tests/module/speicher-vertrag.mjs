@@ -125,6 +125,9 @@ export function speicherVertrag(name, neu) {
     assert.deepEqual((await a.list(B2)).kennungen, ['d_c1/1']);
     assert.deepEqual((await a.list('kid:p_k9')).kennungen, []);
     await fehlt(a.list(B2, merker), 'ungueltig', 'Merker eines anderen Bereichs');
+    await schreibe(c, B, 1, 1);
+    const fremd = (await a.list(B2)).merker;                 // { d_c1: 1 } - passt der Zahl nach auch zu B
+    await fehlt(a.list(B, fremd), 'ungueltig', 'Merker aus B2 wuerde in B d_c1/1 verschlucken');
     for (const m of ['x', 7, {}, { bereich: B }, { bereich: B, stand: { d_a1: -1 } }, { bereich: B, stand: { d_a1: 1.5 } }, { bereich: B, stand: { d_a1: 99 } }]) await fehlt(a.list(B, m), 'ungueltig', JSON.stringify(m));
   });
 
