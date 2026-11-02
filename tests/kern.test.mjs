@@ -118,6 +118,7 @@ test('dist: verbotenes Wort in der Huelle bricht ab und schreibt nichts', async 
     await fs.mkdir(path.dirname(path.join(wurzel, rel)), { recursive: true });
     await fs.copyFile(path.join(WURZEL, rel), path.join(wurzel, rel));
   }
+  await fs.cp(path.join(WURZEL, 'src', 'module'), path.join(wurzel, 'src', 'module'), { recursive: true });
   await fs.writeFile(path.join(wurzel, QUELLEN.vorlage), q.vorlage.replace('Big Quest</h1>', 'Grade 3B</h1>'));
   const ziel = path.join(wurzel, 'dist');
   await assert.rejects(distBauen(TEST_PW, { wurzel, ziel }), /Verbotene Woerter.*Grade 3B/);

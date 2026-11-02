@@ -3,6 +3,7 @@
 //   node --test tests/stufe1-p1.test.mjs
 
 import { test, before, after } from 'node:test';
+import { appLesen } from '../werkzeug/module.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -11,7 +12,7 @@ import { ausV1, kontenPruefen, kontenLesen, kennungErzeugen, startlink, ID_RE, A
 import { browserStarten } from './app-hilfen.mjs';
 import { konto, kontenServer, oeffnen, anmelden, passwortSetzen } from './konten-hilfen.mjs';
 
-const quelltext = await fs.readFile(path.join(WURZEL, QUELLEN.app), 'utf8');
+const quelltext = await appLesen('utf8');
 const VERZ = JSON.parse(await fs.readFile(path.join(WURZEL, 'werkzeug', 'speicherstellen.json'), 'utf8'));
 
 const C = { mia: 'MIAA-2345', lia: 'LIAA-2345', papa: 'PAPA-2345', chef: 'CHEF-2345', frau: 'FRAU-2345' };

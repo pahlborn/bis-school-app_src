@@ -6,12 +6,13 @@
 // "Ã¼ben" statt "üben", "donâ€™t" statt "don’t", "âˆ’" statt "−".
 
 import { test } from 'node:test';
+import { appLesen } from '../werkzeug/module.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { WURZEL, QUELLEN } from '../werkzeug/bauen.mjs';
 
-const roh = await fs.readFile(path.join(WURZEL, QUELLEN.app));
+const roh = await appLesen();
 
 test('index.html ist gueltiges UTF-8', () => {
   new TextDecoder('utf-8', { fatal: true }).decode(roh);

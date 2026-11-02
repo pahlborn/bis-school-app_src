@@ -3,6 +3,7 @@
 //   node --test tests/anmeldung.test.mjs
 
 import { test, before, after } from 'node:test';
+import { appLesen } from '../werkzeug/module.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import http from 'node:http';
@@ -21,7 +22,7 @@ async function konto(user, role, kinder) {
 }
 // Account model v2 (S11): the familiar v1 fixture is converted once; admins are not parents (B3).
 const KONTEN = ausV1({ users: [await konto('mia', 'student'), await konto('papa', 'parent', ['mia', 'tim']), await konto('frau', 'teacher', ['mia']), { ...(await konto('probe', 'student')), test: true }, { ...(await konto('chef', 'parent', ['mia'])), admin: true }, await konto('lia', 'student'), await konto('tim', 'student')] });
-const app = kontenEinsetzen(await fs.readFile(path.join(WURZEL, QUELLEN.app)), KONTEN);
+const app = kontenEinsetzen(await appLesen(), KONTEN);
 
 let browser, server;
 before(async () => {

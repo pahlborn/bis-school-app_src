@@ -4,6 +4,7 @@
 //   node --test tests/fragen.test.mjs
 
 import { test, before, after } from 'node:test';
+import { appLesen } from '../werkzeug/module.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -18,7 +19,7 @@ const HEUTE_DURCHGESPIELT = 60;  // Practise Today: mischt Fragen aus mehreren Q
 const MIX_DURCHGESPIELT = 15;    // je Fach-Mix (die alte Mixed Quest hing bis 29.10. in etwa jeder 4. Runde)
 const ANDERE_DURCHGESPIELT = 5;
 
-const quelltext = await fs.readFile(path.join(WURZEL, QUELLEN.app), 'utf8');
+const quelltext = await appLesen('utf8');
 const SENTS = new Function('return ' + quelltext.match(/const SENTS=(\[[\s\S]*?\n\]);/)[1])();
 
 let browser, server;

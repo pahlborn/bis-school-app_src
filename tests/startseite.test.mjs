@@ -2,6 +2,7 @@
 //   node --test tests/startseite.test.mjs
 
 import { test, before, after } from 'node:test';
+import { appLesen } from '../werkzeug/module.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -14,7 +15,7 @@ const QUESTS = ['numbers', 'round', 'combos', 'wordprob', 'detective', 'forces',
 const MIXE = ['mix_maths', 'mix_science', 'mix_english', 'mix_reading', 'mix_learner'];
 const STUDIOS = ['studio:read', 'studio:grow', 'studio:stage'];
 
-const quelltext = await fs.readFile(path.join(WURZEL, QUELLEN.app), 'utf8');
+const quelltext = await appLesen('utf8');
 const FOCUS = new Function('return ' + quelltext.match(/const FOCUS=(\[[^\]]*\]);/)[1])();
 
 let browser, server;

@@ -2,6 +2,7 @@
 //   node --test tests/version.test.mjs
 
 import { test, before, after } from 'node:test';
+import { appLesen } from '../werkzeug/module.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import http from 'node:http';
@@ -19,7 +20,7 @@ import { browserStarten, appOeffnen, elternOeffnen, elternSeite } from './app-hi
 const tmp = () => fs.mkdtemp(path.join(os.tmpdir(), 'bq-version-'));
 const git = (cwd, ...a) => execFileSync('git', a, { cwd, encoding: 'utf8' }).trim();
 const V = { n: 13, hash: 'a1b2c3d', date: '30.10.2026 14:05', draft: false };
-const appQuelle = await fs.readFile(path.join(WURZEL, QUELLEN.app));
+const appQuelle = await appLesen();
 
 test('version comes from git: number of first-parent commits, 7-character hash, Berlin time', () => {
   const v = versionErmitteln(WURZEL, new Date('2026-10-30T13:05:00Z'));

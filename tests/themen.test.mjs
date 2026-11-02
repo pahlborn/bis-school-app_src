@@ -4,6 +4,7 @@
 //   node --test tests/themen.test.mjs
 
 import { test, before, after } from 'node:test';
+import { appLesen } from '../werkzeug/module.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import http from 'node:http';
@@ -13,7 +14,7 @@ import { browserStarten, appOeffnen } from './app-hilfen.mjs';
 
 // Test hook as in neutral.test.mjs: the served copy exposes a few internals; the app file is unchanged.
 async function appServer() {
-  const html = (await fs.readFile(path.join(WURZEL, QUELLEN.app), 'utf8'))
+  const html = (await appLesen('utf8'))
     .replace(/\}\)\(\);\s*<\/script>/, 'window.__bqi={WORLDS,roundThousandQ,expandedZeroQ,scaleStepQ,lineGraphQ,subtract4Q,calcCheckQ,guidance,exampleFor,bridgeFor,strip};})();</script>');
   if (!html.includes('window.__bqi=')) throw new Error('test hook not inserted');
   const server = http.createServer((req, res) => {

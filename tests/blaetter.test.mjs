@@ -2,13 +2,14 @@
 //   node --test tests/blaetter.test.mjs
 
 import { test, before, after } from 'node:test';
+import { appLesen } from '../werkzeug/module.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { WURZEL, QUELLEN } from '../werkzeug/bauen.mjs';
 import { appServer, browserStarten, appOeffnen, klick, zurStart, elternOeffnen, elternSeite, aboutAbschnitt } from './app-hilfen.mjs';
 
-const quelltext = await fs.readFile(path.join(WURZEL, QUELLEN.app), 'utf8');
+const quelltext = await appLesen('utf8');
 const FOCUS = new Function('return ' + quelltext.match(/const FOCUS=(\[[^\]]*\]);/)[1])();
 const VERBOTEN = ['requires support', 'consolidating', 'meeting expectations', 'extending', 'level '];
 
