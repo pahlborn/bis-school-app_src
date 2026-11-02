@@ -33,7 +33,7 @@ async function eineAntwort(page) {
 // bq2_<key> and every other one bq2_<user>__<key>.
 test('Speicher nach Kennung: jedes Kind unter bq2_<Kennung>__, Passwort unter bq2_pw_<Kennung>', async () => {
   const { ctx, page, fehler } = await oeffnen(browser, server);
-  await anmelden(page, 'student', 'mia', C.mia); await passwortSetzen(page, 'mond');
+  await anmelden(page, 'student', 'mia', C.mia); await passwortSetzen(page, 'Tiger-Lamp-River-4271');
   await page.waitForSelector('#home:not([hidden])');
   await eineAntwort(page);
   const sid = async () => (await page.evaluate(() => JSON.parse(localStorage.getItem('bq2_session')))).id;
@@ -45,7 +45,7 @@ test('Speicher nach Kennung: jedes Kind unter bq2_<Kennung>__, Passwort unter bq
   await page.evaluate(() => document.querySelector('#homeBtn')?.click());
   await page.waitForSelector('#home:not([hidden])');
   await page.locator('#logoutBtn').click();
-  await anmelden(page, 'student', 'lia', C.lia); await passwortSetzen(page, 'lia1');
+  await anmelden(page, 'student', 'lia', C.lia); await passwortSetzen(page, 'Owl-Cake-Moon-1357');
   await page.waitForSelector('#home:not([hidden])');
   await eineAntwort(page);
   id = await sid(); k = await alleSchluessel(page);
@@ -55,18 +55,20 @@ test('Speicher nach Kennung: jedes Kind unter bq2_<Kennung>__, Passwort unter bq
   await ctx.close();
 });
 
-test('Ist (Befund B1): ein Elternteil sieht auf dem Geraet auch ein fremdes Kind', async () => {
+// P3 (02.11.): finding B1 fixed - before, a parent was offered every child with a password on the device.
+test('Befund B1 behoben: ein Elternteil sieht ein fremdes Kind auf dem Geraet nicht, auch wenn es angemeldet ist', async () => {
   const { ctx, page } = await oeffnen(browser, server);
-  await anmelden(page, 'student', 'mia', C.mia); await passwortSetzen(page, 'mond');
+  await anmelden(page, 'student', 'mia', C.mia); await passwortSetzen(page, 'Tiger-Lamp-River-4271');
   await page.waitForSelector('#home:not([hidden])');
   await page.locator('#logoutBtn').click();
-  await anmelden(page, 'student', 'lia', C.lia); await passwortSetzen(page, 'lia1');
+  await anmelden(page, 'student', 'lia', C.lia); await passwortSetzen(page, 'Owl-Cake-Moon-1357');
   await page.waitForSelector('#home:not([hidden])');
   await page.locator('#adultBtn').click();
   await anmelden(page, 'adult', 'papa', C.papa); await passwortSetzen(page, 'langes-passwort');
   await page.waitForSelector('#parentClose');
-  const kinder = await page.$$eval('[data-pkid]', (b) => b.map((x) => x.dataset.pkid));
-  assert.ok(kinder.includes('lia'), 'B1: lia is not papa\'s child but is offered (fixed in P3)');
+  assert.equal(await page.locator('[data-pkid="lia"]').count(), 0, 'lia is not offered');
+  assert.match(await page.textContent('#pKid'), /mia/, 'papa sees his own child');
+  assert.ok(!(await page.textContent('.phdr')).includes('lia'));
   await ctx.close();
 });
 
@@ -75,7 +77,7 @@ test('Ist (Befund B1): ein Elternteil sieht auf dem Geraet auch ein fremdes Kind
 test('Schuldaten haengen an der Kennung: nur das richtige Kind; ein anderes Kind mit gleichem Vornamen bekommt nichts', async () => {
   const schule = async (kind, eltern) => {
     const { ctx, page } = await oeffnen(browser, server);
-    await anmelden(page, 'student', kind, C[kind]); await passwortSetzen(page, 'mond');
+    await anmelden(page, 'student', kind, C[kind]); await passwortSetzen(page, 'Tiger-Lamp-River-4271');
     await page.waitForSelector('#home:not([hidden])');
     await page.locator('#adultBtn').click();
     await anmelden(page, 'adult', eltern, C[eltern]); await passwortSetzen(page, 'langes-passwort');

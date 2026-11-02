@@ -14,7 +14,7 @@ import { browserStarten, zustand } from './app-hilfen.mjs';
 
 const CODES = { kathie: 'KATH-2345', lia: 'LIAA-2345', papa: 'PAPA-2345' };
 const konto = async (user, role, x = {}) => { const salt = Array.from({ length: 16 }, (_, i) => i + user.length); return { user, role, ...x, start: { salt, hash: await pbkdf2Hex(normCode(CODES[user]), salt) } }; };
-const KONTEN = { users: [await konto('kathie', 'student'), await konto('lia', 'student'), await konto('papa', 'parent', { kinder: ['kathie'] })] };
+const KONTEN = { users: [await konto('kathie', 'student'), await konto('lia', 'student'), await konto('papa', 'parent', { kinder: ['kathie', 'lia'] })] };
 // school data come from werkzeug/schuldaten.json and are assigned by the ID of the account "kathie" (S11 P2)
 const K2 = ausV1(KONTEN);
 const app = schuleEinsetzen(kontenEinsetzen(await fs.readFile(path.join(WURZEL, QUELLEN.app)), K2), await schuleLesen(), K2);
@@ -53,7 +53,7 @@ async function quest(page, name) {
 
 test('overview of the school ratings in the grown-ups area: standards, history, assignments, awaiting evaluation', async () => {
   const { ctx, page, fehler } = await oeffnen();
-  await login(page, 'student', 'kathie', 'mond');
+  await login(page, 'student', 'kathie', 'Tiger-Lamp-River-4271');
   await page.locator('#adultBtn').click(); await login(page, 'adult', 'papa', 'langes-passwort');
   await page.waitForSelector('#parentClose');
   await page.locator('details.psec[data-psec="school"] > summary').click();
@@ -86,7 +86,7 @@ test('overview of the school ratings in the grown-ups area: standards, history, 
 
 test('the school rating is the starting point for the task mix while there is too little own practice', async () => {
   const { ctx, page } = await oeffnen();
-  await login(page, 'student', 'kathie', 'mond');
+  await login(page, 'student', 'kathie', 'Tiger-Lamp-River-4271');
   await page.waitForSelector('#home:not([hidden])');
   // rounding: school "secure" (M) -> 2 to 3 challenge tasks; number combinations: "consolidating" (C) -> at most 1
   for (let r = 0; r < 3; r++) {
@@ -105,7 +105,7 @@ test('the school rating is the starting point for the task mix while there is to
 
 test('another child has no school ratings: overview says so, no starting point', async () => {
   const { ctx, page, fehler } = await oeffnen();
-  await login(page, 'student', 'lia', 'lia1');
+  await login(page, 'student', 'lia', 'Owl-Cake-Moon-1357');
   await page.locator('#adultBtn').click(); await login(page, 'adult', 'papa', 'langes-passwort');
   await page.waitForSelector('#parentClose');
   await page.locator('details.psec[data-psec="school"] > summary').click();

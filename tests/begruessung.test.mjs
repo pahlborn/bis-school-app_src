@@ -46,7 +46,7 @@ async function anmelden(page, rolle, name, pw) {
 async function erstesMal(page, wer = 'mia') {
   await anmelden(page, wer === 'mia' ? 'student' : 'adult', wer, CODES[wer]);
   await page.waitForSelector('#setPwForm');
-  const pw = wer === 'mia' ? 'mond' : 'langes-passwort';
+  const pw = wer === 'mia' ? 'Tiger-Lamp-River-4271' : 'langes-passwort';
   await page.locator('#newPw1').fill(pw); await page.locator('#newPw2').fill(pw); await page.locator('#setPwGo').click();
   await page.locator('#welcomeGo').click();
 }

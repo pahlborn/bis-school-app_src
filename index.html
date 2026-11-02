@@ -236,6 +236,7 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 .rank-path li.now .need{color:inherit}
 .chipstat{display:flex;align-items:center;gap:6px;background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:6px 12px;font-family:var(--display);font-weight:600;white-space:nowrap;min-height:44px;font-variant-numeric:tabular-nums}
 .chipstat svg{width:20px;height:20px;fill:var(--sun)}
+.whos-here{margin:4px 0 10px}.whos-here .row{flex-wrap:wrap;gap:8px}.pw-suggest{margin:6px 0 10px}.pw-suggest b{font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:.02em}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .today{display:grid;grid-template-columns:48px 1fr;gap:12px;align-items:center;text-align:left;width:100%;padding:14px 16px;border-radius:20px;border:0;background:var(--w-mix);color:#172033;cursor:pointer;box-shadow:var(--shadow);font:inherit}
 .today:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.12)}
@@ -3558,7 +3559,7 @@ function parentHomeHTML(){
   // A waiting practice sheet is mentioned once, calmly, with a way straight to it (not for teachers).
   const wait=isTeacher()?[]:waitingSheets(), w=wait[wait.length-1];
   const note=w?`<p class="phow psheet-note">📄 ${wait.length===1?(de?`${sheetName(w)} wartet aufs Eintragen.`:`${sheetName(w)} is waiting to be entered.`):(de?`${wait.length} Übungsblätter warten aufs Eintragen.`:`${wait.length} practice sheets are waiting to be entered.`)} <button type="button" class="btn small" data-opensheet="${w.id}">${de?'Jetzt eintragen':'Enter now'}</button></p>`:'';
-  const noKid=accountsOn() && !viewedKid() ? `<p class="phow pnokid">📱 ${de?'Auf diesem Gerät ist kein Kind angemeldet. Den Lernstand sehen Sie auf dem Gerät, auf dem Ihr Kind übt – dort unten „👪 Grown-ups“ antippen.':'No child is logged in on this device. You see your child’s progress on the device where they practice – tap “👪 Grown-ups” at the bottom there.'}</p>` : '';
+  const noKid=accountsOn() && !viewedKid() ? myKidsNote() : '';
   if(noKid) return noKid;   // nothing to show: without a logged-in child the data on this device are not the child's
   return `${migrNote()}${note}${backupLine()}<p class="phow">${T.howHome}</p><div class="playout"><div class="psubjects">${tiles}</div><aside class="pside"><div class="pcard" id="pSummary">${summaryHTML(all)}</div><div class="pcard">${legendHTML()}</div></aside></div>`;
 }
@@ -3721,15 +3722,16 @@ function undoRestore(){
 function renderSheets(){
   if(!parentAccess){ renderParentGate(); return; }
   aboutChrome();
-  const body=$('#aboutBody'), lang=PL(), T=PT[lang], de=lang==='de', teacher=isTeacher(), open=state.popen||(state.popen=[]);
+  syncViewUser();
+  const body=$('#aboutBody'), lang=PL(), T=PT[lang], de=lang==='de', teacher=isTeacher(), open=state.popen||(state.popen=[]), kidOk=!accountsOn() || !!viewedKid();
   let html=parentHeaderHTML()+(state.psubj ? parentSubjectHTML(state.psubj) : parentHomeHTML());
   // the chapters only on the overview, not again inside a subject (Peter, 01.11.)
   const onOverview=!state.psubj || (accountsOn() && !viewedKid());
   const secs=[];
-  if(accountsOn()) secs.push(['school', de?'🏫 Einstufungen der Schule':'🏫 School ratings', schoolHTML()]);
-  if(!teacher) secs.push(['sheets', T.sheets, sheetsPageHTML()]);
+  if(accountsOn() && kidOk) secs.push(['school', de?'🏫 Einstufungen der Schule':'🏫 School ratings', schoolHTML()]);
+  if(!teacher && kidOk) secs.push(['sheets', T.sheets, sheetsPageHTML()]);
   if(canBackup()) secs.push(['backup', de?'💾 Sicherung':'💾 Backup', backupHTML()]);
-  if(!teacher) secs.push(['settings', T.settings, storyCapHTML()+reminderHTML()+profileAdminHTML()]);
+  if(!teacher && kidOk) secs.push(['settings', T.settings, storyCapHTML()+reminderHTML()+profileAdminHTML()]);
   // Peter, 01.11.: three kinds of reading matter, kept apart - practical support, the concept, using the app
   secs.push(['support', de?'🤝 Ihr Kind unterstützen':'🤝 Supporting your child', supportGuideHTML()]);
   secs.push(['concept', ABOUT_UI[lang].title, aboutParts(lang).main+`<div class="about-menu">${aboutSectionsHTML(lang,null,true)}</div>`]);
@@ -3780,13 +3782,42 @@ function adultResume(){
 const FLAG_DE='<svg class="flagsvg" viewBox="0 0 30 18" aria-hidden="true"><rect width="30" height="6" fill="#000"/><rect y="6" width="30" height="6" fill="#DD0000"/><rect y="12" width="30" height="6" fill="#FFCE00"/></svg>', FLAG_US='<svg class="flagsvg" viewBox="0 0 38 20" aria-hidden="true"><rect width="38" height="20" fill="#fff"/><rect y="0.00" width="38" height="1.54" fill="#B22234"/><rect y="3.08" width="38" height="1.54" fill="#B22234"/><rect y="6.15" width="38" height="1.54" fill="#B22234"/><rect y="9.23" width="38" height="1.54" fill="#B22234"/><rect y="12.31" width="38" height="1.54" fill="#B22234"/><rect y="15.38" width="38" height="1.54" fill="#B22234"/><rect y="18.46" width="38" height="1.54" fill="#B22234"/><rect width="15.2" height="10.77" fill="#3C3B6E"/><circle cx="1.6" cy="1.5" r=".6" fill="#fff"/><circle cx="4.6" cy="1.5" r=".6" fill="#fff"/><circle cx="7.6" cy="1.5" r=".6" fill="#fff"/><circle cx="10.6" cy="1.5" r=".6" fill="#fff"/><circle cx="13.6" cy="1.5" r=".6" fill="#fff"/><circle cx="1.6" cy="4.1" r=".6" fill="#fff"/><circle cx="4.6" cy="4.1" r=".6" fill="#fff"/><circle cx="7.6" cy="4.1" r=".6" fill="#fff"/><circle cx="10.6" cy="4.1" r=".6" fill="#fff"/><circle cx="13.6" cy="4.1" r=".6" fill="#fff"/><circle cx="1.6" cy="6.7" r=".6" fill="#fff"/><circle cx="4.6" cy="6.7" r=".6" fill="#fff"/><circle cx="7.6" cy="6.7" r=".6" fill="#fff"/><circle cx="10.6" cy="6.7" r=".6" fill="#fff"/><circle cx="13.6" cy="6.7" r=".6" fill="#fff"/><circle cx="1.6" cy="9.3" r=".6" fill="#fff"/><circle cx="4.6" cy="9.3" r=".6" fill="#fff"/><circle cx="7.6" cy="9.3" r=".6" fill="#fff"/><circle cx="10.6" cy="9.3" r=".6" fill="#fff"/><circle cx="13.6" cy="9.3" r=".6" fill="#fff"/></svg>';
 const flagsHTML = () => `<span class="flags" role="group" aria-label="Sprache / Language"><button type="button" class="flag${PL()==='de'?' on':''}" data-plang="de" aria-label="Deutsch" aria-pressed="${PL()==='de'}">${FLAG_DE}</button><button type="button" class="flag${PL()==='en'?' on':''}" data-plang="en" aria-label="English" aria-pressed="${PL()==='en'}">${FLAG_US}</button></span>`;
 /* The test account is for the admin only (Peter, 31.10.): one way in, no extra choice for other grown-ups. */
-const viewedKid = () => accountsOn() ? (viewUser || (studentSession()||{}).user || null) : null;
-/* children whose data can be looked at on this device: those who logged in here (own password on this
-   device) or are logged in now; the test account only for the admin; teachers only their own children */
-function kidChoices(){
+/* "Meine Kinder" (S11 Stufe 1, P3; finding B1 fixed): grown-ups see ONLY their own children - parents
+   their children, teachers the children assigned to them, the admin only the test child - and only those
+   whose data lie on this device. A logged-in child is not needed. */
+const myKids = () => {
   if(!accountsOn() || !adultUser) return [];
-  const me=APP_ACCOUNTS.users.find(u=>u.user===adultUser.user)||{}, cur=(studentSession()||{}).user;
-  return APP_ACCOUNTS.users.filter(u=>u.role==='student' && (!u.test || adultUser.admin) && (adultUser.role!=='teacher' || (me.kinder||[]).includes(u.user)) && (u.user===cur || store.get(pwKey(u),null))).map(u=>u.user);
+  const me=APP_ACCOUNTS.users.find(u=>u.user===adultUser.user)||{};
+  return APP_ACCOUNTS.users.filter(u=>u.role==='student' && (u.test ? !!adultUser.admin : (me.kinder||[]).includes(u.user)));
+};
+function kidHasData(u){
+  if(((studentSession()||{}).user)===u.user || store.get(pwKey(u),null)) return true;
+  if(!ID_STORAGE) return false;
+  const pre='bq2_'+u.id+'__';
+  for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k && k.startsWith(pre)) return true; }
+  return false;
+}
+function kidChoices(){ return myKids().filter(kidHasData).map(u=>u.user); }
+/* whose data: for grown-ups the child chosen here, else the child logged in on this device if it is one of
+   theirs, else their first child with data here; for children their own login */
+const viewedKid = () => {
+  if(!accountsOn()) return null;
+  if(!adultUser) return viewUser || (studentSession()||{}).user || null;
+  const ch=kidChoices(), cur=(studentSession()||{}).user;
+  if(viewUser && ch.includes(viewUser)) return viewUser;
+  if(cur && ch.includes(cur)) return cur;
+  return ch[0]||null;
+};
+/* the store reads the child's area through viewUser: keep it in line with viewedKid() */
+function syncViewUser(){
+  if(!accountsOn() || !adultUser) return;
+  const k=viewedKid(), cur=(studentSession()||{}).user;
+  viewUser=k && k!==cur ? k : (k ? null : '__none__');
+}
+function myKidsNote(){
+  const de=PL()==='de', kids=myKids().filter(u=>!u.test);
+  if(!kids.length) return `<p class="phow pnokid">👧 ${de?'Ihnen ist noch kein Kind zugeordnet.':'No child is assigned to you yet.'}</p>`;
+  return `<div class="pcard pnokid"><h2>${de?'Meine Kinder':'My children'}</h2>${kids.map(u=>`<p>👧 <b>${esc(u.user)}</b> – ${de?'Daten auf dem Gerät des Kindes. Sie sehen sie dort; der Abgleich zwischen Geräten folgt mit Stufe 2.':'data on your child’s device. You can see them there; syncing between devices follows with stage 2.'}</p>`).join('')}</div>`;
 }
 const testUserFor = () => accountsOn() && adultUser && adultUser.admin ? APP_ACCOUNTS.users.find(u=>u.role==='student' && u.test) || null : null;
 const isTestUser = user => !!(APP_ACCOUNTS && APP_ACCOUNTS.users.some(u=>u.user===user && u.test));
@@ -3827,7 +3858,7 @@ function parentHeaderHTML(){
   const kid=viewedKid(), kids=kidChoices();
   const kidChip=!accountsOn()?'':kids.length>1
     ? `<span class="phdr-kids" role="group" aria-label="${de?'Kind':'Child'}">${kids.map(u=>`<button type="button" class="btn small${u===kid?' primary':''}" data-pkid="${esc(u)}" aria-pressed="${u===kid}">${isTestUser(u)?'🧪':'👧'} ${esc(u)}</button>`).join('')}</span>`
-    : `<span class="phdr-kid" id="pKid">${kid?(isTestUser(kid)?'🧪 ':'👧 ')+esc(kid):(de?'👧 kein Kind auf diesem Gerät':'👧 no child on this device')}</span>`;
+    : `<span class="phdr-kid" id="pKid">${kid?(isTestUser(kid)?'🧪 ':'👧 ')+esc(kid):(de?'👧 keine Daten Ihrer Kinder auf diesem Gerät':'👧 none of your children’s data on this device')}</span>`;
   let h=`<header class="phdr"><div class="phdr-row"><span class="phdr-who">👪 ${who}</span>${kidChip}<span class="phdr-act">${v?`<span class="phdr-ver" id="pVersion">${esc(v)}</span>`:''}${flagsHTML()}${test?`<button type="button" class="btn small" id="pPlayTest">🧪 ${de?'Testkind':'Test child'}</button>`:''}<button class="btn small" id="parentClose" type="button">${close}</button></span></div>`;
   if(accountsOn() && kid && isTestUser(kid)) h+=`<div class="phdr-row phdr-test">🧪 <b>${de?'Hier stehen Testdaten.':'You are looking at test data.'}</b>${store.get('sessionPrev',null)?`<button type="button" class="btn small" id="pRealData">${de?'Zurück zu echten Daten':'Back to real data'}</button>`:''}</div>`;
   return h+'</header>';
@@ -3849,6 +3880,34 @@ async function pbkdf2Hex(text, salt){
   const bits=await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:new Uint8Array(salt),iterations:100000},m,256);
   return Array.from(new Uint8Array(bits)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
+/* ---------- password rules (S11 Stufe 1, P3, 02.11.; Peter: children learn to use a strong password) ----------
+   New passwords need 12 characters or more and must not be a common password or a simple pattern. The
+   app offers a "Merkpasswort": three random words from a list of ~800 child-friendly English words and a
+   four-digit number (about 42 bits), e.g. "Tiger-Lamp-River-4271". Fields are marked for the device's
+   password manager (Face ID / Touch ID fill them in). Existing weaker passwords are replaced once, at the
+   next login. */
+const PW_WORDS='ant bat bear bee bird bison bunny calf camel cat cheetah chick cobra colt cow crab crane crow cub deer dingo dog dolphin donkey dove duck eagle eel elk emu falcon fawn ferret finch fish flamingo fly fox frog gecko gerbil giraffe goat goose gorilla hare hawk hedgehog hen heron hippo horse hound ibis iguana jaguar kitten koala lamb lark lemur leopard lion lizard llama lobster lynx macaw mole moose moth mouse mule newt octopus orca ostrich otter owl ox panda parrot pelican penguin pig pigeon pony poodle puffin puma puppy quail rabbit raccoon ram raven robin salmon seal shark sheep shrimp sloth snail snake sparrow spider squid squirrel stork swan tapir tiger toad toucan trout tuna turkey turtle walrus whale wolf wombat yak zebra beaver badger bulldog canary chipmunk collie coyote cricket dragonfly gazelle hamster husky jellyfish kangaroo ladybug mantis meerkat narwhal oyster peacock pheasant platypus porcupine reindeer rhino seahorse starfish stingray swallow terrier unicorn vulture weasel woodpecker apple apricot bagel banana bean berry biscuit bread bun butter cake candy carrot cereal cheese cherry cocoa coconut cookie corn cracker cream cupcake date donut egg fig grape guava honey jam jelly juice kiwi lemon lime mango maple melon milk muffin nut oat olive onion orange pancake papaya pasta peach peanut pear pea pepper pickle pie pizza plum popcorn potato pretzel pudding pumpkin raisin rice salad soup spinach sugar sushi taco toast tomato waffle walnut yogurt almond avocado broccoli caramel celery cinnamon cucumber dumpling garlic ginger hazelnut lettuce noodle omelette parsley pecan radish sesame toffee turnip vanilla acorn beach bloom blossom branch breeze brook bush canyon cave cliff cloud clover coral creek daisy desert dew dune earth fern field flower forest garden glacier grass hill island jungle lake leaf lily lotus meadow moss mountain oak ocean orchid palm pebble petal pine pond poppy rain rainbow reef river rock rose sand sea seed shell shore sky snow soil spring star stone stream sun sunflower thunder tide tree tulip valley volcano water wave willow wind bamboo cactus cedar daffodil dandelion hazel heather ivy lagoon lavender marsh mushroom nectar pinecone prairie puddle ripple sprout thistle twig violet waterfall comet galaxy meteor moon orbit planet rocket saturn jupiter mars venus pluto nebula sunrise sunset frost hail mist fog lightning snowflake sunshine twilight anchor arrow backpack badge ball balloon basket bell bench bicycle blanket boat book boot bottle bowl box brick broom brush bucket button cabin camera candle canoe cap card carpet castle chair chalk clock coin compass crayon crown cup curtain desk dice door drum easel envelope fan feather flag flute fork frame gate glove glue guitar hammer harp hat helmet hook horn jacket jar kettle key kite ladder lamp lantern letter lock magnet map marble mask medal mirror mitten mug needle net notebook paddle paint paper pen pencil piano pillow pin plate pocket puzzle quilt radio ribbon ring robot rope ruler sail saucer scarf scooter shoe shovel sled sock sofa spoon stamp stool string sweater swing table teapot tent ticket torch towel toy train trumpet truck tunnel umbrella vase violin wagon wallet watch whistle window yoyo zipper apron atlas beacon binder bracelet cushion domino eraser globe goggles hammock hourglass igloo jigsaw kayak locket mailbox marker mitt napkin necklace origami paintbrush parachute pinwheel postcard pyramid rattle sandal satchel scissors seesaw slipper snorkel spinner sticker suitcase sundial tambourine teacup telescope thimble trophy tricycle tuba ukulele wand windmill bakery barn bridge cafe city farm harbor house library market museum palace park school shop stadium station street tower town village zoo arcade attic cottage garage hangar lighthouse orchard pier ranch temple theater workshop bold brave bright brisk busy calm cheerful clever cool cozy crisp curly daring eager early fancy fast fluffy friendly funny fuzzy gentle glad golden good grand great happy helpful honest humble jolly joyful kind lively lucky magic merry mighty neat nice noble polite proud quick quiet rapid ready royal shiny silly silver smart smooth snowy sparkly speedy spicy sporty steady sunny super sweet swift tidy tiny warm wise witty young zany zesty bouncy breezy bubbly chirpy cuddly dreamy fresh frosty glossy handy jumpy lofty mellow minty misty nimble peppy perky plucky rosy sandy silky snappy snug sleek spry starry sturdy toasty velvet wavy windy woolly amber azure beige blue bronze crimson cyan gold gray green indigo ivory jade lilac magenta maroon mint navy ochre pink purple red ruby scarlet teal white yellow archery ballet baseball bowling chess climbing cycling dance diving fencing football golf hiking hockey jogging judo karate marathon netball race relay rowing rugby running sailing skating skiing soccer surfing swimming tennis yoga banjo bass cello chord melody note opera piccolo rhythm song tempo adventure dragon fairy giant hero knight legend pirate princess prince quest riddle treasure wizard wonder explorer captain detective pilot sailor scout astronaut inventor artist baker builder farmer gardener painter poet ranger singer juggler magician acrobat'.split(' ');
+const PW_BASES=['password','passwort','passwd','qwerty','qwertz','asdfgh','yxcvbn','zxcvbn','iloveyou','letmein','welcome','willkommen','monkey','dragon','football','fussball','baseball','soccer','superman','batman','starwars','princess','prinzessin','sunshine','admin','administrator','hallo','hello','geheim','secret','schatz','master','shadow','freedom','whatever','trustno','changeme','abc','test','user','login','iloveu','pokemon','minecraft','fortnite','roblox','unicorn','bigquest','school','schule'];
+function pwSuggest(){
+  const r=new Uint32Array(4); crypto.getRandomValues(r);
+  const w=i=>{ const x=PW_WORDS[r[i]%PW_WORDS.length]; return x[0].toUpperCase()+x.slice(1); };
+  return `${w(0)}-${w(1)}-${w(2)}-${String(r[3]%10000).padStart(4,'0')}`;
+}
+function pwWeak(pw, user){
+  const p=String(pw||''), l=p.toLowerCase(), core=l.replace(/[^a-z0-9]/g,'');
+  if(p.length<12) return true;
+  if(/^(.{1,4})\1+$/.test(l) || /^(.{1,4})\1+$/.test(core)) return true;            // aaaa…, abcabc…, 1212…
+  const runs=['01234567890123456789','98765432109876543210','abcdefghijklmnopqrstuvwxyz','zyxwvutsrqponmlkjihgfedcba','qwertyuiopasdfghjklzxcvbnm','qwertzuiopasdfghjklyxcvbnm','1qaz2wsx3edc4rfv5tgb','zaq12wsxcde34rfvbgt5'];
+  if(core.length>=8 && runs.some(s=>s.includes(core))) return true;                     // 123456789012, qwertyuiopas
+  const letters=l.replace(/[^a-z]/g,'');
+  if(PW_BASES.some(b=>letters===b || letters===b+b || (letters.startsWith(b) && letters.length-b.length<=2))) return true;   // password1234, Passwort!2026
+  if(/^[0-9\W_]+$/.test(p) && new Set(core).size<=4) return true;                     // 111222333444, 1212…
+  if(/^[a-z]{1,8}[0-9]+$/.test(core) || /^[0-9]+[a-z]{1,8}$/.test(core)) return true;     // one word (or name) plus digits: Kathie123456
+  const digits=l.replace(/[^0-9]/g,''); if(letters.length>=3 && digits.length>=3 && runs.some(x=>x.includes(letters)) && runs.some(x=>x.includes(digits))) return true;   // a1b2c3d4e5f6
+  const u=String(user||'').toLowerCase(); if(u.length>=3 && letters.replace(u,'').length<4) return true;   // the name plus digits
+  return false;
+}
+const pwStrongText = adult => adult ? (store.get('parentLang','de')!=='en' ? 'Bitte mindestens 12 Zeichen oder den Vorschlag nehmen.' : 'Please use at least 12 characters or take the suggestion.') : 'A strong password keeps your things safe. Try the suggestion or make it longer.';
 const LOGIN_TXT={
   who:'Who is logging in?', student:'🎒 Student', adult:'👪 Parent / Teacher',
   user:'User name', pw:'Password or start code', go:'Log in', back:'← Back',
@@ -3930,8 +3989,16 @@ function openGuide(kind){
 /* Short help on the login screen: the app (and its guides in "About") is not open yet here. */
 const LOGIN_HELP=`<details class="login-help"><summary>❓ Help / Hilfe</summary>
 <p><b>Students:</b> tap 🎒 Student, type your user name and password. The first time, use the start code from your grown-up and then choose your own password.</p>
-<p><b>Erwachsene:</b> „👪 Parent / Teacher“, Benutzername und Startcode beim ersten Mal, dann ein eigenes Passwort (mindestens 8 Zeichen). Das Passwort gilt nur auf diesem Gerät.</p>
+<p><b>Erwachsene:</b> „👪 Parent / Teacher“, Benutzername und Startcode beim ersten Mal, dann ein eigenes Passwort (mindestens 12 Zeichen – oder der Vorschlag der App aus drei Wörtern und einer Zahl; im Passwortspeicher sichern). Das Passwort gilt nur auf diesem Gerät.</p>
 <p>Passwort vergessen? / Forgot your password? Der Startcode funktioniert immer. Nach 5 Fehlversuchen 30 Sekunden warten. Nach der Anmeldung: Kinder tippen „❓ Help“, Erwachsene finden ihre Anleitung im Elternbereich. / After logging in: children tap “❓ Help”, grown-ups find their guide in the grown-ups area.</p></details>`;
+/* "Who's here?" (S11 Stufe 1, P3): on a device where children have logged in before, they pick themselves
+   instead of typing the name; the password is still asked (the password manager fills it in). */
+function whosHereHTML(){
+  const ids=store.get('kidsHere',[]), kids=ids.map(id=>APP_ACCOUNTS.users.find(u=>u.id===id && u.role==='student')).filter(Boolean);
+  if(!kids.length) return '';
+  const val=(id,k)=>{ if(!ID_STORAGE) return null; const lk='bq2_'+id+'__'+k; try{ return JSON.parse(localStorage.getItem(lk)||'null'); }catch(e){ return null; } };
+  return `<div class="whos-here"><p class="greet-q">Who's here?</p><div class="row">${kids.map(u=>`<button type="button" class="btn kid-pick" data-kidpick="${esc(u.user)}">${esc(val(u.id,'emoji')||'🙂')} ${esc(val(u.id,'name')||u.user)}</button>`).join('')}</div><p class="small">Someone else? Type the user name below.</p></div>`;
+}
 function renderLogin(role){
   const b=$('#loginBody'), T=loginTxt(role==='adult');
   if(!role){
@@ -3941,7 +4008,8 @@ function renderLogin(role){
     $('#roleAdult').addEventListener('click',()=>renderLogin('adult'));
     return;
   }
-  b.innerHTML=`<h2>${role==='student'?T.student:T.adult}</h2><form id="loginForm" class="login-form"><div class="field"><label for="loginUser">${T.user}</label><input id="loginUser" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><div class="field"><label for="loginPw">${T.pw}</label><input id="loginPw" type="password" autocomplete="current-password" required></div><button class="btn primary" id="loginGo" type="submit">${T.go}</button><p id="loginMsg" class="small" role="status"></p></form><button class="btn small" id="loginBack" type="button">${T.back}</button>${LOGIN_HELP}`;
+  b.innerHTML=`<h2>${role==='student'?T.student:T.adult}</h2>${role==='student'?whosHereHTML():''}<form id="loginForm" class="login-form"><div class="field"><label for="loginUser">${T.user}</label><input id="loginUser" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><div class="field"><label for="loginPw">${T.pw}</label><input id="loginPw" type="password" autocomplete="current-password" required></div><button class="btn primary" id="loginGo" type="submit">${T.go}</button><p id="loginMsg" class="small" role="status"></p></form><button class="btn small" id="loginBack" type="button">${T.back}</button>${LOGIN_HELP}`;
+  b.querySelectorAll('[data-kidpick]').forEach(x=>x.addEventListener('click',()=>{ $('#loginUser').value=x.dataset.kidpick; $('#loginPw').value=''; $('#loginPw').focus(); }));
   $('#loginBack').addEventListener('click',()=>{ if(studentSession()){ $('#loginBody').innerHTML=''; renderHome(); show('home'); } else renderLogin(); });
   $('#loginForm').addEventListener('submit',async e=>{
     e.preventDefault();
@@ -3958,22 +4026,28 @@ function renderLogin(role){
       if(!ok){ loginFails++; if(loginFails>=5){ loginBlockedUntil=Date.now()+30000; loginFails=0; } msg.textContent=T.wrong; btn.disabled=false; return; }
       loginFails=0;
       if(viaCode && !store.get(pwKey(u),null)) return renderSetPassword(u);
+      if(!viaCode && pwWeak(pw, u.user)) return renderSetPassword(u, true);
       loginDone(u);
     }catch(err){ msg.textContent='Login is not possible in this browser.'; btn.disabled=false; }
   });
   if(startPrefill){ $('#loginUser').value=startPrefill.name; $('#loginPw').value=startPrefill.code; startPrefill=null; $('#loginGo').focus(); }
   else $('#loginUser').focus();
 }
-function renderSetPassword(u){
-  const T=loginTxt(u.role!=='student'), min=u.role==='student'?4:8;
-  $('#loginBody').innerHTML=`<h2>${T.setTitle}</h2><p class="small">${T.setInfo}</p><form id="setPwForm" class="login-form"><div class="field"><label for="newPw1">${T.pw1}</label><input id="newPw1" type="password" autocomplete="new-password" required></div><div class="field"><label for="newPw2">${T.pw2}</label><input id="newPw2" type="password" autocomplete="new-password" required></div><button class="btn primary" id="setPwGo" type="submit">${T.save}</button><p id="setPwMsg" class="small" role="status"></p></form>`;
+function renderSetPassword(u, renew){
+  const adult=u.role!=='student', T=loginTxt(adult), de=adult && store.get('parentLang','de')!=='en';
+  const title=renew?(adult?(de?'Bitte ein stärkeres Passwort wählen':'Please choose a stronger password'):'Time for a stronger password!'):T.setTitle;
+  const info=renew?(adult?(de?'Ihr bisheriges Passwort ist kürzer als 12 Zeichen oder leicht zu erraten. Einmal neu wählen – danach geht es wie gewohnt weiter.':'Your current password is shorter than 12 characters or easy to guess. Choose a new one once – then everything works as before.'):'Your password should be longer so nobody can guess it. Take the suggestion – your iPad can remember it for you.'):T.setInfo;
+  const sugg=pwSuggest();
+  $('#loginBody').innerHTML=`<h2>${title}</h2><p class="small">${info}</p><form id="setPwForm" class="login-form"><input class="sr" type="text" name="username" autocomplete="username" value="${esc(u.user)}" readonly tabindex="-1" aria-hidden="true"><p class="pw-suggest">${adult?(de?'Vorschlag':'Suggestion'):'Idea'}: <b id="pwSugg">${esc(sugg)}</b> <button type="button" class="btn small" id="pwUse">${adult?(de?'Übernehmen':'Use it'):'Use it'}</button> <button type="button" class="btn small" id="pwAnother">${adult?(de?'Anderer Vorschlag':'Another one'):'Another one'}</button></p><div class="field"><label for="newPw1">${T.pw1}</label><input id="newPw1" type="password" autocomplete="new-password" required></div><div class="field"><label for="newPw2">${T.pw2}</label><input id="newPw2" type="password" autocomplete="new-password" required></div><button class="btn primary" id="setPwGo" type="submit">${T.save}</button><p id="setPwMsg" class="small" role="status"></p></form>`;
+  $('#pwUse').addEventListener('click',()=>{ const v=$('#pwSugg').textContent; $('#newPw1').value=v; $('#newPw2').value=v; $('#newPw1').type='text'; });
+  $('#pwAnother').addEventListener('click',()=>{ $('#pwSugg').textContent=pwSuggest(); });
   $('#setPwForm').addEventListener('submit',async e=>{
     e.preventDefault(); const p1=$('#newPw1').value, p2=$('#newPw2').value, msg=$('#setPwMsg');
-    if(p1.length<min){ msg.textContent=T.short(min); return; }
+    if(pwWeak(p1, u.user)){ msg.textContent=pwStrongText(adult); return; }
     if(p1!==p2){ msg.textContent=T.diff; return; }
     const salt=Array.from(crypto.getRandomValues(new Uint8Array(16)));
     store.set(pwKey(u),{salt, hash:await pbkdf2Hex(p1,salt)});
-    renderWelcome(u);
+    if(renew) loginDone(u); else renderWelcome(u);
   });
   $('#newPw1').focus();
 }
@@ -3990,7 +4064,7 @@ function renderWelcome(u){
 }
 function loginDone(u, welcomed){
   $('#loginBody').innerHTML='';
-  if(u.role==='student'){ store.set('session',sessionOf(u)); adultUser=null; if(welcomed) store.set('greetDay',dayKey()); renderHome(); show('home'); }
+  if(u.role==='student'){ store.set('session',sessionOf(u)); const here=store.get('kidsHere',[]); if(!here.includes(u.id)) store.set('kidsHere',here.concat([u.id])); adultUser=null; if(welcomed) store.set('greetDay',dayKey()); renderHome(); show('home'); }
   else { store.set('adultSession',sessionOf(u)); adultUser={user:u.user, role:u.role, admin:!!u.admin}; parentAccess=true; state.psubj=null; state.popen=state.popen||[]; openAbout('sheets'); }
 }
 /* Test account bar (for grown-ups, in their language): clearly marked, separate data, jump ahead one
@@ -4093,7 +4167,7 @@ STANDARD_TEXT['E-S2']='Sprechen und Zuhören: Meinungen äußern und besprechen'
    Letters: C = Consolidating, M = Meeting expectations (school legend). ATL/Learner profile:
    ES = emerging with support, Obs. = observed, Ind. = independent. */
 const SCHOOL_DATA=/*BQ_SCHULE*/null||{};
-const schoolKid = () => { const n=viewUser || (studentSession()||{}).user, a=n && APP_ACCOUNTS.users.find(u=>u.user===n && u.role==='student'); return a ? a.id : null; };
+const schoolKid = () => { const n=viewedKid(), a=n && APP_ACCOUNTS.users.find(u=>u.user===n && u.role==='student'); return a ? a.id : null; };
 const schoolData = () => accountsOn() ? (SCHOOL_DATA[schoolKid()]||null) : null;
 const SL={C:'c',M:'m',E:'e',RS:'rs',N:'rs'};
 /* latest rating per standard: [{day, r}] newest first */
@@ -4282,7 +4356,7 @@ const sourcesHTML=(lang='en')=>{ const de=lang==='de';
    No separate info buttons elsewhere; the login screen has a short help because the app is not open yet. */
 const GUIDE_KID=`<p class="small">Hello, explorer! Here is how Big Quest works.</p>
 <ol class="steps">
-<li><b>Log in:</b> tap 🎒 Student, type your user name and your password. The very first time you use the start code from your grown-up and then choose your own password. Keep it a secret!</li>
+<li><b>Log in:</b> tap 🎒 Student, type your user name and your password. The very first time you use the start code from your grown-up and then choose your own password. Keep it a secret! Your password is only for you. Don’t tell friends. Your grown-ups can help if you forget it.</li>
 <li><b>Practise Today:</b> 8 questions from your focus topics. Or tap a subject and choose a quest.</li>
 <li><b>Oops, a mistake?</b> No problem! You get a tip and try again. Tap “Show me how” whenever you want – that is not a mistake. Still stuck? “Show me the answer” shows the solution.</li>
 <li><b>Stars and titles:</b> every solved task gives a star. With more stars you reach a new title – tap your title to see your explorer path. Your learning tree grows on every day you practise.</li>
@@ -4296,8 +4370,8 @@ const GUIDE_KID=`<p class="small">Hello, explorer! Here is how Big Quest works.<
 const GUIDE_ADULT_DE=`<p><b>Das Wichtigste vorab:</b> Die App hat keinen Server. Alles, was das Kind übt (Sterne, Lernstand, Wiederholungen, Leseaufnahmen, Übungsblätter), liegt <b>nur auf dem Gerät, auf dem es übt</b>. Deshalb übt das Kind am besten immer auf demselben Gerät, über das App-Symbol auf dem Home-Bildschirm. Den Lernstand sehen Erwachsene auf diesem Gerät.</p>
 <ol class="steps">
 <li><b>Einrichten (einmalig):</b> Seite in Safari öffnen und das Familienpasswort eingeben („angemeldet bleiben“ angehakt lassen). Dann Teilen-Symbol → „Zum Home-Bildschirm“ → „Hinzufügen“ und künftig nur noch über das Symbol öffnen. Die Home-Bildschirm-App hat einen eigenen Speicher und fragt beim ersten Öffnen noch einmal nach dem Familienpasswort.</li>
-<li><b>Kind anmelden (einmalig je Gerät):</b> „🎒 Student“, Benutzername und Startcode eingeben, dann ein eigenes Passwort wählen (mindestens 4 Zeichen). Das Kind bleibt angemeldet, bis jemand „Log out“ tippt.</li>
-<li><b>Als Erwachsener anmelden:</b> auf dem Gerät des Kindes unten „👪 Grown-ups“ (das Kind bleibt angemeldet), Benutzername und Startcode, dann ein eigenes Passwort (mindestens 8 Zeichen). Sie bleiben angemeldet, bis Sie oben „Abmelden“ tippen – auch wenn das iPad in den Ruhezustand geht oder die App geschlossen wird. Auf dem Gerät des Kindes nach dem Nachsehen bitte abmelden; danach ist dort wieder das Kind angemeldet.</li>
+<li><b>Kind anmelden (einmalig je Gerät):</b> „🎒 Student“, Benutzername und Startcode eingeben, dann ein eigenes Passwort wählen (mindestens 12 Zeichen – am einfachsten der Vorschlag der App aus drei Wörtern und einer Zahl; im Passwortspeicher sichern, dann füllt Face ID es aus). Das Kind bleibt angemeldet, bis jemand „Log out“ tippt.</li>
+<li><b>Als Erwachsener anmelden:</b> auf dem Gerät des Kindes unten „👪 Grown-ups“ (das Kind bleibt angemeldet), Benutzername und Startcode, dann ein eigenes Passwort (mindestens 12 Zeichen – oder der Vorschlag der App aus drei Wörtern und einer Zahl; im Passwortspeicher sichern). Sie bleiben angemeldet, bis Sie oben „Abmelden“ tippen – auch wenn das iPad in den Ruhezustand geht oder die App geschlossen wird. Auf dem Gerät des Kindes nach dem Nachsehen bitte abmelden; danach ist dort wieder das Kind angemeldet. Sie sehen nur Ihre eigenen Kinder – auch ohne dass sich ein Kind angemeldet hat, sofern seine Daten auf diesem Gerät liegen.</li>
 <li><b>Im Elternbereich:</b> oben die Übersicht wie auf der Kinderseite mit der Einschätzung in Worten (keine Schulbeurteilung). Fach antippen: bei jeder Quest Grundlage, Tipp und der Schalter „Im Fokus“. Den Fokus wählt die App selbst – was die Lehrkraft als nächste Schritte nennt und wo Übung hilft –, daraus nimmt „Practise Today“ seine Aufgaben; über „🎯 Fokus“ stellen Sie auf „Manuell“, um selbst zu wählen, und mit „Automatisch“ wieder zurück. Darunter zum Aufklappen: Übungsblätter, „Für das Kind“ (Pisolala-Geschichten, Kalender-Erinnerung, Profilangaben), „Ihr Kind unterstützen“ (die wichtigsten Regeln), „So funktioniert Big Quest“ (das Konzept, auch wie die App einstuft) und diese Bedienungshilfe. Die Sprache wechseln Sie oben mit den Flaggen.</li>
 <li><b>Für das Kind:</b> Practise Today oder ein Fach; bei Fehlern Hinweis, zweiter Versuch, dann Lösungsweg; Lese-Studio mit Aufnahme (Teilen/Sichern zum Hochladen auf die Lernplattform der Klasse); Übungsblatt als PDF; nach jeder Runde Witz, Rätsel oder Geschichte.</li>
 </ol>
@@ -4306,8 +4380,8 @@ const GUIDE_ADULT_DE=`<p><b>Das Wichtigste vorab:</b> Die App hat keinen Server.
 const GUIDE_ADULT_EN=`<p><b>Most important first:</b> the app has no server. Everything your child practices (stars, progress, reviews, reading recordings, practice sheets) stays <b>only on the device where they practice</b>. So your child should always use the same device, through the icon on the home screen. Grown-ups see the progress on that device.</p>
 <ol class="steps">
 <li><b>Set up (once):</b> open the page in Safari and enter the family password (keep “stay signed in” checked). Then tap Share → “Add to Home Screen” → “Add”, and from then on open it with the icon. The home-screen app has its own storage and asks for the family password once more.</li>
-<li><b>Log in your child (once per device):</b> “🎒 Student”, username and start code, then choose a personal password (at least 4 characters). Your child stays logged in until someone taps “Log out”.</li>
-<li><b>Log in as a grown-up:</b> on your child’s device tap “👪 Grown-ups” at the bottom (your child stays logged in), enter your username and start code, then a personal password (at least 8 characters). You stay logged in until you tap “Log out” at the top – even when the iPad goes to sleep or the app is closed. On your child’s device, please log out when you are done; your child is then logged in there again.</li>
+<li><b>Log in your child (once per device):</b> “🎒 Student”, username and start code, then choose a personal password (at least 12 characters – easiest is the app’s suggestion of three words and a number; save it in the password manager so Face ID fills it in). Your child stays logged in until someone taps “Log out”.</li>
+<li><b>Log in as a grown-up:</b> on your child’s device tap “👪 Grown-ups” at the bottom (your child stays logged in), enter your username and start code, then a personal password (at least 12 characters – or the app’s suggestion of three words and a number; save it in the password manager). You stay logged in until you tap “Log out” at the top – even when the iPad goes to sleep or the app is closed. On your child’s device, please log out when you are done; your child is then logged in there again. You only see your own children – even without a child logged in, as long as their data are on this device.</li>
 <li><b>In the grown-ups area:</b> at the top, an overview like your child’s start page with a summary in plain words (not a school assessment). Tap a subject: each quest shows what the summary is based on, a tip, and the “In focus” switch. The app picks the focus by itself – what the teacher names as next steps and where practice helps – and “Practise Today” takes its tasks from there; under “🎯 Focus” switch to “Manual” to choose yourself, and back with “Automatic”. Below, open as needed: practice sheets, “For your child” (Pisolala stories, calendar reminder, profile details), “Supporting your child” (the key rules), “How Big Quest works” (the concept, including how the app judges) and this guide to using the app. Switch the language with the flags at the top.</li>
 <li><b>For your child:</b> “Practise Today” or a subject; after a mistake a hint, a second try, then the worked solution; reading studio with recording (share/save to upload to the class learning platform); practice sheet as PDF; a joke, riddle or story after each round.</li>
 </ol>
