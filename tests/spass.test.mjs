@@ -42,9 +42,13 @@ test('nach einer Runde: Leckerli waehlen – Witz mit Aufloesung, Mystery Questi
   assert.ok(geschichte.includes('Nobody can see Pisolala'), 'English after a Maths round');
   assert.equal(await page.textContent('#treatBody p b'), 'Pisolala and the Giggling Pumpkins');
   for (const w of ['Ohren', 'Augen', 'Fell', 'groß wie', 'aussah', 'ears', 'eyes', 'fur', 'as big as', 'looked like']) assert.ok(!geschichte.includes(w), 'Pisolala bleibt unsichtbar: ' + w);
+  // A5: one story per round, remembered as read (the choice of the next one is tested in tests/module/geschichten.test.mjs)
+  assert.deepEqual(await lies(page, 'storyRead'), ['halloween-2026']);
+  assert.equal(await page.$$eval('#treatBody p b', (b) => b.length), 1, 'one story, not a list');
   await klick(page, '#treat [data-treat="joke"]');
   const witz = await page.textContent('#treatBody .story');
   assert.equal(await page.getAttribute('#treatBody .story', 'lang'), 'en', 'English joke after a Maths round');
+  assert.match(await page.textContent('#treatBody .joke-from'), /^\S+ A joke from (the UK|the USA|Canada|India|around the world)$/, 'A4: flag and country');
   await klick(page, '#jokeAnswer');
   assert.equal(await page.$$eval('#treatBody .story', (s) => s.length), 2, 'Frage und Aufloesung');
   // A3 (Peter, 02.11.): one joke per round - pressing "Joke" again shows the same one
