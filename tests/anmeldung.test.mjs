@@ -183,7 +183,7 @@ test('grown-ups header: language flags, ? help, ⚙ settings and log out always 
   assert.match(await page.textContent('.phdr'), /Grown-ups area/);
   assert.match(await page.textContent('#parentClose'), /Log out/);
   assert.deepEqual(await page.$$eval('#aboutBody details.psec > summary', (s) => s.map((x) => x.textContent.trim())),
-    ['🏫 School ratings', '📄 Practice sheets', '🤝 Supporting your child', '📖 How Big Quest works', '📱 Using the app']);
+    ['🏫 School ratings', '📄 Practice sheets', '🤝 Supporting your child', '📖 How Big Quest works']);
   // guide and info pages are one reading chapter: reading keeps the grown-up logged in
   await page.locator('#aboutBody details.psec[data-psec="concept"] > summary').click();
   const ab = page.locator('#aboutBody details.psec[data-psec="concept"] details.about-sec').first();
@@ -204,11 +204,14 @@ test('grown-ups area: chapters open in place, no sub-pages', async () => {
   await kindDann(page, 'papa', 'langes-passwort');
   assert.equal(await page.locator('[data-ppage]').count(), 0, 'no page buttons any more');
   assert.equal(await page.locator('#aboutBody details.psec[open]').count(), 0, 'chapters closed at the start');
-  for (const id of ['sheets', 'support', 'concept', 'app']) {
+  for (const id of ['sheets', 'support', 'concept']) {
     const d = page.locator(`#aboutBody details.psec[data-psec="${id}"]`);
     await d.locator('summary').first().click();
     assert.ok(await d.locator('.psec-body').isVisible(), id);
   }
+  // the guide is the ? help view (B2)
+  await page.locator('#pHelp').click(); await page.waitForSelector('#pHelpBack');
+  assert.ok(await page.locator('.phelp-view').isVisible(), 'guide in ?');
   // the child's settings are in ⚙ (B1)
   await page.locator('#pSettings').click(); await page.waitForSelector('#pSetBack');
   await page.locator('#aboutBody details.psec[data-psec="settings"] > summary').click();
@@ -350,7 +353,7 @@ test('grown-up stays logged in: no timer, not when the iPad sleeps, not when the
 
 /* Peter 31.10.: DE/EN must work everywhere in the grown-ups branch (meaning-based, American English). */
 async function allesSichtbar(page) {
-  for (const id of ['sheets', 'support', 'concept', 'app']) { const d = page.locator(`#aboutBody details.psec[data-psec="${id}"]`); if (!(await d.evaluate((e) => e.open))) await d.locator('summary').first().click(); }
+  for (const id of ['sheets', 'support', 'concept']) { const d = page.locator(`#aboutBody details.psec[data-psec="${id}"]`); if (!(await d.evaluate((e) => e.open))) await d.locator('summary').first().click(); }
   await page.$$eval('#aboutBody details', (d) => d.forEach((x) => (x.open = true)));
   const texte = [await page.locator('#about').innerText()];
   for (const s of await page.$$eval('[data-psubj]', (b) => [...new Set(b.map((x) => x.dataset.psubj))])) { await page.locator(`[data-psubj="${s}"]`).first().click(); texte.push(await page.locator('#about').innerText()); await page.locator('#pBack').click(); }
@@ -362,6 +365,11 @@ async function allesSichtbar(page) {
   texte.push(await page.locator('#about').innerText());
   await infos();
   await page.locator('#pSetBack').click(); await page.waitForSelector('#pSetBack', { state: 'detached' });
+  // ? help (B2): the guide
+  await page.locator('#pHelp').click(); await page.waitForSelector('#pHelpBack');
+  texte.push(await page.locator('#about').innerText());
+  await infos();
+  await page.locator('#pHelpBack').click(); await page.waitForSelector('#pHelpBack', { state: 'detached' });
   return texte.join('\n').split('\n');
 }
 test('language: the English grown-ups area has no German left-overs, the German one no English UI labels', async () => {
@@ -426,7 +434,7 @@ test('teacher sees observations read-only: no focus, settings, profile or sheet 
   await page.waitForSelector('#parentClose');
   const t = await page.textContent('#aboutBody');
   assert.ok(t.includes('Lehrkraft-Ansicht') && t.includes('Einschätzung'));
-  assert.ok(t.includes('Bedienung & Technik') && t.includes('Ihr Kind unterstützen') && t.includes('So funktioniert Big Quest'), 'support, concept and app guide in the grown-ups area');
+  assert.ok((await page.locator('.phdr #pHelp').count()) === 1 && t.includes('Ihr Kind unterstützen') && t.includes('So funktioniert Big Quest'), 'support, concept and the guide (?) in the grown-ups area');
   for (const sel of ['#focusForm', '#storyCap', '#profileDelete', '#reminderForm', 'button[data-res]']) assert.equal(await page.locator(sel).count(), 0, sel);
   await page.locator('[data-psubj="maths"]').click();
   assert.ok(await page.locator('details.phelpq').count(), 'teacher sees the help');

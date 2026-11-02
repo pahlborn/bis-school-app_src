@@ -59,7 +59,7 @@ test('T2 ⚙ per role: parent, teacher, admin see exactly their sections; overvi
   await kindDann(p.page, 'papa');
   const uebersicht = await abschnitte(p.page);
   for (const id of ['settings', 'backup', 'grants', 'accounts', 'aboutapp']) assert.ok(!uebersicht.includes(id), 'not on the overview: ' + id);
-  assert.deepEqual(uebersicht, ['school', 'sheets', 'support', 'concept', 'app']);
+  assert.deepEqual(uebersicht, ['school', 'sheets', 'support', 'concept']);
   await einstellungen(p.page);
   assert.deepEqual(await abschnitte(p.page), ['settings', 'backup', 'grants', 'aboutapp'], 'parent');
   assert.equal((await p.page.textContent('details.psec[data-psec="settings"] > summary')).trim(), '👧 Für mia', 'names the child');
@@ -123,11 +123,12 @@ test('T3 routes: #eltern/einstellungen/<section> opens ⚙ with that section; br
   await einstellungen(page);
   assert.equal(await page.locator('#pBack').count(), 0, 'no subject inside ⚙');
   await page.locator('#pSetBack').click(); await page.waitForSelector('#pSetBack', { state: 'detached' });
-  // ? opens the guide chapter (until the help view of B2), also from ⚙
+  // ? opens the help view (B2), also from ⚙
   await einstellungen(page);
   await page.locator('#pHelp').click();
-  await page.waitForSelector('#pSetBack', { state: 'detached' });
-  assert.ok(await page.locator('details.psec[data-psec="app"]').evaluate((d) => d.open), 'guide open');
+  await page.waitForSelector('#pHelpBack');
+  assert.equal(await page.locator('#pSetBack').count(), 0, '⚙ left');
+  assert.ok(await page.locator('.phelp-view').isVisible(), 'guide open');
   // a route when not logged in: login first, then ⚙
   await page.locator('#parentClose').click(); await page.waitForSelector('#home:not([hidden])');
   await page.evaluate(() => { location.hash = '#eltern/einstellungen/sicherung'; });

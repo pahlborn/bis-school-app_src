@@ -31,14 +31,24 @@ test('A1: the welcome names an existing chapter, the concept describes the focus
   await page.locator('#setPwGo').click();
   await page.waitForSelector('#welcomeGo');
 
-  // the chapter the welcome points to (German, the default language of the grown-ups area)
-  const genannt = (await page.$$eval('.welcome b', (b) => b.map((x) => x.textContent.trim())))
-    .map((s) => s.match(/^[„“]([^”“]+)[”“]$/)?.[1]).filter((n) => n && /^\p{Extended_Pictographic}/u.test(n));
-  assert.ok(genannt.length >= 1, 'the welcome names a chapter');
+  // where the welcome's guide line points to (German, the default language of the grown-ups area): a chapter
+  // in „…“ must exist; since B2 it points to the header buttons ? (help) and ⚙️ (settings), which must exist
+  const genannt = await page.$$eval('.welcome li', (li) => [...(li.find((x) => x.textContent.startsWith('📖'))?.querySelectorAll('b') || [])].map((b) => b.textContent.trim()));
+  assert.ok(genannt.length >= 1, 'the welcome says where the guide is');
   await page.locator('#welcomeGo').click();
   await page.waitForSelector('#parentClose');
-  const de = await kapitel(page);
-  for (const n of genannt) assert.ok(de.includes(n), `chapter named in the welcome exists: ${n} (chapters: ${de.join(' | ')})`);
+  const ziele = async (namen) => {
+    const k = await kapitel(page);
+    for (const n of namen) {
+      const kap = n.match(/^[„“]([^”“]+)[”“]$/)?.[1];
+      if (kap) assert.ok(k.includes(kap), `chapter named in the welcome exists: ${kap} (chapters: ${k.join(' | ')})`);
+      else if (n === '?') assert.equal(await page.locator('.phdr #pHelp').count(), 1, '? in the header');
+      else if (n.startsWith('⚙')) assert.equal(await page.locator('.phdr #pSettings').count(), 1, '⚙ in the header');
+      else assert.fail('unknown target in the welcome: ' + n);
+    }
+    return k;
+  };
+  const de = await ziele(genannt);
   assert.ok(!de.includes('📖 Anleitung & Hintergrund'));
 
   // "So funktioniert Big Quest": focus chosen by the app, grown-ups can switch to manual; no pointer to "the grown-ups area"
@@ -53,14 +63,13 @@ test('A1: the welcome names an existing chapter, the concept describes the focus
   // English: the welcome's chapter name exists as a chapter there too, and no "Details are in the parent area"
   await page.locator('.phdr [data-plang="en"]').click();
   await page.waitForFunction(() => document.querySelector('#parentClose')?.textContent.includes('Log out'));
-  const en = await kapitel(page);
   const welcomeEn = await page.evaluate(() => {
     const s = [...document.scripts].map((x) => x.textContent).join('\n');
-    const m = s.match(/The guide is in the grown-ups area under <b>“([^”]+)”<\/b>/);
-    return m ? m[1] : null;
+    const li = s.match(/<li>📖 The guide [^]*?<\/li>/);
+    return li ? [...li[0].matchAll(/<b>([^<]+)<\/b>/g)].map((m) => m[1].trim()) : null;
   });
-  assert.ok(welcomeEn, 'English welcome found');
-  assert.ok(en.includes(welcomeEn), `English chapter named in the welcome exists: ${welcomeEn} (chapters: ${en.join(' | ')})`);
+  assert.ok(welcomeEn && welcomeEn.length, 'English welcome found');
+  await ziele(welcomeEn);
   const konzeptEn = page.locator('#aboutBody details.psec[data-psec="concept"]');
   await konzeptEn.evaluate((d) => { d.open = true; d.querySelectorAll('details').forEach((x) => { x.open = true; }); });
   assert.ok(!(await konzeptEn.innerText()).includes('Details are in the parent area'), 'no pointer to the page the reader is on (EN)');

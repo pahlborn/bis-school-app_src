@@ -3817,16 +3817,20 @@ function settingsViewHTML(secHTML){
   return `<button type="button" class="btn small" id="pSetBack">${de?'← Zurück zur Übersicht':'← Back to the overview'}</button><h2 class="psubjtitle">⚙️ ${de?'Einstellungen':'Settings'}</h2>`
     +secHTML(settingsSecs())+`<p class="pset-end"><button class="btn" id="parentClose2" type="button">${close}</button></p>`;
 }
-/* Routes (concept 5.7): #eltern, #eltern/einstellungen, #eltern/einstellungen/<section>. Browser back leaves ⚙. */
+/* Routes (concept 5.7): #eltern, #eltern/einstellungen[/<section>], #eltern/hilfe. Browser back leaves ⚙ and ?. */
 const SET_ROUTES={kind:'settings', sicherung:'backup', freigaben:'grants', konten:'accounts', ueber:'aboutapp'};
+const VIEW_HASH={settings:'#eltern/einstellungen', help:'#eltern/hilfe'};
 let pviewPushed=false, pendingRoute=null;   // pendingRoute: a route that needs the login first (kept through parentLock)
 function parentRoute(){
-  const m=/^#eltern(\/einstellungen(?:\/([a-z]+))?)?$/.exec(location.hash||'');
-  return m ? {settings:!!m[1], sec:m[2]||null} : null;
+  const m=/^#eltern(?:\/(einstellungen|hilfe)(?:\/([a-z]+))?)?$/.exec(location.hash||'');
+  if(!m) return null;
+  const view={einstellungen:'settings', hilfe:'help'}[m[1]]||null;
+  return {view, sec:view==='settings'?(m[2]||null):null};
 }
 function setParentView(r){
-  state.pview=r.settings?'settings':null;
-  if(r.settings){ state.psubj=null; const id=SET_ROUTES[r.sec], o=state.popen||(state.popen=[]); if(id && !o.includes(id)) o.push(id); }
+  state.pview=r.view;
+  if(r.view) state.psubj=null;
+  if(r.view==='settings'){ const id=SET_ROUTES[r.sec], o=state.popen||(state.popen=[]); if(id && !o.includes(id)) o.push(id); }
 }
 function scrollToRouteSec(r){ const id=r && r.sec && SET_ROUTES[r.sec], d=id && $(`#aboutBody details.psec[data-psec="${id}"]`); if(d) d.scrollIntoView({block:'start'}); }
 function applyParentRoute(){
@@ -3841,22 +3845,24 @@ function applyParentRoute(){
 function takePendingRoute(){
   const r=pendingRoute; pendingRoute=null; if(!r) return null;
   setParentView(r);
-  if(r.settings){ try{ history.replaceState(null,'',location.pathname+location.search+'#eltern/einstellungen'+(r.sec?'/'+r.sec:'')); }catch(e){} }
+  if(r.view){ try{ history.replaceState(null,'',location.pathname+location.search+VIEW_HASH[r.view]+(r.sec?'/'+r.sec:'')); }catch(e){} }
   return r;
 }
-function openParentView(){ pviewPushed=true; location.hash='#eltern/einstellungen'; }
+/* ⚙ and ? open views of their own; switching between them does not pile up history entries */
+function openParentView(view){
+  if(pviewPushed && parentRoute() && parentRoute().view){ location.replace(VIEW_HASH[view]); return; }
+  pviewPushed=true; location.hash=VIEW_HASH[view];
+}
 function closeParentView(){
-  if(pviewPushed && /^#eltern\/einstellungen/.test(location.hash)){ pviewPushed=false; history.back(); return; }
+  if(pviewPushed && /^#eltern\/(einstellungen|hilfe)/.test(location.hash)){ pviewPushed=false; history.back(); return; }
   try{ history.replaceState(null,'',location.pathname+location.search+'#eltern'); }catch(e){}
   state.pview=null; renderSheets(); window.scrollTo(0,0);
 }
 function leaveParentRoute(){ if(/^#eltern\//.test(location.hash)){ try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} } }
-/* "?" (concept 5.1): until the help view exists (package B2) it opens the guide chapter on the overview. */
-function openParentHelp(){
-  const o=state.popen||(state.popen=[]); if(!o.includes('app')) o.push('app');
-  if(state.pview==='settings'){ state.pview=null; leaveParentRoute(); pviewPushed=false; }
-  state.psubj=null; renderSheets();
-  const d=$('#aboutBody details.psec[data-psec="app"]'); if(d) d.scrollIntoView({block:'start'});
+/* ? Help (concept 5.6, package B2): the guide for the role of the grown-up, unchanged, in a view of its own. */
+function helpViewHTML(){
+  const de=PL()==='de';
+  return `<button type="button" class="btn small" id="pHelpBack">${de?'← Zurück zur Übersicht':'← Back to the overview'}</button><h2 class="psubjtitle">❓ ${de?'Hilfe':'Help'}</h2><div class="phelp-view">${guideAdultFor(de)}</div>`;
 }
 /* Grown-ups area (Peter, 31.10.): fixed header (language flags, version, log out); overview on top;
    below, chapters that open in place. Each thing can be set in one place only: focus at the quest
@@ -3870,6 +3876,7 @@ function renderSheets(){
   const secHTML = list => '<div class="psecs">'+list.map(([id,title,b])=>`<details class="psec" data-psec="${id}"${open.includes(id)?' open':''}><summary>${title}</summary><div class="psec-body">${b}</div></details>`).join('')+'</div>';
   let html=parentHeaderHTML();
   if(state.pview==='settings') html+=settingsViewHTML(secHTML);
+  else if(state.pview==='help') html+=helpViewHTML();
   else {
     html+=state.psubj ? parentSubjectHTML(state.psubj) : parentHomeHTML();
     // the chapters only on the overview, not again inside a subject (Peter, 01.11.)
@@ -3878,18 +3885,16 @@ function renderSheets(){
     if(accountsOn() && kidOk && !(viewerGrant() && !viewerGrant().scope.includes('school'))) secs.push(['school', de?'🏫 Einstufungen der Schule':'🏫 School ratings', schoolHTML()]);
     if(!teacher && kidOk) secs.push(['sheets', T.sheets, sheetsPageHTML()]);
     // Peter, 01.11.: three kinds of reading matter, kept apart - practical support, the concept, using the app.
-    // Settings, backup, grants, accounts and the version live in ⚙ (concept "Elternbereich", package B1).
+    // Settings, backup, grants, accounts and the version live in ⚙ (concept "Elternbereich", B1), the guide in ? (B2).
     secs.push(['support', de?'🤝 Ihr Kind unterstützen':'🤝 Supporting your child', supportGuideHTML()]);
     secs.push(['concept', ABOUT_UI[lang].title, aboutParts(lang).main+`<div class="about-menu">${aboutSectionsHTML(lang,null,true)}</div>`]);
-    secs.push(['app', de?'📱 Bedienung & Technik':'📱 Using the app', guideAdultFor(de)]);
     if(onOverview) html+=secHTML(secs);
   }
   body.innerHTML=html;
   body.querySelectorAll('details.psec').forEach(d=>d.addEventListener('toggle',()=>{ const id=d.dataset.psec, i=open.indexOf(id); if(d.open && i<0) open.push(id); if(!d.open && i>=0) open.splice(i,1); }));
   body.querySelectorAll('[data-plang]').forEach(b=>b.addEventListener('click',()=>setLang(b.dataset.plang)));
-  const set=$('#pSettings'); if(set) set.addEventListener('click',()=>{ if(!parentAccess) return; if(state.pview==='settings') closeParentView(); else openParentView(); });
-  const setBack=$('#pSetBack'); if(setBack) setBack.addEventListener('click',closeParentView);
-  const help=$('#pHelp'); if(help) help.addEventListener('click',()=>{ if(!parentAccess) return; openParentHelp(); });
+  [['#pSettings','settings'],['#pHelp','help']].forEach(([sel,view])=>{ const b=$(sel); if(b) b.addEventListener('click',()=>{ if(!parentAccess) return; if(state.pview===view) closeParentView(); else openParentView(view); }); });
+  ['#pSetBack','#pHelpBack'].forEach(sel=>{ const b=$(sel); if(b) b.addEventListener('click',closeParentView); });
   const real=$('#pRealData'); if(real) real.addEventListener('click',()=>{ if(!parentAccess) return; restoreRealChild(); renderSheets(); });
   body.querySelectorAll('[data-pkid]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess || !kidChoices().includes(b.dataset.pkid)) return; const s=studentSession(); viewUser=(s && s.user===b.dataset.pkid)?null:b.dataset.pkid; state.psubj=null; renderSheets(); }));
   const play=$('#pPlayTest'); if(play) play.addEventListener('click',playTest);
@@ -4011,8 +4016,8 @@ function parentHeaderHTML(){
     : `<span class="phdr-kid" id="pKid">${kid?(isTestUser(kid)?'🧪 ':'👧 ')+esc(kid):(de?'👧 keine Daten Ihrer Kinder auf diesem Gerät':'👧 none of your children’s data on this device')}</span>`;
   // Concept "Elternbereich" 5.1 (B1): child, flags, ? help, ⚙ settings, log out. The version is in ⚙ "About the app",
   // the test child button in ⚙ "Accounts" (until B5).
-  const onSet=state.pview==='settings';
-  let h=`<header class="phdr"><div class="phdr-row"><span class="phdr-who">👪 ${who}</span>${kidChip}<span class="phdr-act">${flagsHTML()}<button type="button" class="btn small phdr-icon" id="pHelp" aria-label="${de?'Hilfe':'Help'}" title="${de?'Hilfe':'Help'}">?</button><button type="button" class="btn small phdr-icon${onSet?' primary':''}" id="pSettings" aria-label="${de?'Einstellungen':'Settings'}" title="${de?'Einstellungen':'Settings'}" aria-pressed="${onSet}">⚙️</button><button class="btn small" id="parentClose" type="button">${close}</button></span></div>`;
+  const onSet=state.pview==='settings', onHelp=state.pview==='help';
+  let h=`<header class="phdr"><div class="phdr-row"><span class="phdr-who">👪 ${who}</span>${kidChip}<span class="phdr-act">${flagsHTML()}<button type="button" class="btn small phdr-icon${onHelp?' primary':''}" id="pHelp" aria-label="${de?'Hilfe':'Help'}" title="${de?'Hilfe':'Help'}" aria-pressed="${onHelp}">?</button><button type="button" class="btn small phdr-icon${onSet?' primary':''}" id="pSettings" aria-label="${de?'Einstellungen':'Settings'}" title="${de?'Einstellungen':'Settings'}" aria-pressed="${onSet}">⚙️</button><button class="btn small" id="parentClose" type="button">${close}</button></span></div>`;
   if(accountsOn() && kid && isTestUser(kid)) h+=`<div class="phdr-row phdr-test">🧪 <b>${de?'Hier stehen Testdaten.':'You are looking at test data.'}</b>${store.get('sessionPrev',null)?`<button type="button" class="btn small" id="pRealData">${de?'Zurück zu echten Daten':'Back to real data'}</button>`:''}</div>`;
   return h+'</header>';
 }
@@ -4184,8 +4189,8 @@ function renderWelcome(u){
   $('#loginBody').innerHTML=kid
     ? `<h2>Welcome to Big Quest! 🎉</h2><ul class="welcome"><li>🎯 <b>Practise Today</b> gives you 8 questions. Or pick a subject.</li><li>💡 <b>A mistake?</b> You get a tip and try again. “Show me how” gives you a tip any time.</li><li>⭐ Every solved task gives a star. Your <b>learning tree</b> grows on every practice day.</li><li>❓ <b>Help</b> is at the bottom of the start page. ⓘ explains things.</li><li>🔒 You stay logged in on this iPad. Tap <b>Log out</b> if someone else wants to use it.</li></ul><button class="btn primary" id="welcomeGo" type="button">Let’s go!</button>`
     : de
-    ? `<h2>Willkommen, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 <b>Daten nur auf diesem Gerät:</b> Den Lernstand des Kindes sehen Sie auf dem Gerät, auf dem es übt.</li><li>🔑 Ihr Passwort gilt nur auf diesem Gerät. Auf einem weiteren Gerät einmal mit dem Startcode anmelden.</li><li>🚪 Sie bleiben angemeldet, bis Sie <b>Abmelden</b> tippen. Auf dem Gerät des Kindes nach dem Nachsehen bitte abmelden.</li><li>📖 Die Anleitung steht im Elternbereich unter <b>„📱 Bedienung & Technik“</b>, ⓘ erklärt einzelne Abschnitte.</li></ul><button class="btn primary" id="welcomeGo" type="button">Los geht’s</button>`
-    : `<h2>Welcome, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 <b>Data only on this device:</b> you see your child’s progress on the device where they practice.</li><li>🔑 Your password works only on this device. On another device, log in once with the start code.</li><li>🚪 You stay logged in until you tap <b>Log out</b>. On your child’s device, please log out when you are done.</li><li>📖 The guide is in the grown-ups area under <b>“📱 Using the app”</b>; ⓘ explains each section.</li></ul><button class="btn primary" id="welcomeGo" type="button">Let’s go</button>`;
+    ? `<h2>Willkommen, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 <b>Daten nur auf diesem Gerät:</b> Den Lernstand des Kindes sehen Sie auf dem Gerät, auf dem es übt.</li><li>🔑 Ihr Passwort gilt nur auf diesem Gerät. Auf einem weiteren Gerät einmal mit dem Startcode anmelden.</li><li>🚪 Sie bleiben angemeldet, bis Sie <b>Abmelden</b> tippen. Auf dem Gerät des Kindes nach dem Nachsehen bitte abmelden.</li><li>📖 Die Anleitung finden Sie oben unter <b>?</b>, Sicherung und Freigaben unter <b>⚙️</b>. ⓘ erklärt einzelne Abschnitte.</li></ul><button class="btn primary" id="welcomeGo" type="button">Los geht’s</button>`
+    : `<h2>Welcome, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 <b>Data only on this device:</b> you see your child’s progress on the device where they practice.</li><li>🔑 Your password works only on this device. On another device, log in once with the start code.</li><li>🚪 You stay logged in until you tap <b>Log out</b>. On your child’s device, please log out when you are done.</li><li>📖 The guide is at the top under <b>?</b>, backup and grants under <b>⚙️</b>. ⓘ explains each section.</li></ul><button class="btn primary" id="welcomeGo" type="button">Let’s go</button>`;
   $('#welcomeGo').addEventListener('click',()=>loginDone(u,true));
   $('#welcomeGo').focus();
 }
