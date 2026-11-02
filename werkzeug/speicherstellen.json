@@ -1,0 +1,53 @@
+{
+  "_info": "Jede Stelle, an der die App etwas speichert (Rechte- und Speicherkonzept, Abschnitt 7.2; S11 Stufe 1). bereich: kind | eltern | geraet. abgleich (ab Stufe 2): protokoll | abgeleitet | letzte-gilt | lokal. sicherung: gehoert in die Sicherungsdatei eines Kindes. Test: tests/stufe1-p1.test.mjs - eine Stelle im Code ohne Eintrag hier macht den Test rot.",
+  "localStorage": [
+    { "key": "attempts", "bereich": "kind", "abgleich": "protokoll", "sicherung": true },
+    { "key": "ev", "bereich": "kind", "abgleich": "abgeleitet", "sicherung": true },
+    { "key": "due", "bereich": "kind", "abgleich": "abgeleitet", "sicherung": true },
+    { "key": "bridgeNext", "bereich": "geraet", "abgleich": "lokal", "sicherung": false },
+    { "key": "best_", "praefix": true, "bereich": "kind", "abgleich": "abgeleitet", "sicherung": true },
+    { "key": "total", "bereich": "kind", "abgleich": "abgeleitet", "sicherung": true },
+    { "key": "badges", "bereich": "kind", "abgleich": "protokoll", "sicherung": true },
+    { "key": "tried", "bereich": "kind", "abgleich": "abgeleitet", "sicherung": true },
+    { "key": "treeStage", "bereich": "kind", "abgleich": "abgeleitet", "sicherung": true },
+    { "key": "rankSeen", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true },
+    { "key": "name", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true },
+    { "key": "birthday", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true },
+    { "key": "emoji", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true },
+    { "key": "bdayParty", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true },
+    { "key": "sheets", "bereich": "kind", "abgleich": "protokoll", "sicherung": true },
+    { "key": "sheetNo", "bereich": "kind", "abgleich": "abgeleitet", "sicherung": true },
+    { "key": "focusMode", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true, "autor": "eltern" },
+    { "key": "focusManual", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true, "autor": "eltern" },
+    { "key": "unlocked", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true, "autor": "eltern" },
+    { "key": "storyCap", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true, "autor": "eltern" },
+    { "key": "focus", "bereich": "kind", "abgleich": "lokal", "sicherung": true, "hinweis": "alte Fokus-Form, wird uebernommen und entfernt" },
+    { "key": "focusOn", "bereich": "kind", "abgleich": "lokal", "sicherung": true, "hinweis": "alte Fokus-Form" },
+    { "key": "focusOff", "bereich": "kind", "abgleich": "lokal", "sicherung": true, "hinweis": "alte Fokus-Form" },
+    { "key": "greetDay", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true },
+    { "key": "mysteryDone", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true },
+    { "key": "chk_", "praefix": true, "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true },
+    { "key": "advent", "praefix": true, "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true },
+    { "key": "kidLang", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true },
+    { "key": "dayOffset", "bereich": "geraet", "abgleich": "lokal", "sicherung": false, "hinweis": "+1 Tag des Testkonto" },
+    { "key": "lastBackup", "bereich": "geraet", "abgleich": "lokal", "sicherung": false },
+    { "key": "vorRueckspielen", "bereich": "geraet", "abgleich": "lokal", "sicherung": false },
+    { "key": "session", "bereich": "geraet", "abgleich": "lokal", "sicherung": false },
+    { "key": "sessionPrev", "bereich": "geraet", "abgleich": "lokal", "sicherung": false },
+    { "key": "adultSession", "bereich": "geraet", "abgleich": "lokal", "sicherung": false },
+    { "key": "pw_", "praefix": true, "bereich": "geraet", "abgleich": "lokal", "sicherung": false },
+    { "key": "parentPin", "bereich": "geraet", "abgleich": "lokal", "sicherung": false, "hinweis": "alt" },
+    { "key": "muted", "bereich": "geraet", "abgleich": "lokal", "sicherung": false },
+    { "key": "parentLang", "bereich": "geraet", "abgleich": "letzte-gilt", "sicherung": false, "hinweis": "ab Stufe 2 Personen-Bereich" }
+  ],
+  "localStorageDirekt": [
+    { "key": "bq_schluessel", "bereich": "geraet", "hinweis": "gemerkter Familienschluessel der Huelle" },
+    { "key": "bq2_session", "bereich": "geraet", "hinweis": "Sitzung, direkt gelesen" }
+  ],
+  "sessionStorage": [
+    { "key": "bqUpdateTo", "bereich": "geraet", "hinweis": "Update-Merker" }
+  ],
+  "indexedDB": [
+    { "key": "bq2_audio", "praefix": true, "bereich": "kind", "abgleich": "lokal", "sicherung": true, "hinweis": "Sprachaufnahmen: nie abgeglichen, aber in der Sicherungsdatei" }
+  ]
+}
