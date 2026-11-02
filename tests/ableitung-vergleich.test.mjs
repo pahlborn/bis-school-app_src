@@ -1,6 +1,6 @@
 // Vergleich mit der echten App (S12 P2, Aufgabe 3a; US7.2): ein Verlauf mit echten Klicks - Runden mit richtigen und
-// falschen Antworten, Tipps, Beispiel, Loesung, einer abgebrochenen Quest, zwei Uebungsblaettern (Ergebnisse, Korrektur,
-// verworfen) und Wiederholungen an mehreren Tagen. Die App schreibt dabei ihren Stand wie immer in den Speicher.
+// falschen Antworten, Tipps, Beispiel, Loesung, einer abgebrochenen Quest, zwei Uebungsblaettern (eines traegt das Kind
+// selbst ein, unterbrochen und fertig - A9; eines verwirft ein Erwachsener) und Wiederholungen an mehreren Tagen. Die App schreibt dabei ihren Stand wie immer in den Speicher.
 // Ein Mitschreiber im Testbau (Haken im Seitenkontext) faengt jede Aenderung der Speicherstellen ab und macht daraus
 // Ereignisse - genau das, was die App in Aufgabe 3b schreiben soll. Danach muss derive(Ereignisse) denselben Stand
 // liefern, den die App gespeichert hat: attempts, ev, due, total, best_*, badges, tried, treeStage, rankSeen, sheets, sheetNo.
@@ -109,8 +109,6 @@ async function heute(page, { falschDue = true } = {}) {
   await zurStart(page);
 }
 
-const blattKnopf = (page, i, res) => page.locator(`#aboutBody details.psheet[open] button[data-i="${i}"][data-res="${res}"]`);
-
 /* ---------- der Vergleich ---------- */
 const STANDARD = { attempts: [], ev: {}, due: [], total: 0, badges: {}, tried: [], treeStage: 0, sheets: [], sheetNo: 0 };
 
@@ -132,15 +130,16 @@ test('derive(Ereignisse) liefert denselben Stand, den die App nach einem Verlauf
   await klick(page, '#sheetBtn'); await page.locator('#sheetClose').click(); await zurStart(page);
   await page.clock.setFixedTime(new Date('2026-11-02T09:05:00'));                    // the sheet id contains the time: stand still would give two equal ids
   await klick(page, '#sheetBtn'); await page.locator('#sheetClose').click(); await zurStart(page);
+  const [b1, b2] = await lies(page, 'sheets');
+  // A9: das Kind traegt Blatt 1 selbst ein (Runde wie Practise Today), unterbrochen und spaeter fertig: Principled
+  await klick(page, `#mySheets [data-mysheet="${b1.id}"]`);
+  await runde(page, ['richtig', 'tipp+richtig', 'falsch']);
+  await klick(page, '#quitBtn');
+  await klick(page, `#mySheets [data-mysheet="${b1.id}"]`);
+  await runde(page, ['falsch+richtig', 'tipp+beispiel+richtig', 'tipp+loesung']);
+  await zurStart(page);
   await elternOeffnen(page);
   await elternSeite(page, 'sheets');
-  const [b1, b2] = await lies(page, 'sheets');
-  await page.locator(`details.psheet[data-sheetid="${b1.id}"] > summary`).click();
-  const n = b1.items.length;
-  for (let i = 0; i < n; i++) await blattKnopf(page, i, ['ok', 'help', 'no'][i % 3]).click();   // alle Aufgaben: das Abzeichen Principled
-  await blattKnopf(page, 0, 'no').click();                                          // Korrektur: ok -> noch nicht
-  await blattKnopf(page, 2, 'ok').click();                                          // Korrektur: noch nicht -> richtig (Wiederholung entfaellt)
-  await blattKnopf(page, 0, 'no').click();                                          // dasselbe nochmal: nichts aendert sich
   await page.locator(`details.psheet[data-sheetid="${b2.id}"] > summary`).click();
   page.once('dialog', (d) => d.accept());
   await page.locator(`details.psheet[data-sheetid="${b2.id}"] [data-discard]`).click();

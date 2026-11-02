@@ -171,6 +171,29 @@ test('Anpassung haelt die Vorgaben in jeder Quest zuverlaessig ein (viele Runden
   } finally { await ctx.close(); hook.close(); }
 });
 
+// Fund 02.11. (Bündel 4, volle Reihe): seit A7 hat Specific Examples auch Aufgaben mit Hilfe. Eine Runde ganz
+// ohne Klassenniveau (nur Hilfe + eine Herausforderung) blieb bei "sitzt" bei einer Herausforderung stehen.
+test('sitzt: auch eine Runde ohne Aufgabe auf Klassenniveau bekommt genug Herausforderungen', async () => {
+  const hook = await appServer({ anpassen: (h) => h.replace(/\}\)\(\);\s*<\/script>/, 'window.__bqa={adaptRound,WORLDS,levelOf};})();</script>') });
+  const { ctx, page, fehler } = await appOeffnen(browser, hook.url);
+  try {
+    const r = await page.evaluate((ev) => {
+      const A = window.__bqa, k = 'examples', vorrat = [];
+      localStorage.setItem('bq2_ev', JSON.stringify({ [k]: ev }));
+      for (let i = 0; i < 30; i++) vorrat.push(...A.WORLDS[k].build());
+      const eins = vorrat.filter((q) => A.levelOf(q) === 1), drei = vorrat.filter((q) => A.levelOf(q) === 3);
+      if (eins.length < 7 || !drei.length) return { fehlt: true };
+      const runde = eins.slice(0, 7).concat(drei.slice(0, 1));
+      const rd = A.adaptRound(k, runde);
+      return { drei: rd.filter((q) => A.levelOf(q) === 3).length, laenge: rd.length };
+    }, belege(10, 2, 10, 3));
+    assert.ok(!r.fehlt, 'Specific Examples has support and extending questions');
+    assert.equal(r.laenge, 8);
+    assert.ok(r.drei >= 2, 'extending questions: ' + r.drei);
+    assert.deepEqual(fehler, []);
+  } finally { await ctx.close(); hook.close(); }
+});
+
 test('das Kind sieht nie Stufen oder Bewertungswoerter', async () => {
   const { ctx, page, fehler } = await app();
   await setzeBelege(page, { round: belege(10, 2, 10, 3), numbers: belege(10, 2, 2, 3) });

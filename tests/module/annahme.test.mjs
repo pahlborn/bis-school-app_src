@@ -62,12 +62,13 @@ const signed = (role, type, opts = {}) => { const [pid, did] = WHO[role]; return
 const reason = async (item, z = Z) => { const r = await acceptEvent(item, z); return r.ok ? 'ok' : r.grund; };
 
 /* ---------- the expected table, written out here on purpose (concept 6 "Schreiben", 5.2, 9.3) ----------
-   c = child, p = parent, t = teacher, a = admin. review and badge also for parents: entering a sheet result writes
-   them (index.html enterResult); parents only the badge "principled" (own test below). */
+   c = child, p = parent, t = teacher, a = admin. A9/A10 (02.11.): the child enters its sheet itself, so
+   sheet_result (and the review and badge it causes) belongs to the child; parents write no learning data at all. */
 const ERWARTET = {
   answer: 'c', round_done: 'c', practice_day: 'c', rank_seen: 'c', checklist_set: 'c', day_flag: 'c',
-  badge: 'cp', review: 'cp', profile_set: 'cp', sheet_created: 'cp', device_added: 'cp',
-  sheet_result: 'p', sheet_discarded: 'p', setting_set: 'p', school_import: 'p', grant_set: 'p', grant_revoked: 'p',
+  badge: 'c', review: 'c', sheet_result: 'c',
+  profile_set: 'cp', sheet_created: 'cp', device_added: 'cp',
+  sheet_discarded: 'p', setting_set: 'p', school_import: 'p', grant_set: 'p', grant_revoked: 'p',
   member_added: 'p', member_removed: 'p', device_removed: 'p', key_rotated: 'p', snapshot: 'p',
   grant_opened: 'ta',
 };
@@ -77,7 +78,7 @@ const darf = (role, type) => ERWARTET[type].includes(role[0]);
 test('Annehmen: gueltig unterschriebene Ereignisse je Rolle und erlaubtem Typ zaehlen', async () => {
   let k = 0;
   for (const role of ROLES) for (const type of EVENT_TYPES) if (darf(role, type)) { assert.equal(await reason(await signed(role, type)), 'ok', `${role} ${type}`); k++; }
-  assert.equal(k, 6 + 5 * 2 + 11 + 2, 'every allowed pair was tried once');
+  assert.equal(k, 9 + 3 * 2 + 10 + 2, 'every allowed pair was tried once');
   const p2 = await signEvent(mk('setting_set', 'p_e2', 'd_e3'), AREA, KEYS.p_e2);
   assert.deepEqual(await acceptEvent(p2, Z), { ok: true }, 'second parent from his second device');
 });
@@ -102,7 +103,7 @@ test('E10: nur fuer sich selbst - Geraet anmelden und "angesehen" protokollieren
   assert.equal(await reason(await signEvent(mk('grant_opened', 'p_l1', 'd_l1', { grant: 'g1', grantee: 'p_a1' }), AREA, KEYS.p_l1)), 'rolle-darf-nicht', 'teacher logs for the admin');
   assert.equal(await reason(await signEvent(mk('grant_opened', 'p_e1', 'd_e1', { grant: 'g1', grantee: 'p_e1' }), AREA, KEYS.p_e1)), 'rolle-darf-nicht', 'parent cannot fake an opening');
   assert.equal(await reason(await signEvent(mk('device_removed', 'p_k1', 'd_k1', { device: 'd_k1' }), AREA, KEYS.p_k1)), 'rolle-darf-nicht', 'the child does not remove devices (concept 6)');
-  for (const badge of ['inquirer', 'thinker', 'reflective']) {
+  for (const badge of ['inquirer', 'thinker', 'reflective', 'principled']) {
     assert.equal(await reason(await signEvent(mk('badge', 'p_e1', 'd_e1', { day: DAY, badge }), AREA, KEYS.p_e1)), 'rolle-darf-nicht', 'parent cannot hand out ' + badge);
     assert.equal(await reason(await signEvent(mk('badge', 'p_k1', 'd_k1', { day: DAY, badge }), AREA, KEYS.p_k1)), 'ok', 'child earns ' + badge);
   }

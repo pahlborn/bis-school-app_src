@@ -54,10 +54,11 @@ Der Mitschreiber im Test macht aus jeder Änderung der Speicherstellen ein Ereig
 | `addBadge` | `badge` {day, badge}; „inquirer“ mit `skill` = die gestartete Quest |
 | `rememberWrong` | `review` Stufe 0 {day, qid, box: 0, dueAt, question = die gespeicherte Kopie} |
 | `advanceDue` | `review` {day, qid, box: 1 oder 2, dueAt} |
-| fertig (Stufe 3) oder `undoResult` nimmt die Wiederholung zurück | `review` {day, qid, box: 3} |
+| fertig (Stufe 3) | `review` {day, qid, box: 3} |
 | `buildSheet` | `sheet_created` {sheet, day, no, writing, items[{q, res: null}]} |
-| `enterResult` | `sheet_result` {sheet, index, res, day, qid} (`qid` = `q.dueId \|\| qId(q)`); bei einer Korrektur zusätzlich die `review`-Ereignisse der alten und neuen Wiederholung |
-| `discardSheet` | `sheet_discarded` |
+| `sheetResult` (seit A9; vorher `enterResult`) – Schreiber ist das **Kind** | `sheet_result` {sheet, index, res, day, qid} (`qid` = `q.dueId \|\| qId(q)`); bei „Noch nicht“ davor die `review` Stufe 0, bei einem fertigen Blatt `badge` „principled“. Keine Korrektur mehr (jede Aufgabe zählt einmal) |
+| Blatt-Runde (`startSheetRound`, Ende in `showResults`) | nur `round_done` {skill: `sheet`} für die Sterne; keine `answer`-Ereignisse, keine eigenen Wiederholungen, Brücken oder Abzeichen |
+| `discardSheet` (Erwachsene) | `sheet_discarded` |
 | `renderRank` (`rankSeen`) | `rank_seen` |
 | Profil, Einstellungen der Eltern, Tageshinweise, Haken | `profile_set`, `setting_set`, `day_flag`, `checklist_set` |
 

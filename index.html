@@ -391,6 +391,8 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 .bday select{font:inherit;padding:8px;border-radius:10px;border:2px solid var(--line);background:var(--surface);color:var(--ink);min-height:44px}
 /* about page */
 #sheetBtn{width:100%}
+.mysheets{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.mysheets .btn{width:100%;justify-content:flex-start;text-align:left}
 .about{background:var(--surface);border:2px solid var(--line);border-radius:22px;padding:20px 18px;line-height:1.55}
 .about h2{margin:18px 0 6px}.about h2:first-child{margin-top:0}
 .about h3{margin:14px 0 4px}
@@ -408,8 +410,8 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 #parentForm input{min-height:48px;font-size:18px}
 .sheetrow{display:flex;flex-direction:column;gap:6px;border-top:2px solid var(--line);padding:10px 0}
 .sheetrow .q{font-size:.95rem}
-.sheetrow .row .btn{flex:1 1 90px}
-.sheetrow .btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.sheetrow .sres{font-size:.9rem;font-weight:700;color:var(--muted)}
+.sheetrow .sres.ok{color:#0F6B43}.sheetrow .sres.help{color:#8A4B00}
 /* printing: only the practice sheet goes on paper, always in light colours */
 #printArea{display:none}
 @media print{
@@ -460,6 +462,7 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
     <div id="subjects" class="subjects"></div>
     <div class="growrow"><div id="tree" class="tree"></div><div><div class="eyebrow">My learning tree <button type="button" class="info-btn" data-help="tree" aria-label="Help: learning tree">ⓘ</button></div><div id="treeText" class="muted"></div><div id="badges" class="badges"></div></div></div>
     <button class="btn" id="sheetBtn" type="button">📄 Practice sheet (PDF / print)</button>
+    <div id="mySheets" class="mysheets" hidden></div>
     <div class="foot">
       <span>Topics from class, updated 30 October.</span>
       <span class="row foot-buttons">
@@ -2006,8 +2009,10 @@ function adaptRound(k, round){
   const count=lvl=>out.filter(q=>levelOf(q)===lvl).length;
   // too many extending questions: swap for year-level (or support) ones
   while(count(3)>want.l3[1]){ const i=out.findIndex(q=>levelOf(q)===3); const r=take(2)||take(1); if(!r) break; out[i]=r; }
-  // too few extending questions: swap year-level ones for extending ones
-  while(count(3)<want.l3[0]){ const i=out.findIndex(q=>levelOf(q)===2); const r=take(3); if(i<0||!r) break; out[i]=r; }
+  // too few extending questions: swap year-level ones for extending ones - or support ones, when the round has
+  // no year-level question left (02.11.: since A7 Specific Examples has support questions; about 1 in 5 000 rounds
+  // for a skill that sits had only one extending question)
+  while(count(3)<want.l3[0]){ let i=out.findIndex(q=>levelOf(q)===2); if(i<0) i=out.findIndex(q=>levelOf(q)===1); const r=take(3); if(i<0||!r) break; out[i]=r; }
   // requires support: add supported questions where the quest has them
   if(want.l1){ while(count(1)<want.l1){ const i=out.findIndex(q=>levelOf(q)===2); const r=take(1); if(i<0||!r) break; out[i]=r; } }
   return shuffle(out);
@@ -2522,7 +2527,7 @@ function renderHome(){
     b.addEventListener('click',()=>openSubject(s.key)); c.appendChild(b);
   });
   $('#soundBtn').textContent='Sound: '+(muted?'off':'on');
-  renderFun();
+  renderFun(); renderMySheets();
 }
 function openSubject(key){
   const s=SUBJECTS.find(x=>x.key===key); state.subject=key; state.back='home';
@@ -2551,6 +2556,7 @@ function goBack(){
 }
 
 function startRound(k){
+  state.sheet=null;
   state.world=k; state.round=(k==='today'||k.indexOf('mix_')===0)?WORLDS[k].build():adaptRound(k, WORLDS[k].build()); state.idx=0; state.stars=0; state.streak=0;
   state.results=state.round.map(()=>null);
   const pending=store.get('bridgeNext',[]).filter(q=>q && WORLDS[q.world]);
@@ -2566,6 +2572,30 @@ function startRound(k){
   $('#roundStars').textContent='0';
   show('play'); renderQuestion();
 }
+/* A9 (Peter, 02.11.): the child enters its own practice sheet - the same view as Practise Today, the open
+   tasks of the sheet in the order of the paper. The app checks as usual (tip and second try, "Show me how",
+   the worked answer). Only the sheet result is written (sheetResult): first try right = ok, right after a
+   tip, an example or a second try = help, otherwise = no. No normal answers, reviews of their own, bridges
+   or badges on top - otherwise the task would count twice. Stars count like in every round. */
+function startSheetRound(id){
+  const sh=store.get('sheets',[]).find(s=>s.id===id); if(!sh) return;
+  const open=[];
+  sh.items.forEach((it,i)=>{ if(it.res || !it.q) return; const q=neutralQ(it.q); if(!q) return;   // a stored copy that cannot be shown without private names stays open
+    const c=JSON.parse(JSON.stringify(q)); ['challenge','accepted','warmup','bridge','bridgePart','bridgeSource','retry'].forEach(k=>delete c[k]); c.sheetIndex=i; open.push(c); });
+  if(!open.length) return;
+  state.world='sheet'; state.sheet={id:sh.id, no:sh.no||0, n:sh.items.length};
+  state.round=open; state.idx=0; state.stars=0; state.streak=0; state.results=open.map(()=>null);
+  state.noteShown=false; state.noteNow=null; state.pendingNote=null; state.back='home';
+  $('#worldChip').textContent=kidSheetName(sh);
+  $('#roundStars').textContent='0';
+  show('play'); renderQuestion();
+}
+/* the result of the current sheet task, once (a task already entered stays as it is) */
+function sheetDecide(ok){
+  const q=state.round[state.idx]; if(!state.sheet || !q || q.sheetDone) return;
+  q.sheetDone=true;
+  sheetResult(state.sheet.id, q.sheetIndex, !ok ? 'no' : (state.attempts===1 && !state.hinted && !state.exampled && !q.assisted) ? 'ok' : 'help');
+}
 function renderDots(){
   const d=$('#dots'); d.innerHTML='';
   state.round.forEach((_,i)=>{ const s=document.createElement('span'); s.className='dot'+(state.results[i]===true?' good':state.results[i]===false?' bad':state.results[i]==='seen'?' seen':i===state.idx?' cur':''); d.appendChild(s); });
@@ -2580,7 +2610,9 @@ function renderQuestion(){
   const pn=$('#playNote'); pn.hidden=!state.pendingNote; pn.textContent=state.pendingNote||''; state.pendingNote=null;
   if(q.challenge && !q.accepted){ renderChallengeOffer(); return; }
   play.style.setProperty('--world', (WORLDS[q.world]||WORLDS[state.world]).color); // repeats saved by an older version may name a quest that no longer exists
-  $('#qLabel').textContent=q.label+' · Question '+(state.idx+1)+' of '+state.round.length;
+  $('#qLabel').textContent=state.sheet
+    ? 'Task '+(state.idx+1)+' of '+state.round.length+' – on your sheet: number '+(q.sheetIndex+1)
+    : q.label+' · Question '+(state.idx+1)+' of '+state.round.length;
   $('#qPrompt').innerHTML=q.prompt;
   const vis=$('#qVisual'); vis.innerHTML=q.visual||''; vis.hidden=!q.visual;
   const A=$('#qAnswers'); A.innerHTML=''; A.className='answers'+(q.grid?' grid':'')+(q.grid3?' grid3':'');
@@ -2590,7 +2622,7 @@ function renderQuestion(){
   if(q.kind==='mc'){
     q.options.forEach((o,i)=>{
       const b=document.createElement('button'); b.type='button'; b.className='opt'+(q.vis?' vis':'');
-      b.innerHTML=q.htmlOptions?o:esc(o); b.dataset.i=i;
+      b.innerHTML=(state.sheet?`<b class="optletter">${LETTERS[i]}</b> `:'')+(q.htmlOptions?o:esc(o)); b.dataset.i=i;   // on a sheet: the letter from the paper
       b.addEventListener('click',()=>answerMC(i)); A.appendChild(b);
     });
   } else if(q.kind==='type'){
@@ -2647,9 +2679,12 @@ function score(ok){
   state.answered=true; state.results[state.idx]=ok;
   if(ok){ state.stars++; state.streak++; } else state.streak=0;
   const q=state.round[state.idx];
-  if(ok && q.dueId && state.attempts===1 && !q.assisted && !state.hinted) advanceDue(q);   // only a success without help moves a review on
-  if(!ok) queueBridge(q);
-  if(ok && levelOf(q)===3){ addBadge('thinker'); if(q.world==='combos') addBadge('openMinded'); }
+  if(state.sheet) sheetDecide(ok);    // a sheet task: only its sheet result (A9)
+  else {
+    if(ok && q.dueId && state.attempts===1 && !q.assisted && !state.hinted) advanceDue(q);   // only a success without help moves a review on
+    if(!ok) queueBridge(q);
+    if(ok && levelOf(q)===3){ addBadge('thinker'); if(q.world==='combos') addBadge('openMinded'); }
+  }
   if(q.challenge && !state.challengeRewarded){ addBadge('riskTaker'); state.challengeRewarded=true; state.noteNow=maybeNote('brave',1); }
   else if(!ok) state.noteNow=maybeNote('wrong',.4);
   $('#roundStars').textContent=state.stars;
@@ -2659,6 +2694,7 @@ function score(ok){
    second independent success. Keep attempt details separately from legacy evidence. */
 function observeAttempt(q, ok, response){
   state.attempts++;
+  if(state.sheet){ if(!state.evidenceRecorded){ state.firstResponse=response; state.evidenceRecorded=true; } return; }   // a sheet task writes only its sheet result
   if(!state.evidenceRecorded){
     state.firstResponse=response; recordAnswer(state.hinted?Object.assign({},q,{assisted:true}):q,ok); state.evidenceRecorded=true;
     if(!ok) rememberWrong(q);
@@ -2852,7 +2888,7 @@ function showExample(){
   if(state.answered || !state.example) return;
   const q=state.round[state.idx], ex=state.example, de=q.world==='anleitung', h=ex.coach?guidance(ex,null,true):{text:ex.explain,visual:ex.visual||''}, fb=$('#feedback');
   state.exampled=true;
-  const log=store.get('attempts',[]); log.push({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,exampleShown:true,qid:q.dueId||qId(q)}); store.set('attempts',log.slice(-200));
+  if(!state.sheet){ const log=store.get('attempts',[]); log.push({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,exampleShown:true,qid:q.dueId||qId(q)}); store.set('attempts',log.slice(-200)); }
   const answer=ex.kind==='mc'?esc(strip(ex.options[ex.answer])):esc(ex.answer);
   fb.className='feedback hint'; fb.hidden=false;
   fb.innerHTML=`<span class="mark">${de?'Ein leichteres Beispiel':'An easier example'}</span><div class="worked"><p>${ex.prompt}</p>${h.visual?`<div class="visual">${h.visual}</div>`:''}<p>${esc(h.text)}</p><p><b>${de?'Lösung':'Answer'}: ${answer}</b></p></div><p><b>${de?'Jetzt du – deine Aufgabe oben.':'Now you – your question above.'}</b></p>`;
@@ -2862,7 +2898,7 @@ function showExample(){
 }
 function showHint(){
   const q=state.round[state.idx], de=q.world==='anleitung', h=guidance(q,null,false), fb=$('#feedback');
-  if(!state.hinted){ const log=store.get('attempts',[]); log.push({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,hintShown:true,qid:q.dueId||qId(q)}); store.set('attempts',log.slice(-200)); }
+  if(!state.hinted && !state.sheet){ const log=store.get('attempts',[]); log.push({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,hintShown:true,qid:q.dueId||qId(q)}); store.set('attempts',log.slice(-200)); }
   state.hinted=true; afterTip(q);
   fb.className='feedback hint'; fb.hidden=false;
   fb.innerHTML=`<span class="mark">${de?'So kannst du vorgehen':'Here’s a way to do it'}</span><p>${esc(h.text)}</p>${h.visual?`<div class="visual">${h.visual}</div>`:''}`;
@@ -2872,14 +2908,17 @@ function showHint(){
 function showWorked(){
   if(state.answered) return;
   const q=state.round[state.idx], beforeTry=state.attempts===0, de=q.world==='anleitung';
-  if(!state.evidenceRecorded){
-    state.evidenceRecorded=true; rememberWrong(q);
-    // answer shown without an own try: not passed, at support level (Peter, 01.11.)
-    recordAnswer(Object.assign({},q,{assisted:true}),false);
+  if(state.sheet){ state.evidenceRecorded=true; sheetDecide(false); }   // a sheet task: "not yet", nothing else is written
+  else {
+    if(!state.evidenceRecorded){
+      state.evidenceRecorded=true; rememberWrong(q);
+      // answer shown without an own try: not passed, at support level (Peter, 01.11.)
+      recordAnswer(Object.assign({},q,{assisted:true}),false);
+    }
+    const log=store.get('attempts',[]); log.push(Object.assign({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,solutionShown:true,qid:q.dueId||qId(q)},beforeTry?{beforeTry:true}:{})); store.set('attempts',log.slice(-200));
   }
-  const log=store.get('attempts',[]); log.push(Object.assign({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,solutionShown:true,qid:q.dueId||qId(q)},beforeTry?{beforeTry:true}:{})); store.set('attempts',log.slice(-200));
   if(beforeTry){
-    state.answered=true; state.results[state.idx]='seen'; queueBridge(q);
+    state.answered=true; state.results[state.idx]='seen'; if(!state.sheet) queueBridge(q);
     $('#roundStars').textContent=state.stars; renderDots();
   } else score(false);
   if(q.kind==='mc') document.querySelectorAll('#qAnswers .opt').forEach(b=>{ b.disabled=true; b.classList.toggle('correct',+b.dataset.i===q.answer); });
@@ -2975,7 +3014,8 @@ function showResults(){
   const n=state.round.length, s=state.stars, k=state.world, name=playerName();
   const total=store.get('total',0)+s; store.set('total',total);
   const best=store.get('best_'+k,0); if(s>best) store.set('best_'+k,s);
-  $('#resWorld').textContent=WORLDS[k].name;
+  $('#resWorld').textContent=state.sheet?$('#worldChip').textContent:WORLDS[k].name;
+  $('#againBtn').hidden=!!state.sheet;   // a sheet is entered once
   $('#resScore').textContent=s;
   $('#resCount').textContent=n;
   $('#bigStars').innerHTML=state.round.map((_,i)=>STAR.replace('<svg', i<s?'<svg class="on"':'<svg')).join('');
@@ -2985,7 +3025,9 @@ function showResults(){
   else if(s>=6){ head='Fantastic work'+who+'!'; msg='Nearly perfect. One more round and you will have them all.'; }
   else if(s>=4){ head='Good job'+who+'!'; msg='You are getting there. Read the explanations and try again.'; }
   else { head='Nice try'+who+'!'; msg='Every game makes your brain stronger. Have another go!'; }
-  if(s>best && best>0) msg+=' New best score for this quest!';
+  if(state.sheet){ const left=((store.get('sheets',[]).find(x=>x.id===state.sheet.id)||{items:[]}).items).filter(i=>!i.res).length;
+    msg=left?'Well done! The other tasks of this sheet wait under “My sheets”.':'Your whole sheet is in the app. Tricky tasks come back later – that is how your brain grows.'; }
+  else if(s>best && best>0) msg+=' New best score for this quest!';
   $('#resHead').textContent=head; $('#resMsg').textContent=msg;
   show('results'); renderAfterRound(k); snapshot();
   if(s>=6){ beep('win'); confetti(); }
@@ -3305,7 +3347,7 @@ function showTreat(kind, roundKey){
 
 /* ---------- practice sheets (paper) ---------- */
 /* Why paper: the school rubric asks for labelled working, units and a second way to check (Meets/Extending). That is practised on paper, not in a quiz.
-   A sheet uses the same questions and hidden levels as the app; grown-ups can enter the results afterwards (About & grown-ups -> Practice sheets). */
+   A sheet uses the same questions and hidden levels as the app; the child enters its answers afterwards under "My sheets" (A9). */
 const MATHS=['numbers','round','combos','wordprob','detective','units','graphs'];
 const strip = h => String(h||'').replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
 const LETTERS='ABCDEF';
@@ -3354,7 +3396,7 @@ function renderSheet(sheet){
     ${sheet.items.map((it,i)=>paperTask(it.q, i+1, i===mathsIdx)).join('')}${writing}
     <div class="task ticks">☐ I answered every question &nbsp; ☐ I checked my units &nbsp; ☐ I explained one task to a grown-up &nbsp; ☐ I worked with someone<br>
     Today I am proud of: ______________________________ &nbsp; Next I will practise: ______________________________</div></section>`;
-  const page2=`<section class="sheet answers-page"><h1>Answers – for grown-ups</h1><div class="meta"><span>${sheet.no?'Sheet '+sheet.no+' · '+sheet.day:'Sheet of '+sheet.day}</span><span>Enter results in the app: 👪 Grown-ups → Practice sheets</span></div>
+  const page2=`<section class="sheet answers-page"><h1>Answers – for grown-ups</h1><div class="meta"><span>${sheet.no?'Sheet '+sheet.no+' · '+sheet.day:'Sheet of '+sheet.day}</span><span>Your child enters the answers: Practice sheet → My sheets</span></div>
     <ol>${sheet.items.map(it=>`<li>${keyFor(it.q)}<br><span class="small">${esc(it.q.explain||'')}</span></li>`).join('')}<li>Writing: look for order words, complete sentences, capitals and full stops.</li></ol>
     <p class="small">Working shown and units written = what the class rubric asks for. A second way to check = the next step up.</p></section>`;
   return page1+page2;
@@ -3365,6 +3407,7 @@ let currentSheet=null;
 const isStandalone = () => window.navigator.standalone===true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
 function printSheet(only){
   currentSheet=buildSheet(Array.isArray(only)?only:null);   // grown-ups: a sheet on one topic only
+  renderMySheets();
   $('#printArea').innerHTML=renderSheet(currentSheet);
   $('#sheetPrint').hidden=isStandalone();
   $('#sheetMsg').textContent='';
@@ -3487,7 +3530,7 @@ async function sheetPdf(sheet){
   doc.text('Today I am proud of: ______________________________   Next I will practise: ______________________________',{size:10});
   doc.newPage();
   doc.text('Answers – for grown-ups',{size:18,bold:true,gap:6});
-  doc.text(`${sheet.no?'Sheet '+sheet.no+' of '+sheet.day:'Sheet of '+sheet.day}. Enter the results in the app afterwards: Grown-ups > Practice sheets.`,{size:10,gap:10});
+  doc.text(`${sheet.no?'Sheet '+sheet.no+' of '+sheet.day:'Sheet of '+sheet.day}. Your child enters the answers in the app: Practice sheet > My sheets.`,{size:10,gap:10});
   sheet.items.forEach((it,i)=>{ const q=it.q, key=q.kind==='mc'?`${LETTERS[q.answer]}${q.htmlOptions?'':' – '+strip(q.options[q.answer])}`:q.kind==='type'?String(q.answer):q.correct.map((k,j)=>`${j+1}. ${strip(q.items[k])}`).join(' · ');
     doc.text(`${i+1}. ${key}`,{size:11,bold:true}); if(q.explain) doc.text(strip(q.explain),{size:10,x:12}); doc.space(3); });
   doc.text(`${sheet.items.length+1}. Writing: look for order words, complete sentences, capitals and full stops.`,{size:11,bold:true});
@@ -3495,26 +3538,14 @@ async function sheetPdf(sheet){
   return doc.bytes();
 }
 
-/* Grown-ups enter the results of a printed sheet (Peter, 31.10./01.11.). Each result counts like a first
-   try in the app (with help = support level) - also in the grown-ups' summary - and can be corrected:
-   tapping another button takes the old entry back exactly. Results of older versions (without a
-   record) stay as they are. A sheet without any entry can be discarded; it never counts. */
+/* The result of a sheet task (A9, Peter, 02.11.: the child enters its sheet itself in a round like Practise
+   Today; before, grown-ups entered it). Each result counts like a first try in the app (with help = support
+   level) - also in the grown-ups' summary. Every task counts once; there is no correcting afterwards.
+   A sheet without any entry can be discarded by a grown-up; it never counts. */
 const RES_T={de:{ok:'✓ Richtig', help:'🤝 Mit Hilfe', no:'↻ Noch nicht'}, en:{ok:'✓ Correct', help:'🤝 With help', no:'↻ Not yet'}};
-const RES=RES_T.en;
-const sameEv = (a,b) => a && b && a[0]===b[0] && a[1]===b[1] && a[2]===b[2];
-function undoResult(it){
-  const r=it.rec; if(!r) return false;
-  const ev=store.get('ev',{}), list=ev[it.q.world]||[];
-  for(let i=list.length-1;i>=0;i--) if(sameEv(list[i],r.ev)){ list.splice(i,1); break; }
-  ev[it.q.world]=list; store.set('ev',ev);
-  store.set('attempts', store.get('attempts',[]).filter(a=>a.sheet!==r.key));
-  if(r.due) store.set('due', store.get('due',[]).filter(d=>d.id!==r.due));
-  it.rec=null; it.res=null; return true;
-}
-function enterResult(sheetId, idx, res){
-  if(!parentAccess || !RES_T.en[res]) return;
-  const all=store.get('sheets',[]), sh=all.find(s=>s.id===sheetId), it=sh && sh.items[idx]; if(!it || it.res===res) return;
-  if(it.res && !undoResult(it)) return;            // an old result without a record stays locked
+function sheetResult(sheetId, idx, res){
+  if(!RES_T.en[res]) return;
+  const all=store.get('sheets',[]), sh=all.find(s=>s.id===sheetId), it=sh && sh.items[idx]; if(!it || !it.q || it.res) return;
   const q=it.q, key=sheetId+':'+idx;
   if(res==='ok') recordAnswer(q,true);
   else if(res==='help') recordAnswer(Object.assign({},q,{level:1}),true);
@@ -3523,9 +3554,8 @@ function enterResult(sheetId, idx, res){
   it.rec={ev:list[list.length-1]||null, key, due:res==='no'?(q.dueId||qId(q)):null};
   const log=store.get('attempts',[]); log.push({day:dayKey(), skill:q.world, level:levelOf(q), attempt:1, ok:res!=='no', help:res==='help', sheet:key}); store.set('attempts',log.slice(-200));
   it.res=res;
-  /* Principled (01.11.): a practice sheet finished to the end – every task has a result. Counts once per sheet, also after a correction. */
+  /* Principled (01.11.): a practice sheet finished to the end – every task has a result. Counts once per sheet. */
   if(!sh.principled && sh.items.every(i=>i.res)){ sh.principled=true; store.set('sheets',all); addBadge('principled'); } else store.set('sheets',all);
-  state.psheetOpen=sheetId; renderSheets();
 }
 function discardSheet(sheetId){
   if(!parentAccess) return;
@@ -3552,7 +3582,7 @@ const PT={
   de:{home:'🏠 Übersicht',sheets:'📄 Übungsblätter',settings:'👧 Für das Kind',help:'💡 Helfen wie die Schule',
     howHome:'<b>So lesen Sie diese Seite:</b> Links sehen Sie dieselben Fächer wie das Kind; jedes Kästchen ist eine Quest. Rechts steht die Einschätzung in Worten. Tippen Sie auf ein Fach, um zu sehen, was geübt wird, worauf die Einschätzung beruht und wie Sie helfen können.',
     
-    howSheets:'<b>So geht’s:</b> Blatt antippen (die Nummer steht auch auf dem Papier) und pro Aufgabe wählen, wie es lief. Vertippt? Einfach den richtigen Knopf antippen. „Mit Hilfe“ und „Noch nicht“ sind gut so: Die App bietet dann leichtere Schritte an und wiederholt die Aufgabe später. Ein Blatt, das nicht eingetragen wird, zählt einfach nicht.',
+    howSheets:'<b>So geht’s:</b> Ihr Kind trägt seine Antworten selbst in der App ein – auf der Startseite unter „My sheets“. Hier sehen Sie, wie jede Aufgabe lief. „Mit Hilfe“ und „Noch nicht“ sind gut so: Die App bietet dann leichtere Schritte an und wiederholt die Aufgabe später. Ein Blatt, das nicht eingetragen wird, zählt einfach nicht.',
     howSettings:'<b>Was kann ich hier tun?</b> Fokus-Themen als Liste, Spannung der Pisolala-Geschichten, eine freiwillige Kalender-Erinnerung, Profilangaben des Kindes und die App-Version. Nichts davon ist Pflicht.',
     howHelp:'<b>Was kann ich hier tun?</b> Kurz nachlesen, wie die Schule ein Thema zeigt, und mit drei Fragen helfen statt vorzurechnen.',
     back:'← Alle Fächer',focus:'Im Fokus',fm:'🎯 Fokus',pvT:'Ausblick: Themen für später',pvTxt:'Diese Themen kommen meist später im Schuljahr. Ihr Kind sieht sie erst, wenn Sie sie hier freigeben – zum Beispiel, wenn sie in der Schule drankommen oder Ihr Kind neugierig ist.',pvBtn:'Für das Kind freigegeben',pvOn:'freigegeben',pvOff:'nicht freigegeben',fAuto:'Automatisch',fMan:'Manuell',school:'nächster Schritt laut Schule',need:'braucht Übung',gap:d=>'Lücke laut Schule ('+d+')',gapWait:'wartet',how:'💡 So helfen Sie',
@@ -3569,7 +3599,7 @@ const PT={
   en:{home:'🏠 Overview',sheets:'📄 Practice sheets',settings:'👧 For your child',help:'💡 Help like the school',
     howHome:'<b>How to read this page:</b> on the left are the same subjects your child sees; each small square is a quest. On the right is a summary in plain words. Tap a subject to see what is practiced, what the summary is based on, and how you can help.',
     
-    howSheets:'<b>How it works:</b> tap a sheet (its number is also on the paper) and choose for each task how it went. Tapped the wrong one? Just tap the right button. “With help” and “Not yet” are fine: the app then offers easier steps and brings the task back later. A sheet that isn’t entered simply doesn’t count.',
+    howSheets:'<b>How it works:</b> your child enters the answers in the app – on the start page under “My sheets”. Here you see how each task went. “With help” and “Not yet” are fine: the app then offers easier steps and brings the task back later. A sheet that isn’t entered simply doesn’t count.',
     howSettings:'<b>What can I do here?</b> Focus topics as a list, how exciting Pisolala stories may be, an optional calendar reminder, the child\'s profile details and the app version. None of this is required.',
     howHelp:'<b>What can I do here?</b> Read briefly how the school teaches a topic and help with three questions instead of calculating for the child.',
     back:'← All subjects',focus:'In focus',fm:'🎯 Focus',pvT:'Coming up: topics for later',pvTxt:'These topics usually come later in the school year. Your child only sees them once you turn them on here – for example when they come up at school or your child is curious.',pvBtn:'Visible to your child',pvOn:'turned on',pvOff:'turned off',fAuto:'Automatic',fMan:'Manual',school:'next step per school',need:'needs practice',gap:d=>'gap per school ('+d+')',gapWait:'waiting',how:'💡 How you can help',
@@ -3745,7 +3775,8 @@ function parentHomeHTML(){
     return `<button type="button" class="psubject" data-psubj="${s.key}"><span class="prow"><span class="pico" style="background:${s.color}">${ICONS[s.icon]||''}</span><span class="pname">${esc(s.name)}</span></span><span class="pdots">${list.map(a=>`<i class="${a.level}" title="${esc(WORLDS[a.k].name)}"></i>`).join('')}</span><span>${pChip(subjectLevel(list))}${(()=>{ const sl=schoolSubjectLevel(s.key); return sl?` <span class="pschooldot" title="${PL()==='de'?'Schule':'School'}: ${esc(PSTAND[PL()][sl])}"><span class="small">🏫</span><span class="pdots"><i class="${sl}"></i></span></span>`:''; })()}${f?` <span class="focus">${T.focusN(f)}</span>`:''}</span></button>`; }).join('');
   // A waiting practice sheet is mentioned once, calmly, with a way straight to it (not for teachers).
   const wait=isTeacher()?[]:waitingSheets(), w=wait[wait.length-1];
-  const note=w?`<p class="phow psheet-note">📄 ${wait.length===1?(de?`${sheetName(w)} wartet aufs Eintragen.`:`${sheetName(w)} is waiting to be entered.`):(de?`${wait.length} Übungsblätter warten aufs Eintragen.`:`${wait.length} practice sheets are waiting to be entered.`)} <button type="button" class="btn small" data-opensheet="${w.id}">${de?'Jetzt eintragen':'Enter now'}</button></p>`:'';
+  // A10 (02.11.): the child enters the sheet itself - the note says where, the button only shows the state
+  const note=w?`<p class="phow psheet-note">📄 ${wait.length===1?(de?`${sheetName(w)} ist noch offen.`:`${sheetName(w)} is still open.`):(de?`${wait.length} Übungsblätter sind noch offen.`:`${wait.length} practice sheets are still open.`)} ${de?'Ihr Kind trägt die Antworten selbst ein: Startseite → „My sheets“.':'Your child enters the answers: start page → “My sheets”.'} <button type="button" class="btn small" data-opensheet="${w.id}">${de?'Stand ansehen':'See progress'}</button></p>`:'';
   const noKid=accountsOn() && !viewedKid() ? myKidsNote() : '';
   if(noKid) return noKid;   // nothing to show: without a logged-in child the data on this device are not the child's
   // concept 5.3 (B4): notes only when something is to do - data move, backup, waiting sheet, "new here?"
@@ -3791,14 +3822,24 @@ function sheetsPageHTML(){
   const T=PT[PL()], de=PL()==='de', R=RES_T[PL()], rank={open:0,part:0,stale:1,done:2};
   const all=store.get('sheets',[]).slice().reverse().sort((a,b)=>rank[sheetState(a)]-rank[sheetState(b)]);
   if(!all.length) return `<h2>${de?'Übungsblätter':'Practice sheets'}</h2><p>${de?'Noch kein Übungsblatt. Auf der Startseite „📄 Practice sheet (PDF / print)“ antippen.':'No practice sheet yet. Tap “📄 Practice sheet (PDF / print)” on the start page.'}</p>`;
-  const label={de:{open:'noch offen',part:'teilweise eingetragen',done:'eingetragen ✓',stale:'nicht eingetragen – zählt nicht, ist in Ordnung'},en:{open:'not entered yet',part:'partly entered',done:'entered ✓',stale:'not entered – doesn’t count, and that’s fine'}}[de?'de':'en'];
+  // A10 (02.11.): grown-ups only see the state - the child enters the answers itself (startSheetRound)
+  const label={de:{open:'noch nicht angefangen',part:(n,N)=>`${n} von ${N} erledigt`,done:'fertig ✓',stale:'nicht eingetragen – zählt nicht, ist in Ordnung'},en:{open:'not started yet',part:(n,N)=>`${n} of ${N} done`,done:'done ✓',stale:'not entered – doesn’t count, and that’s fine'}}[de?'de':'en'];
   return `<h2>${de?'Übungsblätter':'Practice sheets'}</h2><p class="phow">${T.howSheets}</p>`+all.map(sh=>{
     const st=sheetState(sh), n=sh.items.filter(i=>i.res).length;
-    return `<details class="psheet ${st}" data-sheetid="${sh.id}"${state.psheetOpen===sh.id?' open':''}><summary><b>${sheetName(sh)}</b> <span class="psheet-st">${label[st]}${st==='part'?` (${n}/${sh.items.length})`:''}</span></summary>`
-      +sh.items.map((it,i)=>{ const locked=it.res && !it.rec;
-        return `<div class="sheetrow"><div class="q"><b>${i+1}.</b> ${esc(strip(sheetPrompt(it.q)).slice(0,140))}</div><div class="row">${Object.keys(R).map(r=>`<button type="button" class="btn small${it.res===r?' on':''}" data-sheet="${sh.id}" data-i="${i}" data-res="${r}" aria-pressed="${it.res===r}"${locked?' disabled':''}>${R[r]}</button>`).join('')}</div></div>`; }).join('')
+    return `<details class="psheet ${st}" data-sheetid="${sh.id}"${state.psheetOpen===sh.id?' open':''}><summary><b>${sheetName(sh)}</b> <span class="psheet-st">${st==='part'?label.part(n,sh.items.length):label[st]}</span></summary>`
+      +sh.items.map((it,i)=>`<div class="sheetrow"><div class="q"><b>${i+1}.</b> ${esc(strip(sheetPrompt(it.q)).slice(0,140))}</div><div class="sres${it.res?' '+it.res:''}">${it.res&&R[it.res]?R[it.res]:(de?'○ noch offen':'○ still open')}</div></div>`).join('')
       +(n?'':`<p><button type="button" class="btn small" data-discard="${sh.id}">${de?'Blatt verwerfen':'Discard sheet'}</button></p>`)+'</details>';
   }).join('');
+}
+/* A9: the child's open sheets on its start page, under "Practice sheet" (only when there is one) */
+const kidSheetName = sh => (sh.no?'Sheet '+sh.no+' · ':'Sheet · ')+new Date(sh.day+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+function renderMySheets(){
+  const box=$('#mySheets'); if(!box) return;
+  const list=waitingSheets().slice().reverse();
+  box.hidden=!list.length;
+  box.innerHTML=list.length?`<div class="eyebrow">📝 My sheets</div>`+list.map(sh=>{ const n=sh.items.filter(i=>i.res).length;
+    return `<button type="button" class="btn" data-mysheet="${esc(sh.id)}">📝 ${esc(kidSheetName(sh))} – ${n?`${n} of ${sh.items.length} done, go on`:'enter my answers'}</button>`; }).join(''):'';
+  box.querySelectorAll('[data-mysheet]').forEach(b=>b.addEventListener('click',()=>startSheetRound(b.dataset.mysheet)));
 }
 /* The move to IDs failed on this device: grown-ups see it calmly, with a way to try again. */
 function migrNote(){
@@ -4137,7 +4178,6 @@ function renderSheets(){
   body.querySelectorAll('[data-punlock]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; const k=b.dataset.punlock, u=store.get('unlocked',[]); store.set('unlocked', u.includes(k)?u.filter(x=>x!==k):u.concat([k])); renderHome(); renderSheets(); }));
   body.querySelectorAll('[data-gapact]').forEach(b=>b.addEventListener('click',()=>{ if(!gapCanAct()) return; gapAct(b.dataset.gapact, b.dataset.gapstd); renderHome(); renderSheets(); }));
   body.querySelectorAll('[data-fmode]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; setFocusMode(b.dataset.fmode); renderHome(); renderSheets(); }));
-  body.querySelectorAll('button[data-res]').forEach(b=>b.addEventListener('click',()=>enterResult(b.dataset.sheet, +b.dataset.i, b.dataset.res)));
   body.querySelectorAll('[data-psheetq]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; printSheet([b.dataset.psheetq]); renderSheets(); }));
   body.querySelectorAll('[data-discard]').forEach(b=>b.addEventListener('click',()=>discardSheet(b.dataset.discard)));
   body.querySelectorAll('details.psheet').forEach(d=>d.addEventListener('toggle',()=>{ if(d.open) state.psheetOpen=d.dataset.sheetid; else if(state.psheetOpen===d.dataset.sheetid) state.psheetOpen=null; }));
@@ -4314,7 +4354,7 @@ const HELP={
   play:{kid:true,title:'How a question works',text:'<p>Choose or type your answer. Not right yet? You get a tip and can try again. After two tries you see how it works.</p><p>“Show me how” gives you a tip – that is always OK, it is not a mistake. Still stuck? Sometimes there is an easier example to look at first. “Show me the answer” shows the solution, and the question comes back later so you can practise it.</p>'},
   tree:{kid:true,title:'Your learning tree',text:'<p>Your tree grows on every day you practise – in the app or on a practice sheet. It never wilts, even if you take a break.</p><p>Your badges show how you learn: trying a challenge, thinking hard, finishing a sheet.</p>'},
   record:{kid:true,title:'Recording yourself',text:'<p>Tap “● Aufnahme starten”, read aloud, tap “■ Stopp”. Then listen to yourself!</p><p>The last three recordings stay on this iPad. To hand one in, tap “Teilen / Sichern” together with a grown-up.</p>'},
-  sheet:{kid:true,title:'Practice sheet',text:'<p>A sheet with 6 tasks and a writing task, plus an answer page for grown-ups.</p><p>Share it as a PDF (by mail, message or into Files) or print it. Afterwards a grown-up can enter how it went.</p>'},
+  sheet:{kid:true,title:'Practice sheet',text:'<p>A sheet with 6 tasks and a writing task, plus an answer page for grown-ups.</p><p>Share it as a PDF (by mail, message or into Files) or print it. When you are done on paper, tap your sheet under “My sheets” and type in your answers.</p>'},
   gaps:{title:'Lücken laut Schule',text:'<p>Hat die Schule einen Standard mit „Requires support“ oder „Consolidating“ eingestuft, übt die App ihn als <b>Lücke</b>: immer eine zur Zeit, höchstens 2 von 8 Aufgaben pro Runde. Lücken, die ohnehin aktuelles Thema sind, werden übersprungen.</p><p>Geschlossen ist eine Lücke, wenn eine ihrer Quests in der App <b>bestätigt sicher</b> ist. Das heißt: sicher bei den Antworten in der App. Wer geantwortet hat und mit welchen Hilfsmitteln, weiß die App nicht; ob die Aufgaben den Standard so abdecken, wie die Schule ihn prüft, ist je Thema verschieden.</p><p>Sie entscheiden: <b>Jetzt angehen</b>, <b>Als geschlossen markieren</b> oder – nach dem Schließen durch die App – <b>Weiter üben</b>.</p>'},
   overview:{title:'Wie entsteht die Einschätzung?',text:'<p>Gezählt wird nur der <b>erste Versuch</b> jeder Aufgabe: selbst gelöst, mit Hinweis oder Lösungsweg angesehen. Eine Einschätzung gibt es erst ab <b>8 Aufgaben an 3 Tagen</b> – vorher „Noch nicht einschätzbar“, das sagt nichts Schlechtes.</p><p><b>Vorläufig</b> heißt: erste Einschätzung. <b>Bestätigt</b> erst nach etwa 20 Aufgaben an 5 Tagen über zwei Wochen. Eine <b>Tendenz</b> steht nur da, wenn zwei Zeiträume genug Aufgaben haben. Nach mehr als 3 Wochen Pause steht „ältere Belege“ – Ferien sind kein Leistungsabfall.</p><p>Das ist <b>keine schulische Bewertung</b> und wird dem Kind nie gezeigt.</p><p>Die App weiß nicht, wer eine Aufgabe gelöst hat und mit welchen Hilfsmitteln. Die Einschätzung ist ein Hinweis; die Verantwortung liegt bei den Eltern.</p>'},
   focusmode:{title:'Fokus: Automatisch oder Manuell',text:'<p><b>Automatisch:</b> Die App wählt selbst: die Themen, die die Lehrkraft in ihren Bewertungen als nächste Schritte nennt, dazu alles, wo die Einschätzung Unterstützung nahelegt, und die aktive Lücke laut Schule. Das passt sich von selbst an. Tippen Sie bei einer Quest auf „Im Fokus“, wechselt die Wahl auf „Manuell“.</p><p><b>Manuell:</b> Sie legen selbst fest, woraus „Practise Today“ und das Übungsblatt Aufgaben nehmen – zum Beispiel vor einem Test. Mit „Automatisch“ übernimmt wieder die App.</p><p>Alle Quests bleiben für das Kind spielbar; der Fokus bestimmt nur, was „Practise Today“ und das Übungsblatt bevorzugen. Mehr dazu in „📖 So funktioniert Big Quest → Wie die App einstuft“.</p>'},
@@ -4324,7 +4364,7 @@ const HELP={
   storycap:{title:'Pisolala-Geschichten',text:'<p>Hier legen Sie fest, wie spannend eine Geschichte höchstens sein darf. Das Kind wählt selbst bis zu dieser Grenze. Jede Stufe bleibt freundlich.</p>'},
   profile:{title:'Profilangaben',text:'<p>Name, Geburtstag (ohne Jahr) und Emoji, die das Kind unter „My profile“ eingetragen hat. Sie liegen nur auf diesem Gerät. Löschen entfernt nur diese Angaben, keine Lerndaten.</p>'},
   version:{title:'App-Version',text:'<p>Zeigt den Stand der App auf diesem Gerät. Die App aktualisiert sich beim Start und beim Zurückkehren selbst. „Nach neuer Version suchen“ vergleicht mit der veröffentlichten Seite.</p>'},
-  sheets:{title:'Übungsblätter eintragen',text:'<p>Pro Aufgabe „Richtig“, „Mit Hilfe“ oder „Noch nicht“ antippen. „Mit Hilfe“ und „Noch nicht“ sind gut so: Die App bietet dann leichtere Schritte an und wiederholt die Aufgabe später.</p>'},
+    sheets:{title:'Übungsblätter',text:'<p>Ihr Kind trägt seine Antworten vom Papier selbst ein: Startseite → „My sheets“. Die App prüft wie gewohnt, mit Tipp und zweitem Versuch. Hier sehen Sie je Aufgabe „Richtig“, „Mit Hilfe“ oder „Noch nicht“. „Mit Hilfe“ und „Noch nicht“ sind gut so: Die App bietet dann leichtere Schritte an und wiederholt die Aufgabe später.</p>'},
   testday:{noGuide:true,title:'Testkonto: +1 Tag',text:'<p><b>+1 Tag</b> stellt die Uhr der App nur für dieses Testkonto einen Tag vor. So sehen Sie sofort, was sonst erst morgen passiert: Fehler kommen als Wiederholung zurück, der Lernbaum wächst, die Einschätzung im Elternbereich sammelt Übungstage.</p><p>Die Daten des Kindes bleiben unberührt. <b>Testdaten löschen</b> setzt das Testkonto ganz zurück (auch den Tag).</p>'},
   guidance:{title:'Ihr Kind unterstützen',text:'<p>Die wichtigsten Regeln in Kürze. Konkretes zu jedem Thema – auch wie die Schule es zeigt – steht in der Übersicht bei jeder Quest unter „💡 So helfen Sie“.</p>'}
 };
@@ -4339,7 +4379,7 @@ const HELP_EN={
   storycap:{title:'Pisolala stories',text:'<p>Set how exciting a story may be at most. Your child chooses up to this limit. Every level stays kind.</p>'},
   profile:{title:'Profile details',text:'<p>Name, birthday (without year) and emoji that your child entered under “My profile”. Stored only on this device. Deleting removes only these details, no learning data.</p>'},
   version:{title:'App version',text:'<p>Shows the version on this device. The app updates itself when it starts and when you come back to it. “Check for a new version” compares it with the published page.</p>'},
-  sheets:{title:'Entering practice sheets',text:'<p>For each task tap “Correct”, “With help” or “Not yet”. “With help” and “Not yet” are fine: the app then offers easier steps and brings the task back later.</p>'},
+    sheets:{title:'Practice sheets',text:'<p>Your child types in the answers from the paper: start page → “My sheets”. The app checks them as usual, with a tip and a second try. Here you see “Correct”, “With help” or “Not yet” for each task. “With help” and “Not yet” are fine: the app then offers easier steps and brings the task back later.</p>'},
   testday:{title:'Test account: +1 day',text:'<p><b>+1 day</b> moves the app’s clock one day ahead, for this test account only. You see right away what would otherwise happen tomorrow: mistakes come back as reviews, the learning tree grows, and the summary in the grown-ups area collects practice days.</p><p>Your child’s data is not touched. <b>Delete test data</b> resets the test account completely (including the day).</p>'},
   guidance:{title:'Supporting your child',text:'<p>The key rules in brief. Concrete help for each topic – including how school shows it – is in the overview at every quest under “💡 How you can help”.</p>'}
 };
@@ -4786,7 +4826,7 @@ const GUIDE_KID=`<div class="quick"><b>Quick guide</b><ol>
 <li><b>Stars and titles:</b> every solved task gives a star. With more stars you reach a new title – tap your title to see your explorer path. Your learning tree grows on every day you practise.</li>
 <li><b>After a round:</b> choose a joke, the Mystery Question or a Pisolala story.</li>
 <li><b>Lese-Studio:</b> read aloud, record yourself and listen. Your grown-up can help you share the best recording with your class.</li>
-<li><b>Practice sheet:</b> make a sheet with a grown-up and work on paper.</li>
+<li><b>Practice sheet:</b> make a sheet with a grown-up and work on paper. Then tap your sheet under “My sheets” and type in your answers – just like Practise Today.</li>
 <li><b>My profile:</b> tap your name at the top to change your name, birthday or emoji.</li>
 <li><b>Your grown-ups</b> can see what you have worked on. There are no grades in Big Quest – only learning. Other grown-ups, like a teacher, can only look if your parents allow it.</li>
 <li><b>Log out</b> when someone else wants to use this iPad. Your brother or sister then taps their own name and types their own password.</li>
@@ -4808,7 +4848,7 @@ const GUIDE_ADULT_DE=`<div class="quick"><b>Kurzanleitung für Eltern</b><ol>
 <li><b>Im Elternbereich:</b> oben die Übersicht wie auf der Kinderseite mit der Einschätzung in Worten (keine Schulbeurteilung). Fach antippen: bei jeder Quest Grundlage, Tipp und der Schalter „Im Fokus“. Den Fokus wählt die App selbst – was die Lehrkraft als nächste Schritte nennt und wo Übung hilft –, daraus nimmt „Practise Today“ seine Aufgaben; über „🎯 Fokus“ stellen Sie auf „Manuell“, um selbst zu wählen, und mit „Automatisch“ wieder zurück. Darunter zum Aufklappen: Einstufungen der Schule, Übungsblätter, Sicherung, Zugriff & Freigaben, „Für das Kind“ (Pisolala-Geschichten, Kalender-Erinnerung, Profilangaben), „Ihr Kind unterstützen“ (die wichtigsten Regeln), „So funktioniert Big Quest“ (das Konzept, auch wie die App einstuft) und diese Bedienungshilfe. Die Sprache wechseln Sie oben mit den Flaggen.</li>
 <li><b>Zugriff & Freigaben:</b> Eine Lehrkraft oder der Admin sieht den Lernstand Ihres Kindes nur mit Ihrer Freigabe unter „🔐 Zugriff & Freigaben“: Anmeldename der Person eintragen, Umfang wählen (Lernstand, auf Wunsch auch Schuldaten) und Dauer (1–90 Tage, voreingestellt 14). Vor dem Bestätigen lesen Sie, was die Person sehen kann. Sie kann nichts ändern und sieht weder Namen noch Geburtstag aus dem Profil. „Beenden“ wirkt sofort; nach Ablauf endet die Freigabe von selbst. Eine neue Freigabe für dieselbe Person ersetzt die alte. Das Protokoll zeigt, wann eine Freigabe erteilt, angesehen, beendet oder abgelaufen ist. Die Person sieht das Kind nur auf einem Gerät, auf dem seine Daten liegen.</li>
 <li><b>Sicherung:</b> Unter „💾 Sicherung“ speichern Sie den Lernstand Ihres Kindes als Datei (mit Freigaben und Aufnahmen) und können ihn auf jedem Gerät zurückspielen; eine veränderte Datei oder die Datei eines anderen Kindes nimmt die App nicht an. Nach dem Zurückspielen geht „Rückgängig“ einmal. Sichern Sie dort, wo Ihr Kind übt (auf seinem Gerät, in der App vom Home-Bildschirm, nicht in Safari) – am besten einmal im Monat. Die Übersicht zeigt, wann zuletzt gesichert wurde.</li>
-<li><b>Für das Kind:</b> Practise Today oder ein Fach; bei Fehlern Hinweis, zweiter Versuch, dann Lösungsweg; Lese-Studio mit Aufnahme (Teilen/Sichern zum Hochladen auf die Lernplattform der Klasse); Übungsblatt als PDF; nach jeder Runde Witz, Rätsel oder Geschichte.</li>
+<li><b>Für das Kind:</b> Practise Today oder ein Fach; bei Fehlern Hinweis, zweiter Versuch, dann Lösungsweg; Lese-Studio mit Aufnahme (Teilen/Sichern zum Hochladen auf die Lernplattform der Klasse); Übungsblatt als PDF – die Antworten trägt das Kind danach selbst unter „My sheets“ ein, Sie sehen im Elternbereich, wie es lief; nach jeder Runde Witz, Rätsel oder Geschichte.</li>
 </ol>
 <p><b>Gut zu wissen:</b> Eigene Passwörter gelten derzeit nur auf dem Gerät, auf dem sie festgelegt wurden; auf einem weiteren Gerät einmal mit dem Startcode anmelden. Passwort vergessen? Der Startcode funktioniert weiter; ist er nicht zur Hand, gibt der Admin einen neuen (auch als Startlink oder QR-Code). Nach 5 Fehlversuchen 30 Sekunden warten. Neue Versionen lädt die App beim Start und beim Zurückkehren selbst. Familienpasswort, Startcodes und Startlinks bitte nicht weitergeben.</p>`;
 const GUIDE_ADULT_EN=`<div class="quick"><b>Quick guide for parents</b><ol>
@@ -4828,7 +4868,7 @@ const GUIDE_ADULT_EN=`<div class="quick"><b>Quick guide for parents</b><ol>
 <li><b>In the grown-ups area:</b> at the top, an overview like your child’s start page with a summary in plain words (not a school assessment). Tap a subject: each quest shows what the summary is based on, a tip, and the “In focus” switch. The app picks the focus by itself – what the teacher names as next steps and where practice helps – and “Practise Today” takes its tasks from there; under “🎯 Focus” switch to “Manual” to choose yourself, and back with “Automatic”. Below, open as needed: school ratings, practice sheets, backup, access & grants, “For your child” (Pisolala stories, calendar reminder, profile details), “Supporting your child” (the key rules), “How Big Quest works” (the concept, including how the app judges) and this guide to using the app. Switch the language with the flags at the top.</li>
 <li><b>Access & grants:</b> a teacher or the admin sees your child’s progress only with your grant under “🔐 Access & grants”: enter the person’s login name, choose what they may see (progress, optionally school ratings) and for how long (1–90 days, 14 by default). Before you confirm, you read exactly what the person can see. They cannot change anything and never see the name or birthday from the profile. “End” takes effect at once; at the end date the grant ends by itself. A new grant for the same person replaces the old one. The log shows when a grant was given, viewed, ended or expired. The person sees your child only on a device that holds the child’s data.</li>
 <li><b>Backup:</b> under “💾 Backup” you save your child’s progress as a file (including grants and recordings) and can restore it on any device; the app refuses a changed file or another child’s file. After a restore, “Undo” works once. Back up where your child practices (on their device, in the app from the Home Screen, not in Safari) – ideally once a month. The overview shows when the last backup was made.</li>
-<li><b>For your child:</b> “Practise Today” or a subject; after a mistake a hint, a second try, then the worked solution; reading studio with recording (share/save to upload to the class learning platform); practice sheet as PDF; a joke, riddle or story after each round.</li>
+<li><b>For your child:</b> “Practise Today” or a subject; after a mistake a hint, a second try, then the worked solution; reading studio with recording (share/save to upload to the class learning platform); practice sheet as PDF – afterwards your child types in the answers under “My sheets”, and you see in the grown-ups area how it went; a joke, riddle or story after each round.</li>
 </ol>
 <p><b>Good to know:</b> for now, personal passwords work only on the device where they were set; on another device, log in once with the start code. Forgot your password? The start code keeps working; if it is not at hand, the admin gives you a new one (also as a start link or QR code). After 5 wrong tries, wait 30 seconds. The app loads new versions by itself when it starts and when you come back to it. Please keep the family password, start codes and start links private.</p>`;
 const GUIDE_TEACHER_DE=`<div class="quick"><b>Kurzanleitung für Lehrkräfte</b><ol>
@@ -4839,7 +4879,7 @@ const GUIDE_TEACHER_DE=`<div class="quick"><b>Kurzanleitung für Lehrkräfte</b>
 <ol class="steps">
 <li><b>Wofür:</b> Big Quest ist eine private Übungs-App der Familie. Der Einblick ist als Blick auf die Hausaufgaben gedacht, nicht für den dienstlichen Einsatz in der Schule.</li>
 <li><b>Was Sie sehen:</b> die Übersicht des Kindes mit der Einschätzung in Worten (keine Schulbeurteilung), je Quest Grundlage und „💡 So helfen Sie“. Schuldaten nur, wenn die Eltern sie ausdrücklich freigegeben haben. Den Namen aus dem Profil sehen Sie nicht, nur den Anmeldenamen.</li>
-<li><b>Was Sie nicht sehen oder tun können:</b> keine Einstellungen, kein Fokus, keine Übungsblätter eintragen, keine Sicherung, keine Freigaben; keine anderen Kinder, keine Klassenlisten, keine Suche.</li>
+<li><b>Was Sie nicht sehen oder tun können:</b> keine Einstellungen, kein Fokus, keine Übungsblätter, keine Sicherung, keine Freigaben; keine anderen Kinder, keine Klassenlisten, keine Suche.</li>
 <li><b>Dauer:</b> Die Freigabe läuft bis zu dem Datum, das die Eltern gewählt haben (höchstens 90 Tage), und kann jederzeit beendet werden. Danach erscheint „Noch keine Freigabe“.</li>
 <li><b>Protokoll:</b> Die Eltern sehen, wann Sie die Übersicht angesehen haben (einmal pro Tag vermerkt).</li>
 <li><b>Bitte:</b> keine Bildschirmfotos oder Notizen über das Kind weitergeben; Fragen direkt mit den Eltern klären.</li>
@@ -4852,7 +4892,7 @@ const GUIDE_TEACHER_EN=`<div class="quick"><b>Quick guide for teachers</b><ol>
 <ol class="steps">
 <li><b>Purpose:</b> Big Quest is the family’s private practice app. Access is meant as a look at homework practice, not for official use at school.</li>
 <li><b>What you see:</b> the child’s overview with a summary in plain words (not a school assessment), for each quest what it is based on and “💡 How you can help”. School ratings only if the parents explicitly allowed them. You do not see the name from the profile, only the login name.</li>
-<li><b>What you cannot see or do:</b> no settings, no focus, no entering of practice sheets, no backup, no grants; no other children, no class lists, no search.</li>
+<li><b>What you cannot see or do:</b> no settings, no focus, no practice sheets, no backup, no grants; no other children, no class lists, no search.</li>
 <li><b>Duration:</b> the grant lasts until the date the parents chose (at most 90 days) and can be ended at any time. After that, “No grant yet” appears.</li>
 <li><b>Log:</b> the parents see when you looked at the overview (noted once a day).</li>
 <li><b>Please:</b> do not pass on screenshots or notes about the child; talk to the parents directly.</li>

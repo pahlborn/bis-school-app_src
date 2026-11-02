@@ -23,11 +23,12 @@ Spezifikation S12, Phase P2 (EP7: US7.5), Konzept 6 (Rechtematrix), 7.2 und 8.5.
 | Typ | Kind | Elternteil | Lehrkraft | Admin | Grundlage |
 |---|---|---|---|---|---|
 | `answer`, `round_done`, `practice_day`, `rank_seen`, `checklist_set`, `day_flag` | ✅ | ❌ | ❌ | ❌ | 6 „Antwort, Runde, … Studio-Haken“; Tageshinweise und Titel erlebt das Kind |
-| `review` | ✅ | ✅ | ❌ | ❌ | siehe Entscheidung 1 |
-| `badge` | ✅ | ✅ nur `principled` | ❌ | ❌ | siehe Entscheidung 1 |
+| `review` | ✅ | ❌ | ❌ | ❌ | 6; Nachtrag A9/A10 (Entscheidung 1 entfällt) |
+| `badge` | ✅ | ❌ | ❌ | ❌ | 6; Nachtrag A9/A10 (Entscheidung 1 entfällt) |
 | `profile_set` | ✅ | ✅ | ❌ | ❌ | 6 „Profil … Eltern korrigieren“ |
 | `sheet_created` | ✅ | ✅ | ❌ | ❌ | 6 „Übungsblatt erzeugt“ |
-| `sheet_result`, `sheet_discarded` | ❌ | ✅ | ❌ | ❌ | 6 „eingetragen / korrigiert / verworfen“ |
+| `sheet_result` | ✅ | ❌ | ❌ | ❌ | Nachtrag A9/A10: das Kind trägt sein Blatt selbst ein |
+| `sheet_discarded` | ❌ | ✅ | ❌ | ❌ | 6 „verworfen“; A10: bleibt bei den Erwachsenen |
 | `setting_set` | ❌ | ✅ | ❌ | ❌ | 6, 7.2 „nur Eltern als Autor“ |
 | `school_import` | ❌ | ✅ | ❌ | ❌ | 6 (Admin: Vorgabe nein) |
 | `grant_set`, `grant_revoked` | ❌ | ✅ | ❌ | ❌ | 5.2, 6 |
@@ -41,7 +42,10 @@ Spezifikation S12, Phase P2 (EP7: US7.5), Konzept 6 (Rechtematrix), 7.2 und 8.5.
 „Nur eigene“: `grant_opened` nur mit `grantee` = Autor. „Nur das eigene Gerät“: `device_added` nur mit `payload.device` = Gerät des Ereignisses. Unbekannte Rollen haben keine Rechte.
 
 ## Abweichungen und Entscheidungen (Peter kann widersprechen)
-1. **Eltern dürfen `review` und das Abzeichen `principled` schreiben.** Das weicht von der Rechtematrix 6 ab (Wiederholung, Abzeichen: Eltern ❌). Grund: Wenn Eltern ein Blattergebnis eintragen, schreibt die App heute eine Wiederholung (falsch → `rememberWrong`, Korrektur → zurücknehmen) und bei einem fertigen Blatt das Abzeichen `principled` (`index.html` `enterResult`). Aufgabe 3a hält das in „Was 3b schreiben muss“ fest. Ohne diese Rechte gingen diese Einträge auf allen anderen Geräten verloren. Andere Abzeichen und Antworten bleiben für Eltern gesperrt (Test).
+> [!note] Nachtrag 02.11. (Bündel 4, A9/A10)
+> Das Kind trägt sein Übungsblatt jetzt selbst ein (`index.html` `startSheetRound` → `sheetResult`); Erwachsene sehen nur den Stand und verwerfen leere Blätter. Damit gehört `sheet_result` dem Kind, ebenso die `review` und das Abzeichen `principled`, die ein Blatt-Ergebnis auslöst. Entscheidung 1 entfällt: Eltern schreiben keine Lerndaten mehr (`review`, `badge`, `sheet_result` gesperrt). Matrix im Test angepasst: 27 erlaubte Paare (9 nur Kind, 3 Kind und Eltern, 10 nur Eltern, `grant_opened` für Lehrkraft und Admin). Zweiter Absatz von Entscheidung 2 („Das Kind trägt keine Blattergebnisse ein“) ist damit ebenfalls überholt.
+
+1. ~~**Eltern dürfen `review` und das Abzeichen `principled` schreiben.**~~ (überholt, siehe Nachtrag) Das weicht von der Rechtematrix 6 ab (Wiederholung, Abzeichen: Eltern ❌). Grund: Wenn Eltern ein Blattergebnis eintragen, schreibt die App heute eine Wiederholung (falsch → `rememberWrong`, Korrektur → zurücknehmen) und bei einem fertigen Blatt das Abzeichen `principled` (`index.html` `enterResult`). Aufgabe 3a hält das in „Was 3b schreiben muss“ fest. Ohne diese Rechte gingen diese Einträge auf allen anderen Geräten verloren. Andere Abzeichen und Antworten bleiben für Eltern gesperrt (Test).
 2. **Vorschlag aus der Aufgabe, wo das Konzept anders ist:** Die Aufgabe schlug vor, dass Eltern „alles, was das Kind darf“ schreiben und das Kind `sheet_*` und eigene `device_removed`. Umgesetzt ist das Konzept: Eltern schreiben keine Antworten, Runden, Tageshinweise oder Haken. Das Kind trägt keine Blattergebnisse ein und verwirft keine Blätter (das macht in der App nur der Elternbereich). Es entfernt auch keine Geräte.
 3. **Lehrkraft und Admin:** nur `grant_opened`, und nur für sich selbst (5.2). Eine absichtlich veränderte App kann das Protokoll trotzdem weglassen (ehrliche Grenze aus 5.2).
 4. **Strenger Eintrag:** Ein Eintrag hat genau `event` und `sig`. Zusatzfelder gelten als `format`, denn sie wären nicht unterschrieben.
