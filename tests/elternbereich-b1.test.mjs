@@ -59,7 +59,7 @@ test('T2 ⚙ per role: parent, teacher, admin see exactly their sections; overvi
   await kindDann(p.page, 'papa');
   const uebersicht = await abschnitte(p.page);
   for (const id of ['settings', 'backup', 'grants', 'accounts', 'aboutapp']) assert.ok(!uebersicht.includes(id), 'not on the overview: ' + id);
-  assert.deepEqual(uebersicht, ['school', 'sheets', 'support', 'concept']);
+  assert.deepEqual(uebersicht, ['concept', 'support', 'school', 'sheets']);
   await einstellungen(p.page);
   assert.deepEqual(await abschnitte(p.page), ['settings', 'backup', 'grants', 'aboutapp'], 'parent');
   assert.equal((await p.page.textContent('details.psec[data-psec="settings"] > summary')).trim(), '👧 Für mia', 'names the child');

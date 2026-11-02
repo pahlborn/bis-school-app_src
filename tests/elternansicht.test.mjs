@@ -44,7 +44,9 @@ test('overview: same subjects as the child, summary in words, colours explained,
   assert.match(s, /Noch nicht einschätzbar/); assert.match(s, /Bar Graphs/);
   assert.match(s, /Länger nicht geübt/); assert.match(s, /Number Combinations/);
   assert.match(s, /keine schulische Beurteilung/);
-  assert.match(await page.textContent('#aboutBody'), /So lesen Sie diese Seite/);
+  assert.doesNotMatch(await page.textContent('#aboutBody'), /So lesen Sie diese Seite/, 'no self-explanation (B4)');
+  assert.deepEqual(await page.$$eval('#aboutBody .pleg-line .pleg', (l) => l.map((x) => x.textContent.trim())),
+    ['Sicher', 'Darüber hinaus', 'Wird sicherer', 'Braucht Unterstützung', 'Noch nicht einschätzbar'], 'colours explained in one line');
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'no horizontal overflow');
   assert.deepEqual(fehler, []);
   await ctx.close();
@@ -118,7 +120,7 @@ test('DE/EN switch changes the whole grown-ups view and is remembered', async ()
   await elternOeffnen(page);
   await page.locator('[data-plang="en"]').click();
   const s = await page.textContent('#aboutBody');
-  assert.match(s, /Grown-ups area/); assert.match(s, /How to read this page/); assert.match(s, /Going well/); assert.match(s, /not a school assessment/);
+  assert.match(s, /Grown-ups area/); assert.match(s, /Needs support/); assert.match(s, /Going well/); assert.match(s, /not a school assessment/);
   await page.locator('[data-psubj="science"]').click();
   assert.match(await page.textContent('#aboutBody'), /What is this based on\?.*Needs support/s);
   await page.reload(); await page.waitForSelector('#aboutBtn');

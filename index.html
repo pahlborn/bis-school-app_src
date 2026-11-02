@@ -156,7 +156,8 @@ button{font:inherit;color:inherit}
 .pcard h2{font-size:1.1rem;margin-bottom:6px}
 .ph{font-weight:800;margin:10px 0 2px}
 .pdisc{font-size:.8rem;color:var(--muted);border-top:1px solid var(--line);margin-top:10px;padding-top:6px}
-.pleg{margin:4px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pleg{margin:4px 0;display:inline-flex;gap:6px;align-items:center}
+.pleg-line{display:flex;flex-wrap:wrap;gap:4px 14px;margin:0;font-size:.92rem}
 .psubjtitle{margin:10px 0 4px}
 .pquests{display:flex;flex-direction:column;gap:10px}
 .pquest{background:var(--surface);border:2px solid var(--line);border-radius:16px;padding:12px 14px}
@@ -620,7 +621,7 @@ const TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4
    bq2_<id>__<key>; passwords under bq2_pw_<id>. Before (and as a fallback if the move on this device
    failed): the FIRST student account used bq2_<key>, every other one bq2_<user>__<key>. Device-wide keys
    stay shared. */
-const GLOBAL_KEYS=/^(session|sessionPrev|adultSession|pw_.+|parentPin|muted|parentLang|migr|kidsHere|lastSeen)$/;
+const GLOBAL_KEYS=/^(session|sessionPrev|adultSession|pw_.+|parentPin|muted|parentLang|migr|kidsHere|lastSeen|conceptSeen)$/;
 let ID_STORAGE=false;
 /* account for a stored reference {id} or {user} (id first: login names may change, IDs never do) */
 function accByRef(r){
@@ -3555,11 +3556,13 @@ function parentHomeHTML(){
   const note=w?`<p class="phow psheet-note">📄 ${wait.length===1?(de?`${sheetName(w)} wartet aufs Eintragen.`:`${sheetName(w)} is waiting to be entered.`):(de?`${wait.length} Übungsblätter warten aufs Eintragen.`:`${wait.length} practice sheets are waiting to be entered.`)} <button type="button" class="btn small" data-opensheet="${w.id}">${de?'Jetzt eintragen':'Enter now'}</button></p>`:'';
   const noKid=accountsOn() && !viewedKid() ? myKidsNote() : '';
   if(noKid) return noKid;   // nothing to show: without a logged-in child the data on this device are not the child's
-  return `${migrNote()}${note}${backupLine()}<p class="phow">${T.howHome}</p><div class="playout"><div class="psubjects">${tiles}</div><aside class="pside"><div class="pcard" id="pSummary">${summaryHTML(all)}</div><div class="pcard">${legendHTML()}</div></aside></div>`;
+  // concept 5.3 (B4): notes only when something is to do - data move, backup, waiting sheet, "new here?"
+  return `${migrLine()}${backupLine()}${note}${newHereLine()}<div class="playout"><div class="psubjects">${tiles}</div><aside class="pside"><div class="pcard" id="pSummary">${summaryHTML(all)}</div><div class="pcard">${legendHTML()}</div></aside></div>`;
 }
 function legendHTML(){
-  const T=PT[PL()], de=PL()==='de';
-  return `<h2>${de?'Was bedeuten die Farben?':'What do the colors mean?'}</h2>`+['m','e','c','rs','na'].map(l=>`<p class="pleg"><span class="pdots"><i class="${l}"></i></span> <b>${PSTAND[PL()][l]}</b>${SCHOOLTERM[l]?` <i>(${SCHOOLTERM[l]})</i>`:''}</p>`).join('')+`<p class="small">${de?'„Vorläufig“ heißt: genug für eine erste Einschätzung, noch nicht über längere Zeit bestätigt. „Bestätigt“: etwa 20 Aufgaben an 5 Tagen über zwei Wochen.':'“Provisional” means enough for a first judgment, not yet confirmed over a longer time. “Confirmed”: about 20 tasks on 5 days over two weeks.'}</p>`;
+  // one line, dot + word (concept 5.3, B4); "provisional / confirmed" is explained in the ⓘ of the summary
+  const de=PL()==='de';
+  return `<p class="pleg-line" role="list" aria-label="${de?'Farben':'Colors'}">`+['m','e','c','rs','na'].map(l=>`<span class="pleg" role="listitem"${SCHOOLTERM[l]?` title="${esc(SCHOOLTERM[l])}"`:''}><span class="pdots"><i class="${l}"></i></span> ${PSTAND[PL()][l]}</span>`).join('')+`</p>`;
 }
 function schoolLine(k){ const s=schoolStandFor(k); if(!s) return ''; return `<p class="pline"><b>${PL()==='de'?'🏫 Schule':'🏫 School'}:</b> ${pChip(SL[s.st]||'rs')} <span class="small">${fmtDay(s.day)}</span></p>`; }
 function parentSubjectHTML(key){
@@ -3612,6 +3615,14 @@ function migrNote(){
     ? (de?'Die Umstellung der Daten auf die neue Kennung hat auf diesem Gerät nicht geklappt. Die App arbeitet unverändert mit dem bisherigen Stand weiter.':'Moving the data to the new ID did not work on this device. The app keeps working with the existing data as before.')
     : (de?'Die Aufnahmen konnten nicht übernommen werden. Sie bleiben 30 Tage im bisherigen Speicher.':'The recordings could not be moved. They stay in the old storage for 30 days.');
   return `<p class="phow pmigr-note">⚠️ ${text} <button type="button" class="btn small" data-migrretry>${de?'Erneut versuchen':'Try again'}</button></p>`;
+}
+/* Concept 5.3 (B4): on the overview only a warning line that leads to ⚙ → backup & data, where the note and
+   "try again" are. Grown-ups without backup rights (no ⚙ section) keep the full note on the overview. */
+function migrLine(){
+  const full=migrNote(); if(!full) return '';
+  if(!canBackup()) return full;
+  const de=PL()==='de';
+  return `<p class="phow pmigr-line">⚠️ ${de?'Datenumzug nicht abgeschlossen':'Data move not finished'} <button type="button" class="btn small" data-pgoto="sicherung">${de?'Ansehen':'View'}</button></p>`;
 }
 /* ---------- grants (S11 Stufe 1, P4, 02.11.) ----------
    Teachers and the admin see a child only with a GRANT from one of the child's parents: chosen scope
@@ -3731,14 +3742,33 @@ const countsText = c => PL()==='de'
   ? `${c.answers} Antworten · ${c.stars} Sterne · ${c.badges} Abzeichen · ${c.sheets} Übungsblätter · ${c.recordings} Aufnahmen`
   : `${c.answers} answers · ${c.stars} stars · ${c.badges} badges · ${c.sheets} practice sheets · ${c.recordings} recordings`;
 let backupNote='', restoreCandidate=null;
+/* the last day with practice in the app or an entered practice sheet */
+function lastPracticeDay(){
+  let d='';
+  for(const a of store.get('attempts',[])) if(a && a.day>d) d=a.day;
+  for(const sh of store.get('sheets',[])) if(sh && sh.day>d && (sh.items||[]).some(i=>i.res)) d=sh.day;
+  return d||null;
+}
+/* Concept 5.3 (B4, R10): a note only when there is new practice since the last backup and the last backup is
+   missing or older than 30 days - without new practice there is nothing to back up. */
 function backupLine(){
   if(!canBackup()) return '';
-  const de=PL()==='de', last=store.get('lastBackup',null), old=!last || daysBetween(last,dayKey())>30;
-  return `<p class="phow pbackup-note">💾 ${de?'Letzte Sicherung':'Last backup'}: ${last?fmtDay(last):(de?'noch nie':'never')}${old?` <button type="button" class="btn small" data-backup>${de?'Jetzt sichern':'Back up now'}</button>`:''}</p>`;
+  const de=PL()==='de', last=store.get('lastBackup',null), p=lastPracticeDay();
+  if(!p || (last && (p<=last || daysBetween(last,dayKey())<=30))) return '';
+  return `<p class="phow pbackup-note">💾 ${last?(de?'Neue Übungen seit der letzten Sicherung':'New practice since the last backup'):(de?'Noch nie gesichert':'Not backed up yet')} <button type="button" class="btn small" data-backup>${de?'Jetzt sichern':'Back up now'}</button></p>`;
+}
+/* "New here?" (concept 5.3, B4): until the grown-up has opened "How Big Quest works" once on this device. */
+const conceptSeenId = () => accountsOn() && adultUser ? ((APP_ACCOUNTS.users.find(u=>u.user===adultUser.user)||{}).id || adultUser.user) : 'pin';
+const conceptSeen = () => !!(store.get('conceptSeen',{})||{})[conceptSeenId()];
+function markConceptSeen(){ const s=store.get('conceptSeen',{})||{}; if(s[conceptSeenId()]) return; s[conceptSeenId()]=dayKey(); store.set('conceptSeen',s); }
+function newHereLine(){
+  if(conceptSeen()) return '';
+  const de=PL()==='de';
+  return `<p class="phow pnew-note">👋 ${de?'Neu hier?':'New here?'} <button type="button" class="btn small" data-pconcept>${ABOUT_UI[PL()].title}</button></p>`;
 }
 function backupHTML(){
   const de=PL()==='de', last=store.get('lastBackup',null), undo=store.get('vorRueckspielen',null);
-  return `<h2>${de?'Sicherung':'Backup'}</h2>
+  return `${migrNote()}<h2>${de?'Sicherung':'Backup'}</h2>
     <p class="phow">${de?'Sichert den Lernstand dieses Kindes als Datei: Antworten, Sterne, Abzeichen, Übungsblätter, Einstellungen und Aufnahmen. Bewahren Sie sie z. B. in „Dateien“ auf oder schicken Sie sie sich selbst. Bitte dort sichern, wo Ihr Kind übt: auf seinem Gerät in der App vom Home-Bildschirm, nicht in Safari.':'Saves this child’s progress as a file: answers, stars, badges, practice sheets, settings and recordings. Keep it e.g. in “Files” or send it to yourself. Please back up where your child practices: on their device, in the app from the Home Screen, not in Safari.'}</p>
     <p><b>${de?'Letzte Sicherung':'Last backup'}:</b> ${last?fmtDay(last):(de?'noch nie':'never')}</p>
     <p class="row"><button type="button" class="btn small" data-backup>💾 ${de?'Jetzt sichern':'Back up now'}</button>
@@ -3891,17 +3921,19 @@ function renderSheets(){
     html+=state.psubj ? parentSubjectHTML(state.psubj) : parentHomeHTML();
     // the chapters only on the overview, not again inside a subject (Peter, 01.11.)
     const onOverview=!state.psubj || (accountsOn() && !viewedKid());
+    // Concept 5.3 (B4): How Big Quest works · Supporting your child · School ratings · Practice sheets.
+    // Settings, backup, grants, accounts and the version live in ⚙ (B1), the guide in ? (B2).
     const secs=[];
+    secs.push(['concept', ABOUT_UI[lang].title, `<div class="about-menu">${aboutSectionsHTML(lang,null,true)}</div>`]);
+    secs.push(['support', de?'🤝 Ihr Kind unterstützen':'🤝 Supporting your child', supportGuideHTML()]);
     if(accountsOn() && kidOk && !(viewerGrant() && !viewerGrant().scope.includes('school'))) secs.push(['school', de?'🏫 Einstufungen der Schule':'🏫 School ratings', schoolHTML()]);
     if(!teacher && kidOk) secs.push(['sheets', T.sheets, sheetsPageHTML()]);
-    // Peter, 01.11.: three kinds of reading matter, kept apart - practical support, the concept, using the app.
-    // Settings, backup, grants, accounts and the version live in ⚙ (concept "Elternbereich", B1), the guide in ? (B2).
-    secs.push(['support', de?'🤝 Ihr Kind unterstützen':'🤝 Supporting your child', supportGuideHTML()]);
-    secs.push(['concept', ABOUT_UI[lang].title, `<div class="about-menu">${aboutSectionsHTML(lang,null,true)}</div>`]);
     if(onOverview) html+=secHTML(secs);
   }
   body.innerHTML=html;
-  body.querySelectorAll('details.psec').forEach(d=>d.addEventListener('toggle',()=>{ const id=d.dataset.psec, i=open.indexOf(id); if(d.open && i<0) open.push(id); if(!d.open && i>=0) open.splice(i,1); }));
+  body.querySelectorAll('details.psec').forEach(d=>d.addEventListener('toggle',()=>{ const id=d.dataset.psec, i=open.indexOf(id); if(d.open && i<0) open.push(id); if(!d.open && i>=0) open.splice(i,1); if(d.open && id==='concept') markConceptSeen(); }));
+  const nh=body.querySelector('[data-pconcept]'); if(nh) nh.addEventListener('click',()=>{ if(!parentAccess) return; markConceptSeen(); if(!open.includes('concept')) open.push('concept'); renderSheets(); const d=$('#aboutBody details.psec[data-psec="concept"]'); if(d) d.scrollIntoView({block:'start'}); });
+  body.querySelectorAll('[data-pgoto]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess) return; pviewPushed=true; location.hash=VIEW_HASH.settings+'/'+b.dataset.pgoto; }));
   body.querySelectorAll('[data-plang]').forEach(b=>b.addEventListener('click',()=>setLang(b.dataset.plang)));
   [['#pSettings','settings'],['#pHelp','help']].forEach(([sel,view])=>{ const b=$(sel); if(b) b.addEventListener('click',()=>{ if(!parentAccess) return; if(state.pview===view) closeParentView(); else openParentView(view); }); });
   ['#pSetBack','#pHelpBack'].forEach(sel=>{ const b=$(sel); if(b) b.addEventListener('click',closeParentView); });
