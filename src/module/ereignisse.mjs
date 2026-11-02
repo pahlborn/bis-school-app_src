@@ -35,15 +35,15 @@ const evField = {
    answer follows what the app stores today for an attempt (index.html, "attempts"); the others are derived from
    the storage places in werkzeug/speicherstellen.json (concept 7.2) and kept short. */
 const EV_SPEC = {
-  answer: ['day:day skill:str level:lvl attempt:pos ok:bool qid:str', 'family:nstr response:any help:bool example:bool hintShown:bool exampleShown:bool solutionShown:bool beforeTry:bool sheet:str'],
+  answer: ['day:day skill:str level:lvl attempt:int ok:bool qid:str', 'family:nstr response:any help:bool example:bool hintShown:bool exampleShown:bool solutionShown:bool beforeTry:bool sheet:str'],
   round_done: ['day:day skill:str stars:int count:pos', ''],
-  badge: ['day:day badge:str', ''],
+  badge: ['day:day badge:str', 'skill:str'],
   review: ['day:day qid:str box:int', 'dueAt:day question:obj'],
   practice_day: ['day:day', ''],
   profile_set: ['field:enum(name|birthday|emoji|kidLang) value:any', ''],
   rank_seen: ['rank:str', ''],
   sheet_created: ['sheet:str day:day no:pos writing:enum(de|en) items:arr', ''],
-  sheet_result: ['sheet:str index:int res:enum(ok|no|help)', ''],
+  sheet_result: ['sheet:str index:int res:enum(ok|no|help) day:day qid:str', ''],
   sheet_discarded: ['sheet:str', ''],
   setting_set: ['setting:enum(focusMode|focusManual|unlocked|storyCap) value:any', ''],
   checklist_set: ['studio:str index:int value:bool', ''],

@@ -28,13 +28,13 @@ const KONZEPT_TYPEN = ['answer', 'round_done', 'badge', 'review', 'practice_day'
 const SAMPLE = {
   answer: { day: DAY, skill: 'round', family: null, level: 2, attempt: 1, ok: true, response: '3', qid: 'q|v|o|a', help: false, example: false },
   round_done: { day: DAY, skill: 'round', stars: 7, count: 8 },
-  badge: { day: DAY, badge: 'inquirer' },
+  badge: { day: DAY, badge: 'inquirer', skill: 'round' },
   review: { day: DAY, qid: 'q1', box: 1, dueAt: '2026-11-05', question: { prompt: 'x' } },
   practice_day: { day: DAY },
   profile_set: { field: 'name', value: 'Kathie' },
   rank_seen: { rank: 'Investigator' },
   sheet_created: { sheet: DAY + '-abc', day: DAY, no: 3, writing: 'en', items: [{ q: { prompt: 'x' }, res: null }] },
-  sheet_result: { sheet: DAY + '-abc', index: 0, res: 'ok' },
+  sheet_result: { sheet: DAY + '-abc', index: 0, res: 'ok', day: DAY, qid: 'q|v|o|a' },
   sheet_discarded: { sheet: DAY + '-abc' },
   setting_set: { setting: 'focusMode', value: 'manual' },
   checklist_set: { studio: 'grow', index: 2, value: true },
@@ -99,7 +99,7 @@ test('US7.1: kaputte Faelle werden mit Grund abgelehnt', () => {
     ['unbekanntes Feld in der Nutzlast', ev('answer', { ...SAMPLE.answer, name: 'Kathie' }), /^payload\.name: unknown field/],
     ['Feld wie ein Objekt-Eigenschaftsname', ev('answer', { ...SAMPLE.answer, constructor: 1 }), /^payload\.constructor: unknown field/],
     ['Stufe 4', ev('answer', { ...SAMPLE.answer, level: 4 }), /^payload\.level: invalid/], ['Stufe 0', ev('answer', { ...SAMPLE.answer, level: 0 }), /^payload\.level: invalid/],
-    ['Versuch 0', ev('answer', { ...SAMPLE.answer, attempt: 0 }), /^payload\.attempt: invalid/], ['ok als Text', ev('answer', { ...SAMPLE.answer, ok: 'yes' }), /^payload\.ok: invalid/],
+    ['Versuch -1', ev('answer', { ...SAMPLE.answer, attempt: -1 }), /^payload\.attempt: invalid/], ['Versuch 1.5', ev('answer', { ...SAMPLE.answer, attempt: 1.5 }), /^payload\.attempt: invalid/], ['ok als Text', ev('answer', { ...SAMPLE.answer, ok: 'yes' }), /^payload\.ok: invalid/],
     ['Tag falsch geschrieben', ev('answer', { ...SAMPLE.answer, day: '02.11.2026' }), /^payload\.day: invalid/], ['Tag gibt es nicht', ev('answer', { ...SAMPLE.answer, day: '2026-02-30' }), /^payload\.day: invalid/],
     ['qid leer', ev('answer', { ...SAMPLE.answer, qid: '' }), /^payload\.qid: invalid/],
     ['Profilfeld unbekannt', ev('profile_set', { field: 'color', value: 'red' }), /^payload\.field: invalid/],
@@ -124,13 +124,14 @@ test('US7.1: gueltig sind auch Zeit mit Millisekunden, Antwort mit allen Zusatzf
     { day: DAY, skill: 'round', family: null, level: 2, attempt: 1, ok: true, response: 'b', qid: 'q1', help: false, example: false },
     { day: DAY, skill: 'round', family: 'rounding', level: 1, attempt: 2, ok: false, response: 12, qid: 'q2', help: true, example: true },
     { day: DAY, skill: 'units', level: 2, attempt: 1, ok: false, help: true, exampleShown: true, qid: 'q3' },
-    { day: DAY, skill: 'units', level: 2, attempt: 1, ok: false, help: true, hintShown: true, qid: 'q4' },
-    { day: DAY, skill: 'units', level: 3, attempt: 2, ok: false, help: true, solutionShown: true, beforeTry: true, qid: 'q5' },
+    { day: DAY, skill: 'units', level: 2, attempt: 0, ok: false, help: true, hintShown: true, qid: 'q4' },          // before the first try: attempt 0
+    { day: DAY, skill: 'units', level: 2, attempt: 0, ok: false, help: true, exampleShown: true, qid: 'q4' },
+    { day: DAY, skill: 'units', level: 3, attempt: 0, ok: false, help: true, solutionShown: true, beforeTry: true, qid: 'q5' },
     { day: DAY, skill: 'graphs', level: 2, attempt: 1, ok: true, help: false, sheet: DAY + '-x1', qid: 'q6' },
   ];
   for (const p of heute) assert.deepEqual(checkEvent(ev('answer', p)), [], JSON.stringify(p));
   // finding: the entry the app writes today when a grown-up enters a sheet result (index.html, "sheet:key") has no qid.
-  // It is therefore no "answer"; task 3 maps it as "sheet_result" (sheet, index, res).
+  // It is therefore no "answer"; it is the event "sheet_result" (sheet, index, res, day, qid).
   mitGrund(ev('answer', { day: DAY, skill: 'graphs', level: 2, attempt: 1, ok: true, help: false, sheet: DAY + '-x1' }), /^payload\.qid: missing$/, 'sheet entry without qid');
   assert.deepEqual(checkEvent(ev('profile_set', { field: 'birthday', value: null })), [], 'a profile field can be cleared');
 });

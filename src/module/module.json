@@ -5,6 +5,7 @@
     { "name": "passwort", "bau": "live", "browserTests": ["stufe1-p3", "anmeldung", "hilfe-rollen"] },
     { "name": "krypto", "bau": "test", "browserTests": ["testbau"] },
     { "name": "ereignisse", "bau": "test", "browserTests": ["testbau"] },
+    { "name": "ableitung", "bau": "test", "browserTests": ["ableitung-vergleich"] },
     { "name": "annahme", "bau": "test", "browserTests": ["testbau"] }
   ]
 }
