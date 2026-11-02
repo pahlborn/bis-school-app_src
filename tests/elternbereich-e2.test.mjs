@@ -1,6 +1,7 @@
 // Pakete E2a–e (Konzept Elternbereich 5.11, 7.0): „So helfen Sie“ je Fach umsortiert und gekürzt (freigegeben von Peter).
 //  E2a Mathe: Ziel ein kurzer Satz, Stolperstein 1–2 Stichpunkte + „Besser nicht“, höchstens 2 Ideen; Word Problems ohne die
 //  doppelte Idee (Peter 02.11.: „2“); die alten langen Sätze fehlen; DE und EN.
+//  E2b English: dieselben Regeln; Opinion Writing ohne die Idee, die „Fragen statt erklären“ wiederholt.
 //   node --test tests/elternbereich-e2.test.mjs
 
 import { test, before, after } from 'node:test';
@@ -53,6 +54,26 @@ test('E2a maths: shortened "How to help" in the parts of 5.11, German and Englis
   const en = await teile(page, 'maths');
   for (const q of en) regeln(q, 'Better not:');
   assert.equal(en.find((q) => q.k === 'wordprob').ideen.length, 1);
+  assert.ok(!en.some((q) => /[äöüß]|„/.test(q.alles)), 'English only');
+  assert.ok(!en.some((q) => /practis(ed|ing)|colour/.test(q.alles)), 'American English');
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
+
+test('E2b English: shortened "How to help" in the parts of 5.11, German and English', async () => {
+  const { ctx, page, fehler } = await appOeffnen(browser, server.url);
+  await elternOeffnen(page);
+  const de = await teile(page, 'english');
+  assert.deepEqual(de.map((q) => q.k).sort(), ['examples', 'opinion', 'sentences', 'words']);
+  for (const q of de) regeln(q, 'Besser nicht:');
+  const O = de.find((q) => q.k === 'opinion');
+  assert.equal(O.ideen.length, 1, 'opinion writing: the idea repeating "ask instead of explaining" is gone');
+  assert.ok(!O.ideen.join(' ').includes('Hast du ein Beispiel'));
+  for (const s of ['in logischer Reihenfolge', 'Eigennamen klein', 'Vorsilbe benannt, aber nicht gesagt, was sie bewirkt']) assert.ok(!de.some((q) => q.alles.includes(s)), 'old text gone: ' + s);
+  await page.locator('.phdr [data-plang="en"]').click();
+  const en = await teile(page, 'english');
+  for (const q of en) regeln(q, 'Better not:');
+  assert.equal(en.find((q) => q.k === 'opinion').ideen.length, 1);
   assert.ok(!en.some((q) => /[äöüß]|„/.test(q.alles)), 'English only');
   assert.ok(!en.some((q) => /practis(ed|ing)|colour/.test(q.alles)), 'American English');
   assert.deepEqual(fehler, []);
