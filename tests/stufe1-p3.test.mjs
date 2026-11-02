@@ -13,52 +13,15 @@ const C = { mia: 'MIAA-2345', lia: 'LIAA-2345', papa: 'PAPA-2345' };
 const KONTEN = { users: [await konto('mia', 'student', C.mia), await konto('lia', 'student', C.lia), await konto('papa', 'parent', C.papa, { kinder: ['mia', 'lia'] })] };
 const STARK = { mia: 'Tiger-Lamp-River-4271', lia: 'Owl-Cake-Moon-1357' };
 
-let browser, server, hook;
+let browser, server;
 before(async () => {
   browser = await browserStarten();
   server = await kontenServer(KONTEN);
-  hook = await kontenServer(KONTEN, { anpassen: (h) => h.replace(/\}\)\(\);\s*<\/script>/, 'window.__bqi={pwWeak,pwSuggest,PW_WORDS};})();</script>') });
 });
-after(async () => { await browser?.close(); server?.close(); hook?.close(); });
+after(async () => { await browser?.close(); server?.close(); });
 
-// typical weak passwords of 12+ characters (common words with digits, sequences, keyboard rows, repeats, the name)
-const SCHWACH = [
-  ...['password', 'passwort', 'qwerty', 'qwertz', 'iloveyou', 'letmein', 'welcome', 'monkey', 'dragon', 'football', 'fussball', 'baseball', 'superman', 'starwars', 'princess', 'sunshine', 'admin', 'hallo', 'geheim', 'schatz', 'master', 'shadow', 'freedom', 'pokemon', 'minecraft']
-    .flatMap((b) => [b + '1234567890'.slice(0, Math.max(2, 12 - b.length)), b[0].toUpperCase() + b.slice(1) + '!2026'.padEnd(Math.max(5, 12 - b.length), '9')]),
-  '123456789012', '098765432109', 'abcdefghijkl', 'qwertyuiopas', 'asdfghjklzxc', '1qaz2wsx3edc', 'aaaaaaaaaaaa', '121212121212', 'abcabcabcabc', '111122223333',
-  'mia123456789', 'Mia-2026-2026!', 'passwordpassword', 'zyxwvutsrqpo', 'qwertzuiopas', '999999999999', 'xyzxyzxyzxyz', 'hallohallo12', 'abc123abc123', 'ababababababab',
-  'kurz', 'Mond', 'sonne123', 'Tiger-12', 'elf-zeichen', 'kathie2018!', 'Kathie123456', 'Kathie-123456', 'mia', '', 'a1b2c3d4e5f6',
-];
-
-test('Passwortregeln: auch Vorschlaege aus den kuerzesten Woertern gelten als stark (Fund 02.11.: Jam-Ox-Cup-3571)', async () => {
-  const { ctx, page } = await oeffnen(browser, hook);
-  const r = await page.evaluate(() => {
-    const B = window.__bqi, cap = (x) => x[0].toUpperCase() + x.slice(1);
-    const kurz = [...new Set(B.PW_WORDS)].sort((a, b) => a.length - b.length).slice(0, 14), schlecht = [];
-    for (const a of kurz) for (const b of kurz) for (const c of kurz) for (const z of ['0000', '3571', '9999']) { const p = `${cap(a)}-${cap(b)}-${cap(c)}-${z}`; if (B.pwWeak(p, 'mia')) schlecht.push(p); }
-    return { schlecht: schlecht.slice(0, 5), anzahl: schlecht.length, fund: B.pwWeak('Jam-Ox-Cup-3571', 'mia') };
-  });
-  assert.equal(r.fund, false);
-  assert.deepEqual(r.schlecht, [], 'weak by mistake: ' + r.anzahl);
-  await ctx.close();
-});
-
-test('Passwortregeln: typische schwache Passwoerter abgelehnt; 1000 Merkpasswoerter angenommen, verschieden, mind. 40 Bit (K7)', async () => {
-  const { ctx, page } = await oeffnen(browser, hook);
-  const r = await page.evaluate((schwach) => {
-    const B = window.__bqi, s = new Set(), sugg = Array.from({ length: 1000 }, () => B.pwSuggest());
-    return { durch: schwach.filter((p) => !B.pwWeak(p, 'mia')), schlecht: sugg.filter((p) => B.pwWeak(p, 'mia')), einzig: new Set(sugg).size, woerter: new Set(B.PW_WORDS).size, form: sugg.every((p) => /^[A-Z][a-z]+-[A-Z][a-z]+-[A-Z][a-z]+-\d{4}$/.test(p)), gut: ['Elefant-Rakete-Wolke-77', 'Mein Hund heißt Bello!', 'Kathie liebt Pferde 3x'].filter((p) => B.pwWeak(p, 'mia')) };
-  }, SCHWACH);
-  assert.ok(SCHWACH.length >= 100 - 30 && SCHWACH.length >= 70, 'enough samples: ' + SCHWACH.length);
-  assert.deepEqual(r.durch, [], 'weak passwords that got through');
-  assert.deepEqual(r.schlecht, []);
-  assert.ok(r.einzig >= 999, 'suggestions differ');
-  assert.ok(r.form);
-  assert.ok(r.woerter >= 600);
-  assert.ok(3 * Math.log2(r.woerter) + Math.log2(10000) >= 40, 'at least 40 bits');
-  assert.deepEqual(r.gut, [], 'good long passphrases are accepted');
-  await ctx.close();
-});
+// The password rules themselves (weak list, suggestions, 40 bits) are tested without a browser:
+// tests/module/passwort.test.mjs. Here: how the app uses them.
 
 test('erstes Passwort: Vorschlag uebernehmen, Felder fuer den Passwortspeicher gekennzeichnet, zu kurz abgelehnt', async () => {
   const { ctx, page, fehler } = await oeffnen(browser, server);

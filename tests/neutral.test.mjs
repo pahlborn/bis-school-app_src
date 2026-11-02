@@ -2,6 +2,7 @@
 //   node --test tests/neutral.test.mjs
 
 import { test, before, after } from 'node:test';
+import { appLesen } from '../werkzeug/module.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import http from 'node:http';
@@ -12,7 +13,7 @@ import { browserStarten, appOeffnen, elternOeffnen, elternSeite, zustand } from 
 // The app runs in a closed function. For these tests only, the served copy exposes a few
 // internals at the very end of that function; the app file itself is not changed.
 async function appServer() {
-  const html = (await fs.readFile(path.join(WURZEL, QUELLEN.app), 'utf8'))
+  const html = (await appLesen('utf8'))
     .replace(/\}\)\(\);\s*<\/script>/, 'window.__bqi={WORLDS,isPrivate,neutralQ,dueToday};})();</script>');
   if (!html.includes('window.__bqi=')) throw new Error('test hook not inserted');
   const server = http.createServer((req, res) => {
@@ -29,7 +30,7 @@ const MUSTER = [/\b3B\b/, /Grade 3B/i, /Bavaria/i, /\bBIS\b/, /International Sch
   /Haimhausen/i, /Munich/i, /Toddle/i, /Legoland/i, /bis-school\.com/i, /our school is in/i, /we live in/i];
 const treffer = (text) => MUSTER.filter((m) => m.test(text)).map(String);
 
-const quelltext = await fs.readFile(path.join(WURZEL, QUELLEN.app), 'utf8');
+const quelltext = await appLesen('utf8');
 
 let browser, server;
 before(async () => { server = await appServer(); browser = await browserStarten(); });

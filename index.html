@@ -596,21 +596,12 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 <script>
 (function(){
 'use strict';
+/* Modules from src/module/ (logic without screen, tested in Node) - inserted here by the build: */
+/*BQ_MODULE*/
 /* Set by the build (werkzeug/version.mjs) inside the encrypted vault; null when opened unbuilt. */
 const APP_VERSION=/*BQ_VERSION*/null;
 /* Set by the build from werkzeug/konten.json (S3 login); null = no accounts, app runs without login. */
-/* Accounts v2 (S11 Stufe 1, 02.11.): every person has a fixed random ID ("p_..."); parent-child is
-   linked by ID only (guardians). The rest of the app still works with login names and the older
-   fields role/kinder - derived here once. Admin accounts are not parents (finding B3). */
-function normAccounts(raw){
-  if(!raw || !raw.users || raw.version!==2) return raw;
-  const byId=new Map(raw.users.map(u=>[u.id,u])), name=id=>byId.get(id)&&byId.get(id).user;
-  const users=raw.users.map(u=>Object.assign({},u,{
-    role:u.kind==='child'?'student':(u.teacher?'teacher':'parent'), admin:!!u.admin,
-    kinder:(u.teacher?[]:(raw.guardians||[]).filter(g=>g.adult===u.id).map(g=>g.child)).map(name).filter(Boolean)
-  }));
-  return {version:2, users, guardians:raw.guardians||[]};
-}
+/* Accounts v2 (S11 Stufe 1): normAccounts and the rules who sees which child are in module src/module/rechte.mjs. */
 const APP_ACCOUNTS=normAccounts(/*BQ_KONTEN*/null);
 const $ = s => document.querySelector(s);
 const rnd = n => Math.floor(Math.random()*n);
@@ -3629,26 +3620,26 @@ function migrNote(){
 const kidKey = (acc,k) => ID_STORAGE && acc ? 'bq2_'+acc.id+'__'+k : null;
 function kidRead(acc,k,d){ const lk=kidKey(acc,k); if(!lk) return d; try{ const v=localStorage.getItem(lk); return v===null?d:JSON.parse(v); }catch(e){ return d; } }
 function kidWrite(acc,k,v){ const lk=kidKey(acc,k); if(lk) try{ localStorage.setItem(lk, JSON.stringify(v)); }catch(e){} }
-const grantActive = g => !g.revokedAt && dayKey()>=g.from && dayKey()<=g.until;
+const grantActive = g => isGrantActive(g, dayKey());
 function grantLog(acc, entry){ const log=kidRead(acc,'grantlog',[]); log.push(Object.assign({at:new Date().toISOString()}, entry)); kidWrite(acc,'grantlog',log.slice(-200)); }
 /* expired grants get their log entry once */
 function grantsExpire(acc){
-  const gs=kidRead(acc,'grants',[]); let ch=false;
-  for(const g of gs) if(!g.revokedAt && !g.expiredLogged && dayKey()>g.until){ g.expiredLogged=true; ch=true; grantLog(acc,{ev:'abgelaufen', grant:g.id, grantee:g.grantee, scope:g.scope}); }
-  if(ch) kidWrite(acc,'grants',gs);
+  const gs=kidRead(acc,'grants',[]), neu=expireGrants(gs, dayKey());
+  for(const g of neu) grantLog(acc,{ev:'abgelaufen', grant:g.id, grantee:g.grantee, scope:g.scope});
+  if(neu.length) kidWrite(acc,'grants',gs);
   return gs;
 }
 function myGrantFor(acc){
   if(!adultUser) return null;
   const me=APP_ACCOUNTS.users.find(u=>u.user===adultUser.user); if(!me) return null;
-  return grantsExpire(acc).find(g=>g.grantee===me.id && grantActive(g)) || null;
+  return activeGrantFor(grantsExpire(acc), me.id, dayKey());
 }
 /* the grant through which the current grown-up looks at the shown child (null for its parents) */
 function viewerGrant(){
   if(!accountsOn() || !adultUser) return null;
   const k=viewedKid(), acc=k && APP_ACCOUNTS.users.find(u=>u.user===k); if(!acc || acc.test) return null;
   const me=APP_ACCOUNTS.users.find(u=>u.user===adultUser.user)||{};
-  if(me.role==='parent' && (me.kinder||[]).includes(acc.user)) return null;
+  if(isParentOf(me, acc)) return null;
   return myGrantFor(acc);
 }
 const grantPeople = () => APP_ACCOUNTS.users.filter(u=>u.role!=='student' && (u.teacher || u.admin));
@@ -3882,7 +3873,7 @@ const flagsHTML = () => `<span class="flags" role="group" aria-label="Sprache / 
 const myKids = () => {
   if(!accountsOn() || !adultUser) return [];
   const me=APP_ACCOUNTS.users.find(u=>u.user===adultUser.user)||{};
-  return APP_ACCOUNTS.users.filter(u=>u.role==='student' && (u.test ? !!adultUser.admin : ((me.role==='parent' && (me.kinder||[]).includes(u.user)) || !!myGrantFor(u))));
+  return visibleKids(APP_ACCOUNTS.users, me, {admin:!!adultUser.admin, grantFor:myGrantFor});
 };
 function kidHasData(u){
   if(((studentSession()||{}).user)===u.user || store.get(pwKey(u),null)) return true;
@@ -3974,34 +3965,7 @@ async function pbkdf2Hex(text, salt){
   const bits=await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:new Uint8Array(salt),iterations:100000},m,256);
   return Array.from(new Uint8Array(bits)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
-/* ---------- password rules (S11 Stufe 1, P3, 02.11.; Peter: children learn to use a strong password) ----------
-   New passwords need 12 characters or more and must not be a common password or a simple pattern. The
-   app offers a "Merkpasswort": three random words from a list of ~800 child-friendly English words and a
-   four-digit number (about 42 bits), e.g. "Tiger-Lamp-River-4271". Fields are marked for the device's
-   password manager (Face ID / Touch ID fill them in). Existing weaker passwords are replaced once, at the
-   next login. */
-const PW_WORDS='ant bat bear bee bird bison bunny calf camel cat cheetah chick cobra colt cow crab crane crow cub deer dingo dog dolphin donkey dove duck eagle eel elk emu falcon fawn ferret finch fish flamingo fly fox frog gecko gerbil giraffe goat goose gorilla hare hawk hedgehog hen heron hippo horse hound ibis iguana jaguar kitten koala lamb lark lemur leopard lion lizard llama lobster lynx macaw mole moose moth mouse mule newt octopus orca ostrich otter owl ox panda parrot pelican penguin pig pigeon pony poodle puffin puma puppy quail rabbit raccoon ram raven robin salmon seal shark sheep shrimp sloth snail snake sparrow spider squid squirrel stork swan tapir tiger toad toucan trout tuna turkey turtle walrus whale wolf wombat yak zebra beaver badger bulldog canary chipmunk collie coyote cricket dragonfly gazelle hamster husky jellyfish kangaroo ladybug mantis meerkat narwhal oyster peacock pheasant platypus porcupine reindeer rhino seahorse starfish stingray swallow terrier unicorn vulture weasel woodpecker apple apricot bagel banana bean berry biscuit bread bun butter cake candy carrot cereal cheese cherry cocoa coconut cookie corn cracker cream cupcake date donut egg fig grape guava honey jam jelly juice kiwi lemon lime mango maple melon milk muffin nut oat olive onion orange pancake papaya pasta peach peanut pear pea pepper pickle pie pizza plum popcorn potato pretzel pudding pumpkin raisin rice salad soup spinach sugar sushi taco toast tomato waffle walnut yogurt almond avocado broccoli caramel celery cinnamon cucumber dumpling garlic ginger hazelnut lettuce noodle omelette parsley pecan radish sesame toffee turnip vanilla acorn beach bloom blossom branch breeze brook bush canyon cave cliff cloud clover coral creek daisy desert dew dune earth fern field flower forest garden glacier grass hill island jungle lake leaf lily lotus meadow moss mountain oak ocean orchid palm pebble petal pine pond poppy rain rainbow reef river rock rose sand sea seed shell shore sky snow soil spring star stone stream sun sunflower thunder tide tree tulip valley volcano water wave willow wind bamboo cactus cedar daffodil dandelion hazel heather ivy lagoon lavender marsh mushroom nectar pinecone prairie puddle ripple sprout thistle twig violet waterfall comet galaxy meteor moon orbit planet rocket saturn jupiter mars venus pluto nebula sunrise sunset frost hail mist fog lightning snowflake sunshine twilight anchor arrow backpack badge ball balloon basket bell bench bicycle blanket boat book boot bottle bowl box brick broom brush bucket button cabin camera candle canoe cap card carpet castle chair chalk clock coin compass crayon crown cup curtain desk dice door drum easel envelope fan feather flag flute fork frame gate glove glue guitar hammer harp hat helmet hook horn jacket jar kettle key kite ladder lamp lantern letter lock magnet map marble mask medal mirror mitten mug needle net notebook paddle paint paper pen pencil piano pillow pin plate pocket puzzle quilt radio ribbon ring robot rope ruler sail saucer scarf scooter shoe shovel sled sock sofa spoon stamp stool string sweater swing table teapot tent ticket torch towel toy train trumpet truck tunnel umbrella vase violin wagon wallet watch whistle window yoyo zipper apron atlas beacon binder bracelet cushion domino eraser globe goggles hammock hourglass igloo jigsaw kayak locket mailbox marker mitt napkin necklace origami paintbrush parachute pinwheel postcard pyramid rattle sandal satchel scissors seesaw slipper snorkel spinner sticker suitcase sundial tambourine teacup telescope thimble trophy tricycle tuba ukulele wand windmill bakery barn bridge cafe city farm harbor house library market museum palace park school shop stadium station street tower town village zoo arcade attic cottage garage hangar lighthouse orchard pier ranch temple theater workshop bold brave bright brisk busy calm cheerful clever cool cozy crisp curly daring eager early fancy fast fluffy friendly funny fuzzy gentle glad golden good grand great happy helpful honest humble jolly joyful kind lively lucky magic merry mighty neat nice noble polite proud quick quiet rapid ready royal shiny silly silver smart smooth snowy sparkly speedy spicy sporty steady sunny super sweet swift tidy tiny warm wise witty young zany zesty bouncy breezy bubbly chirpy cuddly dreamy fresh frosty glossy handy jumpy lofty mellow minty misty nimble peppy perky plucky rosy sandy silky snappy snug sleek spry starry sturdy toasty velvet wavy windy woolly amber azure beige blue bronze crimson cyan gold gray green indigo ivory jade lilac magenta maroon mint navy ochre pink purple red ruby scarlet teal white yellow archery ballet baseball bowling chess climbing cycling dance diving fencing football golf hiking hockey jogging judo karate marathon netball race relay rowing rugby running sailing skating skiing soccer surfing swimming tennis yoga banjo bass cello chord melody note opera piccolo rhythm song tempo adventure dragon fairy giant hero knight legend pirate princess prince quest riddle treasure wizard wonder explorer captain detective pilot sailor scout astronaut inventor artist baker builder farmer gardener painter poet ranger singer juggler magician acrobat'.split(' ');
-const PW_BASES=['password','passwort','passwd','qwerty','qwertz','asdfgh','yxcvbn','zxcvbn','iloveyou','letmein','welcome','willkommen','monkey','dragon','football','fussball','baseball','soccer','superman','batman','starwars','princess','prinzessin','sunshine','admin','administrator','hallo','hello','geheim','secret','schatz','master','shadow','freedom','whatever','trustno','changeme','abc','test','user','login','iloveu','pokemon','minecraft','fortnite','roblox','unicorn','bigquest','school','schule'];
-function pwSuggest(){
-  const r=new Uint32Array(4); crypto.getRandomValues(r);
-  const w=i=>{ const x=PW_WORDS[r[i]%PW_WORDS.length]; return x[0].toUpperCase()+x.slice(1); };
-  return `${w(0)}-${w(1)}-${w(2)}-${String(r[3]%10000).padStart(4,'0')}`;
-}
-function pwWeak(pw, user){
-  const p=String(pw||''), l=p.toLowerCase(), core=l.replace(/[^a-z0-9]/g,'');
-  if(p.length<12) return true;
-  if(/^(.{1,4})\1+$/.test(l) || /^(.{1,4})\1+$/.test(core)) return true;            // aaaa…, abcabc…, 1212…
-  const runs=['01234567890123456789','98765432109876543210','abcdefghijklmnopqrstuvwxyz','zyxwvutsrqponmlkjihgfedcba','qwertyuiopasdfghjklzxcvbnm','qwertzuiopasdfghjklyxcvbnm','1qaz2wsx3edc4rfv5tgb','zaq12wsxcde34rfvbgt5'];
-  if(core.length>=8 && runs.some(s=>s.includes(core))) return true;                     // 123456789012, qwertyuiopas
-  const letters=l.replace(/[^a-z]/g,'');
-  if(PW_BASES.some(b=>letters===b || letters===b+b || (letters.startsWith(b) && letters.length-b.length<=2))) return true;   // password1234, Passwort!2026
-  if(/^[0-9\W_]+$/.test(p) && new Set(core).size<=4) return true;                     // 111222333444, 1212…
-  const parts=(l.match(/[a-z]+/g)||[]).length;   // several short words (Jam-Ox-Cup-3571) are not "one word"
-  if((/^[a-z]{1,8}[0-9]+$/.test(core) || /^[0-9]+[a-z]{1,8}$/.test(core)) && (parts===1 || letters.length<6)) return true;     // one word (or name) plus digits: Kathie123456
-  const digits=l.replace(/[^0-9]/g,''); if(letters.length>=3 && digits.length>=3 && runs.some(x=>x.includes(letters)) && runs.some(x=>x.includes(digits))) return true;   // a1b2c3d4e5f6
-  const u=String(user||'').toLowerCase(); if(u.length>=3 && letters.replace(u,'').length<4) return true;   // the name plus digits
-  return false;
-}
+/* password rules: module src/module/passwort.mjs (PW_WORDS, PW_BASES, pwSuggest, pwWeak) */
 const pwStrongText = adult => adult ? (store.get('parentLang','de')!=='en' ? 'Bitte mindestens 12 Zeichen oder den Vorschlag nehmen.' : 'Please use at least 12 characters or take the suggestion.') : 'A strong password keeps your things safe. Try the suggestion or make it longer.';
 const LOGIN_TXT={
   who:'Who is logging in?', student:'🎒 Student', adult:'👪 Parent / Teacher',

@@ -3,13 +3,14 @@
 //   node --test tests/sohelfen.test.mjs
 
 import { test, before, after } from 'node:test';
+import { appLesen } from '../werkzeug/module.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { WURZEL, QUELLEN } from '../werkzeug/bauen.mjs';
 import { appServer, browserStarten, appOeffnen, elternOeffnen, questStarten, zustand, zurStart } from './app-hilfen.mjs';
 
-const quelltext = (await fs.readFile(path.join(WURZEL, QUELLEN.app), 'utf8')).replace(/\r\n/g, '\n');
+const quelltext = (await appLesen('utf8')).replace(/\r\n/g, '\n');
 let browser, server;
 before(async () => { server = await appServer(); browser = await browserStarten(); });
 after(async () => { await browser?.close(); server?.close(); });

@@ -1,10 +1,11 @@
 import {test,before,after} from 'node:test';
 import assert from 'node:assert/strict';
+import { appLesen } from '../werkzeug/module.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {WURZEL,QUELLEN} from '../werkzeug/bauen.mjs';
 import {appServer,browserStarten,appOeffnen,klick,elternOeffnen,elternSeite,zurStart,zustand} from './app-hilfen.mjs';
-const FOCUS=new Function('return '+(await fs.readFile(path.join(WURZEL,QUELLEN.app),'utf8')).match(/const FOCUS=(\[[^\]]*\]);/)[1])();
+const FOCUS=new Function('return '+(await appLesen('utf8')).match(/const FOCUS=(\[[^\]]*\]);/)[1])();
 let server,browser;
 before(async()=>{server=await appServer();browser=await browserStarten();});
 after(async()=>{await browser?.close();server?.close();});

@@ -22,6 +22,7 @@ import {
 import { versionErmitteln, versionEinsetzen, versionAuslesen, versionText } from './version.mjs';
 import { kontenLesen, kontenEinsetzen } from './konten.mjs';
 import { schuleLesen, schuleEinsetzen } from './schule.mjs';
+import { moduleEinsetzen } from './module.mjs';
 
 /** The app as it goes into the vault: version, accounts (S3/S11) and school data by ID (S11 P2). */
 export function appZusammensetzen(app, version, konten, schule) {
@@ -46,7 +47,7 @@ export async function quellenLesen(wurzel = WURZEL) {
   const salt = unb64(salz.salt || '');
   if (salt.length < 16) throw new Error(`${QUELLEN.salz}: Salt fehlt oder ist kuerzer als 16 Bytes.`);
   return {
-    app: await lies(QUELLEN.app),
+    app: moduleEinsetzen(await lies(QUELLEN.app), { ordner: path.join(wurzel, 'src', 'module') }),   // modules (src/module) into the one file
     vorlage: await lies(QUELLEN.vorlage, 'utf8'),
     manifest: await lies(QUELLEN.manifest, 'utf8'),
     salt,

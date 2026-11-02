@@ -3,6 +3,7 @@
 //   node --test tests/schule.test.mjs
 
 import { test, before, after } from 'node:test';
+import { appLesen } from '../werkzeug/module.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import http from 'node:http';
@@ -17,7 +18,7 @@ const konto = async (user, role, x = {}) => { const salt = Array.from({ length: 
 const KONTEN = { users: [await konto('kathie', 'student'), await konto('lia', 'student'), await konto('papa', 'parent', { kinder: ['kathie', 'lia'] })] };
 // school data come from werkzeug/schuldaten.json and are assigned by the ID of the account "kathie" (S11 P2)
 const K2 = ausV1(KONTEN);
-const app = schuleEinsetzen(kontenEinsetzen(await fs.readFile(path.join(WURZEL, QUELLEN.app)), K2), await schuleLesen(), K2);
+const app = schuleEinsetzen(kontenEinsetzen(await appLesen(), K2), await schuleLesen(), K2);
 let browser, server;
 before(async () => {
   browser = await browserStarten();

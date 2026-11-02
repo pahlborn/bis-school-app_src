@@ -4,6 +4,7 @@
 //   node --test tests/begruessung.test.mjs
 
 import { test, before, after } from 'node:test';
+import { appLesen } from '../werkzeug/module.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import http from 'node:http';
@@ -18,7 +19,7 @@ async function konto(user, role, kinder) {
   return { user, role, ...(kinder ? { kinder } : {}), start: { salt, hash: await pbkdf2Hex(normCode(CODES[user]), salt) } };
 }
 const KONTEN = { users: [await konto('mia', 'student'), await konto('papa', 'parent', ['mia'])] };
-const app = kontenEinsetzen(await fs.readFile(path.join(WURZEL, QUELLEN.app)), ausV1(KONTEN));
+const app = kontenEinsetzen(await appLesen(), ausV1(KONTEN));
 const TAG1 = new Date('2026-11-02T09:00:00'), TAG2 = new Date('2026-11-03T09:00:00');
 
 let browser, server;
