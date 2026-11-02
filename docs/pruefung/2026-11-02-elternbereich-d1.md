@@ -29,7 +29,7 @@ Peter (02.11.): Die Schule bewertet ein Thema einmal und geht weiter. Wer eine L
   - D1-Tests mit der App von `main` (2 von 2).
   - Ohne Schreibschutz für die Lehrkraft (1).
   - Schließen schon bei „vorläufig sicher“ (Test meldet „provisional "secure" is not enough“).
-- `npm test`: 330 bestanden.
+- `npm test`: 330 bestanden; nach dem Merge von `main` (#71) 331 bestanden.
 
 ## Prüfung mit den echten Schuldaten (Konzept 6.8, nur Zahlen)
 Lokal mit `werkzeug/schuldaten.json`, ohne Übung in der App:
