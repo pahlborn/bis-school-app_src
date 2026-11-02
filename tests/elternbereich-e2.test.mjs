@@ -79,3 +79,30 @@ test('E2b English: shortened "How to help" in the parts of 5.11, German and Engl
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
+
+/** E2c–e: one subject, same rules, plus quest-specific checks */
+async function fachPruefen(page, fach, quests, extra = () => {}) {
+  const de = await teile(page, fach);
+  assert.deepEqual(de.map((q) => q.k).sort(), quests.slice().sort());
+  for (const q of de) regeln(q, 'Besser nicht:');
+  extra(de);
+  await page.locator('.phdr [data-plang="en"]').click();
+  const en = await teile(page, fach);
+  for (const q of en) regeln(q, 'Better not:');
+  assert.ok(!en.some((q) => /[äöüß]|„/.test(q.alles.replace(/Als Erstes|Als Nächstes|Danach|Zum Schluss|Zuerst faltet man|Danach schneidet man|Dann schneidet man das Papier|aus\.“|“du”|“man”/g, ''))), 'English only');
+  assert.ok(!en.some((q) => /practis(ed|ing)|colour/.test(q.alles)), 'American English');
+  await page.locator('.phdr [data-plang="de"]').click();
+}
+
+test('E2c German: "Anleitung schreiben" shortened; the goal no longer repeats "how school shows it"', async () => {
+  const { ctx, page, fehler } = await appOeffnen(browser, server.url);
+  await elternOeffnen(page);
+  await fachPruefen(page, 'deutsch', ['anleitung'], (de) => {
+    const a = de[0];
+    assert.equal(a.ziel, 'Eine vollständige Anleitung in richtiger Reihenfolge schreiben und selbst prüfen.');
+    assert.ok(!/Man-Form|Vorsilbe|zusammengesetzte/.test(a.ziel), 'details only in "how school shows it"');
+    assert.match(a.schule, /Man-Form/);
+  });
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
