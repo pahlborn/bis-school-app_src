@@ -21,7 +21,7 @@ Spezifikation: Vault „S11 Stufe 1 – Eindeutige Personen und Zuordnung“, Ab
 
 **Werkzeug:**
 - Neue Befehle: `neu <name> kind|erwachsen [--lehrkraft] [--admin] [--test]`, `eltern`, `eltern-entfernen`, `startlink`, `migrieren`. `liste` zeigt Kennungen gekürzt.
-- `startlink` erzeugt einen neuen Startcode als Link (`…/#start=<name>.<code>`) und als QR-Code (HTML/SVG in `%LOCALAPPDATA%\bis-school-app\`). Die QR-Bibliothek steckt nur im Werkzeug (`werkzeug/package.json`, einmal `npm install` in `werkzeug`), nicht in der App.
+- `startlink` erzeugt einen neuen Startcode als Link (`…/#start=<name>.<code>`) und als QR-Code (HTML/SVG in `%LOCALAPPDATA%\bis-school-app\`). Die QR-Bibliothek steckt nur im Werkzeug (einmal `npm install --prefix werkzeug --no-save qrcode@1.5.4`), nicht in der App. Hinweis: Das Firmennetz lehnt den Push einer zusätzlichen `package.json` ab (HTTP 403); deshalb wird die Bibliothek ohne eingecheckte Paketdatei installiert.
 
 **App:**
 - Liest Konten v2 (`normAccounts`); die übrige Logik ist unverändert.

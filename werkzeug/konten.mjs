@@ -24,7 +24,9 @@
 //   node werkzeug/konten.mjs migrieren                          (v1 -> v2, once)
 //   add --still to never print a start code (e.g. when run by an assistant whose output is logged)
 //
-// Output in ASCII only (Windows console). The QR code needs "npm install" once in werkzeug/.
+// Output in ASCII only (Windows console). The QR code needs a small library, installed once outside the
+// repository's package files (the company network refuses pushes of extra package.json files):
+//   npm install --prefix werkzeug --no-save qrcode@1.5.4
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -161,7 +163,7 @@ async function mitNeuemCode(u) {
 async function qrSchreiben(name, link) {
   let QR;
   try { QR = (await import(pathToFileURL(path.join(WURZEL, 'werkzeug', 'node_modules', 'qrcode', 'lib', 'index.js')).href)).default; }
-  catch (e) { throw new Error('QR-Code: einmal "npm install" im Ordner werkzeug ausfuehren.'); }
+  catch (e) { throw new Error('QR-Code: einmal ausfuehren: npm install --prefix werkzeug --no-save qrcode@1.5.4'); }
   const svg = await QR.toString(link, { type: 'svg', errorCorrectionLevel: 'M', margin: 2, width: 320 });
   await fs.mkdir(ablageOrdner(), { recursive: true });
   const datei = path.join(ablageOrdner(), `startlink-${name}.svg`);
