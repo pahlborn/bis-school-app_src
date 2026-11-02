@@ -1,8 +1,10 @@
 {
+  "version": 2,
   "users": [
     {
+      "id": "p_71ANFJ3X5V35ZD7H22W1WB4107",
       "user": "kathie",
-      "role": "student",
+      "kind": "child",
       "start": {
         "salt": [
           87,
@@ -26,11 +28,9 @@
       }
     },
     {
+      "id": "p_2QEPBHQPMQZHYPNKH65D6Q09DM",
       "user": "anna",
-      "role": "parent",
-      "kinder": [
-        "kathie"
-      ],
+      "kind": "adult",
       "start": {
         "salt": [
           61,
@@ -54,11 +54,9 @@
       }
     },
     {
+      "id": "p_41M6NF3VG56TYNE44QDRXPXEFZ",
       "user": "peter",
-      "role": "parent",
-      "kinder": [
-        "kathie"
-      ],
+      "kind": "adult",
       "start": {
         "salt": [
           170,
@@ -82,12 +80,10 @@
       }
     },
     {
+      "id": "p_3A7E8TDSDZ2CHCH4V8JPEZK580",
       "user": "admin",
-      "role": "parent",
+      "kind": "adult",
       "admin": true,
-      "kinder": [
-        "kathie"
-      ],
       "start": {
         "salt": [
           206,
@@ -111,8 +107,9 @@
       }
     },
     {
+      "id": "p_61VMN3BW3DQH0BGRW9XNN2HRHX",
       "user": "test",
-      "role": "student",
+      "kind": "child",
       "test": true,
       "start": {
         "salt": [
@@ -137,8 +134,9 @@
       }
     },
     {
+      "id": "p_5GS8A93W7YPDJYS0F68PMAE595",
       "user": "test2",
-      "role": "student",
+      "kind": "child",
       "start": {
         "salt": [
           173,
@@ -160,6 +158,18 @@
         ],
         "hash": "0d75611a456b472400e24685d656f7cd820bb36751c8cae8337332ae50c84840"
       }
+    }
+  ],
+  "guardians": [
+    {
+      "adult": "p_2QEPBHQPMQZHYPNKH65D6Q09DM",
+      "child": "p_71ANFJ3X5V35ZD7H22W1WB4107",
+      "since": "2026-11-02"
+    },
+    {
+      "adult": "p_41M6NF3VG56TYNE44QDRXPXEFZ",
+      "child": "p_71ANFJ3X5V35ZD7H22W1WB4107",
+      "since": "2026-11-02"
     }
   ]
 }

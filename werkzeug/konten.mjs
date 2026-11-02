@@ -1,33 +1,46 @@
-// Accounts for the login (S3, Peter 30.10.): user + password, role "student" or "parent"/"teacher".
-// Phase 1: the admin creates accounts from here; each account gets a START CODE. On the first login
-// on a device the user enters name + start code and then chooses an own password (stored only on
-// that device). The start code keeps working as a fallback (e.g. on a new device); it can be renewed.
+// Accounts for the login. Account model v2 (S11 Stufe 1, 02.11.2026): every person has a fixed,
+// random ID ("p_" + 26 characters, 128 bits). Login name and ID are separate; everything that
+// belongs together (parent - child) is linked by ID only. Display names are NOT part of the
+// accounts (they live in the child's profile on the device).
 //
-// werkzeug/konten.json holds names, roles, assignments and only a salted PBKDF2 hash of each start
-// code - never the code itself. The build inserts the list into the ENCRYPTED app (marker below).
-// Start codes are shown once in the terminal and written to a file OUTSIDE the repo
-// (%LOCALAPPDATA%\bis-school-app\startcodes.txt), never into chat logs or the repository.
+//   { "version": 2,
+//     "users": [ { "id", "user", "kind": "child"|"adult", "teacher", "admin", "test", "teacherOf", "start": {salt, hash} } ],
+//     "guardians": [ { "adult": "p_...", "child": "p_...", "since": "YYYY-MM-DD" } ] }
 //
-//   node werkzeug/konten.mjs neu <name> <student|parent|teacher> [--kind <name>] [--admin] [--test]
-//     --test: test child account (own data, "+1 day" and "reset" on the start page)
-//   node werkzeug/konten.mjs code-neu <name>
+// "teacherOf" (IDs) is an interim field until local grants arrive (S11 P4) and then removed.
+//
+// werkzeug/konten.json holds only a salted PBKDF2 hash of each start code - never the code itself.
+// The build inserts the list into the ENCRYPTED app (marker below). Start codes and start links are
+// written to a folder OUTSIDE the repo (%LOCALAPPDATA%\bis-school-app\), never into the repository.
+//
+//   node werkzeug/konten.mjs neu <name> kind [--test]
+//   node werkzeug/konten.mjs neu <name> erwachsen [--lehrkraft] [--admin]
+//   node werkzeug/konten.mjs eltern <erwachsener> <kind>        (parent - child)
+//   node werkzeug/konten.mjs eltern-entfernen <erwachsener> <kind>
+//   node werkzeug/konten.mjs code-neu <name>                    (new start code)
+//   node werkzeug/konten.mjs startlink <name>                   (new start code as link + QR code)
 //   node werkzeug/konten.mjs entfernen <name>
 //   node werkzeug/konten.mjs liste
+//   node werkzeug/konten.mjs migrieren                          (v1 -> v2, once)
+//   add --still to never print a start code (e.g. when run by an assistant whose output is logged)
 //
-// Output in ASCII only (Windows console).
+// Output in ASCII only (Windows console). The QR code needs "npm install" once in werkzeug/.
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { webcrypto, randomBytes } from 'node:crypto';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { ablageOrdner } from './schluesselablage.mjs';
 
 export const MARKE = '/*BQ_KONTEN*/null';
-export const ROLLEN = ['student', 'parent', 'teacher'];
 export const ITER = 100000;
+export const APP_URL = 'https://pahlborn.github.io/bis-school-app/';
 const WURZEL = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const kontenDatei = (wurzel = WURZEL) => path.join(wurzel, 'werkzeug', 'konten.json');
 const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no 0/O, 1/I/L
+const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+export const ID_RE = /^p_[0-9A-HJKMNP-TV-Z]{26}$/;
+export const NAME_RE = /^[a-z0-9][a-z0-9.-]{2,19}$/;
 
 export const normName = (s) => String(s || '').trim().toLowerCase();
 export const normCode = (s) => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -36,6 +49,13 @@ export function codeErzeugen() {
   const b = randomBytes(8); let c = '';
   for (let i = 0; i < 8; i++) c += ALPHABET[b[i] % ALPHABET.length];
   return c.slice(0, 4) + '-' + c.slice(4);
+}
+
+/** Random person ID: "p_" + 26 Crockford base32 characters from 128 random bits. */
+export function kennungErzeugen() {
+  let n = 0n; for (const x of randomBytes(16)) n = (n << 8n) | BigInt(x);
+  let s = ''; for (let i = 0; i < 26; i++) { s = CROCKFORD[Number(n & 31n)] + s; n >>= 5n; }
+  return 'p_' + s;
 }
 
 export async function pbkdf2Hex(text, saltBytes, iter = ITER) {
@@ -48,35 +68,82 @@ export async function kontenLesen(wurzel = WURZEL) {
   try { return JSON.parse(await fs.readFile(kontenDatei(wurzel), 'utf8')); } catch (e) { if (e.code === 'ENOENT') return null; throw e; }
 }
 
-/** Checks the account list; throws on anything that would lock people out or leak codes. */
+const heute = () => new Date().toISOString().slice(0, 10);
+
+/**
+ * Account list v1 (name, role student|parent|teacher, kinder by name) -> v2. Keeps the order of the
+ * accounts and the start code hashes (nobody has to start over). Admin accounts do NOT become
+ * parents (finding B3: the admin sees a child only with a grant). Teacher assignments become the
+ * interim field teacherOf.
+ */
+export function ausV1(k1) {
+  if (k1 && k1.version === 2) return k1;
+  const users = k1.users.map((u) => ({
+    id: kennungErzeugen(), user: u.user, kind: u.role === 'student' ? 'child' : 'adult',
+    ...(u.role === 'teacher' ? { teacher: true } : {}), ...(u.admin ? { admin: true } : {}), ...(u.test ? { test: true } : {}),
+    start: u.start
+  }));
+  const id = (name) => (users.find((x) => x.user === name) || {}).id;
+  const guardians = [];
+  k1.users.forEach((u, i) => {
+    if (u.role === 'parent' && !u.admin) for (const kid of u.kinder || []) if (id(kid)) guardians.push({ adult: users[i].id, child: id(kid), since: heute() });
+    if (u.role === 'teacher' && (u.kinder || []).length) users[i].teacherOf = u.kinder.map(id).filter(Boolean);
+  });
+  return { version: 2, users, guardians };
+}
+
+/** Checks the account list v2; throws on anything that would mix people up, lock them out or leak codes. */
 export function kontenPruefen(k) {
-  if (!k || !Array.isArray(k.users) || !k.users.length) throw new Error('konten.json: keine Konten.');
-  const namen = new Set();
+  if (!k || k.version !== 2) throw new Error('konten.json: Version 2 noetig (node werkzeug/konten.mjs migrieren).');
+  if (!Array.isArray(k.users) || !k.users.length) throw new Error('konten.json: keine Konten.');
+  if (!Array.isArray(k.guardians)) throw new Error('konten.json: "guardians" fehlt.');
+  const ids = new Set(), namen = new Set(), byId = new Map();
   for (const u of k.users) {
-    if (!/^[a-z0-9._-]{2,24}$/.test(u.user)) throw new Error(`Konto "${u.user}": Name 2-24 Zeichen, nur a-z 0-9 . _ -`);
-    if (namen.has(u.user)) throw new Error(`Konto "${u.user}" doppelt.`);
-    namen.add(u.user);
-    if (!ROLLEN.includes(u.role)) throw new Error(`Konto "${u.user}": Rolle muss student, parent oder teacher sein.`);
-    if (!u.start || !/^[0-9a-f]{64}$/.test(u.start.hash) || !Array.isArray(u.start.salt) || u.start.salt.length < 16) throw new Error(`Konto "${u.user}": Startcode-Hash fehlt.`);
     if ('code' in u || 'startCode' in u) throw new Error(`Konto "${u.user}": Startcode darf nicht im Klartext gespeichert sein.`);
+    if (!ID_RE.test(u.id || '')) throw new Error(`Konto "${u.user}": Kennung fehlt oder ungueltig.`);
+    if (ids.has(u.id)) throw new Error(`Kennung ${u.id} doppelt.`);
+    if (!NAME_RE.test(u.user || '')) throw new Error(`Konto "${u.user}": Anmeldename 3-20 Zeichen, nur a-z 0-9 . -`);
+    if (namen.has(u.user)) throw new Error(`Anmeldename "${u.user}" doppelt.`);
+    if (!['child', 'adult'].includes(u.kind)) throw new Error(`Konto "${u.user}": Art muss child oder adult sein.`);
+    if (u.kind === 'child' && (u.teacher || u.admin)) throw new Error(`Konto "${u.user}": ein Kind kann nicht Lehrkraft oder Admin sein.`);
+    if (u.kind === 'adult' && u.test) throw new Error(`Konto "${u.user}": nur Kinder koennen Testkonten sein.`);
+    if (u.teacherOf && !u.teacher) throw new Error(`Konto "${u.user}": teacherOf nur fuer Lehrkraefte.`);
+    if (!u.start || !/^[0-9a-f]{64}$/.test(u.start.hash) || !Array.isArray(u.start.salt) || u.start.salt.length < 16) throw new Error(`Konto "${u.user}": Startcode-Hash fehlt.`);
+    ids.add(u.id); namen.add(u.user); byId.set(u.id, u);
   }
-  for (const u of k.users) for (const kid of u.kinder || []) {
-    const kind = k.users.find((x) => x.user === kid);
-    if (!kind || kind.role !== 'student') throw new Error(`Konto "${u.user}": zugeordnetes Kind "${kid}" fehlt.`);
+  const paare = new Set();
+  for (const g of k.guardians) {
+    const a = byId.get(g.adult), c = byId.get(g.child);
+    if (!a || !c) throw new Error(`Eltern-Kind-Beziehung mit unbekannter Kennung: ${g.adult} -> ${g.child}`);
+    if (a.kind !== 'adult' || c.kind !== 'child') throw new Error(`Beziehung ${a.user} -> ${c.user}: nur Erwachsener -> Kind.`);
+    if (a.teacher) throw new Error(`Beziehung ${a.user} -> ${c.user}: eine Lehrkraft ist nicht zugleich Elternteil.`);
+    const key = g.adult + g.child; if (paare.has(key)) throw new Error(`Beziehung ${a.user} -> ${c.user} doppelt.`); paare.add(key);
   }
-  if (!k.users.some((u) => u.role === 'student')) throw new Error('konten.json: mindestens ein Kinderkonto noetig.');
-  if (!k.users.some((u) => u.role === 'parent')) throw new Error('konten.json: mindestens ein Elternkonto noetig.');
+  for (const u of k.users) for (const c of u.teacherOf || []) {
+    if (!byId.has(c) || byId.get(c).kind !== 'child') throw new Error(`Konto "${u.user}": zugeordnetes Kind ${c} fehlt.`);
+  }
+  if (!k.users.some((u) => u.kind === 'child')) throw new Error('konten.json: mindestens ein Kinderkonto noetig.');
+  if (!k.users.some((u) => u.kind === 'adult')) throw new Error('konten.json: mindestens ein Erwachsenenkonto noetig.');
   return k;
 }
 
+/** Inserts the checked account list v2 into the app (only names, IDs, kinds, start code hashes). */
 export function kontenEinsetzen(app, konten) {
   const text = Buffer.isBuffer(app) ? app.toString('utf8') : String(app);
   const teile = text.split(MARKE);
   if (teile.length !== 2) throw new Error(`index.html muss die Kontenmarke ${MARKE} genau einmal enthalten.`);
   if (!konten) return Buffer.from(text, 'utf8');
-  const daten = { users: kontenPruefen(konten).users.map((u) => ({ user: u.user, role: u.role, admin: !!u.admin, ...(u.test ? { test: true } : {}), kinder: u.kinder || [], start: u.start })) };
+  const k = kontenPruefen(konten);
+  const daten = {
+    version: 2,
+    users: k.users.map((u) => ({ id: u.id, user: u.user, kind: u.kind, ...(u.teacher ? { teacher: true } : {}), ...(u.admin ? { admin: true } : {}), ...(u.test ? { test: true } : {}), ...(u.teacherOf ? { teacherOf: u.teacherOf } : {}), start: u.start })),
+    guardians: k.guardians.map((g) => ({ adult: g.adult, child: g.child }))
+  };
   return Buffer.from(teile[0] + JSON.stringify(daten) + teile[1], 'utf8');
 }
+
+/** Start link: the part after "#" never reaches the server; the app fills in name and code. */
+export const startlink = (name, code) => `${APP_URL}#start=${encodeURIComponent(name)}.${normCode(code)}`;
 
 async function codeMerken(name, code) {
   const datei = path.join(ablageOrdner(), 'startcodes.txt');
@@ -91,49 +158,93 @@ async function mitNeuemCode(u) {
   return code;
 }
 
+async function qrSchreiben(name, link) {
+  let QR;
+  try { QR = (await import(pathToFileURL(path.join(WURZEL, 'werkzeug', 'node_modules', 'qrcode', 'lib', 'index.js')).href)).default; }
+  catch (e) { throw new Error('QR-Code: einmal "npm install" im Ordner werkzeug ausfuehren.'); }
+  const svg = await QR.toString(link, { type: 'svg', errorCorrectionLevel: 'M', margin: 2, width: 320 });
+  await fs.mkdir(ablageOrdner(), { recursive: true });
+  const datei = path.join(ablageOrdner(), `startlink-${name}.svg`);
+  const html = path.join(ablageOrdner(), `startlink-${name}.html`);
+  await fs.writeFile(datei, svg, { mode: 0o600 });
+  await fs.writeFile(html, `<!doctype html><meta charset="utf-8"><title>Startlink ${name}</title><body style="font-family:sans-serif;text-align:center"><h1>Big Quest – Start für ${name}</h1><p>Mit der Kamera scannen oder den Link öffnen. Nur persönlich weitergeben.</p>${svg}<p><a href="${link}">${link}</a></p></body>`, { mode: 0o600 });
+  return html;
+}
+
 async function main() {
-  // --still: do not print start codes (e.g. when run by an assistant whose output is logged)
   const still = process.argv.includes('--still');
-  const [befehl, name, rolle, ...rest] = process.argv.slice(2).filter((a) => a !== '--still');
+  const args = process.argv.slice(2).filter((a) => a !== '--still');
+  const [befehl, name, zweites, ...rest] = args;
   const zeige = (text, code) => console.log(still ? text : `${text} Startcode: ${code}`);
   const datei = kontenDatei();
-  const k = (await kontenLesen()) || { users: [] };
-  const speichern = async () => { await fs.writeFile(datei, JSON.stringify(k, null, 2) + '\n', 'utf8'); };
+  const k = (await kontenLesen()) || { version: 2, users: [], guardians: [] };
+  if (befehl === 'migrieren') {
+    if (k.version === 2) { console.log('konten.json ist schon Version 2.'); return; }
+    await fs.mkdir(ablageOrdner(), { recursive: true });
+    const bak = path.join(ablageOrdner(), 'konten.v1.bak.json');
+    await fs.writeFile(bak, JSON.stringify(k, null, 2) + '\n', { mode: 0o600 });
+    const v2 = kontenPruefen(ausV1(k));
+    await fs.writeFile(datei, JSON.stringify(v2, null, 2) + '\n', 'utf8');
+    console.log(`konten.json auf Version 2 umgestellt (${v2.users.length} Konten, ${v2.guardians.length} Eltern-Kind-Beziehungen). Alte Fassung: ${bak}`);
+    return;
+  }
+  if (k.version !== 2) throw new Error('konten.json ist noch Version 1: zuerst "node werkzeug/konten.mjs migrieren".');
+  const speichern = async () => { kontenPruefen(k); await fs.writeFile(datei, JSON.stringify(k, null, 2) + '\n', 'utf8'); };
   const finde = (n) => k.users.find((u) => u.user === normName(n));
+  const muss = (n) => { const u = finde(n); if (!u) throw new Error(`Konto "${n}" fehlt.`); return u; };
   if (befehl === 'liste') {
-    for (const u of k.users) console.log(`${u.user.padEnd(16)} ${u.role.padEnd(8)}${u.admin ? ' admin' : ''}${u.kinder && u.kinder.length ? '  Kinder: ' + u.kinder.join(', ') : ''}`);
+    for (const u of k.users) {
+      const kinder = k.guardians.filter((g) => g.adult === u.id).map((g) => k.users.find((x) => x.id === g.child)?.user);
+      const merkmale = [u.kind === 'child' ? 'Kind' : 'Erwachsen', u.teacher && 'Lehrkraft', u.admin && 'Admin', u.test && 'Testkind'].filter(Boolean).join(', ');
+      console.log(`${u.user.padEnd(14)} ${merkmale.padEnd(24)} ${u.id.slice(0, 10)}...${kinder.length ? '  Kinder: ' + kinder.join(', ') : ''}`);
+    }
     return;
   }
   if (befehl === 'neu') {
     const n = normName(name);
     if (finde(n)) throw new Error(`Konto "${n}" gibt es schon.`);
-    if (!ROLLEN.includes(rolle)) throw new Error('Rolle: student, parent oder teacher');
-    const u = { user: n, role: rolle };
+    if (!['kind', 'erwachsen'].includes(zweites)) throw new Error('Art: kind oder erwachsen');
+    const u = { id: kennungErzeugen(), user: n, kind: zweites === 'kind' ? 'child' : 'adult' };
+    while (k.users.some((x) => x.id === u.id)) u.id = kennungErzeugen();
+    if (rest.includes('--lehrkraft')) u.teacher = true;
     if (rest.includes('--admin')) u.admin = true;
-    if (rest.includes('--test')) { if (rolle !== 'student') throw new Error('--test nur fuer Kinderkonten'); u.test = true; }
-    const i = rest.indexOf('--kind'); if (i >= 0) u.kinder = [normName(rest[i + 1])];
+    if (rest.includes('--test')) u.test = true;
     const code = await mitNeuemCode(u);
-    k.users.push(u);
-    if (k.users.some((x) => x.role === 'student') && k.users.some((x) => x.role === 'parent')) kontenPruefen(k);
-    await speichern();
-    zeige(`Konto angelegt: ${n} (${rolle}${u.admin ? ', admin' : ''}).`, code);
+    k.users.push(u); await speichern();
+    zeige(`Konto angelegt: ${n} (${zweites}${u.teacher ? ', Lehrkraft' : ''}${u.admin ? ', Admin' : ''}${u.test ? ', Testkind' : ''}).`, code);
     console.log(`Der Startcode steht auch in: ${await codeMerken(n, code)}`);
     return;
   }
-  if (befehl === 'code-neu') {
-    const u = finde(name); if (!u) throw new Error(`Konto "${name}" fehlt.`);
+  if (befehl === 'eltern' || befehl === 'eltern-entfernen') {
+    const a = muss(name), c = muss(zweites);
+    if (befehl === 'eltern') {
+      if (k.guardians.some((g) => g.adult === a.id && g.child === c.id)) { console.log('Beziehung besteht schon.'); return; }
+      k.guardians.push({ adult: a.id, child: c.id, since: heute() });
+    } else k.guardians = k.guardians.filter((g) => !(g.adult === a.id && g.child === c.id));
+    await speichern(); console.log(`${befehl === 'eltern' ? 'Beziehung angelegt' : 'Beziehung entfernt'}: ${a.user} -> ${c.user}`);
+    return;
+  }
+  if (befehl === 'code-neu' || befehl === 'startlink') {
+    const u = muss(name);
     const code = await mitNeuemCode(u); await speichern();
-    zeige(`Neuer Startcode fuer ${u.user} (der alte gilt nach dem naechsten Veroeffentlichen nicht mehr).`, code);
-    console.log(`Steht auch in: ${await codeMerken(u.user, code)}`);
+    await codeMerken(u.user, code);
+    if (befehl === 'code-neu') { zeige(`Neuer Startcode fuer ${u.user} (der alte gilt nach dem naechsten Veroeffentlichen nicht mehr).`, code); console.log(`Steht auch in: ${path.join(ablageOrdner(), 'startcodes.txt')}`); return; }
+    const link = startlink(u.user, code);
+    const html = await qrSchreiben(u.user, link);
+    console.log(`Neuer Startcode fuer ${u.user} als Link und QR-Code (der alte gilt nach dem naechsten Veroeffentlichen nicht mehr).`);
+    if (!still) console.log(`Startlink: ${link}`);
+    console.log(`QR-Code und Link zum Oeffnen/Zeigen: ${html}`);
     return;
   }
   if (befehl === 'entfernen') {
-    const u = finde(name); if (!u) throw new Error(`Konto "${name}" fehlt.`);
-    k.users = k.users.filter((x) => x !== u); k.users.forEach((x) => { if (x.kinder) x.kinder = x.kinder.filter((c) => c !== u.user); });
-    await speichern(); console.log(`Konto entfernt: ${u.user}`);
+    const u = muss(name);
+    k.users = k.users.filter((x) => x !== u);
+    k.guardians = k.guardians.filter((g) => g.adult !== u.id && g.child !== u.id);
+    k.users.forEach((x) => { if (x.teacherOf) { x.teacherOf = x.teacherOf.filter((c) => c !== u.id); if (!x.teacherOf.length) delete x.teacherOf; } });
+    await speichern(); console.log(`Konto entfernt: ${u.user} (Kennung wird nie wieder vergeben)`);
     return;
   }
-  console.log('Befehle: neu <name> <student|parent|teacher> [--kind <name>] [--admin] | code-neu <name> | entfernen <name> | liste');
+  console.log('Befehle: neu <name> kind [--test] | neu <name> erwachsen [--lehrkraft] [--admin] | eltern <erwachsener> <kind> | eltern-entfernen <erwachsener> <kind> | code-neu <name> | startlink <name> | entfernen <name> | liste | migrieren   (--still: Startcode nie anzeigen)');
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
