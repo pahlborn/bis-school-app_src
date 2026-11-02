@@ -17,4 +17,4 @@ Paket E2e aus `docs/konzept/elternbereich-auftraege.md`. Freigegeben mit E2c–E
 - `npm test`: 365 bestanden.
 
 ## Damit abgeschlossen
-Alle 18 Quests mit „So helfen Sie“ sind umsortiert und gekürzt (E2a–E2e).
+Alle 15 Quests mit „So helfen Sie“ sind umsortiert und gekürzt (E2a–E2e: 5 Mathe, 4 English, 1 Deutsch, 3 Science, Library & Research, Finish Every Task).
