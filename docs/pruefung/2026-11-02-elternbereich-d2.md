@@ -26,7 +26,7 @@ Die aktive Lücke soll in jeder Runde drankommen, ohne das aktuelle Thema der Kl
   - D2-Test mit der App von `main`.
   - Kontingent 4 statt 2.
   - Ohne die Suche nach einer Grundlage-Aufgabe.
-- `npm test`: 339 bestanden.
+- `npm test`: 339 bestanden; nach dem Merge von `main` (#75) 349 bestanden.
 - Hinweis: `tests/begruessung.test.mjs` ist in einem Volllauf einmal fehlgeschlagen und danach nicht mehr (3 Einzelläufe und ein Volllauf grün). Der Test berührt nichts aus D2; ohne Schuldaten schreibt die Lücken-Logik nichts. Die Fehlerausgabe des ersten Laufs ist nicht erhalten. Er prüft unter anderem, dass Wörter wie „okay“ oder „great“ nirgends im Speicher stehen. [Vermutung] Ein zufälliger Treffer in wechselnden Inhalten ist denkbar, belegt ist das nicht.
 
 ## Wirkung mit den echten Schuldaten
