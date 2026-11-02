@@ -8,13 +8,13 @@ import fs from 'node:fs/promises';
 import http from 'node:http';
 import path from 'node:path';
 import { WURZEL, QUELLEN } from '../werkzeug/bauen.mjs';
-import { kontenEinsetzen, pbkdf2Hex, normCode } from '../werkzeug/konten.mjs';
+import { kontenEinsetzen, pbkdf2Hex, normCode, ausV1 } from '../werkzeug/konten.mjs';
 import { browserStarten, zustand } from './app-hilfen.mjs';
 
 const CODES = { kathie: 'KATH-2345', lia: 'LIAA-2345', papa: 'PAPA-2345' };
 const konto = async (user, role, x = {}) => { const salt = Array.from({ length: 16 }, (_, i) => i + user.length); return { user, role, ...x, start: { salt, hash: await pbkdf2Hex(normCode(CODES[user]), salt) } }; };
 const KONTEN = { users: [await konto('kathie', 'student'), await konto('lia', 'student'), await konto('papa', 'parent', { kinder: ['kathie'] })] };
-const app = kontenEinsetzen(await fs.readFile(path.join(WURZEL, QUELLEN.app)), KONTEN);
+const app = kontenEinsetzen(await fs.readFile(path.join(WURZEL, QUELLEN.app)), ausV1(KONTEN));
 let browser, server;
 before(async () => {
   browser = await browserStarten();

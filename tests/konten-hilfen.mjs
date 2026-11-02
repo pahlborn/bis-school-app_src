@@ -5,7 +5,7 @@ import fs from 'node:fs/promises';
 import http from 'node:http';
 import path from 'node:path';
 import { WURZEL, QUELLEN } from '../werkzeug/bauen.mjs';
-import { kontenEinsetzen, pbkdf2Hex, normCode } from '../werkzeug/konten.mjs';
+import { kontenEinsetzen, pbkdf2Hex, normCode, ausV1 } from '../werkzeug/konten.mjs';
 
 /** Konto im alten Format (Name, Rolle, Kinder) mit Startcode-Hash. */
 export async function konto(user, role, code, extra = {}) {
@@ -13,9 +13,9 @@ export async function konto(user, role, code, extra = {}) {
   return { user, role, ...extra, start: { salt, hash: await pbkdf2Hex(normCode(code), salt) } };
 }
 
-/** Testserver mit eingesetzten Konten. */
+/** Testserver mit eingesetzten Konten (altes Format wird mit ausV1 ins Kontenmodell v2 umgestellt). */
 export async function kontenServer(konten, { anpassen } = {}) {
-  let app = kontenEinsetzen(await fs.readFile(path.join(WURZEL, QUELLEN.app)), konten).toString('utf8');
+  let app = kontenEinsetzen(await fs.readFile(path.join(WURZEL, QUELLEN.app)), ausV1(konten)).toString('utf8');
   if (anpassen) app = anpassen(app);
   const server = http.createServer((q, r) => { if (q.url.split('?')[0] !== '/') { r.writeHead(404); return r.end(); } r.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); r.end(app); });
   await new Promise((r) => server.listen(0, '127.0.0.1', r));

@@ -10,7 +10,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { WURZEL, QUELLEN, distBauen } from '../werkzeug/bauen.mjs';
 import { entschluesseln, tresorAusHuelle, ohneTresor } from '../werkzeug/kern.mjs';
-import { kontenEinsetzen, kontenPruefen, pbkdf2Hex, normCode, codeErzeugen } from '../werkzeug/konten.mjs';
+import { kontenEinsetzen, kontenPruefen, pbkdf2Hex, normCode, codeErzeugen, ausV1 } from '../werkzeug/konten.mjs';
 import { TEST_PW } from './hilfen.mjs';
 import { browserStarten, appOeffnen } from './app-hilfen.mjs';
 
@@ -19,7 +19,8 @@ async function konto(user, role, kinder) {
   const salt = Array.from({ length: 16 }, (_, i) => i + user.length);
   return { user, role, ...(kinder ? { kinder } : {}), start: { salt, hash: await pbkdf2Hex(normCode(CODES[user]), salt) } };
 }
-const KONTEN = { users: [await konto('mia', 'student'), await konto('papa', 'parent', ['mia']), await konto('frau', 'teacher', ['mia']), { ...(await konto('probe', 'student')), test: true }, { ...(await konto('chef', 'parent', ['mia'])), admin: true }, await konto('lia', 'student')] };
+// Account model v2 (S11): the familiar v1 fixture is converted once; admins are not parents (B3).
+const KONTEN = ausV1({ users: [await konto('mia', 'student'), await konto('papa', 'parent', ['mia']), await konto('frau', 'teacher', ['mia']), { ...(await konto('probe', 'student')), test: true }, { ...(await konto('chef', 'parent', ['mia'])), admin: true }, await konto('lia', 'student')] });
 const app = kontenEinsetzen(await fs.readFile(path.join(WURZEL, QUELLEN.app)), KONTEN);
 
 let browser, server;
@@ -170,7 +171,7 @@ test('grown-ups header: language flags, version and log out always in view; info
   assert.match(await page.textContent('.phdr'), /Grown-ups area/);
   assert.match(await page.textContent('#parentClose'), /Log out/);
   assert.deepEqual(await page.$$eval('#aboutBody details.psec > summary', (s) => s.map((x) => x.textContent.trim())),
-    ['🏫 School ratings', '📄 Practice sheets', '👧 For your child', '🤝 Supporting your child', '📖 How Big Quest works', '📱 Using the app']);
+    ['🏫 School ratings', '📄 Practice sheets', '💾 Backup', '👧 For your child', '🤝 Supporting your child', '📖 How Big Quest works', '📱 Using the app']);
   // guide and info pages are one reading chapter: reading keeps the grown-up logged in
   await page.locator('#aboutBody details.psec[data-psec="concept"] > summary').click();
   const ab = page.locator('#aboutBody details.psec[data-psec="concept"] details.about-sec').first();
@@ -394,9 +395,10 @@ test('teacher sees observations read-only: no focus, settings, profile or sheet 
 });
 
 test('accounts file is checked; the build puts accounts only into the vault, never a start code', async () => {
-  assert.throws(() => kontenPruefen({ users: [{ ...KONTEN.users[0], code: 'ABCD-EFGH' }, KONTEN.users[1]] }), /Klartext/);
-  assert.throws(() => kontenPruefen({ users: [KONTEN.users[0]] }), /Elternkonto/);
-  assert.throws(() => kontenPruefen({ users: [KONTEN.users[0], { ...KONTEN.users[1], kinder: ['tom'] }] }), /Kind "tom" fehlt/);
+  assert.throws(() => kontenPruefen({ ...KONTEN, users: [{ ...KONTEN.users[0], code: 'ABCD-EFGH' }, ...KONTEN.users.slice(1)] }), /Klartext/);
+  assert.throws(() => kontenPruefen({ version: 2, users: [KONTEN.users[0]], guardians: [] }), /Erwachsenenkonto/);
+  assert.throws(() => kontenPruefen({ ...KONTEN, guardians: [{ adult: KONTEN.users[1].id, child: 'p_00000000000000000000000000' }] }), /unbekannter Kennung/);
+  assert.throws(() => kontenPruefen({ users: KONTEN.users }), /Version 2/);
   assert.match(codeErzeugen(), /^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/);
   const ziel = await fs.mkdtemp(path.join(os.tmpdir(), 'bq-konten-'));
   await distBauen(TEST_PW, { ziel, konten: KONTEN, version: { n: 1, hash: 'abcdef1', date: '31.10.2026 08:00', draft: false } });
