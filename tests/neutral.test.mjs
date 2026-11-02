@@ -8,7 +8,7 @@ import fs from 'node:fs/promises';
 import http from 'node:http';
 import path from 'node:path';
 import { WURZEL, QUELLEN } from '../werkzeug/bauen.mjs';
-import { browserStarten, appOeffnen, elternOeffnen, elternSeite, zustand } from './app-hilfen.mjs';
+import { browserStarten, appOeffnen, elternOeffnen, elternSeite, zustand, zurStart } from './app-hilfen.mjs';
 
 // The app runs in a closed function. For these tests only, the served copy exposes a few
 // internals at the very end of that function; the app file itself is not changed.
@@ -118,7 +118,7 @@ const ALT_861 = { kind: 'mc', prompt: '3B looked up force words with Ms. Zeckser
 const ALT_BHAN = { kind: 'mc', prompt: 'Which word MUST have a capital letter, even in the middle of a sentence?', visual: '<div class="quote">my teacher is ms. bhan.</div>', options: ['bhan', 'teacher', 'is', 'my'], answer: 0, explain: '‘Bhan’ is a name.', label: 'Capital Letters & Full Stops', world: 'sentences', dueId: 'alt-cap', grid: true };
 const gestern = () => { const d = new Date(); d.setDate(d.getDate() - 1); return d.toISOString().slice(0, 10); };
 
-test('old stored reviews are shown with neutral text, keep their id, and storage stays byte-identical', async () => {
+test('old stored reviews are shown with neutral text and keep their id (before the cleanup at the next start)', async () => {
   const { ctx, page, fehler } = await appOeffnen(browser, server.url);
   const due = [{ id: 'alt-861', box: 0, at: gestern(), q: ALT_861 }, { id: 'alt-cap', box: 1, at: gestern(), q: ALT_BHAN }];
   await page.evaluate((d) => localStorage.setItem('bq2_due', JSON.stringify(d)), due);
@@ -135,7 +135,65 @@ test('old stored reviews are shown with neutral text, keep their id, and storage
   const runde = (await zustand(page)).round;
   assert.deepEqual(treffer(JSON.stringify(runde)), []);
   assert.ok(runde.some((q) => q.dueId === 'alt-861'));
-  assert.equal(await page.evaluate(() => localStorage.getItem('bq2_due')), vorher, 'stored copies are never rewritten');
+  assert.equal(await page.evaluate(() => localStorage.getItem('bq2_due')), vorher, 'storage is only cleaned at start and after a restore');
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
+
+// A1 (02.11.): old copies are removed from the storage itself; ids stay linked; no view shows a name.
+const QID_861 = ALT_861.prompt + '||iPads/microwaves/telescopes/typewriters||iPads';
+const QID_CAP = 'Which word needs a capital letter?|<div class="quote">ms. zeckser showed us britannica on the ipads.</div>|Zeckser/on/showed/us||Zeckser';
+const ALT_CAP = { kind: 'mc', prompt: 'Which word needs a capital letter?', visual: '<div class="quote">ms. zeckser showed us britannica on the ipads.</div>', options: ['Zeckser', 'showed', 'us', 'on'], answer: 0, explain: 'Ms. Zeckser is a name.', label: 'Capital Letters & Full Stops', world: 'sentences', dueId: QID_CAP };
+const GRANTS_ROH = JSON.stringify([{ sig: 'ab+3B/cd==' }]);   // base64 can contain "3B" - grants are never touched
+
+test('A1: at start old copies are cleaned in storage, ids stay linked, grants untouched, no view shows a name', async () => {
+  const { ctx, page, fehler } = await appOeffnen(browser, server.url);
+  const q861 = { ...ALT_861, dueId: QID_861 };
+  await page.evaluate(({ q861, cap, qid861, qidCap, tag, grants }) => {
+    const due = [{ id: qid861, box: 0, at: tag, q: q861 }, { id: qidCap, box: 1, at: tag, q: cap }];
+    localStorage.setItem('bq2_due', JSON.stringify(due));
+    localStorage.setItem('bq2_attempts', JSON.stringify([
+      { day: tag, skill: 'library', level: 1, attempt: 1, ok: false, qid: qid861, response: 'Ms. Zeckser' },
+      { day: tag, skill: 'sentences', level: 1, attempt: 1, ok: false, qid: qidCap, response: 'zeckser' }]));
+    localStorage.setItem('bq2_sheets', JSON.stringify([{ id: 'alt', day: tag, no: 1, writing: 'en',
+      items: [{ q: q861, res: 'no', rec: { ev: null, key: 'alt:0', due: qid861 } }, { q: cap, res: null }] }]));
+    localStorage.setItem('bq2_bridgeNext', JSON.stringify([cap]));
+    localStorage.setItem('bq2_vorRueckspielen', JSON.stringify({ at: '2026-11-01T10:00:00Z', data: { due: JSON.stringify(due), grants } }));
+    localStorage.setItem('bq2_grants', grants);
+  }, { q861, cap: ALT_CAP, qid861: QID_861, qidCap: QID_CAP, tag: gestern(), grants: GRANTS_ROH });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('#home h1');
+  const ls = await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).map((k) => [k, localStorage.getItem(k)])));
+  for (const k of ['bq2_due', 'bq2_attempts', 'bq2_sheets', 'bq2_bridgeNext']) assert.deepEqual(treffer(ls[k]), [], k);
+  assert.equal(ls.bq2_grants, GRANTS_ROH, 'grants are never touched');
+  const vor = JSON.parse(ls.bq2_vorRueckspielen);
+  assert.deepEqual(treffer(vor.data.due), []); assert.equal(vor.data.grants, GRANTS_ROH);
+  const due = JSON.parse(ls.bq2_due), att = JSON.parse(ls.bq2_attempts), sh = JSON.parse(ls.bq2_sheets)[0];
+  assert.equal(due.length, 2, 'reviews stay');
+  assert.ok(due[0].q.prompt.startsWith('Your class looked up force words'), due[0].q.prompt);
+  assert.equal(due[0].q.options[due[0].q.answer], 'iPads');
+  assert.match(due[1].id, /^alt-[0-9a-z]+$/, 'an id that cannot be rewritten becomes a neutral one');
+  assert.equal(due[1].q.world, 'sentences');
+  for (const d of due) assert.equal(d.q.dueId, d.id, 'question and review keep the same id');
+  assert.deepEqual(att.map((a) => a.qid), due.map((d) => d.id), 'answer log stays linked to the reviews');
+  assert.equal(sh.items[0].rec.due, due[0].id, 'sheet entry stays linked');
+  assert.deepEqual(att.map((a) => a.response), ['Ms. [name]', '[name]']);
+  // every view of child and grown-ups: no name visible
+  assert.deepEqual(treffer(await page.evaluate(() => document.body.innerText)), []);
+  await page.locator('#todayBtn').click();
+  assert.deepEqual(treffer(JSON.stringify((await zustand(page)).round)), []);
+  assert.deepEqual(treffer(await page.evaluate(() => document.body.innerText)), []);
+  await zurStart(page);
+  await elternOeffnen(page);
+  const texte = [await page.textContent('#aboutBody')];
+  for (const s of await page.$$eval('[data-psubj]', (b) => [...new Set(b.map((x) => x.dataset.psubj))])) {
+    await page.locator(`[data-psubj="${s}"]`).first().click();
+    texte.push(await page.textContent('#aboutBody'));
+    await elternSeite(page, 'home');
+  }
+  await elternSeite(page, 'sheets');
+  texte.push(await page.textContent('#aboutBody'));
+  for (const t of texte) assert.deepEqual(treffer(t), []);
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
