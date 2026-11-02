@@ -27,8 +27,21 @@ const SCHWACH = [
     .flatMap((b) => [b + '1234567890'.slice(0, Math.max(2, 12 - b.length)), b[0].toUpperCase() + b.slice(1) + '!2026'.padEnd(Math.max(5, 12 - b.length), '9')]),
   '123456789012', '098765432109', 'abcdefghijkl', 'qwertyuiopas', 'asdfghjklzxc', '1qaz2wsx3edc', 'aaaaaaaaaaaa', '121212121212', 'abcabcabcabc', '111122223333',
   'mia123456789', 'Mia-2026-2026!', 'passwordpassword', 'zyxwvutsrqpo', 'qwertzuiopas', '999999999999', 'xyzxyzxyzxyz', 'hallohallo12', 'abc123abc123', 'ababababababab',
-  'kurz', 'Mond', 'sonne123', 'Tiger-12', 'elf-zeichen', 'kathie2018!', 'Kathie123456', 'mia', '', 'a1b2c3d4e5f6',
+  'kurz', 'Mond', 'sonne123', 'Tiger-12', 'elf-zeichen', 'kathie2018!', 'Kathie123456', 'Kathie-123456', 'mia', '', 'a1b2c3d4e5f6',
 ];
+
+test('Passwortregeln: auch Vorschlaege aus den kuerzesten Woertern gelten als stark (Fund 02.11.: Jam-Ox-Cup-3571)', async () => {
+  const { ctx, page } = await oeffnen(browser, hook);
+  const r = await page.evaluate(() => {
+    const B = window.__bqi, cap = (x) => x[0].toUpperCase() + x.slice(1);
+    const kurz = [...new Set(B.PW_WORDS)].sort((a, b) => a.length - b.length).slice(0, 14), schlecht = [];
+    for (const a of kurz) for (const b of kurz) for (const c of kurz) for (const z of ['0000', '3571', '9999']) { const p = `${cap(a)}-${cap(b)}-${cap(c)}-${z}`; if (B.pwWeak(p, 'mia')) schlecht.push(p); }
+    return { schlecht: schlecht.slice(0, 5), anzahl: schlecht.length, fund: B.pwWeak('Jam-Ox-Cup-3571', 'mia') };
+  });
+  assert.equal(r.fund, false);
+  assert.deepEqual(r.schlecht, [], 'weak by mistake: ' + r.anzahl);
+  await ctx.close();
+});
 
 test('Passwortregeln: typische schwache Passwoerter abgelehnt; 1000 Merkpasswoerter angenommen, verschieden, mind. 40 Bit (K7)', async () => {
   const { ctx, page } = await oeffnen(browser, hook);
