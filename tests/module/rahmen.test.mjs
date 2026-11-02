@@ -37,7 +37,7 @@ test('echte App: Testbau setzt sich ohne Namenskonflikt zusammen; Live-Bau entha
     assert.equal(live.includes(`/* ---- Modul ${m.name} `), false, m.name + ' not live');
     assert.equal(testbau.includes(`/* ---- Modul ${m.name} `), true, m.name + ' in the test build');
   }
-  for (const wort of ['sealEntry', 'wrapKeyFor', 'api.github.com', 'bqt_']) assert.equal(live.includes(wort), false, 'live: ' + wort);
+  for (const wort of ['sealEntry', 'wrapKeyFor', 'mergeLog', 'lastWins', 'api.github.com', 'bqt_']) assert.equal(live.includes(wort), false, 'live: ' + wort);
 });
 
 test('Testbau-Module fehlen im Live-Bau', () => {
