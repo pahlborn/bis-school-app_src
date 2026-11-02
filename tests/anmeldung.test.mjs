@@ -74,7 +74,7 @@ test('with accounts the app starts with the login: role choice, no list of names
   const text = await page.evaluate(() => document.body.innerText.toLowerCase());
   for (const n of ['mia', 'papa', 'frau']) assert.ok(!text.includes(n), 'no user names shown: ' + n);
   await page.locator('.login-help summary').click();
-  assert.match(await page.textContent('.login-help'), /Startcode funktioniert immer/);
+  assert.match(await page.textContent('.login-help'), /Startcode funktioniert weiter/);
   await page.evaluate(() => { location.hash = '#eltern'; });
   await page.waitForTimeout(200);
   assert.equal(await page.locator('#focusForm').count(), 0, 'no grown-ups area without login');
