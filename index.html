@@ -3809,24 +3809,38 @@ function settingsSecs(){
     const t=testUserFor();
     s.push(['accounts', de?'🛠 Konten':'🛠 Accounts', accountsAdminHTML()+(t?`<p><button type="button" class="btn small" id="pPlayTest">🧪 ${de?'Testkind':'Test child'}</button></p>`:'')]);
   }
-  s.push(['aboutapp', de?'ℹ️ Über die App':'ℹ️ About the app', versionAdminHTML()]);
+  s.push(['aboutapp', de?'ℹ️ Über die App':'ℹ️ About the app', aboutAppHTML()]);
   return s;
+}
+/* ⚙ "About the app" (concept 5.8, B3): about this app and the important note, privacy, legal notice (placeholder),
+   version. The texts are the same as on the info page (one place, R1); only the headings fit the section. */
+function aboutAppHTML(){
+  const lang=PL(), de=lang==='de', {main, sections}=aboutParts(lang), privacy=sections.find(s=>PRIVACY_TITLES.includes(s.title));
+  const sec=(title,body,id)=>`<details class="about-sec" data-about="${id}"><summary>${title}</summary><div class="about-sec-body">${body}</div></details>`;
+  return `<div class="pabout">${main.replace(/<h2>[^<]*<\/h2>/,'')}</div><div class="about-menu">`
+    +(privacy?sec(privacy.title, privacy.body, 'privacy'):'')
+    +sec(de?'Impressum':'Legal notice', `<p>${de?'Wird ergänzt.':'To be added.'}</p>`, 'imprint')
+    +`</div>`+versionAdminHTML();
 }
 function settingsViewHTML(secHTML){
   const de=PL()==='de', close=accountsOn()?(de?'Abmelden':'Log out'):(de?'Sperren':'Lock');
   return `<button type="button" class="btn small" id="pSetBack">${de?'← Zurück zur Übersicht':'← Back to the overview'}</button><h2 class="psubjtitle">⚙️ ${de?'Einstellungen':'Settings'}</h2>`
     +secHTML(settingsSecs())+`<p class="pset-end"><button class="btn" id="parentClose2" type="button">${close}</button></p>`;
 }
-/* Routes (concept 5.7): #eltern, #eltern/einstellungen, #eltern/einstellungen/<section>. Browser back leaves ⚙. */
+/* Routes (concept 5.7): #eltern, #eltern/einstellungen[/<section>], #eltern/hilfe. Browser back leaves ⚙ and ?. */
 const SET_ROUTES={kind:'settings', sicherung:'backup', freigaben:'grants', konten:'accounts', ueber:'aboutapp'};
+const VIEW_HASH={settings:'#eltern/einstellungen', help:'#eltern/hilfe'};
 let pviewPushed=false, pendingRoute=null;   // pendingRoute: a route that needs the login first (kept through parentLock)
 function parentRoute(){
-  const m=/^#eltern(\/einstellungen(?:\/([a-z]+))?)?$/.exec(location.hash||'');
-  return m ? {settings:!!m[1], sec:m[2]||null} : null;
+  const m=/^#eltern(?:\/(einstellungen|hilfe)(?:\/([a-z]+))?)?$/.exec(location.hash||'');
+  if(!m) return null;
+  const view={einstellungen:'settings', hilfe:'help'}[m[1]]||null;
+  return {view, sec:view==='settings'?(m[2]||null):null};
 }
 function setParentView(r){
-  state.pview=r.settings?'settings':null;
-  if(r.settings){ state.psubj=null; const id=SET_ROUTES[r.sec], o=state.popen||(state.popen=[]); if(id && !o.includes(id)) o.push(id); }
+  state.pview=r.view;
+  if(r.view) state.psubj=null;
+  if(r.view==='settings'){ const id=SET_ROUTES[r.sec], o=state.popen||(state.popen=[]); if(id && !o.includes(id)) o.push(id); }
 }
 function scrollToRouteSec(r){ const id=r && r.sec && SET_ROUTES[r.sec], d=id && $(`#aboutBody details.psec[data-psec="${id}"]`); if(d) d.scrollIntoView({block:'start'}); }
 function applyParentRoute(){
@@ -3841,22 +3855,24 @@ function applyParentRoute(){
 function takePendingRoute(){
   const r=pendingRoute; pendingRoute=null; if(!r) return null;
   setParentView(r);
-  if(r.settings){ try{ history.replaceState(null,'',location.pathname+location.search+'#eltern/einstellungen'+(r.sec?'/'+r.sec:'')); }catch(e){} }
+  if(r.view){ try{ history.replaceState(null,'',location.pathname+location.search+VIEW_HASH[r.view]+(r.sec?'/'+r.sec:'')); }catch(e){} }
   return r;
 }
-function openParentView(){ pviewPushed=true; location.hash='#eltern/einstellungen'; }
+/* ⚙ and ? open views of their own; switching between them does not pile up history entries */
+function openParentView(view){
+  if(pviewPushed && parentRoute() && parentRoute().view){ location.replace(VIEW_HASH[view]); return; }
+  pviewPushed=true; location.hash=VIEW_HASH[view];
+}
 function closeParentView(){
-  if(pviewPushed && /^#eltern\/einstellungen/.test(location.hash)){ pviewPushed=false; history.back(); return; }
+  if(pviewPushed && /^#eltern\/(einstellungen|hilfe)/.test(location.hash)){ pviewPushed=false; history.back(); return; }
   try{ history.replaceState(null,'',location.pathname+location.search+'#eltern'); }catch(e){}
   state.pview=null; renderSheets(); window.scrollTo(0,0);
 }
 function leaveParentRoute(){ if(/^#eltern\//.test(location.hash)){ try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} } }
-/* "?" (concept 5.1): until the help view exists (package B2) it opens the guide chapter on the overview. */
-function openParentHelp(){
-  const o=state.popen||(state.popen=[]); if(!o.includes('app')) o.push('app');
-  if(state.pview==='settings'){ state.pview=null; leaveParentRoute(); pviewPushed=false; }
-  state.psubj=null; renderSheets();
-  const d=$('#aboutBody details.psec[data-psec="app"]'); if(d) d.scrollIntoView({block:'start'});
+/* ? Help (concept 5.6, package B2): the guide for the role of the grown-up, unchanged, in a view of its own. */
+function helpViewHTML(){
+  const de=PL()==='de';
+  return `<button type="button" class="btn small" id="pHelpBack">${de?'← Zurück zur Übersicht':'← Back to the overview'}</button><h2 class="psubjtitle">❓ ${de?'Hilfe':'Help'}</h2><div class="phelp-view">${guideAdultFor(de)}</div>`;
 }
 /* Grown-ups area (Peter, 31.10.): fixed header (language flags, version, log out); overview on top;
    below, chapters that open in place. Each thing can be set in one place only: focus at the quest
@@ -3870,6 +3886,7 @@ function renderSheets(){
   const secHTML = list => '<div class="psecs">'+list.map(([id,title,b])=>`<details class="psec" data-psec="${id}"${open.includes(id)?' open':''}><summary>${title}</summary><div class="psec-body">${b}</div></details>`).join('')+'</div>';
   let html=parentHeaderHTML();
   if(state.pview==='settings') html+=settingsViewHTML(secHTML);
+  else if(state.pview==='help') html+=helpViewHTML();
   else {
     html+=state.psubj ? parentSubjectHTML(state.psubj) : parentHomeHTML();
     // the chapters only on the overview, not again inside a subject (Peter, 01.11.)
@@ -3878,18 +3895,16 @@ function renderSheets(){
     if(accountsOn() && kidOk && !(viewerGrant() && !viewerGrant().scope.includes('school'))) secs.push(['school', de?'🏫 Einstufungen der Schule':'🏫 School ratings', schoolHTML()]);
     if(!teacher && kidOk) secs.push(['sheets', T.sheets, sheetsPageHTML()]);
     // Peter, 01.11.: three kinds of reading matter, kept apart - practical support, the concept, using the app.
-    // Settings, backup, grants, accounts and the version live in ⚙ (concept "Elternbereich", package B1).
+    // Settings, backup, grants, accounts and the version live in ⚙ (concept "Elternbereich", B1), the guide in ? (B2).
     secs.push(['support', de?'🤝 Ihr Kind unterstützen':'🤝 Supporting your child', supportGuideHTML()]);
-    secs.push(['concept', ABOUT_UI[lang].title, aboutParts(lang).main+`<div class="about-menu">${aboutSectionsHTML(lang,null,true)}</div>`]);
-    secs.push(['app', de?'📱 Bedienung & Technik':'📱 Using the app', guideAdultFor(de)]);
+    secs.push(['concept', ABOUT_UI[lang].title, `<div class="about-menu">${aboutSectionsHTML(lang,null,true)}</div>`]);
     if(onOverview) html+=secHTML(secs);
   }
   body.innerHTML=html;
   body.querySelectorAll('details.psec').forEach(d=>d.addEventListener('toggle',()=>{ const id=d.dataset.psec, i=open.indexOf(id); if(d.open && i<0) open.push(id); if(!d.open && i>=0) open.splice(i,1); }));
   body.querySelectorAll('[data-plang]').forEach(b=>b.addEventListener('click',()=>setLang(b.dataset.plang)));
-  const set=$('#pSettings'); if(set) set.addEventListener('click',()=>{ if(!parentAccess) return; if(state.pview==='settings') closeParentView(); else openParentView(); });
-  const setBack=$('#pSetBack'); if(setBack) setBack.addEventListener('click',closeParentView);
-  const help=$('#pHelp'); if(help) help.addEventListener('click',()=>{ if(!parentAccess) return; openParentHelp(); });
+  [['#pSettings','settings'],['#pHelp','help']].forEach(([sel,view])=>{ const b=$(sel); if(b) b.addEventListener('click',()=>{ if(!parentAccess) return; if(state.pview===view) closeParentView(); else openParentView(view); }); });
+  ['#pSetBack','#pHelpBack'].forEach(sel=>{ const b=$(sel); if(b) b.addEventListener('click',closeParentView); });
   const real=$('#pRealData'); if(real) real.addEventListener('click',()=>{ if(!parentAccess) return; restoreRealChild(); renderSheets(); });
   body.querySelectorAll('[data-pkid]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess || !kidChoices().includes(b.dataset.pkid)) return; const s=studentSession(); viewUser=(s && s.user===b.dataset.pkid)?null:b.dataset.pkid; state.psubj=null; renderSheets(); }));
   const play=$('#pPlayTest'); if(play) play.addEventListener('click',playTest);
@@ -4011,8 +4026,8 @@ function parentHeaderHTML(){
     : `<span class="phdr-kid" id="pKid">${kid?(isTestUser(kid)?'🧪 ':'👧 ')+esc(kid):(de?'👧 keine Daten Ihrer Kinder auf diesem Gerät':'👧 none of your children’s data on this device')}</span>`;
   // Concept "Elternbereich" 5.1 (B1): child, flags, ? help, ⚙ settings, log out. The version is in ⚙ "About the app",
   // the test child button in ⚙ "Accounts" (until B5).
-  const onSet=state.pview==='settings';
-  let h=`<header class="phdr"><div class="phdr-row"><span class="phdr-who">👪 ${who}</span>${kidChip}<span class="phdr-act">${flagsHTML()}<button type="button" class="btn small phdr-icon" id="pHelp" aria-label="${de?'Hilfe':'Help'}" title="${de?'Hilfe':'Help'}">?</button><button type="button" class="btn small phdr-icon${onSet?' primary':''}" id="pSettings" aria-label="${de?'Einstellungen':'Settings'}" title="${de?'Einstellungen':'Settings'}" aria-pressed="${onSet}">⚙️</button><button class="btn small" id="parentClose" type="button">${close}</button></span></div>`;
+  const onSet=state.pview==='settings', onHelp=state.pview==='help';
+  let h=`<header class="phdr"><div class="phdr-row"><span class="phdr-who">👪 ${who}</span>${kidChip}<span class="phdr-act">${flagsHTML()}<button type="button" class="btn small phdr-icon${onHelp?' primary':''}" id="pHelp" aria-label="${de?'Hilfe':'Help'}" title="${de?'Hilfe':'Help'}" aria-pressed="${onHelp}">?</button><button type="button" class="btn small phdr-icon${onSet?' primary':''}" id="pSettings" aria-label="${de?'Einstellungen':'Settings'}" title="${de?'Einstellungen':'Settings'}" aria-pressed="${onSet}">⚙️</button><button class="btn small" id="parentClose" type="button">${close}</button></span></div>`;
   if(accountsOn() && kid && isTestUser(kid)) h+=`<div class="phdr-row phdr-test">🧪 <b>${de?'Hier stehen Testdaten.':'You are looking at test data.'}</b>${store.get('sessionPrev',null)?`<button type="button" class="btn small" id="pRealData">${de?'Zurück zu echten Daten':'Back to real data'}</button>`:''}</div>`;
   return h+'</header>';
 }
@@ -4072,7 +4087,7 @@ const HELP={
   tree:{kid:true,title:'Your learning tree',text:'<p>Your tree grows on every day you practise – in the app or on a practice sheet. It never wilts, even if you take a break.</p><p>Your badges show how you learn: trying a challenge, thinking hard, finishing a sheet.</p>'},
   record:{kid:true,title:'Recording yourself',text:'<p>Tap “● Aufnahme starten”, read aloud, tap “■ Stopp”. Then listen to yourself!</p><p>The last three recordings stay on this iPad. To hand one in, tap “Teilen / Sichern” together with a grown-up.</p>'},
   sheet:{kid:true,title:'Practice sheet',text:'<p>A sheet with 6 tasks and a writing task, plus an answer page for grown-ups.</p><p>Share it as a PDF (by mail, message or into Files) or print it. Afterwards a grown-up can enter how it went.</p>'},
-  overview:{title:'Wie entsteht die Einschätzung?',text:'<p>Gezählt wird nur der <b>erste Versuch</b> jeder Aufgabe: selbst gelöst, mit Hinweis oder Lösungsweg angesehen. Eine Einschätzung gibt es erst ab <b>8 Aufgaben an 3 Tagen</b> – vorher „Noch nicht einschätzbar“, das sagt nichts Schlechtes.</p><p><b>Vorläufig</b> heißt: erste Einschätzung. <b>Bestätigt</b> erst nach etwa 20 Aufgaben an 5 Tagen über zwei Wochen. Eine <b>Tendenz</b> steht nur da, wenn zwei Zeiträume genug Aufgaben haben. Nach mehr als 3 Wochen Pause steht „ältere Belege“ – Ferien sind kein Leistungsabfall.</p><p>Das ist <b>keine schulische Bewertung</b> und wird dem Kind nie gezeigt.</p>'},
+  overview:{title:'Wie entsteht die Einschätzung?',text:'<p>Gezählt wird nur der <b>erste Versuch</b> jeder Aufgabe: selbst gelöst, mit Hinweis oder Lösungsweg angesehen. Eine Einschätzung gibt es erst ab <b>8 Aufgaben an 3 Tagen</b> – vorher „Noch nicht einschätzbar“, das sagt nichts Schlechtes.</p><p><b>Vorläufig</b> heißt: erste Einschätzung. <b>Bestätigt</b> erst nach etwa 20 Aufgaben an 5 Tagen über zwei Wochen. Eine <b>Tendenz</b> steht nur da, wenn zwei Zeiträume genug Aufgaben haben. Nach mehr als 3 Wochen Pause steht „ältere Belege“ – Ferien sind kein Leistungsabfall.</p><p>Das ist <b>keine schulische Bewertung</b> und wird dem Kind nie gezeigt.</p><p>Die App weiß nicht, wer eine Aufgabe gelöst hat und mit welchen Hilfsmitteln. Die Einschätzung ist ein Hinweis; die Verantwortung liegt bei den Eltern.</p>'},
   focus:{title:'Fokus-Themen',text:'<p>Aus diesen Themen stellt „Practise Today“ die 8 Fragen zusammen; auch die Übungsblätter nutzen sie. Auf der Startseite tragen sie das Zeichen „Focus“.</p><p>Die App wählt sie selbst: was die Lehrkraft als nächste Schritte nennt und wo Übung hilft. Unter „🎯 Fokus“ können Sie auf „Manuell“ umstellen und selbst wählen.</p>'},
   school:{title:'Einstufungen der Schule',text:'<p>Die Einstufungen stammen aus den bewerteten Aufgaben auf der Lernplattform der Schule. Solange in der App für eine Quest noch zu wenig geübt wurde (weniger als 6 Antworten oder 2 Tage), richtet die App die Schwierigkeit der Aufgaben danach aus. Danach zählt die eigene Übung.</p><p>Die Einschätzung im Elternbereich beruht nur auf der Übung in der App. Neue Bewertungen der Schule werden bei Gelegenheit übernommen.</p>'},
   calendar:{title:'Kalender-Erinnerung',text:'<p>Freiwillig: erzeugt eine Kalenderdatei mit einer wiederkehrenden, freundlichen Einladung zum Üben. Die App selbst schickt keine Nachrichten.</p>'},
@@ -4085,7 +4100,7 @@ const HELP={
 };
 /* Grown-ups help in English: meaning-based, American English (Peter, 31.10.). */
 const HELP_EN={
-  overview:{title:'How is the summary made?',text:'<p>Only the <b>first try</b> at each task counts: solved on their own, with a hint, or after viewing the solution. A judgment appears only after <b>8 tasks on 3 days</b> – until then it says “not enough to tell yet”, which says nothing bad.</p><p><b>Provisional</b> means a first judgment. <b>Confirmed</b> only after about 20 tasks on 5 days over two weeks. A <b>trend</b> is shown only when two periods have enough tasks. After a break of more than 3 weeks it says “older evidence” – vacations are not a drop in ability.</p><p>This is <b>not a school assessment</b> and is never shown to your child.</p>'},
+  overview:{title:'How is the summary made?',text:'<p>Only the <b>first try</b> at each task counts: solved on their own, with a hint, or after viewing the solution. A judgment appears only after <b>8 tasks on 3 days</b> – until then it says “not enough to tell yet”, which says nothing bad.</p><p><b>Provisional</b> means a first judgment. <b>Confirmed</b> only after about 20 tasks on 5 days over two weeks. A <b>trend</b> is shown only when two periods have enough tasks. After a break of more than 3 weeks it says “older evidence” – vacations are not a drop in ability.</p><p>This is <b>not a school assessment</b> and is never shown to your child.</p><p>The app does not know who solved a task or with what help. The summary is a hint; responsibility lies with the parents.</p>'},
   focus:{title:'Focus topics',text:'<p>“Practise Today” builds its 8 questions from these topics; practice sheets use them too. On the start page they carry the “Focus” sign.</p><p>The app picks them by itself: what the teacher names as next steps and where practice helps. Under “🎯 Focus” you can switch to “Manual” and choose yourself.</p>'},
   school:{title:'School ratings',text:'<p>The ratings come from the evaluated assignments on the school’s learning platform. While there is too little practice in the app for a quest (fewer than 6 answers or 2 days), the app sets the difficulty of the tasks by them. After that, the app’s own practice counts.</p><p>The summary in the grown-ups area is based only on practice in the app. New school evaluations are added from time to time.</p>'},
   calendar:{title:'Calendar reminder',text:'<p>Optional: creates a calendar file with a recurring, friendly invitation to practice. The app itself never sends messages.</p>'},
@@ -4184,8 +4199,8 @@ function renderWelcome(u){
   $('#loginBody').innerHTML=kid
     ? `<h2>Welcome to Big Quest! 🎉</h2><ul class="welcome"><li>🎯 <b>Practise Today</b> gives you 8 questions. Or pick a subject.</li><li>💡 <b>A mistake?</b> You get a tip and try again. “Show me how” gives you a tip any time.</li><li>⭐ Every solved task gives a star. Your <b>learning tree</b> grows on every practice day.</li><li>❓ <b>Help</b> is at the bottom of the start page. ⓘ explains things.</li><li>🔒 You stay logged in on this iPad. Tap <b>Log out</b> if someone else wants to use it.</li></ul><button class="btn primary" id="welcomeGo" type="button">Let’s go!</button>`
     : de
-    ? `<h2>Willkommen, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 <b>Daten nur auf diesem Gerät:</b> Den Lernstand des Kindes sehen Sie auf dem Gerät, auf dem es übt.</li><li>🔑 Ihr Passwort gilt nur auf diesem Gerät. Auf einem weiteren Gerät einmal mit dem Startcode anmelden.</li><li>🚪 Sie bleiben angemeldet, bis Sie <b>Abmelden</b> tippen. Auf dem Gerät des Kindes nach dem Nachsehen bitte abmelden.</li><li>📖 Die Anleitung steht im Elternbereich unter <b>„📱 Bedienung & Technik“</b>, ⓘ erklärt einzelne Abschnitte.</li></ul><button class="btn primary" id="welcomeGo" type="button">Los geht’s</button>`
-    : `<h2>Welcome, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 <b>Data only on this device:</b> you see your child’s progress on the device where they practice.</li><li>🔑 Your password works only on this device. On another device, log in once with the start code.</li><li>🚪 You stay logged in until you tap <b>Log out</b>. On your child’s device, please log out when you are done.</li><li>📖 The guide is in the grown-ups area under <b>“📱 Using the app”</b>; ⓘ explains each section.</li></ul><button class="btn primary" id="welcomeGo" type="button">Let’s go</button>`;
+    ? `<h2>Willkommen, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 <b>Daten nur auf diesem Gerät:</b> Den Lernstand des Kindes sehen Sie auf dem Gerät, auf dem es übt.</li><li>🔑 Ihr Passwort gilt nur auf diesem Gerät. Auf einem weiteren Gerät einmal mit dem Startcode anmelden.</li><li>🚪 Sie bleiben angemeldet, bis Sie <b>Abmelden</b> tippen. Auf dem Gerät des Kindes nach dem Nachsehen bitte abmelden.</li><li>📖 Die Anleitung finden Sie oben unter <b>?</b>, Sicherung und Freigaben unter <b>⚙️</b>. ⓘ erklärt einzelne Abschnitte.</li></ul><button class="btn primary" id="welcomeGo" type="button">Los geht’s</button>`
+    : `<h2>Welcome, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 <b>Data only on this device:</b> you see your child’s progress on the device where they practice.</li><li>🔑 Your password works only on this device. On another device, log in once with the start code.</li><li>🚪 You stay logged in until you tap <b>Log out</b>. On your child’s device, please log out when you are done.</li><li>📖 The guide is at the top under <b>?</b>, backup and grants under <b>⚙️</b>. ⓘ explains each section.</li></ul><button class="btn primary" id="welcomeGo" type="button">Let’s go</button>`;
   $('#welcomeGo').addEventListener('click',()=>loginDone(u,true));
   $('#welcomeGo').focus();
 }
@@ -4589,7 +4604,7 @@ const guideAdultFor = de => {
 const ABOUT_DE=()=>`
 <h2>Über diese Anwendung</h2>
 <p><b>Grade 3 – Big Quest</b> ist ein privat entwickeltes, spielerisches Übungsangebot für ein Kind der 3. Klasse an einer IB-Schule (Primary Years Programme). Die Anwendung begleitet die Inhalte des laufenden Schuljahres und lädt dazu ein, zwischendurch und an jedem Ort freiwillig zu üben – ergänzend zum Unterricht und zu den eigentlichen Hausaufgaben, niemals an ihrer Stelle.</p>
-<div class="note"><b>Wichtiger Hinweis.</b> Es handelt sich um eine Spaß- und Lernanwendung ohne pädagogische Herkunft und ohne fachliche Beratung. Sie wurde weder von der Schule noch vom International Baccalaureate beauftragt, geprüft oder unterstützt. Aufgaben und Programmierung sind mit Unterstützung eines KI-Assistenten entstanden und von den Eltern durchgesehen; Fehler sind dennoch möglich. Ein in der Anwendung ermittelter Übungsstand ist keine Bewertung und lässt keine Rückschlüsse auf schulische Beurteilungen zu.</div>
+<div class="note"><b>Wichtiger Hinweis.</b> Es handelt sich um eine Spaß- und Lernanwendung ohne pädagogische Herkunft und ohne fachliche Beratung. Sie wurde weder von der Schule noch vom International Baccalaureate beauftragt, geprüft oder unterstützt. Aufgaben und Programmierung sind mit Unterstützung eines KI-Assistenten entstanden und von den Eltern durchgesehen; Fehler sind dennoch möglich. Ein in der Anwendung ermittelter Übungsstand ist keine Bewertung und lässt keine Rückschlüsse auf schulische Beurteilungen zu. Die App weiß nicht, wer eine Aufgabe gelöst hat und mit welchen Hilfsmitteln. Was sie anzeigt, ist ein Hinweis; die Verantwortung für das Lernen und für Entscheidungen liegt bei den Eltern.</div>
 <h3>Anleitung für Erwachsene</h3>${GUIDE_ADULT_DE}
 <h3>How to use Big Quest (für Kinder)</h3>${GUIDE_KID}
 <h3>Grundidee</h3>
@@ -4635,14 +4650,14 @@ const ABOUT_DE=()=>`
 <h3>Herkunft der Aufgaben</h3>
 <p>Themen und Erfolgskriterien folgen den Lerneinheiten der 3. Klasse im Schuljahr 2026/27, wie sie auf der Lernplattform der Schule veröffentlicht sind – darunter <i>Friction Frenzy</i> (How the World Works), <i>Persuade for the Park</i> (Who We Are), <i>Mastering Basic Numbers</i> mit <i>Travel for Work</i> und dem <i>Sticker Milestone</i>, das Runden auf Zehner und Hunderter, die <i>Anleitung</i> zur Traummaschine, die Leseaufnahme, die Bibliotheksstunden sowie die Primary Production <i>Pantastic</i>. Die Aufgaben selbst sind neu formuliert oder werden mit wechselnden Zahlen erzeugt; Arbeitsblätter der Schule werden nicht wiedergegeben. Die Geschichten um <i>Pisolala</i> sind eine Erfindung der Familie.</p>
 <h3>Datenschutz</h3>
-<p><b>Konten und Rechte:</b> Jede Person hat ein eigenes Konto mit einer festen, zufälligen Kennung; Lerndaten und Schuldaten hängen an dieser Kennung, nicht am Namen. Passwörter und Startcodes speichert die App nur als Prüfwert, nie im Klartext. Eltern sehen nur ihre eigenen Kinder. Eine Lehrkraft oder der Admin sieht ein Kind nur mit Freigabe der Eltern – befristet, nur lesend, ohne Profilangaben, Schuldaten nur auf Wunsch; jede Freigabe und jedes Ansehen steht im Protokoll der Eltern. Ohne Freigabe sieht der Admin nur Verwaltungsangaben. Die angezeigten Einschätzungen sind weder Diagnosen noch Bewertungen der Schule.</p>
+<p><b>Konten und Rechte:</b> Jede Person hat ein eigenes Konto mit einer festen, zufälligen Kennung; Passwörter und Startcodes speichert die App nur als Prüfwert, nie im Klartext. Eltern sehen nur ihre eigenen Kinder, eine Lehrkraft oder der Admin ein Kind nur mit Freigabe der Eltern (Einzelheiten im Elternbereich unter ⚙ → „🔐 Zugriff & Freigaben“).</p>
 <p>Die Anwendung läuft vollständig im Browser und ist nur verschlüsselt veröffentlicht. Name, Sterne und Übungsstand werden ausschließlich auf dem jeweiligen Gerät gespeichert, für jedes Kind getrennt, und nicht weitergegeben; es gibt keinen Server, keine Werbung und keine Auswertungsdienste. Eine Sicherungsdatei erzeugen nur die Eltern; sie bleibt bei der Familie. Eine optionale Kalenderdatei wird lokal erzeugt; erst der von den Eltern gewählte Kalender bestimmt Speicherung und Benachrichtigungen. Nach dem Öffnen lädt die Anwendung Schriftarten von Google Fonts; dabei wird die IP-Adresse des Geräts an Google übermittelt.</p>
 <p><b>Leseaufnahmen:</b> Das Mikrofon wird nur nach einem Tipp auf „Aufnahme starten“ geöffnet und nach „Stopp“ wieder freigegeben. Die letzten drei Aufnahmen bleiben ausschließlich im Speicher dieses Geräts; die Anwendung verschickt sie nicht. Weitergegeben werden sie nur, wenn jemand sie selbst über „Teilen / Sichern“ hochlädt oder speichert. Jede Aufnahme lässt sich löschen.</p>
 <h3>Quellen</h3>${sourcesHTML('de')}`;
 const ABOUT_EN=()=>`
 <h2>About this app</h2>
 <p><b>Grade 3 – Big Quest</b> is a privately developed, playful practice companion for a child in Grade 3 at an IB school (Primary Years Programme). It follows the topics of the current school year and invites voluntary practice anywhere and at any time – as a supplement to lessons and homework, never as a replacement.</p>
-<div class="note"><b>Please note.</b> This is a fun learning app without any pedagogical origin or professional advice. It has not been commissioned, reviewed or endorsed by the school or by the International Baccalaureate. Tasks and code were created with the help of an AI assistant and reviewed by the parents; errors remain possible. Any practice status kept by the app is not an assessment and permits no conclusions about school grades.</div>
+<div class="note"><b>Please note.</b> This is a fun learning app without any pedagogical origin or professional advice. It has not been commissioned, reviewed or endorsed by the school or by the International Baccalaureate. Tasks and code were created with the help of an AI assistant and reviewed by the parents; errors remain possible. Any practice status kept by the app is not an assessment and permits no conclusions about school grades. The app does not know who solved a task or with what help. What it shows is a hint; responsibility for learning and for decisions lies with the parents.</div>
 <h3>Guide for grown-ups</h3>${GUIDE_ADULT_EN}
 <h3>How to use Big Quest</h3>${GUIDE_KID}
 <h3>Idea</h3>
@@ -4684,7 +4699,7 @@ const ABOUT_EN=()=>`
 <h3>Origin of the tasks</h3>
 <p>Topics and success criteria follow the Grade 3 units of the 2026/27 school year as published on the school's learning platform. The tasks themselves are rewritten or generated with varying numbers; school worksheets are not reproduced. The stories about <i>Pisolala</i> are a family invention.</p>
 <h3>Privacy</h3>
-<p><b>Accounts and rights:</b> every person has their own account with a fixed, random ID; learning data and school ratings belong to that ID, not to the name. Passwords and start codes are stored only as check values, never in plain text. Parents see only their own children. A teacher or the admin sees a child only with a grant from the parents – for a limited time, read-only, without profile details, school ratings only if allowed; every grant and every view is in the parents’ log. Without a grant, the admin sees administrative details only. The summaries shown are neither diagnoses nor school assessments.</p>
+<p><b>Accounts and rights:</b> every person has their own account with a fixed, random ID; passwords and start codes are stored only as check values, never in plain text. Parents see only their own children, a teacher or the admin sees a child only with a grant from the parents (details in the grown-ups area under ⚙ → “🔐 Access & grants”).</p>
 <p>The app runs entirely in the browser and is published only in encrypted form. Name, stars and practice status are stored solely on the device, separately for each child, and never shared; there is no server, no advertising and no analytics. Only parents can create a backup file; it stays with the family. An optional calendar file is created locally; only the calendar the parents choose decides on storage and notifications. After opening, the app loads fonts from Google Fonts, which transmits the device’s IP address to Google.</p>
 <p><b>Reading recordings:</b> the microphone opens only after tapping “Aufnahme starten” and is released after “Stopp”. The last three recordings stay only in this device's storage; the app never sends them. They leave the device only if someone shares or saves them via “Teilen / Sichern”. Every recording can be deleted.</p>
 <h3>Sources</h3>${sourcesHTML('en')}
@@ -4695,6 +4710,8 @@ const ABOUT_UI={de:{title:'📖 So funktioniert Big Quest',stand:'Stand: 30. Okt
 /* The user guide depends on the login (Peter, 31.10.): a logged-in child sees the child guide, not the
    grown-ups guide; grown-ups find theirs in the grown-ups area. Without accounts: both. */
 const ADULT_GUIDE_TITLES=['Anleitung für Erwachsene','Guide for grown-ups'], KID_GUIDE_TITLES=['How to use Big Quest','How to use Big Quest (für Kinder)'];
+/* In the grown-ups area privacy is part of ⚙ "About the app" (concept 5.8, B3), not of the concept chapter. */
+const PRIVACY_TITLES=['Datenschutz','Privacy'];
 /* A logged-in child sees only the child guide (Peter, 01.11.: help strictly by role - no concept,
    no sources, no notes for grown-ups). Grown-ups find guide and background in their area. */
 const kidView = () => accountsOn() && !!studentSession() && !adultUser;
@@ -4705,7 +4722,7 @@ function aboutParts(lang){
   return {main:parts[0], sections};
 }
 // grown-ups also get the school website under "Sources" (Peter, 01.11.); the child-reachable page never links the school
-const aboutSectionsHTML = (lang, open, forAdults) => aboutParts(lang).sections.filter(s=>!(forAdults && (ADULT_GUIDE_TITLES.includes(s.title) || KID_GUIDE_TITLES.includes(s.title)))).map(s=>`<details class="about-sec"${s.title===open?' open':''}><summary>${s.title}</summary><div class="about-sec-body">${s.body}${forAdults && (s.title==='Quellen'||s.title==='Sources')?schoolSourcesHTML():''}</div></details>`).join('');
+const aboutSectionsHTML = (lang, open, forAdults) => aboutParts(lang).sections.filter(s=>!(forAdults && (ADULT_GUIDE_TITLES.includes(s.title) || KID_GUIDE_TITLES.includes(s.title) || PRIVACY_TITLES.includes(s.title)))).map(s=>`<details class="about-sec"${s.title===open?' open':''}><summary>${s.title}</summary><div class="about-sec-body">${s.body}${forAdults && (s.title==='Quellen'||s.title==='Sources')?schoolSourcesHTML():''}</div></details>`).join('');
 function renderAboutPage(open){
   if(kidView()){
     const g=aboutParts('en').sections.find(s=>s.title==='How to use Big Quest');

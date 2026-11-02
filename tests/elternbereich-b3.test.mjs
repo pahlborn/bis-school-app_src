@@ -1,0 +1,91 @@
+// Paket B3 (Konzept Elternbereich 5.8, R11): ⚙ → Über die App.
+//  T11: Über diese Anwendung, Wichtiger Hinweis (mit Satz zur Verantwortung), Datenschutz, Impressum (Platzhalter), Version;
+//       Datenschutz und Hinweis nicht mehr im Konzept-Kapitel des Elternbereichs; Satz zur Verantwortung auch im ⓘ der Einschätzung;
+//       die Info-Seite außerhalb des Elternbereichs zeigt Hinweis und Datenschutz weiter.
+// Echte Klicks.
+//   node --test tests/elternbereich-b3.test.mjs
+
+import { test, before, after } from 'node:test';
+import assert from 'node:assert/strict';
+import { browserStarten, appServer, appOeffnen, klick } from './app-hilfen.mjs';
+import { konto, kontenServer, oeffnen, anmelden, passwortSetzen } from './konten-hilfen.mjs';
+
+const C = { mia: 'ABCD-EFGH', papa: 'PAPA-2345', frau: 'TEAC-HER2' };
+let browser, server, ohneKonten;
+before(async () => {
+  server = await kontenServer({ users: [await konto('mia', 'student', C.mia), await konto('papa', 'parent', C.papa, { kinder: ['mia'] }), await konto('frau', 'teacher', C.frau)] });
+  ohneKonten = await appServer();
+  browser = await browserStarten();
+});
+after(async () => { await browser?.close(); server?.close(); ohneKonten?.close(); });
+
+async function kindDann(page, wer) {
+  await anmelden(page, 'student', 'mia', C.mia); await passwortSetzen(page, 'Tiger-Lamp-River-4271');
+  await page.waitForSelector('#home:not([hidden])');
+  await page.locator('#adultBtn').click();
+  await anmelden(page, 'adult', wer, C[wer]); await passwortSetzen(page, 'Moon-Glass-Paper-8812');
+  await page.waitForSelector('#parentClose');
+}
+async function ueberDieApp(page) {
+  await page.locator('#pSettings').click(); await page.waitForSelector('#pSetBack');
+  const d = page.locator('#aboutBody details.psec[data-psec="aboutapp"]');
+  await d.locator(':scope > summary').click();
+  await d.evaluate((e) => e.querySelectorAll('details').forEach((x) => { x.open = true; }));
+  return d;
+}
+const VERANTWORTUNG_DE = 'Die App weiß nicht, wer eine Aufgabe gelöst hat und mit welchen Hilfsmitteln.';
+const VERANTWORTUNG_EN = 'The app does not know who solved a task or with what help.';
+
+test('T11 ⚙ → Über die App: intro, important note with responsibility, privacy, legal notice, version (DE/EN); not in the concept chapter', async () => {
+  const { ctx, page, fehler } = await oeffnen(browser, server);
+  await kindDann(page, 'papa');
+  // concept chapter on the overview: neither intro nor note nor privacy
+  const konzept = page.locator('#aboutBody details.psec[data-psec="concept"]');
+  await konzept.locator(':scope > summary').click();
+  await konzept.evaluate((e) => e.querySelectorAll('details').forEach((x) => { x.open = true; }));
+  const k = await konzept.innerText();
+  for (const s of ['Über diese Anwendung', 'Wichtiger Hinweis', 'Konten und Rechte', 'Leseaufnahmen:']) assert.ok(!k.includes(s), 'not in the concept chapter: ' + s);
+  assert.deepEqual(await konzept.locator('details.about-sec > summary').allInnerTexts().then((x) => x.filter((s) => /Datenschutz/.test(s))), []);
+  // ⚙ → Über die App
+  const d = await ueberDieApp(page);
+  const t = await d.innerText();
+  assert.match(t, /privat entwickeltes, spielerisches Übungsangebot/);
+  assert.match(t, /Wichtiger Hinweis\./);
+  assert.ok(t.includes(VERANTWORTUNG_DE) && t.includes('die Verantwortung für das Lernen und für Entscheidungen liegt bei den Eltern'), 'responsibility (R11)');
+  assert.deepEqual(await d.locator('details.about-sec > summary').allInnerTexts(), ['Datenschutz', 'Impressum']);
+  assert.match(t, /Konten und Rechte:[\s\S]*Leseaufnahmen:/);
+  assert.match(await d.locator('details[data-about="imprint"]').innerText(), /Wird ergänzt\./);
+  assert.ok(await d.locator('#versionInfo').isVisible(), 'version');
+  assert.equal(await page.locator('#aboutBody h2', { hasText: 'Über diese Anwendung' }).count(), 0, 'no second page title inside the section');
+  // English
+  await page.locator('.phdr [data-plang="en"]').click();
+  const en = await page.locator('#aboutBody details.psec[data-psec="aboutapp"]');
+  await en.evaluate((e) => { e.open = true; e.querySelectorAll('details').forEach((x) => { x.open = true; }); });
+  const te = await en.innerText();
+  assert.ok(te.includes('Please note.') && te.includes(VERANTWORTUNG_EN));
+  assert.deepEqual(await en.locator('details.about-sec > summary').allInnerTexts(), ['Privacy', 'Legal notice']);
+  assert.match(te, /To be added\./);
+  // teacher: "about the app" too
+  const l = await oeffnen(browser, server);
+  await kindDann(l.page, 'frau');
+  const dl = await ueberDieApp(l.page);
+  assert.ok((await dl.innerText()).includes(VERANTWORTUNG_DE));
+  assert.deepEqual([...fehler, ...l.fehler], []);
+  await ctx.close(); await l.ctx.close();
+});
+
+test('T11 ⓘ of the assessment names the responsibility; the info page outside the grown-ups area keeps note and privacy', async () => {
+  const { ctx, page, fehler } = await oeffnen(browser, server);
+  await kindDann(page, 'papa');
+  await page.locator('#aboutBody .info-btn[data-help="overview"]').first().click();
+  assert.ok((await page.locator('#helpDlg').innerText()).includes(VERANTWORTUNG_DE), 'ⓘ of the assessment');
+  await page.locator('#helpClose').click();
+  // info page without accounts (what a grown-up reads before setting up): note and privacy stay
+  const o = await appOeffnen(browser, ohneKonten.url);
+  await klick(o.page, '#aboutBtn');
+  const info = await o.page.locator('#aboutBody').innerText();
+  assert.ok(info.includes('Wichtiger Hinweis') && info.includes(VERANTWORTUNG_DE), 'note on the info page');
+  assert.ok((await o.page.locator('#aboutBody details.about-sec > summary').allInnerTexts()).includes('Datenschutz'), 'privacy on the info page');
+  assert.deepEqual([...fehler, ...o.fehler], []);
+  await ctx.close(); await o.ctx.close();
+});

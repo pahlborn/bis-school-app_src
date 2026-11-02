@@ -19,9 +19,9 @@ async function anleitung(page, wer) {
   await page.locator('#adultBtn').click();
   await anmelden(page, 'adult', wer, C[wer]); await passwortSetzen(page, PW[wer]);
   await page.waitForSelector('#parentClose');
-  const d = page.locator('#aboutBody details.psec[data-psec="app"]');
-  if (!(await d.evaluate((e) => e.open))) await d.locator('summary').first().click();
-  return d.innerText();
+  // the guide is the ? help view (B2)
+  await page.locator('#pHelp').click(); await page.waitForSelector('#pHelpBack');
+  return page.locator('.phelp-view').innerText();
 }
 
 test('Kind: Kurzanleitung und Anleitung, mit Who\'s here?, Startlink/QR, Merkpasswort; nichts fuer Erwachsene', async () => {
@@ -44,7 +44,7 @@ test('Eltern, Lehrkraft und Admin sehen je ihre eigene Anleitung (DE und EN)', a
   for (const s of ['Kurzanleitung für Eltern', 'Meine Kinder', 'Zugriff & Freigaben', 'Sicherung', 'Who\'s here?', 'Startlink', 'Passwortspeicher']) assert.ok(eltern.includes(s), 'parents: ' + s);
   for (const s of ['Kurzanleitung für Lehrkräfte', 'Für den Admin']) assert.ok(!eltern.includes(s), 'parents not: ' + s);
   await page.locator('.phdr [data-plang="en"]').click();
-  const parentsEn = await page.locator('#aboutBody details.psec[data-psec="app"]').innerText();
+  const parentsEn = await page.locator('.phelp-view').innerText();
   assert.ok(parentsEn.includes('Quick guide for parents') && parentsEn.includes('Access & grants'));
   await page.locator('.phdr [data-plang="de"]').click();
   const lehrkraft = await anleitung(page, 'frau');
@@ -56,17 +56,19 @@ test('Eltern, Lehrkraft und Admin sehen je ihre eigene Anleitung (DE und EN)', a
   await ctx.close();
 });
 
-test('Datenschutz im Konzept beschreibt Konten, Freigaben und Sicherung, nicht mehr die alte PIN', async () => {
+test('Datenschutz (B3: in ⚙ → Über die App) beschreibt Konten, Freigaben und Sicherung, nicht mehr die alte PIN', async () => {
   const { ctx, page } = await oeffnen(browser, server);
   await anmelden(page, 'student', 'mia', C.mia); await passwortSetzen(page, PW.mia);
   await page.waitForSelector('#home:not([hidden])');
   await anleitung(page, 'papa');
-  const d = page.locator('#aboutBody details.psec[data-psec="concept"]');
-  await d.locator('summary').first().click();
-  const sec = d.locator('details.about-sec').filter({ has: page.locator('summary', { hasText: 'Datenschutz' }) }).first();
-  await sec.locator('summary').first().click();
+  await page.locator('#pSettings').click(); await page.waitForSelector('#pSetBack');
+  await page.locator('#aboutBody details.psec[data-psec="aboutapp"] > summary').click();
+  const sec = page.locator('#aboutBody details.psec[data-psec="aboutapp"] details[data-about="privacy"]');
+  assert.equal((await sec.locator('summary').innerText()).trim(), 'Datenschutz');
+  await sec.locator('summary').click();
   const t = await sec.innerText();
   assert.match(t, /festen, zufälligen Kennung/); assert.match(t, /nur mit Freigabe der Eltern/); assert.match(t, /Sicherungsdatei/);
+  assert.match(t, /⚙ → „🔐 Zugriff & Freigaben“/, 'points to the grants instead of repeating them');
   assert.doesNotMatch(t, /PIN/);
   await ctx.close();
 });
