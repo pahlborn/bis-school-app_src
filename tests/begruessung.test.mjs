@@ -9,7 +9,7 @@ import fs from 'node:fs/promises';
 import http from 'node:http';
 import path from 'node:path';
 import { WURZEL, QUELLEN } from '../werkzeug/bauen.mjs';
-import { kontenEinsetzen, pbkdf2Hex, normCode } from '../werkzeug/konten.mjs';
+import { kontenEinsetzen, pbkdf2Hex, normCode, ausV1 } from '../werkzeug/konten.mjs';
 import { browserStarten } from './app-hilfen.mjs';
 
 const CODES = { mia: 'ABCD-EFGH', papa: 'PAPA-2345' };
@@ -18,7 +18,7 @@ async function konto(user, role, kinder) {
   return { user, role, ...(kinder ? { kinder } : {}), start: { salt, hash: await pbkdf2Hex(normCode(CODES[user]), salt) } };
 }
 const KONTEN = { users: [await konto('mia', 'student'), await konto('papa', 'parent', ['mia'])] };
-const app = kontenEinsetzen(await fs.readFile(path.join(WURZEL, QUELLEN.app)), KONTEN);
+const app = kontenEinsetzen(await fs.readFile(path.join(WURZEL, QUELLEN.app)), ausV1(KONTEN));
 const TAG1 = new Date('2026-11-02T09:00:00'), TAG2 = new Date('2026-11-03T09:00:00');
 
 let browser, server;

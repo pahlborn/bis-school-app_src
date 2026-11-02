@@ -2,3 +2,7 @@
 # bis-school-app hochgeladen, nicht hier eingecheckt.
 dist/
 node_modules/
+
+# Lockdatei des Werkzeugs enthaelt die Adresse des Firmen-Paketspiegels - nicht einchecken
+werkzeug/package-lock.json
+werkzeug/package.json
