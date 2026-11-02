@@ -118,3 +118,12 @@ test('E2d science: Forces, Units, Bar Graphs shortened', async () => {
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
+
+test('E2e Library & Reading, Me as a Learner: Library & Research and Finish Every Task shortened; quests without help unchanged', async () => {
+  const { ctx, page, fehler } = await appOeffnen(browser, server.url);
+  await elternOeffnen(page);
+  await fachPruefen(page, 'reading', ['library'], (de) => assert.ok(!de[0].alles.includes('auf die Stelle zeigen')));
+  await fachPruefen(page, 'learner', ['finish'], (de) => assert.equal(de[0].ideen.length, 1));
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
