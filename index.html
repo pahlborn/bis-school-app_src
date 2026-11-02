@@ -2284,10 +2284,15 @@ function openGaps(){
 }
 /* teachers and the admin look through a grant: they never change the child's data */
 const gapReadOnly = () => typeof isTeacher==='function' && accountsOn() && !!adultUser && isTeacher();
-/* the one active gap (a standard): the one the parents chose (D4), if still open, otherwise the first in order */
+/* the one active gap (a standard): the one the parents chose (D4), if still open; otherwise the first in order that
+   brings something new - a gap whose quests are all current topics anyway (the teacher's next steps or "needs
+   practice" in the app) is skipped, because it is practised already (Peter 02.11., D3: "try it"); if every gap is
+   covered like that, the first one */
 function activeGap(){
   const open=openGaps(), chosen=gapData().active;
-  return (open.find(g=>g.s===chosen) || open[0] || null);
+  const mine=open.find(g=>g.s===chosen); if(mine) return mine;
+  const covered=new Set(classTopics().concat(focusNeed()));
+  return open.find(g=>g.quests.some(k=>!covered.has(k))) || open[0] || null;
 }
 /* the quests of the active gap (they join the automatic focus) */
 const activeGapQuests = () => { const g=activeGap(); return g ? g.quests : []; };
