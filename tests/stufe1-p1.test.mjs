@@ -165,7 +165,7 @@ test('Sicherung: nur Eltern des Kindes; Datei vollstaendig ohne Passwoerter; Zur
   await kindMitDaten(a.page);
   const vorher = await kinderSchluessel(a.page);
   await elternbereich(a.page, 'papa', 'langes-passwort');
-  assert.match(await a.page.textContent('.pbackup-note'), /Letzte Sicherung: noch nie/);
+  assert.match(await a.page.textContent('.pbackup-note'), /Noch nie gesichert/);   // B4: a note only while there is something to back up
   const [dl] = await Promise.all([a.page.waitForEvent('download'), a.page.locator('.pbackup-note [data-backup]').click()]);
   const datei = path.join(await fs.mkdtemp(path.join((await import('node:os')).tmpdir(), 'bq-sich-')), dl.suggestedFilename());
   await dl.saveAs(datei);
@@ -178,8 +178,9 @@ test('Sicherung: nur Eltern des Kindes; Datei vollstaendig ohne Passwoerter; Zur
   for (const k of ['attempts', 'badges', 'total', 'best_round', 'name', 'emoji', 'sheets', 'chk_grow', 'focusMode', 'focusManual']) assert.ok(keys.includes(k), k);
   assert.ok(!keys.some((k) => /^(pw_|session|adultSession|sessionPrev|parentLang|muted|lastBackup)/.test(k)), 'no device keys: ' + keys.join(','));
   assert.deepEqual(body.audio.map((x) => [x.id, x.size]), [['r1', 3000]]);
-  await a.page.waitForFunction(() => !document.querySelector('.pbackup-note [data-backup]'));
-  assert.match(await a.page.textContent('.pbackup-note'), /Letzte Sicherung: \d\d\.\d\d\.\d{4}/);
+  await a.page.waitForFunction(() => !document.querySelector('.pbackup-note'));   // backed up: no note on the overview (B4)
+  await a.page.locator('#pSettings').click(); await a.page.waitForSelector('#pSetBack');
+  assert.match(await a.page.textContent('details.psec[data-psec="backup"]'), /Letzte Sicherung:\s*\d\d\.\d\d\.\d{4}/);
 
   // the admin (not a parent, B3) and the teacher see no backup
   for (const wer of ['chef', 'frau']) {
