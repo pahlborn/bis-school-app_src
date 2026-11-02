@@ -2009,8 +2009,10 @@ function adaptRound(k, round){
   const count=lvl=>out.filter(q=>levelOf(q)===lvl).length;
   // too many extending questions: swap for year-level (or support) ones
   while(count(3)>want.l3[1]){ const i=out.findIndex(q=>levelOf(q)===3); const r=take(2)||take(1); if(!r) break; out[i]=r; }
-  // too few extending questions: swap year-level ones for extending ones
-  while(count(3)<want.l3[0]){ const i=out.findIndex(q=>levelOf(q)===2); const r=take(3); if(i<0||!r) break; out[i]=r; }
+  // too few extending questions: swap year-level ones for extending ones - or support ones, when the round has
+  // no year-level question left (02.11.: since A7 Specific Examples has support questions; about 1 in 5 000 rounds
+  // for a skill that sits had only one extending question)
+  while(count(3)<want.l3[0]){ let i=out.findIndex(q=>levelOf(q)===2); if(i<0) i=out.findIndex(q=>levelOf(q)===1); const r=take(3); if(i<0||!r) break; out[i]=r; }
   // requires support: add supported questions where the quest has them
   if(want.l1){ while(count(1)<want.l1){ const i=out.findIndex(q=>levelOf(q)===2); const r=take(1); if(i<0||!r) break; out[i]=r; } }
   return shuffle(out);
