@@ -88,6 +88,9 @@ Je ein absichtlicher Fehler im Modul, danach muss der Modultest rot werden. Die 
 |---|---|
 | `tests/module/annahme.test.mjs` (12 Tests) | 0,2 s |
 | `npm run test:module` (78 Tests) | 1,6 s |
-| volle Reihe (320 Tests, alle grün, auf dem Stand mit 3a und Elternbereich B1–B3) | 207 s |
+| volle Reihe (323 Tests, alle grün, auf dem Stand mit 3a und Elternbereich B1–B4) | 188 s |
 
-Live-Bau: Die SHA-256 der Live-App von `main` (nach #65) und von diesem Zweig sind identisch (`185e999c…a982a`, Index-Form mit LF). `index.html` ist unverändert. Der Live-Bau enthält das Modul nicht, der Testbau schon.
+Live-Bau: Die SHA-256 der Live-App von `main` (nach #66) und von diesem Zweig sind identisch (`924f128d…8d10c`, Index-Form mit LF).
+
+## Veröffentlichung
+Nicht veröffentlicht. Live bleibt v62. `main` enthält die Elternbereich-Pakete B1–B4, und deren Aufträge sagen „Nicht veröffentlichen“ (`docs/konzept/elternbereich-auftraege.md`; das Veröffentlichen macht Peter). Dieses PR ändert die Live-App nicht (siehe Prüfsumme). Es gibt also nichts, was nur wegen dieses PRs live gehen müsste. `index.html` ist unverändert. Der Live-Bau enthält das Modul nicht, der Testbau schon.
