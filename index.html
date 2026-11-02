@@ -596,7 +596,19 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 /* Set by the build (werkzeug/version.mjs) inside the encrypted vault; null when opened unbuilt. */
 const APP_VERSION=/*BQ_VERSION*/null;
 /* Set by the build from werkzeug/konten.json (S3 login); null = no accounts, app runs without login. */
-const APP_ACCOUNTS=/*BQ_KONTEN*/null;
+/* Accounts v2 (S11 Stufe 1, 02.11.): every person has a fixed random ID ("p_..."); parent-child is
+   linked by ID only (guardians). The rest of the app still works with login names and the older
+   fields role/kinder - derived here once. Admin accounts are not parents (finding B3). */
+function normAccounts(raw){
+  if(!raw || !raw.users || raw.version!==2) return raw;
+  const byId=new Map(raw.users.map(u=>[u.id,u])), name=id=>byId.get(id)&&byId.get(id).user;
+  const users=raw.users.map(u=>Object.assign({},u,{
+    role:u.kind==='child'?'student':(u.teacher?'teacher':'parent'), admin:!!u.admin,
+    kinder:(u.teacher?(u.teacherOf||[]):(raw.guardians||[]).filter(g=>g.adult===u.id).map(g=>g.child)).map(name).filter(Boolean)
+  }));
+  return {version:2, users, guardians:raw.guardians||[]};
+}
+const APP_ACCOUNTS=normAccounts(/*BQ_KONTEN*/null);
 const $ = s => document.querySelector(s);
 const rnd = n => Math.floor(Math.random()*n);
 const pick = a => a[rnd(a.length)];
@@ -3458,7 +3470,7 @@ function parentHomeHTML(){
   const note=w?`<p class="phow psheet-note">📄 ${wait.length===1?(de?`${sheetName(w)} wartet aufs Eintragen.`:`${sheetName(w)} is waiting to be entered.`):(de?`${wait.length} Übungsblätter warten aufs Eintragen.`:`${wait.length} practice sheets are waiting to be entered.`)} <button type="button" class="btn small" data-opensheet="${w.id}">${de?'Jetzt eintragen':'Enter now'}</button></p>`:'';
   const noKid=accountsOn() && !viewedKid() ? `<p class="phow pnokid">📱 ${de?'Auf diesem Gerät ist kein Kind angemeldet. Den Lernstand sehen Sie auf dem Gerät, auf dem Ihr Kind übt – dort unten „👪 Grown-ups“ antippen.':'No child is logged in on this device. You see your child’s progress on the device where they practice – tap “👪 Grown-ups” at the bottom there.'}</p>` : '';
   if(noKid) return noKid;   // nothing to show: without a logged-in child the data on this device are not the child's
-  return `${note}<p class="phow">${T.howHome}</p><div class="playout"><div class="psubjects">${tiles}</div><aside class="pside"><div class="pcard" id="pSummary">${summaryHTML(all)}</div><div class="pcard">${legendHTML()}</div></aside></div>`;
+  return `${note}${backupLine()}<p class="phow">${T.howHome}</p><div class="playout"><div class="psubjects">${tiles}</div><aside class="pside"><div class="pcard" id="pSummary">${summaryHTML(all)}</div><div class="pcard">${legendHTML()}</div></aside></div>`;
 }
 function legendHTML(){
   const T=PT[PL()], de=PL()==='de';
@@ -3507,6 +3519,102 @@ function sheetsPageHTML(){
       +(n?'':`<p><button type="button" class="btn small" data-discard="${sh.id}">${de?'Blatt verwerfen':'Discard sheet'}</button></p>`)+'</details>';
   }).join('');
 }
+/* ---------- backup (S11 Stufe 1, 02.11.): the child's data as a file, and back ----------
+   Only parents of the child. Keys are stored WITHOUT the device namespace, so a backup made now can be
+   restored after the move to IDs (S11 P2). Which keys belong to a child is fixed in
+   werkzeug/speicherstellen.json (checked by tests/stufe1-p1.test.mjs). Never in a backup: passwords,
+   sessions, device keys. Recordings are included (the file stays with the family). */
+const BACKUP_KEYS={exact:['attempts','ev','due','total','badges','tried','treeStage','rankSeen','name','birthday','emoji','bdayParty','sheets','sheetNo','focusMode','focusManual','unlocked','storyCap','focus','focusOn','focusOff','greetDay','mysteryDone','kidLang'], prefix:['best_','chk_','advent']};
+const isBackupKey = k => BACKUP_KEYS.exact.includes(k) || BACKUP_KEYS.prefix.some(p=>k.startsWith(p));
+function childStoreKeys(){
+  const pre=storeKey('x').slice(0,-1), plain=pre==='bq2_', out=[];
+  for(let i=0;i<localStorage.length;i++){ const full=localStorage.key(i); if(!full || !full.startsWith(pre)) continue; const k=full.slice(pre.length); if(plain && k.includes('__')) continue; if(isBackupKey(k)) out.push(k); }
+  return out.sort();
+}
+const toB64 = buf => { let s=''; const u=new Uint8Array(buf); for(let i=0;i<u.length;i+=0x8000) s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000)); return btoa(s); };
+const fromB64 = s => Uint8Array.from(atob(s), c=>c.charCodeAt(0));
+async function sha256Hex(text){ const d=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)); return Array.from(new Uint8Array(d)).map(b=>b.toString(16).padStart(2,'0')).join(''); }
+const kidAccount = () => { const k=viewedKid(); return k ? APP_ACCOUNTS.users.find(u=>u.user===k && u.role==='student') : null; };
+function canBackup(){
+  if(!accountsOn() || !adultUser) return false;
+  const kid=kidAccount(), me=APP_ACCOUNTS.users.find(u=>u.user===adultUser.user);
+  return !!(kid && !kid.test && me && me.role==='parent' && (me.kinder||[]).includes(kid.user));
+}
+function backupCounts(data, audio){
+  const j=k=>{ try{ return JSON.parse(data[k]); }catch(e){ return null; } }, b=j('badges')||{};
+  return {answers:(j('attempts')||[]).length, stars:+j('total')||0, badges:Object.values(b).reduce((s,v)=>s+(+v||0),0), sheets:(j('sheets')||[]).length, recordings:(audio||[]).length};
+}
+const countsText = c => PL()==='de'
+  ? `${c.answers} Antworten · ${c.stars} Sterne · ${c.badges} Abzeichen · ${c.sheets} Übungsblätter · ${c.recordings} Aufnahmen`
+  : `${c.answers} answers · ${c.stars} stars · ${c.badges} badges · ${c.sheets} practice sheets · ${c.recordings} recordings`;
+let backupNote='', restoreCandidate=null;
+function backupLine(){
+  if(!canBackup()) return '';
+  const de=PL()==='de', last=store.get('lastBackup',null), old=!last || daysBetween(last,dayKey())>30;
+  return `<p class="phow pbackup-note">💾 ${de?'Letzte Sicherung':'Last backup'}: ${last?fmtDay(last):(de?'noch nie':'never')}${old?` <button type="button" class="btn small" data-backup>${de?'Jetzt sichern':'Back up now'}</button>`:''}</p>`;
+}
+function backupHTML(){
+  const de=PL()==='de', last=store.get('lastBackup',null), undo=store.get('vorRueckspielen',null);
+  return `<h2>${de?'Sicherung':'Backup'}</h2>
+    <p class="phow">${de?'Sichert den Lernstand dieses Kindes als Datei: Antworten, Sterne, Abzeichen, Übungsblätter, Einstellungen und Aufnahmen. Bewahren Sie sie z. B. in „Dateien“ auf oder schicken Sie sie sich selbst. Bitte dort sichern, wo Ihr Kind übt: auf seinem Gerät in der App vom Home-Bildschirm, nicht in Safari.':'Saves this child’s progress as a file: answers, stars, badges, practice sheets, settings and recordings. Keep it e.g. in “Files” or send it to yourself. Please back up where your child practices: on their device, in the app from the Home Screen, not in Safari.'}</p>
+    <p><b>${de?'Letzte Sicherung':'Last backup'}:</b> ${last?fmtDay(last):(de?'noch nie':'never')}</p>
+    <p class="row"><button type="button" class="btn small" data-backup>💾 ${de?'Jetzt sichern':'Back up now'}</button>
+    <label class="btn small" for="pRestoreFile">📂 ${de?'Sicherung zurückspielen':'Restore a backup'}</label><input type="file" id="pRestoreFile" accept=".json,application/json" hidden></p>
+    <div id="pRestorePreview"></div>
+    ${undo?`<p><button type="button" class="btn small" data-restoreundo>↩️ ${de?'Zurückspielen rückgängig machen':'Undo the restore'}</button></p>`:''}
+    <p id="pBackupMsg" class="small" role="status">${esc(backupNote)}</p>`;
+}
+async function makeBackup(){
+  if(!canBackup()) return;
+  const de=PL()==='de', kid=kidAccount();
+  try{
+    const data={}; for(const k of childStoreKeys()) data[k]=localStorage.getItem(storeKey(k));
+    const audio=[];
+    try{ for(const r of await recAll()) audio.push({id:r.id, created:r.created, durationMs:r.durationMs, mime:r.mime, size:r.blob.size, base64:toB64(await r.blob.arrayBuffer())}); }catch(e){}
+    const body={format:'bq-sicherung-1', child:kid.id, user:kid.user, createdAt:new Date().toISOString(), appVersion:versionLabel(), data, audio};
+    body.sha256=await sha256Hex(JSON.stringify({data, audio}));
+    const name=`big-quest-sicherung-${kid.user}-${dayKey()}.json`, file=new File([JSON.stringify(body)], name, {type:'application/json'});
+    let done=false;
+    if(navigator.canShare && navigator.share && navigator.canShare({files:[file]})){
+      try{ await navigator.share({files:[file], title:name}); done=true; }catch(e){ if(e && e.name==='AbortError') return; }
+    }
+    if(!done){ const a=document.createElement('a'); a.href=URL.createObjectURL(file); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); }
+    store.set('lastBackup', dayKey());
+    backupNote=(de?'Gesichert: ':'Saved: ')+countsText(backupCounts(data,audio));
+  }catch(e){ backupNote=de?'Die Sicherung ließ sich nicht erstellen.':'The backup could not be created.'; }
+  renderHome(); renderSheets();
+}
+async function readRestoreFile(file){
+  const de=PL()==='de', kid=kidAccount(), msg=$('#pBackupMsg'), pv=$('#pRestorePreview');
+  restoreCandidate=null; if(pv) pv.innerHTML='';
+  if(!canBackup()) return;
+  let body;
+  try{ body=JSON.parse(await file.text()); }catch(e){ body=null; }
+  if(!body || body.format!=='bq-sicherung-1' || typeof body.data!=='object'){ msg.textContent=de?'Das ist keine Sicherung von Big Quest.':'This is not a Big Quest backup.'; return; }
+  if(body.child!==kid.id){ msg.textContent=de?'Diese Sicherung gehört zu einem anderen Kind.':'This backup belongs to a different child.'; return; }
+  if(await sha256Hex(JSON.stringify({data:body.data, audio:body.audio}))!==body.sha256){ msg.textContent=de?'Die Datei ist beschädigt oder wurde verändert.':'The file is damaged or was changed.'; return; }
+  restoreCandidate=body;
+  pv.innerHTML=`<p><b>${de?'Sicherung vom':'Backup from'} ${fmtDay(body.createdAt.slice(0,10))}:</b> ${countsText(backupCounts(body.data, body.audio))}</p><p class="small">${de?'Der jetzige Stand wird ersetzt. Sie können das danach einmal rückgängig machen.':'The current progress is replaced. You can undo this once afterwards.'}</p><p class="row"><button type="button" class="btn small primary" id="pRestoreGo">${de?'Zurückspielen':'Restore'}</button><button type="button" class="btn small" id="pRestoreCancel">${de?'Abbrechen':'Cancel'}</button></p>`;
+  $('#pRestoreGo').addEventListener('click',applyRestore);
+  $('#pRestoreCancel').addEventListener('click',()=>{ restoreCandidate=null; pv.innerHTML=''; msg.textContent=''; });
+}
+async function applyRestore(){
+  const body=restoreCandidate, de=PL()==='de'; if(!body || !canBackup()) return;
+  const prev={}; for(const k of childStoreKeys()) prev[k]=localStorage.getItem(storeKey(k));
+  store.set('vorRueckspielen',{at:new Date().toISOString(), data:prev});
+  for(const k of childStoreKeys()) localStorage.removeItem(storeKey(k));
+  for(const [k,v] of Object.entries(body.data)) if(isBackupKey(k) && typeof v==='string') localStorage.setItem(storeKey(k), v);
+  for(const r of body.audio||[]){ try{ await recPut({id:r.id, created:r.created, durationMs:r.durationMs, mime:r.mime, blob:new Blob([fromB64(r.base64)],{type:r.mime})}); }catch(e){} }
+  restoreCandidate=null; backupNote=(de?'Zurückgespielt: ':'Restored: ')+countsText(backupCounts(body.data, body.audio));
+  renderHome(); renderSheets();
+}
+function undoRestore(){
+  const v=store.get('vorRueckspielen',null), de=PL()==='de'; if(!v || !canBackup()) return;
+  for(const k of childStoreKeys()) localStorage.removeItem(storeKey(k));
+  for(const [k,val] of Object.entries(v.data||{})) localStorage.setItem(storeKey(k), val);
+  store.del('vorRueckspielen'); backupNote=de?'Der Stand vor dem Zurückspielen ist wiederhergestellt.':'The progress from before the restore is back.';
+  renderHome(); renderSheets();
+}
 /* Grown-ups area (Peter, 31.10.): fixed header (language flags, version, log out); overview on top;
    below, chapters that open in place. Each thing can be set in one place only: focus at the quest
    (overview), the rest under "For your child". Reading matter (guide, how the class supports,
@@ -3521,6 +3629,7 @@ function renderSheets(){
   const secs=[];
   if(accountsOn()) secs.push(['school', de?'🏫 Einstufungen der Schule':'🏫 School ratings', schoolHTML()]);
   if(!teacher) secs.push(['sheets', T.sheets, sheetsPageHTML()]);
+  if(canBackup()) secs.push(['backup', de?'💾 Sicherung':'💾 Backup', backupHTML()]);
   if(!teacher) secs.push(['settings', T.settings, storyCapHTML()+reminderHTML()+profileAdminHTML()]);
   // Peter, 01.11.: three kinds of reading matter, kept apart - practical support, the concept, using the app
   secs.push(['support', de?'🤝 Ihr Kind unterstützen':'🤝 Supporting your child', supportGuideHTML()]);
@@ -3543,6 +3652,9 @@ function renderSheets(){
   body.querySelectorAll('[data-discard]').forEach(b=>b.addEventListener('click',()=>discardSheet(b.dataset.discard)));
   body.querySelectorAll('details.psheet').forEach(d=>d.addEventListener('toggle',()=>{ if(d.open) state.psheetOpen=d.dataset.sheetid; else if(state.psheetOpen===d.dataset.sheetid) state.psheetOpen=null; }));
   body.querySelectorAll('[data-opensheet]').forEach(b=>b.addEventListener('click',()=>{ state.psheetOpen=b.dataset.opensheet; if(!open.includes('sheets')) open.push('sheets'); renderSheets(); const d=$('#aboutBody details.psheet[open]'); if(d) d.scrollIntoView({block:'start'}); }));
+  body.querySelectorAll('[data-backup]').forEach(b=>b.addEventListener('click',makeBackup));
+  const rf=$('#pRestoreFile'); if(rf) rf.addEventListener('change',()=>{ if(rf.files && rf.files[0]) readRestoreFile(rf.files[0]); });
+  body.querySelectorAll('[data-restoreundo]').forEach(b=>b.addEventListener('click',undoRestore));
   bindParentSettings();
 }
 
@@ -3651,6 +3763,20 @@ const LOGIN_DE={...LOGIN_TXT, user:'Benutzername', pw:'Passwort oder Startcode',
   pw1:'Neues Passwort', pw2:'Passwort wiederholen', save:'Passwort speichern', short:n=>`Bitte mindestens ${n} Zeichen verwenden.`, diff:'Die beiden Passwörter sind nicht gleich.'};
 const loginTxt = adult => adult && store.get('parentLang','de')!=='en' ? LOGIN_DE : LOGIN_TXT;
 function showLogin(role){ $('#loginBody').innerHTML=''; renderLogin(role); show('login'); }
+/* Start link (S11 Stufe 1): ".../#start=<name>.<code>" fills in the login once; the code is removed from
+   the address right away so it does not stay in the browser history. */
+let startPrefill=null;
+function startFromHash(){
+  const m=/^#start=([^.]+)\.([A-Za-z0-9-]+)$/.exec(location.hash||'');
+  if(!m || !accountsOn()) return false;
+  try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){}
+  const name=decodeURIComponent(m[1]).trim().toLowerCase(), u=APP_ACCOUNTS.users.find(x=>x.user===name);
+  if(!u) return false;
+  startPrefill={name, code:m[2]};
+  showLogin(u.role==='student'?'student':'adult');
+  return true;
+}
+
 /* ---------- help and info buttons (Peter, 31.10.) ----------
    One ⓘ component, one dialog, all texts here. Child texts English, grown-up texts German.
    "📖 Guide" opens the matching user guide in About (not offered inside the grown-ups area,
@@ -3735,7 +3861,8 @@ function renderLogin(role){
       loginDone(u);
     }catch(err){ msg.textContent='Login is not possible in this browser.'; btn.disabled=false; }
   });
-  $('#loginUser').focus();
+  if(startPrefill){ $('#loginUser').value=startPrefill.name; $('#loginPw').value=startPrefill.code; startPrefill=null; $('#loginGo').focus(); }
+  else $('#loginUser').focus();
 }
 function renderSetPassword(u){
   const T=loginTxt(u.role!=='student'), min=u.role==='student'?4:8;
@@ -4092,6 +4219,7 @@ const GUIDE_ADULT_DE=`<p><b>Das Wichtigste vorab:</b> Die App hat keinen Server.
 <li><b>Im Elternbereich:</b> oben die Übersicht wie auf der Kinderseite mit der Einschätzung in Worten (keine Schulbeurteilung). Fach antippen: bei jeder Quest Grundlage, Tipp und der Schalter „Im Fokus“. Den Fokus wählt die App selbst – was die Lehrkraft als nächste Schritte nennt und wo Übung hilft –, daraus nimmt „Practise Today“ seine Aufgaben; über „🎯 Fokus“ stellen Sie auf „Manuell“, um selbst zu wählen, und mit „Automatisch“ wieder zurück. Darunter zum Aufklappen: Übungsblätter, „Für das Kind“ (Pisolala-Geschichten, Kalender-Erinnerung, Profilangaben), „Ihr Kind unterstützen“ (die wichtigsten Regeln), „So funktioniert Big Quest“ (das Konzept, auch wie die App einstuft) und diese Bedienungshilfe. Die Sprache wechseln Sie oben mit den Flaggen.</li>
 <li><b>Für das Kind:</b> Practise Today oder ein Fach; bei Fehlern Hinweis, zweiter Versuch, dann Lösungsweg; Lese-Studio mit Aufnahme (Teilen/Sichern zum Hochladen auf die Lernplattform der Klasse); Übungsblatt als PDF; nach jeder Runde Witz, Rätsel oder Geschichte.</li>
 </ol>
+<p><b>Sicherung:</b> Im Elternbereich unter „💾 Sicherung“ speichern Sie den Lernstand Ihres Kindes als Datei und können ihn auf jedem Gerät zurückspielen. Sichern Sie dort, wo Ihr Kind übt (auf seinem Gerät, in der App vom Home-Bildschirm, nicht in Safari) – am besten einmal im Monat. Die Übersicht zeigt, wann zuletzt gesichert wurde. Ein neues Konto kommt per Startlink oder QR-Code vom Admin: einmal öffnen, die Anmeldung ist schon ausgefüllt.</p>
 <p><b>Gut zu wissen:</b> Eigene Passwörter gelten nur auf dem Gerät, auf dem sie festgelegt wurden; auf einem weiteren Gerät einmal mit dem Startcode anmelden. Passwort vergessen? Der Startcode funktioniert immer. Nach 5 Fehlversuchen 30 Sekunden warten. Neue Versionen lädt die App beim Start und beim Zurückkehren selbst. Familienpasswort und Startcodes bitte nicht weitergeben. Admin: „🧪 Testkind“ öffnet das Testkonto mit eigenen Daten, „↩ Zurück zum Elternbereich“ führt zurück.</p>`;
 const GUIDE_ADULT_EN=`<p><b>Most important first:</b> the app has no server. Everything your child practices (stars, progress, reviews, reading recordings, practice sheets) stays <b>only on the device where they practice</b>. So your child should always use the same device, through the icon on the home screen. Grown-ups see the progress on that device.</p>
 <ol class="steps">
@@ -4101,6 +4229,7 @@ const GUIDE_ADULT_EN=`<p><b>Most important first:</b> the app has no server. Eve
 <li><b>In the grown-ups area:</b> at the top, an overview like your child’s start page with a summary in plain words (not a school assessment). Tap a subject: each quest shows what the summary is based on, a tip, and the “In focus” switch. The app picks the focus by itself – what the teacher names as next steps and where practice helps – and “Practise Today” takes its tasks from there; under “🎯 Focus” switch to “Manual” to choose yourself, and back with “Automatic”. Below, open as needed: practice sheets, “For your child” (Pisolala stories, calendar reminder, profile details), “Supporting your child” (the key rules), “How Big Quest works” (the concept, including how the app judges) and this guide to using the app. Switch the language with the flags at the top.</li>
 <li><b>For your child:</b> “Practise Today” or a subject; after a mistake a hint, a second try, then the worked solution; reading studio with recording (share/save to upload to the class learning platform); practice sheet as PDF; a joke, riddle or story after each round.</li>
 </ol>
+<p><b>Backup:</b> In the grown-ups area under “💾 Backup” you save your child’s progress as a file and can restore it on any device. Back up where your child practices (on their device, in the app from the Home Screen, not in Safari) – ideally once a month. The overview shows when the last backup was made. A new account comes as a start link or QR code from the admin: open it once and the login is already filled in.</p>
 <p><b>Good to know:</b> personal passwords work only on the device where they were set; on another device, log in once with the start code. Forgot your password? The start code always works. After 5 wrong tries, wait 30 seconds. The app loads new versions by itself when it starts and when you come back to it. Please keep the family password and start codes private. Admin: “🧪 Test child” opens the test account with its own data; “↩ Back to grown-ups area” brings you back.</p>`;
 const ABOUT_DE=()=>`
 <h2>Über diese Anwendung</h2>
@@ -4475,7 +4604,7 @@ $('#tabInfo').addEventListener('click',()=>openAbout('info'));
 $('#tabSheets').addEventListener('click',()=>openAbout('sheets'));
 // No log-out in the background (Peter, 31.10.): an iPad is personal; only stop a running recording.
 document.addEventListener('visibilitychange',()=>{if(!document.hidden) checkForUpdate(); if(document.hidden) recStop();});
-window.addEventListener('hashchange',()=>{if(location.hash==='#eltern') openAbout('sheets');});
+window.addEventListener('hashchange',()=>{if(location.hash==='#eltern') openAbout('sheets'); else startFromHash();});
 
 function boot(data){
   renderHome();
@@ -4485,6 +4614,7 @@ function boot(data){
     show('play'); renderQuestion();
   } else if(data && data.screen==='studio' && STUDIOS[data.studio]){ openStudio(data.studio); }
   else if(data && data.screen==='subject' && SUBJECTS.some(s=>s.key===data.subject)){ openSubject(data.subject); }
+  else if(startFromHash()){ /* start link: login filled in */ }
   else if(location.hash==='#eltern') openAbout('sheets');
   else if(accountsOn() && store.get('adultSession',null) && !isTestAccount() && adultResume()){ /* grown-up stays logged in */ }
   else show('home');   // with accounts and no login, show() leads to the login screen
