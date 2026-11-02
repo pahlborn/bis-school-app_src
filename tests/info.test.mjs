@@ -64,8 +64,10 @@ test('grown-ups area: every section has ⓘ with a German explanation; no guide 
   const infos = async () => page.$$eval('#aboutBody h2 .info-btn', (b) => b.map((x) => x.dataset.help));
   assert.ok((await infos()).includes('overview'), 'info at the summary');
   await elternSeite(page, 'support');
-  await elternSeite(page, 'app');
   const keys = await infos();
+  // ? help (B2): the guide
+  await elternSeite(page, 'app');
+  keys.push(...(await infos()));
   // ⚙ settings (B1): the child's settings and "about the app" with the version
   await elternSeite(page, 'settings');
   await elternSeite(page, 'aboutapp');
