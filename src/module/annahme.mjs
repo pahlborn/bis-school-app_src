@@ -1,0 +1,91 @@
+// Module annahme - signature and rights check when reading (concept 6, 7.2, 8.5; EP7: US7.5; success criterion E10).
+// Pure functions: no screen, no storage, no network. Test build only (module.json: bau "test").
+//
+//   sign:     the author signs a fixed byte sequence: "bq-sig1|" + area + "|" + the event with sorted keys.
+//             The area is part of the signature, so an event cannot be copied into another area.
+//   accept:   an event counts only if it is well-formed, its author is admitted, the device belongs to the author,
+//             the signature is valid and the role may write this type. Checked in exactly this order; the first
+//             failing check is the reason.
+//   admission (input, computed from member_* / device_* events later, EP9):
+//             { area, members: { <personId>: { role: 'child'|'parent'|'teacher'|'admin', pub: { ecdh, ecdsa }, devices: [<deviceId>] } } }
+//
+// Names: every helper starts with "ann"/"ANN_" because all modules and index.html share one scope in the app.
+
+import { signBytes, verifyBytes } from './krypto.mjs';
+import { checkEvent } from './ereignisse.mjs';
+
+/* reasons, in the order they are checked */
+export const ANNAHME_GRUENDE = ['format', 'autor-unbekannt', 'geraet-fremd', 'unterschrift', 'rolle-darf-nicht'];
+
+/* ---------- who may write which type (concept 6 "Schreiben", table 7.2, 5.2, 9.3) ----------
+   child:   learning progress, profile, own sheets, day hints, checklist; registers its own device
+   parent:  profile (correct), sheets (create, enter, discard), settings, school data, grants, members, devices,
+            key change, snapshot - but no learning progress of the child (concept 6: "Antwort ... Elternteil ❌")
+   teacher, admin: only the protocol entry "opened" for their own grant (5.2); they never write into child data */
+const ANN_RIGHTS = {
+  child: ['answer', 'round_done', 'badge', 'review', 'practice_day', 'profile_set', 'rank_seen', 'sheet_created', 'checklist_set', 'day_flag', 'device_added'],
+  parent: ['profile_set', 'sheet_created', 'sheet_result', 'sheet_discarded', 'setting_set', 'school_import', 'grant_set', 'grant_revoked', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated', 'snapshot'],
+  teacher: ['grant_opened'],
+  admin: ['grant_opened'],
+};
+export const ANNAHME_RECHTE = Object.freeze(Object.fromEntries(Object.entries(ANN_RIGHTS).map(([r, t]) => [r, Object.freeze(t.slice())])));
+
+/* conditions beyond role and type: the entry may only concern the author himself */
+const ANN_ONLY_SELF = {
+  device_added: (e) => e.payload.device === e.device,     // a device registers itself, nobody adds a foreign device
+  grant_opened: (e) => e.payload.grantee === e.author,    // the recipient logs his own opening, nobody else's
+};
+
+/* ---------- helpers ---------- */
+const annObj = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
+const annOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+const annEnc = new TextEncoder();
+function annCanon(x) {
+  if (x === null || typeof x !== 'object') return JSON.stringify(x);
+  if (Array.isArray(x)) return '[' + x.map((v) => annCanon(v === undefined ? null : v)).join(',') + ']';
+  return '{' + Object.keys(x).sort().filter((k) => x[k] !== undefined).map((k) => JSON.stringify(k) + ':' + annCanon(x[k])).join(',') + '}';
+}
+function annCheckAdmission(z) {
+  if (!annObj(z) || typeof z.area !== 'string' || !z.area || !annObj(z.members)) throw new Error('annahme: Zulassung braucht area und members.');
+}
+
+/* ---------- sign ---------- */
+/* the fixed byte sequence that is signed: area + event with sorted keys */
+export function canonicalBytes(event, area) {
+  if (typeof area !== 'string' || !area) throw new Error('annahme: Bereich fehlt.');
+  return annEnc.encode('bq-sig1|' + area + '|' + annCanon(event));
+}
+/* -> { event, sig }; a malformed event is not signed */
+export async function signEvent(event, area, myKeys) {
+  const errors = checkEvent(event);
+  if (errors.length) throw new Error('annahme: Ereignis ungueltig, nicht unterschrieben (' + errors.join('; ') + ')');
+  const copy = JSON.parse(JSON.stringify(event));
+  return { event: copy, sig: await signBytes(myKeys, canonicalBytes(copy, area)) };
+}
+
+/* ---------- accept ---------- */
+/* item = { event, sig } -> { ok: true } or { ok: false, grund } (grund: one of ANNAHME_GRUENDE) */
+export async function acceptEvent(item, zulassung) {
+  annCheckAdmission(zulassung);
+  if (!annObj(item) || Object.keys(item).some((k) => k !== 'event' && k !== 'sig') || checkEvent(item.event).length) return { ok: false, grund: 'format' };
+  const e = item.event;
+  const member = annOwn(zulassung.members, e.author) ? zulassung.members[e.author] : null;
+  if (!annObj(member)) return { ok: false, grund: 'autor-unbekannt' };
+  if (!Array.isArray(member.devices) || !member.devices.includes(e.device)) return { ok: false, grund: 'geraet-fremd' };
+  if (typeof item.sig !== 'string' || !item.sig || !annObj(member.pub) || !(await verifyBytes(member.pub, canonicalBytes(e, zulassung.area), item.sig))) return { ok: false, grund: 'unterschrift' };
+  const allowed = annOwn(ANN_RIGHTS, member.role) ? ANN_RIGHTS[member.role] : [];
+  if (!allowed.includes(e.type) || (annOwn(ANN_ONLY_SELF, e.type) && !ANN_ONLY_SELF[e.type](e))) return { ok: false, grund: 'rolle-darf-nicht' };
+  return { ok: true };
+}
+/* checks every item; nothing is dropped silently: each item is either accepted or rejected with a reason.
+   Order is kept. -> { angenommen: [item], verworfen: [{ item, grund }] } */
+export async function acceptAll(items, zulassung) {
+  annCheckAdmission(zulassung);
+  if (!Array.isArray(items)) throw new Error('annahme: Liste erwartet.');
+  const angenommen = [], verworfen = [];
+  for (const item of items) {
+    const r = await acceptEvent(item, zulassung);
+    if (r.ok) angenommen.push(item); else verworfen.push({ item, grund: r.grund });
+  }
+  return { angenommen, verworfen };
+}
