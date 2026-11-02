@@ -11,7 +11,7 @@ import { konto, kontenServer, anmelden } from './konten-hilfen.mjs';
 const C = { mia: 'MIAA-2345', lia: 'LIAA-2345', papa: 'PAPA-2345' };
 const V1 = { users: [await konto('mia', 'student', C.mia), await konto('lia', 'student', C.lia), await konto('papa', 'parent', C.papa, { kinder: ['mia'] })] };
 const SALT = Array.from({ length: 16 }, (_, i) => 30 + i);
-const PW = { mia: { salt: SALT, hash: await pbkdf2Hex('mond', SALT) }, lia: { salt: SALT, hash: await pbkdf2Hex('sonne', SALT) }, papa: { salt: SALT, hash: await pbkdf2Hex('langes-passwort', SALT) } };
+const PW = { mia: { salt: SALT, hash: await pbkdf2Hex('Tiger-Lamp-River-4271', SALT) }, lia: { salt: SALT, hash: await pbkdf2Hex('Owl-Cake-Moon-1357', SALT) }, papa: { salt: SALT, hash: await pbkdf2Hex('langes-passwort', SALT) } };
 const TAG = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); };
 // realistic data in the OLD layout (before S11 P2): first child without prefix, other children with the name
 const ALT = {
@@ -80,7 +80,7 @@ test('Umzug: jeder Wert zeichengleich unter der Kennung, Passwoerter und Sitzung
   assert.deepEqual(rec, [['r1', 3000]]);
   // own passwords still work (moved to bq2_pw_<id>)
   await page.locator('#logoutBtn').click();
-  await anmelden(page, 'student', 'lia', 'sonne');
+  await anmelden(page, 'student', 'lia', 'Owl-Cake-Moon-1357');
   await page.waitForSelector('#home:not([hidden])');
   assert.equal(await page.textContent('#totalStars'), '3');
   // a reload does not move again

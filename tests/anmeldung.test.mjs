@@ -14,13 +14,13 @@ import { kontenEinsetzen, kontenPruefen, pbkdf2Hex, normCode, codeErzeugen, ausV
 import { TEST_PW } from './hilfen.mjs';
 import { browserStarten, appOeffnen } from './app-hilfen.mjs';
 
-const CODES = { mia: 'ABCD-EFGH', papa: 'PAPA-2345', frau: 'TEAC-HER2', probe: 'TEST-2345', chef: 'CHEF-2345', lia: 'LIAA-2345' };
+const CODES = { mia: 'ABCD-EFGH', papa: 'PAPA-2345', frau: 'TEAC-HER2', probe: 'TEST-2345', chef: 'CHEF-2345', lia: 'LIAA-2345', tim: 'TIMM-2345' };
 async function konto(user, role, kinder) {
   const salt = Array.from({ length: 16 }, (_, i) => i + user.length);
   return { user, role, ...(kinder ? { kinder } : {}), start: { salt, hash: await pbkdf2Hex(normCode(CODES[user]), salt) } };
 }
 // Account model v2 (S11): the familiar v1 fixture is converted once; admins are not parents (B3).
-const KONTEN = ausV1({ users: [await konto('mia', 'student'), await konto('papa', 'parent', ['mia']), await konto('frau', 'teacher', ['mia']), { ...(await konto('probe', 'student')), test: true }, { ...(await konto('chef', 'parent', ['mia'])), admin: true }, await konto('lia', 'student')] });
+const KONTEN = ausV1({ users: [await konto('mia', 'student'), await konto('papa', 'parent', ['mia', 'tim']), await konto('frau', 'teacher', ['mia']), { ...(await konto('probe', 'student')), test: true }, { ...(await konto('chef', 'parent', ['mia'])), admin: true }, await konto('lia', 'student'), await konto('tim', 'student')] });
 const app = kontenEinsetzen(await fs.readFile(path.join(WURZEL, QUELLEN.app)), KONTEN);
 
 let browser, server;
@@ -55,7 +55,7 @@ async function passwortSetzen(page, pw) {
 const sichtbar = (page, sel) => page.locator(sel).isVisible();
 /** the child logs in on its device, then a grown-up opens the grown-ups area there */
 async function kindDann(page, wer, pw) {
-  await anmelden(page, 'student', 'mia', CODES.mia); await passwortSetzen(page, 'mond');
+  await anmelden(page, 'student', 'mia', CODES.mia); await passwortSetzen(page, 'Tiger-Lamp-River-4271');
   await page.waitForSelector('#home:not([hidden])');
   await page.locator('#adultBtn').click();
   await anmelden(page, 'adult', wer, CODES[wer]); await passwortSetzen(page, pw);
@@ -87,19 +87,19 @@ test('student: first login with start code, then own password; stays logged in; 
   await anmelden(page, 'student', ' Mia ', 'abcd efgh');
   await page.waitForSelector('#setPwForm');
   await page.locator('#newPw1').fill('ab'); await page.locator('#newPw2').fill('ab'); await page.locator('#setPwGo').click();
-  assert.match(await page.textContent('#setPwMsg'), /at least 4/);
-  await page.locator('#newPw1').fill('mond'); await page.locator('#newPw2').fill('sonne'); await page.locator('#setPwGo').click();
+  assert.match(await page.textContent('#setPwMsg'), /strong password/);
+  await page.locator('#newPw1').fill('Tiger-Lamp-River-4271'); await page.locator('#newPw2').fill('Owl-Cake-Moon-1357'); await page.locator('#setPwGo').click();
   assert.match(await page.textContent('#setPwMsg'), /not the same/);
-  await passwortSetzen(page, 'mond');
+  await passwortSetzen(page, 'Tiger-Lamp-River-4271');
   await page.waitForSelector('#home:not([hidden])');
   const pw = await lies(page, 'pw_' + ID('mia'));
-  assert.match(pw.hash, /^[0-9a-f]{64}$/); assert.ok(!JSON.stringify(pw).includes('mond'), 'password never stored');
+  assert.match(pw.hash, /^[0-9a-f]{64}$/); assert.ok(!JSON.stringify(pw).includes('Tiger-Lamp-River-4271'), 'password never stored');
   assert.deepEqual(await lies(page, 'session'), { user: 'mia', id: ID('mia') });
   await page.reload(); await page.waitForSelector('#home:not([hidden])');
   assert.ok(await sichtbar(page, '#logoutBtn'));
   await page.locator('#logoutBtn').click();
   assert.ok(await sichtbar(page, '#login'));
-  await anmelden(page, 'student', 'mia', 'mond');
+  await anmelden(page, 'student', 'mia', 'Tiger-Lamp-River-4271');
   await page.waitForSelector('#home:not([hidden])');
   assert.deepEqual(fehler, []);
   await ctx.close();
@@ -122,7 +122,7 @@ test('wrong password, unknown name and the wrong role are refused; after 5 tries
 
 test('child view has no grown-ups tab; "Grown-ups" opens the grown-ups login openly; leaving returns to the child', async () => {
   const { ctx, page, fehler } = await oeffnen();
-  await anmelden(page, 'student', 'mia', CODES.mia); await passwortSetzen(page, 'mond');
+  await anmelden(page, 'student', 'mia', CODES.mia); await passwortSetzen(page, 'Tiger-Lamp-River-4271');
   await page.waitForSelector('#home:not([hidden])');
   // help by role (Peter 01.11.): one help button, only the child guide - no concept, sources or grown-up notes
   assert.equal(await sichtbar(page, '#aboutBtn'), false, 'no second info button for the child');
@@ -139,7 +139,7 @@ test('child view has no grown-ups tab; "Grown-ups" opens the grown-ups login ope
   assert.ok(await sichtbar(page, '#loginUser'));
   await anmelden(page, 'adult', 'papa', CODES.papa);
   await page.locator('#newPw1').fill('kurz'); await page.locator('#newPw2').fill('kurz'); await page.locator('#setPwGo').click();
-  assert.match(await page.textContent('#setPwMsg'), /mindestens 8/);
+  assert.match(await page.textContent('#setPwMsg'), /mindestens 12/);
   await passwortSetzen(page, 'langes-passwort');
   await page.waitForSelector('#parentClose');
   assert.match(await page.textContent('.phdr'), /Elternbereich · papa/);
@@ -192,8 +192,7 @@ test('grown-ups header: language flags, version and log out always in view; info
 
 test('grown-ups area: chapters open in place, no sub-pages', async () => {
   const { ctx, page, fehler } = await oeffnen();
-  await anmelden(page, 'adult', 'papa', CODES.papa); await passwortSetzen(page, 'langes-passwort');
-  await page.waitForSelector('#parentClose');
+  await kindDann(page, 'papa', 'langes-passwort');
   assert.equal(await page.locator('[data-ppage]').count(), 0, 'no page buttons any more');
   assert.equal(await page.locator('#aboutBody details.psec[open]').count(), 0, 'chapters closed at the start');
   for (const id of ['sheets', 'settings', 'support', 'concept', 'app']) {
@@ -210,13 +209,13 @@ test('grown-ups area: chapters open in place, no sub-pages', async () => {
 test('test account: own data apart from the child, "+1 Tag" with ⓘ, reset clears only test data', async () => {
   const { ctx, page, fehler } = await oeffnen();
   // the real child practises first
-  await anmelden(page, 'student', 'mia', CODES.mia); await passwortSetzen(page, 'mond');
+  await anmelden(page, 'student', 'mia', CODES.mia); await passwortSetzen(page, 'Tiger-Lamp-River-4271');
   await page.waitForSelector('#home:not([hidden])');
   assert.equal(await page.isVisible('#testBar'), false, 'no test bar for the real child');
   await page.evaluate((ns) => localStorage.setItem(ns + 'total', '7'), NS('mia'));
   await page.locator('#logoutBtn').click();
   // test account
-  await anmelden(page, 'student', 'probe', CODES.probe); await passwortSetzen(page, 'probe1');
+  await anmelden(page, 'student', 'probe', CODES.probe); await passwortSetzen(page, 'Fox-Kite-Rain-2468');
   await page.waitForSelector('#testBar:not([hidden])');
   assert.match(await page.textContent('#testBar'), /Testkonto/);
   assert.equal(await page.isVisible('#testBack'), false, 'no way into the grown-ups area without a grown-up');
@@ -249,7 +248,7 @@ test('test account: own data apart from the child, "+1 Tag" with ⓘ, reset clea
 
 test('admin: try the test child and come back without a new login; log out returns the device to the real child', async () => {
   const { ctx, page, fehler } = await oeffnen();
-  await anmelden(page, 'student', 'mia', CODES.mia); await passwortSetzen(page, 'mond');
+  await anmelden(page, 'student', 'mia', CODES.mia); await passwortSetzen(page, 'Tiger-Lamp-River-4271');
   await page.waitForSelector('#home:not([hidden])');
   await page.evaluate((ns) => localStorage.setItem(ns + 'total', '7'), NS('mia'));
   await page.locator('#adultBtn').click();
@@ -273,7 +272,9 @@ test('admin: try the test child and come back without a new login; log out retur
   assert.match(await page.textContent('.phdr'), /chef/);
   assert.match(await page.textContent('.phdr-test'), /Testdaten/, 'clearly marked: test data');
   await page.locator('#pRealData').click();
-  assert.equal(await page.locator('.phdr-test').count(), 0, 'back to real data');
+  assert.equal(await page.locator('#pRealData').count(), 0, 'back to real data: the device has the real child again');
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('bq2_session')).user), 'mia');
+  assert.ok(!(await page.textContent('.phdr')).includes('mia'), 'the admin does not see the child without a grant (S11 P3/P4)');
   // play again, come back, log out: the device goes back to the real child
   await page.locator('#pPlayTest').click(); await page.locator('#testBack').click();
   await page.waitForSelector('#parentClose');
@@ -315,7 +316,7 @@ test('test child: the way back stays when the iPad sleeps and when the app is re
 test('grown-up stays logged in: no timer, not when the iPad sleeps, not when the app is reopened; only "Abmelden" ends it', async () => {
   const { ctx, page } = await oeffnen();
   await page.clock.install();
-  await anmelden(page, 'student', 'mia', CODES.mia); await passwortSetzen(page, 'mond');
+  await anmelden(page, 'student', 'mia', CODES.mia); await passwortSetzen(page, 'Tiger-Lamp-River-4271');
   await page.locator('#adultBtn').click();
   await anmelden(page, 'adult', 'papa', CODES.papa); await passwortSetzen(page, 'langes-passwort');
   await page.waitForSelector('#parentClose');
@@ -347,7 +348,7 @@ async function allesSichtbar(page) {
 test('language: the English grown-ups area has no German left-overs, the German one no English UI labels', async () => {
   const { ctx, page, fehler } = await oeffnen({ viewport: { width: 1200, height: 900 } });
   await page.evaluate((ns) => localStorage.setItem(ns + 'attempts', JSON.stringify(Array.from({ length: 30 }, (_, i) => ({ day: '2026-10-' + (10 + i % 6), skill: i % 2 ? 'round' : 'units', level: 2, attempt: 1, ok: i % 3 !== 0, help: false })))), NS('mia'));
-  await kindDann(page, 'chef', 'langes-passwort');
+  await kindDann(page, 'papa', 'langes-passwort');
   await page.locator('.phdr [data-plang="en"]').click();
   // German example sentences for the German-class quest are meant to stay German
   const en = (await allesSichtbar(page)).filter((z) => !/Grundschulkönig|Van der Kleij|Als Erstes|schneidet man|faltet man/.test(z));
@@ -360,26 +361,36 @@ test('language: the English grown-ups area has no German left-overs, the German 
   await ctx.close();
 });
 
-test('whose data: the header names the child on this device; without a child no overview, only a clear note', async () => {
+test('whose data: grown-ups see only their own children; without their data on this device a clear note; with it the overview at once (E2)', async () => {
   const { ctx, page, fehler } = await oeffnen();
   await page.evaluate(() => localStorage.setItem('bq2_total', '9'));   // old practice on this device without login
   await anmelden(page, 'adult', 'papa', CODES.papa); await passwortSetzen(page, 'langes-passwort');
   await page.waitForSelector('#parentClose');
-  assert.match(await page.textContent('#pKid'), /kein Kind auf diesem Gerät/);
-  assert.match(await page.textContent('.pnokid'), /Auf diesem Gerät ist kein Kind angemeldet/);
+  assert.match(await page.textContent('#pKid'), /keine Daten Ihrer Kinder auf diesem Gerät/);
+  assert.match(await page.textContent('.pnokid'), /Meine Kinder/);
+  assert.match(await page.textContent('.pnokid'), /mia[\s\S]*Daten auf dem Gerät des Kindes/);
   assert.equal(await page.locator('.psubject').count(), 0, 'no overview of data that are not the child’s');
+  assert.equal(await page.locator('details.psec[data-psec="sheets"]').count(), 0, 'no child chapters without the child’s data');
   await page.locator('.phdr [data-plang="en"]').click();
-  assert.match(await page.textContent('#pKid'), /no child on this device/);
+  assert.match(await page.textContent('#pKid'), /none of your children/);
   await page.locator('.phdr [data-plang="de"]').click();
   await page.locator('#parentClose').click();
   // with the child logged in: name in the header, overview there
-  await anmelden(page, 'student', 'mia', CODES.mia); await passwortSetzen(page, 'mond');
+  await anmelden(page, 'student', 'mia', CODES.mia); await passwortSetzen(page, 'Tiger-Lamp-River-4271');
   await page.locator('#adultBtn').click();
   await page.locator('#loginUser').fill('papa'); await page.locator('#loginPw').fill('langes-passwort'); await page.locator('#loginGo').click();
   await page.waitForSelector('#parentClose');
   assert.match(await page.textContent('#pKid'), /mia/);
   assert.equal(await page.locator('.pnokid').count(), 0);
   assert.ok(await page.locator('.psubject').count());
+  // E2: nobody logged in, the child's data on the device: the grown-up sees them right after logging in
+  await page.locator('#parentClose').click();
+  await page.waitForSelector('#home:not([hidden])');
+  await page.locator('#logoutBtn').click();
+  await anmelden(page, 'adult', 'papa', 'langes-passwort');
+  await page.waitForSelector('#parentClose');
+  assert.match(await page.textContent('#pKid'), /mia/);
+  assert.ok(await page.locator('.psubject').count(), 'overview with 0 taps after the login');
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
@@ -412,37 +423,37 @@ test('accounts file is checked; the build puts accounts only into the vault, nev
   for (const n of ['papa', 'frau', '"mia"']) assert.ok(!ohneTresor(html).includes(n), 'no user name in the public shell');
 });
 
-test('choose the child in the grown-ups area: all children who use this device, the test account only for the admin', async () => {
+test('Meine Kinder (B1 behoben): Eltern waehlen nur zwischen ihren eigenen Kindern, ohne Kind-Anmeldung; ein fremdes Kind und das Testkind erscheinen nie; der Admin sieht nur das Testkind', async () => {
   const { ctx, page, fehler } = await oeffnen();
   const tag = (b) => { const d = new Date(); d.setDate(d.getDate() - b); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
   const tage = (n) => Array.from({ length: n }, (_, i) => ({ day: tag(i + 1), skill: 'round', level: 2, attempt: 1, ok: true, help: false }));
-  await anmelden(page, 'student', 'mia', CODES.mia); await passwortSetzen(page, 'mond');
-  await page.evaluate(([ns, a]) => localStorage.setItem(ns + 'attempts', JSON.stringify(a)), [NS('mia'), tage(3)]);
-  await page.locator('#logoutBtn').click();
-  await anmelden(page, 'student', 'probe', CODES.probe); await passwortSetzen(page, 'probe1');
-  await page.locator('#logoutBtn').click();
-  await anmelden(page, 'student', 'lia', CODES.lia); await passwortSetzen(page, 'lia1');
-  await page.evaluate(([ns, a]) => localStorage.setItem(ns + 'attempts', JSON.stringify(a)), [NS('lia'), tage(1)]);
+  for (const [kind, pw, n] of [['mia', 'Tiger-Lamp-River-4271', 3], ['tim', 'Bear-Kite-Snow-2222', 1], ['probe', 'Fox-Kite-Rain-2468', 2], ['lia', 'Owl-Cake-Moon-1357', 5]]) {
+    await anmelden(page, 'student', kind, CODES[kind]); await passwortSetzen(page, pw);
+    await page.evaluate(([ns, a]) => localStorage.setItem(ns + 'attempts', JSON.stringify(a)), [NS(kind), tage(n)]);
+    if (kind !== 'lia') await page.locator('#logoutBtn').click();
+  }
+  // lia (not papa's child) is logged in on the device
   await page.locator('#adultBtn').click();
   await anmelden(page, 'adult', 'papa', CODES.papa); await passwortSetzen(page, 'langes-passwort');
   await page.waitForSelector('#parentClose');
-  assert.deepEqual(await page.$$eval('[data-pkid]', (b) => b.map((x) => x.dataset.pkid)), ['mia', 'lia'], 'no test account for a parent');
-  assert.equal(await page.getAttribute('[data-pkid="lia"]', 'aria-pressed'), 'true', 'the child logged in now is shown first');
+  assert.deepEqual(await page.$$eval('[data-pkid]', (b) => b.map((x) => x.dataset.pkid)), ['mia', 'tim'], 'only own children: no lia (B1), no test child');
+  assert.equal(await page.getAttribute('[data-pkid="mia"]', 'aria-pressed'), 'true', 'the logged-in child is not his: his first child is shown');
   const zeile = async () => page.textContent('#pSummary');
-  assert.match(await zeile(), /an 1 Tag geübt|on 1 day/);
-  await page.locator('[data-pkid="mia"]').click();
-  assert.equal(await page.getAttribute('[data-pkid="mia"]', 'aria-pressed'), 'true');
   assert.match(await zeile(), /an 3 Tagen geübt/);
+  await page.locator('[data-pkid="tim"]').click();
+  assert.equal(await page.getAttribute('[data-pkid="tim"]', 'aria-pressed'), 'true');
+  assert.match(await zeile(), /an 1 Tag geübt/);
+  assert.ok(!/an 5 Tagen geübt/.test(await zeile()) && !(await page.textContent('.phdr')).includes('lia'), 'nothing of lia');
   // leaving: the device still belongs to the child logged in (lia), nothing was switched
   await page.locator('#parentClose').click();
   await page.waitForSelector('#home:not([hidden])');
   assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('bq2_session')).user), 'lia');
-  // the admin also sees the test account
+  // the admin: only the test child
   await page.locator('#adultBtn').click();
   await anmelden(page, 'adult', 'chef', CODES.chef); await passwortSetzen(page, 'langes-passwort');
   await page.waitForSelector('#parentClose');
-  assert.deepEqual(await page.$$eval('[data-pkid]', (b) => b.map((x) => x.dataset.pkid)), ['mia', 'probe', 'lia']);
-  await page.locator('[data-pkid="probe"]').click();
+  assert.equal(await page.locator('[data-pkid]').count(), 0, 'one child only: no choice');
+  assert.match(await page.textContent('#pKid'), /probe/);
   assert.match(await page.textContent('.phdr-test'), /Testdaten/);
   assert.deepEqual(fehler, []);
   await ctx.close();

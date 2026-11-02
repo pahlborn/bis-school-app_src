@@ -137,7 +137,7 @@ const DATEN = {
   sheets: [1, 2, 3].map((n) => ({ id: 's' + n, no: n, day: TAG(n), items: [] })), chk_grow: [true, false], focusMode: 'manual', focusManual: ['round']
 };
 async function kindMitDaten(page) {
-  await anmelden(page, 'student', 'mia', C.mia); await passwortSetzen(page, 'mond');
+  await anmelden(page, 'student', 'mia', C.mia); await passwortSetzen(page, 'Tiger-Lamp-River-4271');
   await page.waitForSelector('#home:not([hidden])');
   await page.evaluate(([d, kind]) => { const { pre } = new Function('return ' + kind)()(); for (const [k, v] of Object.entries(d)) localStorage.setItem(pre + k, JSON.stringify(v)); }, [DATEN, KIND.toString()]);
   // one recording, written the way the app stores it (database bq2_audio__<id>)
@@ -183,7 +183,7 @@ test('Sicherung: nur Eltern des Kindes; Datei vollstaendig ohne Passwoerter; Zur
   // the admin (not a parent, B3) and the teacher see no backup
   for (const wer of ['chef', 'frau']) {
     const b = await oeffnen(browser, server);
-    await anmelden(b.page, 'student', 'mia', C.mia); await passwortSetzen(b.page, 'mond');
+    await anmelden(b.page, 'student', 'mia', C.mia); await passwortSetzen(b.page, 'Tiger-Lamp-River-4271');
     await b.page.waitForSelector('#home:not([hidden])');
     await elternbereich(b.page, wer, 'langes-passwort');
     assert.equal(await b.page.locator('details.psec[data-psec="backup"]').count(), 0, wer);
@@ -193,7 +193,7 @@ test('Sicherung: nur Eltern des Kindes; Datei vollstaendig ohne Passwoerter; Zur
 
   // device 2: fresh, the same child, restore
   const c = await oeffnen(browser, server);
-  await anmelden(c.page, 'student', 'mia', C.mia); await passwortSetzen(c.page, 'mond');
+  await anmelden(c.page, 'student', 'mia', C.mia); await passwortSetzen(c.page, 'Tiger-Lamp-River-4271');
   await c.page.waitForSelector('#home:not([hidden])');
   const frisch = await kinderSchluessel(c.page);
   await elternbereich(c.page, 'papa', 'langes-passwort');
