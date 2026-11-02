@@ -22,4 +22,4 @@ Paket E2a aus `docs/konzept/elternbereich-auftraege.md` (Konzept 5.11, 7.0). Vor
   - Word Problems mit einer Idee ohne 278; die alten Sätze fehlen.
   - Englisch ohne deutsche Reste, amerikanische Schreibweise.
 - Gegenprobe: der Test mit der App von `main` ist rot.
-- `npm test`: 361 bestanden.
+- `npm test`: 361 bestanden; nach dem Merge von `main` (#81) 362 bestanden.
