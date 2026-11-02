@@ -97,7 +97,7 @@ test('built app: child sees only "v13" at the end of About (DE and EN); adults s
   assert.equal(await page.textContent('#aboutBody .app-version'), 'v13');
   await page.locator('#aboutBack').click();
   await elternOeffnen(page);
-  await elternSeite(page, 'app');
+  await elternSeite(page, 'aboutapp');
   const info = await page.textContent('#versionInfo');
   assert.ok(info.includes('v13') && info.includes('30.10.2026 14:05') && info.includes('a1b2c3d'), info);
   assert.deepEqual(fehler, []);
@@ -117,7 +117,7 @@ test('published shell: "check for new version" says current, then reports a newe
   page.on('request', (q) => { if (!q.url().startsWith(server.url) && !q.url().includes('fonts.g')) anfragen.push(q.url()); });
   await page.goto(server.url + '/app/'); await page.waitForSelector('#home h1');
   await elternOeffnen(page);
-  await elternSeite(page, 'app');
+  await elternSeite(page, 'aboutapp');
   await page.locator('#checkUpdate').click();
   await page.waitForFunction(() => !document.querySelector('#updateMessage').textContent.includes('Prüfe'));
   assert.match(await page.textContent('#updateMessage'), /^Aktuell/);

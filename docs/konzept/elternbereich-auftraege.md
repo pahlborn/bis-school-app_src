@@ -9,7 +9,7 @@ Erst verschieben (B), dann neu bauen (C–E), zuletzt umschreiben (F). So wird k
 
 | Paket | Status |
 |---|---|
-| A1 | ☐ |
+| A1 | ☑ (#59) |
 | B1 · B2 · B3 · B4 · B5 | ☐ ☐ ☐ ☐ ☐ |
 | C1 | ☐ |
 | D1 · D2 · D3 · D4 | ☐ ☐ ☐ ☐ |

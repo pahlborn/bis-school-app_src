@@ -212,7 +212,8 @@ button{font:inherit;color:inherit}
 .phdr-who{font-family:var(--display);font-weight:700}
 .phdr-kids{display:inline-flex;flex-wrap:wrap;gap:6px}
 .phdr-kid{font-size:.85rem;font-weight:700;background:var(--soft);border-radius:999px;padding:2px 10px}
-.phdr-ver{font-size:.8rem;color:var(--muted);font-weight:700;border:1px solid var(--line);border-radius:999px;padding:2px 8px}
+.phdr-icon{min-width:44px;font-size:1.05rem}
+.pset-end{margin-top:18px}
 .phdr-act{display:flex;align-items:center;gap:6px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
 .phdr .flags{margin-left:0}
 .phdr-test{background:#F1EEFF;border-radius:12px;padding:6px 10px}
@@ -3797,6 +3798,66 @@ function undoRestore(){
   store.del('vorRueckspielen'); backupNote=de?'Der Stand vor dem Zurückspielen ist wiederhergestellt.':'The progress from before the restore is back.';
   renderHome(); renderSheets();
 }
+/* ⚙ Settings (concept "Elternbereich" 5.5, package B1): everything that is set up rarely, in one view of its own.
+   The sections keep their ids (settings, backup, grants, accounts) so their bindings and the open state stay as before. */
+function settingsSecs(){
+  const lang=PL(), T=PT[lang], de=lang==='de', teacher=isTeacher(), kidOk=!accountsOn() || !!viewedKid(), kid=accountsOn()?viewedKid():null, s=[];
+  if(!teacher && kidOk) s.push(['settings', kid?(de?'👧 Für ':'👧 For ')+esc(kid):T.settings, storyCapHTML()+reminderHTML()+profileAdminHTML()]);
+  if(canBackup()) s.push(['backup', de?'💾 Sicherung & Daten':'💾 Backup & data', backupHTML()]);
+  if(canBackup()) s.push(['grants', de?'🔐 Zugriff & Freigaben':'🔐 Access & grants', grantsHTML()]);
+  if(accountsOn() && adultUser && adultUser.admin){
+    const t=testUserFor();
+    s.push(['accounts', de?'🛠 Konten':'🛠 Accounts', accountsAdminHTML()+(t?`<p><button type="button" class="btn small" id="pPlayTest">🧪 ${de?'Testkind':'Test child'}</button></p>`:'')]);
+  }
+  s.push(['aboutapp', de?'ℹ️ Über die App':'ℹ️ About the app', versionAdminHTML()]);
+  return s;
+}
+function settingsViewHTML(secHTML){
+  const de=PL()==='de', close=accountsOn()?(de?'Abmelden':'Log out'):(de?'Sperren':'Lock');
+  return `<button type="button" class="btn small" id="pSetBack">${de?'← Zurück zur Übersicht':'← Back to the overview'}</button><h2 class="psubjtitle">⚙️ ${de?'Einstellungen':'Settings'}</h2>`
+    +secHTML(settingsSecs())+`<p class="pset-end"><button class="btn" id="parentClose2" type="button">${close}</button></p>`;
+}
+/* Routes (concept 5.7): #eltern, #eltern/einstellungen, #eltern/einstellungen/<section>. Browser back leaves ⚙. */
+const SET_ROUTES={kind:'settings', sicherung:'backup', freigaben:'grants', konten:'accounts', ueber:'aboutapp'};
+let pviewPushed=false, pendingRoute=null;   // pendingRoute: a route that needs the login first (kept through parentLock)
+function parentRoute(){
+  const m=/^#eltern(\/einstellungen(?:\/([a-z]+))?)?$/.exec(location.hash||'');
+  return m ? {settings:!!m[1], sec:m[2]||null} : null;
+}
+function setParentView(r){
+  state.pview=r.settings?'settings':null;
+  if(r.settings){ state.psubj=null; const id=SET_ROUTES[r.sec], o=state.popen||(state.popen=[]); if(id && !o.includes(id)) o.push(id); }
+}
+function scrollToRouteSec(r){ const id=r && r.sec && SET_ROUTES[r.sec], d=id && $(`#aboutBody details.psec[data-psec="${id}"]`); if(d) d.scrollIntoView({block:'start'}); }
+function applyParentRoute(){
+  const r=parentRoute(); if(!r) return false;
+  setParentView(r);
+  if(state.screen==='about' && state.aboutTab==='sheets' && parentAccess){ renderSheets(); window.scrollTo(0,0); }
+  else { pendingRoute=r; openAbout('sheets'); if(parentAccess) pendingRoute=null; }
+  scrollToRouteSec(r);
+  return true;
+}
+/* after the login of a grown-up: go where the route asked for (the login page locks the area and clears the hash) */
+function takePendingRoute(){
+  const r=pendingRoute; pendingRoute=null; if(!r) return null;
+  setParentView(r);
+  if(r.settings){ try{ history.replaceState(null,'',location.pathname+location.search+'#eltern/einstellungen'+(r.sec?'/'+r.sec:'')); }catch(e){} }
+  return r;
+}
+function openParentView(){ pviewPushed=true; location.hash='#eltern/einstellungen'; }
+function closeParentView(){
+  if(pviewPushed && /^#eltern\/einstellungen/.test(location.hash)){ pviewPushed=false; history.back(); return; }
+  try{ history.replaceState(null,'',location.pathname+location.search+'#eltern'); }catch(e){}
+  state.pview=null; renderSheets(); window.scrollTo(0,0);
+}
+function leaveParentRoute(){ if(/^#eltern\//.test(location.hash)){ try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){} } }
+/* "?" (concept 5.1): until the help view exists (package B2) it opens the guide chapter on the overview. */
+function openParentHelp(){
+  const o=state.popen||(state.popen=[]); if(!o.includes('app')) o.push('app');
+  if(state.pview==='settings'){ state.pview=null; leaveParentRoute(); pviewPushed=false; }
+  state.psubj=null; renderSheets();
+  const d=$('#aboutBody details.psec[data-psec="app"]'); if(d) d.scrollIntoView({block:'start'});
+}
 /* Grown-ups area (Peter, 31.10.): fixed header (language flags, version, log out); overview on top;
    below, chapters that open in place. Each thing can be set in one place only: focus at the quest
    (overview), the rest under "For your child". Reading matter (guide, how the class supports,
@@ -3806,24 +3867,29 @@ function renderSheets(){
   aboutChrome();
   syncViewUser(); grantOpened();
   const body=$('#aboutBody'), lang=PL(), T=PT[lang], de=lang==='de', teacher=isTeacher(), open=state.popen||(state.popen=[]), kidOk=!accountsOn() || !!viewedKid();
-  let html=parentHeaderHTML()+(state.psubj ? parentSubjectHTML(state.psubj) : parentHomeHTML());
-  // the chapters only on the overview, not again inside a subject (Peter, 01.11.)
-  const onOverview=!state.psubj || (accountsOn() && !viewedKid());
-  const secs=[];
-  if(accountsOn() && kidOk && !(viewerGrant() && !viewerGrant().scope.includes('school'))) secs.push(['school', de?'🏫 Einstufungen der Schule':'🏫 School ratings', schoolHTML()]);
-  if(!teacher && kidOk) secs.push(['sheets', T.sheets, sheetsPageHTML()]);
-  if(canBackup()) secs.push(['backup', de?'💾 Sicherung':'💾 Backup', backupHTML()]);
-  if(canBackup()) secs.push(['grants', de?'🔐 Zugriff & Freigaben':'🔐 Access & grants', grantsHTML()]);
-  if(accountsOn() && adultUser && adultUser.admin) secs.push(['accounts', de?'🛠 Konten':'🛠 Accounts', accountsAdminHTML()]);
-  if(!teacher && kidOk) secs.push(['settings', T.settings, storyCapHTML()+reminderHTML()+profileAdminHTML()]);
-  // Peter, 01.11.: three kinds of reading matter, kept apart - practical support, the concept, using the app
-  secs.push(['support', de?'🤝 Ihr Kind unterstützen':'🤝 Supporting your child', supportGuideHTML()]);
-  secs.push(['concept', ABOUT_UI[lang].title, aboutParts(lang).main+`<div class="about-menu">${aboutSectionsHTML(lang,null,true)}</div>`]);
-  secs.push(['app', de?'📱 Bedienung & Technik':'📱 Using the app', guideAdultFor(de)+versionAdminHTML()]);
-  if(onOverview) html+='<div class="psecs">'+secs.map(([id,title,b])=>`<details class="psec" data-psec="${id}"${open.includes(id)?' open':''}><summary>${title}</summary><div class="psec-body">${b}</div></details>`).join('')+'</div>';
+  const secHTML = list => '<div class="psecs">'+list.map(([id,title,b])=>`<details class="psec" data-psec="${id}"${open.includes(id)?' open':''}><summary>${title}</summary><div class="psec-body">${b}</div></details>`).join('')+'</div>';
+  let html=parentHeaderHTML();
+  if(state.pview==='settings') html+=settingsViewHTML(secHTML);
+  else {
+    html+=state.psubj ? parentSubjectHTML(state.psubj) : parentHomeHTML();
+    // the chapters only on the overview, not again inside a subject (Peter, 01.11.)
+    const onOverview=!state.psubj || (accountsOn() && !viewedKid());
+    const secs=[];
+    if(accountsOn() && kidOk && !(viewerGrant() && !viewerGrant().scope.includes('school'))) secs.push(['school', de?'🏫 Einstufungen der Schule':'🏫 School ratings', schoolHTML()]);
+    if(!teacher && kidOk) secs.push(['sheets', T.sheets, sheetsPageHTML()]);
+    // Peter, 01.11.: three kinds of reading matter, kept apart - practical support, the concept, using the app.
+    // Settings, backup, grants, accounts and the version live in ⚙ (concept "Elternbereich", package B1).
+    secs.push(['support', de?'🤝 Ihr Kind unterstützen':'🤝 Supporting your child', supportGuideHTML()]);
+    secs.push(['concept', ABOUT_UI[lang].title, aboutParts(lang).main+`<div class="about-menu">${aboutSectionsHTML(lang,null,true)}</div>`]);
+    secs.push(['app', de?'📱 Bedienung & Technik':'📱 Using the app', guideAdultFor(de)]);
+    if(onOverview) html+=secHTML(secs);
+  }
   body.innerHTML=html;
   body.querySelectorAll('details.psec').forEach(d=>d.addEventListener('toggle',()=>{ const id=d.dataset.psec, i=open.indexOf(id); if(d.open && i<0) open.push(id); if(!d.open && i>=0) open.splice(i,1); }));
   body.querySelectorAll('[data-plang]').forEach(b=>b.addEventListener('click',()=>setLang(b.dataset.plang)));
+  const set=$('#pSettings'); if(set) set.addEventListener('click',()=>{ if(!parentAccess) return; if(state.pview==='settings') closeParentView(); else openParentView(); });
+  const setBack=$('#pSetBack'); if(setBack) setBack.addEventListener('click',closeParentView);
+  const help=$('#pHelp'); if(help) help.addEventListener('click',()=>{ if(!parentAccess) return; openParentHelp(); });
   const real=$('#pRealData'); if(real) real.addEventListener('click',()=>{ if(!parentAccess) return; restoreRealChild(); renderSheets(); });
   body.querySelectorAll('[data-pkid]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess || !kidChoices().includes(b.dataset.pkid)) return; const s=studentSession(); viewUser=(s && s.user===b.dataset.pkid)?null:b.dataset.pkid; state.psubj=null; renderSheets(); }));
   const play=$('#pPlayTest'); if(play) play.addEventListener('click',playTest);
@@ -3851,7 +3917,7 @@ function renderSheets(){
 let parentAccess=false, parentFailures=0, parentBlockedUntil=0, parentEpoch=0;
 function parentLock(){
   parentEpoch++;
-  parentAccess=false; viewUser=null;
+  parentAccess=false; viewUser=null; state.pview=null; pviewPushed=false; leaveParentRoute();
   if(accountsOn()) adultUser=null;
   if(state.aboutTab==='sheets') $('#aboutBody').innerHTML='';
 }
@@ -3932,19 +3998,21 @@ function backFromTest(){ if(!adultResume()) renderHome(); }
 /* Header of the grown-ups area: only what the user needs (Peter, 31.10.: no processing notes here;
    how log-out works belongs to the guide). */
 function parentHeaderHTML(){
-  const de=PL()==='de', v=APP_VERSION?versionLabel():'';
+  const de=PL()==='de';
   const who=accountsOn() && adultUser
     ? `${adultUser.role==='teacher'?(de?'Lehrkraft-Ansicht':'Teacher view'):(de?'Elternbereich':'Grown-ups area')} · <b>${esc(adultUser.user)}</b>`
     : (de?'Elternbereich':'Grown-ups area');
   const close=accountsOn()?(de?'Abmelden':'Log out'):(de?'Sperren':'Lock');
-  const test=testUserFor();
   // whose data is shown (Peter, 01.11.): the child logged in on this device - data stay on the device
   // whose data: the child chosen here or the one logged in on this device; a choice when several children use this device
   const kid=viewedKid(), kids=kidChoices();
   const kidChip=!accountsOn()?'':kids.length>1
     ? `<span class="phdr-kids" role="group" aria-label="${de?'Kind':'Child'}">${kids.map(u=>`<button type="button" class="btn small${u===kid?' primary':''}" data-pkid="${esc(u)}" aria-pressed="${u===kid}">${isTestUser(u)?'🧪':'👧'} ${esc(u)}</button>`).join('')}</span>`
     : `<span class="phdr-kid" id="pKid">${kid?(isTestUser(kid)?'🧪 ':'👧 ')+esc(kid):(de?'👧 keine Daten Ihrer Kinder auf diesem Gerät':'👧 none of your children’s data on this device')}</span>`;
-  let h=`<header class="phdr"><div class="phdr-row"><span class="phdr-who">👪 ${who}</span>${kidChip}<span class="phdr-act">${v?`<span class="phdr-ver" id="pVersion">${esc(v)}</span>`:''}${flagsHTML()}${test?`<button type="button" class="btn small" id="pPlayTest">🧪 ${de?'Testkind':'Test child'}</button>`:''}<button class="btn small" id="parentClose" type="button">${close}</button></span></div>`;
+  // Concept "Elternbereich" 5.1 (B1): child, flags, ? help, ⚙ settings, log out. The version is in ⚙ "About the app",
+  // the test child button in ⚙ "Accounts" (until B5).
+  const onSet=state.pview==='settings';
+  let h=`<header class="phdr"><div class="phdr-row"><span class="phdr-who">👪 ${who}</span>${kidChip}<span class="phdr-act">${flagsHTML()}<button type="button" class="btn small phdr-icon" id="pHelp" aria-label="${de?'Hilfe':'Help'}" title="${de?'Hilfe':'Help'}">?</button><button type="button" class="btn small phdr-icon${onSet?' primary':''}" id="pSettings" aria-label="${de?'Einstellungen':'Settings'}" title="${de?'Einstellungen':'Settings'}" aria-pressed="${onSet}">⚙️</button><button class="btn small" id="parentClose" type="button">${close}</button></span></div>`;
   if(accountsOn() && kid && isTestUser(kid)) h+=`<div class="phdr-row phdr-test">🧪 <b>${de?'Hier stehen Testdaten.':'You are looking at test data.'}</b>${store.get('sessionPrev',null)?`<button type="button" class="btn small" id="pRealData">${de?'Zurück zu echten Daten':'Back to real data'}</button>`:''}</div>`;
   return h+'</header>';
 }
@@ -4124,8 +4192,8 @@ function renderWelcome(u){
 function loginDone(u, welcomed){
   $('#loginBody').innerHTML='';
   const seen=store.get('lastSeen',{}); seen[u.id]=new Date().toISOString(); store.set('lastSeen',seen);
-  if(u.role==='student'){ store.set('session',sessionOf(u)); const here=store.get('kidsHere',[]); if(!here.includes(u.id)) store.set('kidsHere',here.concat([u.id])); adultUser=null; if(welcomed) store.set('greetDay',dayKey()); renderHome(); show('home'); }
-  else { store.set('adultSession',sessionOf(u)); adultUser={user:u.user, role:u.role, admin:!!u.admin}; parentAccess=true; state.psubj=null; state.popen=state.popen||[]; openAbout('sheets'); }
+  if(u.role==='student'){ pendingRoute=null; store.set('session',sessionOf(u)); const here=store.get('kidsHere',[]); if(!here.includes(u.id)) store.set('kidsHere',here.concat([u.id])); adultUser=null; if(welcomed) store.set('greetDay',dayKey()); renderHome(); show('home'); }
+  else { store.set('adultSession',sessionOf(u)); adultUser={user:u.user, role:u.role, admin:!!u.admin}; parentAccess=true; state.psubj=null; state.popen=state.popen||[]; const r=takePendingRoute(); openAbout('sheets'); scrollToRouteSec(r); }
 }
 /* Test account bar (for grown-ups, in their language): clearly marked, separate data, jump ahead one
    day, reset everything, and – while a grown-up is logged in – back to the grown-ups area. */
@@ -4309,7 +4377,7 @@ function bindParentSettings(){
   const de=PL()==='de';
   bindStoryCap(); bindProfileAdmin(); bindVersionAdmin(); addAdultInfo($('#aboutBody'));
   // "Log out" is the only way out (Peter, 31.10.): no timer, no log-out in the background.
-  const pc=$('#parentClose'); if(pc) pc.addEventListener('click',()=>{ if(accountsOn()){ store.del('adultSession'); restoreRealChild(); } parentLock(); renderParentGate(); });
+  ['#parentClose','#parentClose2'].forEach(sel=>{ const pc=$(sel); if(pc) pc.addEventListener('click',()=>{ pendingRoute=null; if(accountsOn()){ store.del('adultSession'); restoreRealChild(); } parentLock(); renderParentGate(); }); });
   if($('#reminderForm')) $('#reminderForm').addEventListener('submit',e=>{
     e.preventDefault();if(!parentAccess) return;
     try{
@@ -4891,7 +4959,12 @@ $('#tabInfo').addEventListener('click',()=>openAbout('info'));
 $('#tabSheets').addEventListener('click',()=>openAbout('sheets'));
 // No log-out in the background (Peter, 31.10.): an iPad is personal; only stop a running recording.
 document.addEventListener('visibilitychange',()=>{if(!document.hidden) checkForUpdate(); if(document.hidden) recStop();});
-window.addEventListener('hashchange',()=>{if(location.hash==='#eltern') openAbout('sheets'); else startFromHash();});
+window.addEventListener('hashchange',()=>{
+  if(applyParentRoute()) return;
+  // browser back out of ⚙ to a page without a route: back to the overview of the grown-ups area
+  if(state.pview && state.screen==='about' && state.aboutTab==='sheets'){ state.pview=null; pviewPushed=false; renderSheets(); return; }
+  startFromHash();
+});
 
 function boot(data){
   renderHome();
@@ -4902,7 +4975,7 @@ function boot(data){
   } else if(data && data.screen==='studio' && STUDIOS[data.studio]){ openStudio(data.studio); }
   else if(data && data.screen==='subject' && SUBJECTS.some(s=>s.key===data.subject)){ openSubject(data.subject); }
   else if(startFromHash()){ /* start link: login filled in */ }
-  else if(location.hash==='#eltern') openAbout('sheets');
+  else if(parentRoute()) applyParentRoute();
   else if(accountsOn() && store.get('adultSession',null) && !isTestAccount() && adultResume()){ /* grown-up stays logged in */ }
   else show('home');   // with accounts and no login, show() leads to the login screen
   setTimeout(checkForUpdate,3000);
