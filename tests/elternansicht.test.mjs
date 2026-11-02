@@ -59,7 +59,9 @@ test('subject page: status with school term, how sure, basis, trend, recency, ti
   await page.locator('[data-psubj="science"]').click();
   const units = await page.locator('.pquest', { hasText: 'Units & Measuring' }).textContent();
   assert.match(units, /Braucht Unterstützung \(Requires support\)/); assert.match(units, /vorläufig/);
-  assert.match(units, /10 Aufgaben an 3 Tagen: 2 selbst gelöst/);
+  assert.match(units, /10 Aufgaben · 2 selbst gelöst/);   // E1: level 2
+  await page.locator('.pquest', { hasText: 'Units & Measuring' }).locator('details.pbasis > summary').click();
+  assert.match(await page.locator('.pquest', { hasText: 'Units & Measuring' }).locator('details.pbasis table').innerText(), /10 Aufgaben an 3 Tagen[\s\S]*selbst gelöst\s+2/);
   assert.match(units, /noch keine verlässliche Tendenz/);
   assert.match(units, /Belastbar ab etwa 20 Aufgaben/);
   assert.match(units, /So helfen Sie/);
@@ -91,11 +93,14 @@ test('focus: "Automatic" (class topics + where support helps) or "Manual", each 
   assert.equal(await page.getAttribute('[data-pfocus="detective"]', 'aria-pressed'), 'true', 'needs support → automatic focus');
   assert.equal(await page.getAttribute('[data-pfocus="round"]', 'aria-pressed'), 'true', 'class topic → automatic focus');
   assert.equal(await page.getAttribute('[data-fmode="auto"]', 'aria-pressed'), 'true', 'automatic by default');
-  assert.match(await page.textContent('.pfmode'), /Die App wählt selbst/);
+  assert.match(await page.textContent('.pfmode'), /Automatisch: die App wählt\. Manuell: Sie wählen\./);   // E1: one sentence, the rest in ⓘ
+  await page.locator('.pfmode .info-btn[data-help="focusmode"]').click();
+  assert.match(await page.locator('#helpDlg').innerText(), /Die App wählt selbst[\s\S]*Sie legen selbst fest/);
+  await page.locator('#helpClose').click();
   // a switch in automatic mode starts manual mode from the current choice
   await page.locator('[data-pfocus="round"]').click();
   assert.equal(await page.getAttribute('[data-fmode="manual"]', 'aria-pressed'), 'true');
-  assert.match(await page.textContent('.pfmode'), /Sie legen selbst fest/);
+  assert.equal(await page.getAttribute('[data-fmode="manual"]', 'aria-pressed'), 'true', 'manual is marked');
   assert.equal(await page.getAttribute('[data-pfocus="round"]', 'aria-pressed'), 'false');
   assert.equal(await page.getAttribute('[data-pfocus="detective"]', 'aria-pressed'), 'true', 'the rest of the choice stays');
   await page.locator('[data-pfocus="numbers"]').click();

@@ -48,12 +48,14 @@ test('help sits at the quest: open and highlighted where support helps, closed e
   assert.ok(await karte('units').locator('details.phelpq.need').evaluate((d) => d.open), 'needs support → open');
   assert.equal(await karte('forces').locator('details.phelpq').evaluate((d) => d.open), false, 'secure → closed');
   const text = await karte('units').locator('.phelpq-body').innerText();
-  for (const w of ['Was die Schule erwartet', 'Typische Stolpersteine', 'Ideen für zu Hause', 'Besser nicht', 'Grundlage']) assert.ok(text.includes(w), w);
+  // E1: fixed parts in a fixed order (concept 5.11)
+  for (const w of ['🎯 Ziel', '⚠️ Stolperstein', '💡 Ideen für zu Hause', 'Besser nicht', 'Grundlage']) assert.ok(text.includes(w), w);
+  assert.ok(text.indexOf('Ziel') < text.indexOf('Stolperstein') && text.indexOf('Stolperstein') < text.indexOf('Ideen für zu Hause'), 'order of the parts');
   assert.ok(await karte('units').locator('.phelpq-body').isVisible());
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'fits a phone');
   await page.locator('.phdr [data-plang="en"]').click();
   const en = await karte('units').locator('.phelpq-body').innerText();
-  for (const w of ['What school expects', 'Common stumbling blocks', 'Ideas for home', 'Better not', 'Based on']) assert.ok(en.includes(w), w);
+  for (const w of ['🎯 Goal', '⚠️ Stumbling block', '💡 Ideas for home', 'Better not', 'Based on']) assert.ok(en.includes(w), w);
   assert.ok(!/[äöüß]/.test(en.replace(/Als Erstes|Als Nächstes|Danach|Zum Schluss/g, '')), 'English text');
   assert.deepEqual(fehler, []);
   await ctx.close();
@@ -107,7 +109,11 @@ test('basis line shows how much help was used: with help, of them with an exampl
     [a({}), a({}), a({ help: true }), a({ help: true, example: true }), a({ ok: false }), a({ attempt: 2, ok: true, help: true })].filter((x) => x.attempt === 1 || true));
   await elternOeffnen(page);
   await page.locator('[data-psubj="maths"]').click();
-  const zeile = await page.locator('.pquest', { has: page.locator('[data-pfocus="round"]') }).locator('.pline').first().innerText();
-  assert.match(zeile, /2 selbst gelöst, 3 mit Hilfe \(davon 1 mit Beispiel\)/);
+  // E1: level 2 is one line, the details are in "ⓘ Worauf beruht das?"
+  const k = page.locator('.pquest', { has: page.locator('[data-pfocus="round"]') });
+  assert.match(await k.locator('.pq2').innerText(), /^\d+ Aufgaben · 2 selbst gelöst/);
+  await k.locator('details.pbasis > summary').click();
+  const tab = await k.locator('details.pbasis table').innerText();
+  assert.match(tab, /selbst gelöst\s+2/); assert.match(tab, /mit Hilfe\s+3 \(davon 1 mit Beispiel\)/);
   await ctx.close();
 });
