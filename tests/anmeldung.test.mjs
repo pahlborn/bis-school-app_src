@@ -182,7 +182,7 @@ test('grown-ups header: language flags, ? help, ⚙ settings and log out always 
   assert.match(await page.textContent('.phdr'), /Grown-ups area/);
   assert.match(await page.textContent('#parentClose'), /Log out/);
   assert.deepEqual(await page.$$eval('#aboutBody details.psec > summary', (s) => s.map((x) => x.textContent.trim())),
-    ['📖 How Big Quest works', '🤝 Supporting your child', '🏫 School ratings', '📄 Practice sheets']);
+    ['📖 How Big Quest works', '🤝 Supporting your child', '🏫 School evaluations – history', '📄 Practice sheets']);
   // guide and info pages are one reading chapter: reading keeps the grown-up logged in
   await page.locator('#aboutBody details.psec[data-psec="concept"] > summary').click();
   const ab = page.locator('#aboutBody details.psec[data-psec="concept"] details.about-sec').first();

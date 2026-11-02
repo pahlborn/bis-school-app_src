@@ -218,6 +218,10 @@ button{font:inherit;color:inherit}
 .phdr-act{display:flex;align-items:center;gap:6px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
 .phdr .flags{margin-left:0}
 .phdr-test{background:#F1EEFF;border-radius:12px;padding:6px 10px}
+.pqchips{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.pqchip{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.pschool{margin:10px 0 14px}.pschool h3{margin:0 0 4px}.psteps{margin:6px 0;padding-left:18px}.psteps li{margin:4px 0}
+.pschooldot{display:inline-flex;gap:3px;align-items:center;margin-left:6px;vertical-align:middle}
 .phdr-kidsel{font:inherit;font-size:16px;font-weight:700;min-height:40px;padding:4px 10px;border-radius:12px;border:2px solid var(--line);background:var(--surface);color:var(--ink);max-width:100%}
 .psub{margin:16px 0 4px}
 .test-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center}
@@ -3551,7 +3555,7 @@ const isTeacher = () => !!(accountsOn() && adultUser && (adultUser.role==='teach
 function parentHomeHTML(){
   const T=PT[PL()], de=PL()==='de', focus=focusTopics(), all=[];
   const tiles=SUBJECTS.map(s=>{ const qs=questsIn(s), list=qs.map(assessQuest); all.push(...list); const f=qs.filter(k=>focus.includes(k)).length;
-    return `<button type="button" class="psubject" data-psubj="${s.key}"><span class="prow"><span class="pico" style="background:${s.color}">${ICONS[s.icon]||''}</span><span class="pname">${esc(s.name)}</span></span><span class="pdots">${list.map(a=>`<i class="${a.level}" title="${esc(WORLDS[a.k].name)}"></i>`).join('')}</span><span>${pChip(subjectLevel(list))}${f?` <span class="focus">${T.focusN(f)}</span>`:''}</span></button>`; }).join('');
+    return `<button type="button" class="psubject" data-psubj="${s.key}"><span class="prow"><span class="pico" style="background:${s.color}">${ICONS[s.icon]||''}</span><span class="pname">${esc(s.name)}</span></span><span class="pdots">${list.map(a=>`<i class="${a.level}" title="${esc(WORLDS[a.k].name)}"></i>`).join('')}</span><span>${pChip(subjectLevel(list))}${(()=>{ const sl=schoolSubjectLevel(s.key); return sl?` <span class="pschooldot" title="${PL()==='de'?'Schule':'School'}: ${esc(PSTAND[PL()][sl])}"><span class="small">🏫</span><span class="pdots"><i class="${sl}"></i></span></span>`:''; })()}${f?` <span class="focus">${T.focusN(f)}</span>`:''}</span></button>`; }).join('');
   // A waiting practice sheet is mentioned once, calmly, with a way straight to it (not for teachers).
   const wait=isTeacher()?[]:waitingSheets(), w=wait[wait.length-1];
   const note=w?`<p class="phow psheet-note">📄 ${wait.length===1?(de?`${sheetName(w)} wartet aufs Eintragen.`:`${sheetName(w)} is waiting to be entered.`):(de?`${wait.length} Übungsblätter warten aufs Eintragen.`:`${wait.length} practice sheets are waiting to be entered.`)} <button type="button" class="btn small" data-opensheet="${w.id}">${de?'Jetzt eintragen':'Enter now'}</button></p>`:'';
@@ -3565,23 +3569,22 @@ function legendHTML(){
   const de=PL()==='de';
   return `<p class="pleg-line" role="list" aria-label="${de?'Farben':'Colors'}">`+['m','e','c','rs','na'].map(l=>`<span class="pleg" role="listitem"${SCHOOLTERM[l]?` title="${esc(SCHOOLTERM[l])}"`:''}><span class="pdots"><i class="${l}"></i></span> ${PSTAND[PL()][l]}</span>`).join('')+`</p>`;
 }
-function schoolLine(k){ const s=schoolStandFor(k); if(!s) return ''; return `<p class="pline"><b>${PL()==='de'?'🏫 Schule':'🏫 School'}:</b> ${pChip(SL[s.st]||'rs')} <span class="small">${fmtDay(s.day)}</span></p>`; }
 function parentSubjectHTML(key){
   if(accountsOn() && !viewedKid()) return parentHomeHTML();
   const T=PT[PL()], s=SUBJECTS.find(x=>x.key===key), focus=focusTopics(), list=questsIn(s).map(assessQuest), teacher=isTeacher(), man=focusManualMode();
   const cards=list.map(a=>{ const k=a.k, tags=[classTopics().includes(k)?`<span class="ptag school">${T.school}</span>`:'', (a.level==='rs'||a.level==='c')?`<span class="ptag need">${T.need}</span>`:''].join('');
-    return `<div class="pquest"><div class="phead"><div><div class="pqn">${esc(WORLDS[k].name)}</div><div class="small">${esc(qInfo(k,0))}</div></div><div>${pChip(a.level,a.sure)}</div></div>
+    const sch=schoolStandFor(k);
+    return `<div class="pquest"><div class="phead"><div><div class="pqn">${esc(WORLDS[k].name)}</div><div class="small">${esc(qInfo(k,0))}</div></div><div class="pqchips"><span class="pqchip"><span class="small">${PL()==='de'?'App':'App'}</span> ${pChip(a.level,a.sure)}</span>${sch?`<span class="pqchip pqschool"><span class="small">🏫 ${PL()==='de'?'Schule':'School'}</span> ${pChip(SL[sch.st]||'rs')} <span class="small">${fmtDay(sch.day)}</span></span>`:''}</div></div>
       <p class="pline"><b>${T.basis}</b> ${a.n?`${T.tasks(a.n,a.days)}: ${a.self} ${T.self}, ${a.hint} ${T.hint}${a.ex?` (${T.ex(a.ex)})`:''}, ${a.seen}× ${T.seen}.`:T.none+'.'} ${a.due?T.due(a.due)+'.':''}</p>
       ${a.n?`<p class="pline"><b>${T.trend}:</b> ${T.tr[a.trend]} · <b>${T.recent}:</b> ${a.old?`<span class="pold">${T.old}</span>`:T.ago(a.age)}</p>`:''}
       ${a.sure!=='confirmed'&&a.n?`<p class="pline small">${T.when}</p>`:''}
-      ${schoolLine(k)}
       <div class="ptags">${tags}</div>
       ${helpHTML(a)}
       ${teacher?'':`<button type="button" class="psw" data-pfocus="${k}" aria-pressed="${focus.includes(k)}"><i></i>${T.focus}</button>`}</div>`; }).join('');
   // Coming up (Peter, 01.11.): topics for later, invisible to the child until switched on here - one place only.
   const pv=s.items.filter(k=>WORLDS[k] && WORLDS[k].preview);
   const pvHTML=pv.length?`<div class="pcard ppreview"><h3>${T.pvT}</h3><p class="small">${T.pvTxt}</p>${pv.map(k=>{ const on=!isLocked(k); return `<div class="pv-row"><div><b>${esc(WORLDS[k].name)}</b><div class="small">${esc(qInfo(k,0))}</div></div>${teacher?`<span class="small">${on?T.pvOn:T.pvOff}</span>`:`<button type="button" class="psw" data-punlock="${k}" aria-pressed="${on}"><i></i>${T.pvBtn}</button>`}</div>`; }).join('')}</div>`:'';
-  return `<button type="button" class="btn small" id="pBack">${T.back}</button><h2 class="psubjtitle">${esc(s.name)} <span class="small">· ${T.quests(list.length)}</span></h2>
+  return `<button type="button" class="btn small" id="pBack">${T.back}</button><h2 class="psubjtitle">${esc(s.name)} <span class="small">· ${T.quests(list.length)}</span></h2>${schoolSubjectHTML(key)}
     <p class="phow">${T.howSubj}</p>${teacher?'':`<div class="pfmode"><div class="phdr-row"><b>${T.fm}:</b><span class="plang" role="group" aria-label="${T.fm}"><button type="button" data-fmode="auto" class="${man?'':'on'}" aria-pressed="${!man}">${T.fAuto}</button><button type="button" data-fmode="manual" class="${man?'on':''}" aria-pressed="${man}">${T.fMan}</button></span></div><p class="small">${man?T.fManTxt:T.fAutoTxt} ${T.fNote}</p></div>`}
     <div class="playout"><div class="pquests">${cards}${pvHTML}</div><aside class="pside"><div class="pcard">${summaryHTML(list, s.name)}</div></aside></div>`;
 }
@@ -3924,7 +3927,7 @@ function renderSheets(){
     const secs=[];
     secs.push(['concept', ABOUT_UI[lang].title, `<div class="about-menu">${aboutSectionsHTML(lang,null,true)}</div>`]);
     secs.push(['support', de?'🤝 Ihr Kind unterstützen':'🤝 Supporting your child', supportGuideHTML()]);
-    if(accountsOn() && kidOk && !(viewerGrant() && !viewerGrant().scope.includes('school'))) secs.push(['school', de?'🏫 Einstufungen der Schule':'🏫 School ratings', schoolHTML()]);
+    if(accountsOn() && kidOk && !(viewerGrant() && !viewerGrant().scope.includes('school'))) secs.push(['school', de?'🏫 Bewertungen der Schule – Verlauf':'🏫 School evaluations – history', schoolHTML()]);
     if(!teacher && kidOk) secs.push(['sheets', T.sheets, sheetsPageHTML()]);
     if(onOverview) html+=secHTML(secs);
   }
@@ -4360,20 +4363,58 @@ function schoolStandFor(k){
   const l=schoolRatings(d)[s]; return l&&l.length?{st:l[0].r==='N'?'RS':l[0].r, day:l[0].day}:null;
 }
 const fmtDay = d => PL()==='de' ? d.split('-').reverse().join('.') : new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-function schoolHTML(){
-  const d=schoolData(), de=PL()==='de', L=de?'de':'en';
-  const T=de?{h:'Einstufungen der Schule',intro:'Von der Lernplattform übernommen (Stand {d}). Alle Einstufungen hier sind die der Lehrkraft; wo sich das Kind selbst eingeschätzt hat, steht das daneben. Die App nutzt sie als <b>Startwert für die Aufgabenwahl</b>, solange in der App noch zu wenig geübt wurde; danach zählt die eigene Übung. Das Kind sieht davon nichts.',std:'Standards – zuletzt',area:'Bereich',now:'Einstufung',before:'vorher',quests:'Übt in der App',atl:'Lernkompetenzen und Learner Profile',atlKey:'ES = mit Unterstützung, Obs. = beobachtet, Ind. = selbstständig',tasks:'Bewertete Aufgaben',good:'Das gelingt',next:'Nächste Schritte',pend:'Wartet auf Bewertung',none:'Für dieses Kind liegen noch keine Einstufungen der Schule vor.',areas:{math:'Mathe',english:'Englisch',science:'Science',learner:'Lernen'}}
+/* School data (concept 5.3/5.4, C1): texts shared by the block in the subject view and the history chapter. */
+function schoolTexts(de){
+  return de?{h:'Einstufungen der Schule',intro:'Von der Lernplattform übernommen (Stand {d}). Alle Einstufungen hier sind die der Lehrkraft; wo sich das Kind selbst eingeschätzt hat, steht das daneben. Die App nutzt sie als <b>Startwert für die Aufgabenwahl</b>, solange in der App noch zu wenig geübt wurde; danach zählt die eigene Übung. Das Kind sieht davon nichts.',std:'Standards – zuletzt',area:'Bereich',now:'Einstufung',before:'vorher',quests:'Übt in der App',atl:'Lernkompetenzen und Learner Profile',atlKey:'ES = mit Unterstützung, Obs. = beobachtet, Ind. = selbstständig',tasks:'Bewertete Aufgaben',good:'Das gelingt',next:'Nächste Schritte',pend:'Wartet auf Bewertung',none:'Für dieses Kind liegen noch keine Einstufungen der Schule vor.',areas:{math:'Mathe',english:'Englisch',science:'Science',learner:'Lernen'}}
                 :{h:'School ratings',intro:'Taken from the learning platform (as of {d}). All ratings here are the teacher’s; where your child rated themselves, that is shown next to it. The app uses them as a <b>starting point for choosing tasks</b> while there is too little practice in the app; after that the app’s own practice counts. Your child never sees them.',std:'Standards – latest',area:'Area',now:'Rating',before:'before',quests:'Practiced in the app',atl:'Learning skills and learner profile',atlKey:'ES = emerging with support, Obs. = observed, Ind. = independent',tasks:'Evaluated assignments',good:'Going well',next:'Next steps',pend:'Awaiting evaluation',none:'There are no school ratings for this child yet.',areas:{math:'Math',english:'English',science:'Science',learner:'Learning'}};
-  if(!d) return `<h2>${T.h}</h2><p>${T.none}</p>`;
-  const per=schoolRatings(d), area=s=>s.startsWith('M-')?T.areas.math:s.startsWith('E-')?T.areas.english:s.startsWith('S-')?T.areas.science:'Deutsch';
-  const rows=Object.keys(per).sort().map(s=>{ const l=per[s], k=SL[l[0].r]||'na', qs=Object.keys(STANDARDS).filter(q=>STANDARDS[q].includes(s)&&WORLDS[q]).map(q=>esc(WORLDS[q].name)).join(', ');
-    return `<tr><td>${area(s)}</td><td>${esc((de?STANDARD_TEXT:STANDARD_TEXT_EN)[s]||s)}</td><td>${pChip(k)} <span class="small">${fmtDay(l[0].day)}</span>${l[1]?`<br><span class="small">${T.before}: ${PSTAND[L][SL[l[1].r]]} (${fmtDay(l[1].day)})</span>`:''}</td><td class="small">${qs||'–'}</td></tr>`; }).join('');
-  const atl=d.tasks.filter(t=>t.atl).map(t=>Object.entries(t.atl).map(([a,v])=>`<li>${esc(a)}: <b>${esc(v)}</b> <span class="small">(${esc(t.title)}, ${fmtDay(t.day)})</span></li>`).join('')).join('');
-  const done=d.tasks.filter(t=>!t.pending).sort((a,b)=>a.day<b.day?1:-1), pend=d.tasks.filter(t=>t.pending);
+}
+/* the subject a standard is shown in: where all its quests are practised, otherwise the subject of its code
+   (M- maths, E- English, S- science, otherwise German) - every standard in exactly one subject (R1) */
+function stdSubject(std){
+  const qs=Object.keys(STANDARDS).filter(q=>STANDARDS[q].includes(std) && WORLDS[q]);
+  const subs=uniq(qs.map(q=>(SUBJECTS.find(s=>questsIn(s).includes(q))||{}).key).filter(Boolean));
+  if(subs.length===1) return subs[0];
+  return std.startsWith('M-')?'maths':std.startsWith('E-')?'english':std.startsWith('S-')?'science':'deutsch';
+}
+const AREA_SUBJECT={math:'maths', english:'english', science:'science', learner:'learner', deutsch:'deutsch'};
+/* the teacher's evaluations that count for the focus: the last 8 weeks, if there are none that recent all of them (as classTopics) */
+function recentEvaluations(d){
+  const done=d.tasks.filter(t=>!t.pending), recent=done.filter(t=>daysBetween(t.day,dayKey())<=56);
+  return (recent.length?recent:done).slice().sort((a,b)=>a.day<b.day?1:-1);
+}
+/* 🏫 From school (concept 5.4, C1): at the top of a subject - its standards, the teacher's next steps, learning skills */
+function schoolSubjectHTML(key){
+  const d=schoolData(); if(!d) return '';
+  const de=PL()==='de', L=de?'de':'en', T=schoolTexts(de), per=schoolRatings(d), sub=SUBJECTS.find(x=>x.key===key), mine=questsIn(sub);
+  const stds=Object.keys(per).filter(s=>stdSubject(s)===key).sort();
+  const rows=stds.map(s=>{ const l=per[s], k=SL[l[0].r]||'na', qs=Object.keys(STANDARDS).filter(q=>STANDARDS[q].includes(s)&&WORLDS[q]).map(q=>esc(WORLDS[q].name)).join(', ');
+    return `<tr><td>${esc((de?STANDARD_TEXT:STANDARD_TEXT_EN)[s]||s)}</td><td>${pChip(k)} <span class="small">${fmtDay(l[0].day)}</span>${l[1]?`<br><span class="small">${T.before}: ${PSTAND[L][SL[l[1].r]]} (${fmtDay(l[1].day)})</span>`:''}</td><td class="small">${qs||'–'}</td></tr>`; }).join('');
+  const steps=recentEvaluations(d).filter(t=>t.next && t.next[L] && (AREA_SUBJECT[t.area]===key || (t.focusNext||[]).some(q=>mine.includes(q)))).map(t=>{
+    const f=(t.focusNext||[]).filter(q=>WORLDS[q] && mine.includes(q));
+    return `<li><b>${fmtDay(t.day)} · ${esc(t.title)}:</b> ${esc(t.next[L])}${f.length?`<br><span class="small">${de?'Daraus im automatischen Fokus':'In the automatic focus because of this'}: ${f.map(q=>esc(WORLDS[q].name)).join(', ')}</span>`:''}</li>`; }).join('');
+  const atl=key==='learner' ? d.tasks.filter(t=>t.atl).map(t=>Object.entries(t.atl).map(([a,v])=>`<li>${esc(a)}: <b>${esc(v)}</b> <span class="small">(${esc(t.title)}, ${fmtDay(t.day)})</span></li>`).join('')).join('') : '';
+  if(!rows && !steps && !atl) return '';
+  return `<div class="pcard pschool" id="pSchool"><h3>🏫 ${de?'Aus der Schule':'From school'}</h3><p class="small">${de?'Von der Lernplattform übernommen, Stand':'From the learning platform, as of'} ${fmtDay(d.asOf)}.</p>`
+    +(rows?`<div class="tablewrap"><table class="dt"><thead><tr><th>Standard</th><th>${T.now}</th><th>${T.quests}</th></tr></thead><tbody>${rows}</tbody></table></div>`:'')
+    +(steps?`<h4 class="psub">${T.next}</h4><ul class="psteps">${steps}</ul>`:'')
+    +(atl?`<h4 class="psub">${T.atl}</h4><p class="small">${T.atlKey}</p><ul>${atl}</ul>`:'')+`</div>`;
+}
+/* the weakest current school rating among the standards of a subject (for the dot on the subject tile) */
+function schoolSubjectLevel(key){
+  const d=schoolData(); if(!d) return null;
+  const per=schoolRatings(d), order=['rs','c','m','e'];
+  const ls=Object.keys(per).filter(s=>stdSubject(s)===key).map(s=>SL[per[s][0].r]).filter(Boolean);
+  return ls.length ? ls.sort((a,b)=>order.indexOf(a)-order.indexOf(b))[0] : null;
+}
+/* 🏫 School evaluations – history (concept 5.3, C1): only the evaluated and the waiting assignments, newest first */
+function schoolHTML(){
+  const d=schoolData(), de=PL()==='de', L=de?'de':'en', T=schoolTexts(de);
+  const h=de?'Bewertungen der Schule – Verlauf':'School evaluations – history';
+  if(!d) return `<h2>${h}</h2><p>${T.none}</p>`;
   const rub=t=>t.rubric?`<p><b>${de?'Bewertungsraster':'Rubric'}:</b></p><ul>${t.rubric.map(x=>`<li>${esc(x.crit)}: ${de?'Lehrkraft':'teacher'} ${pChip(SL[x.teacher])} · ${de?'selbst eingeschätzt':'self-rating'} ${pChip(SL[x.self])}</li>`).join('')}</ul>`:'';
   const task=t=>`<details class="about-sec"><summary>${fmtDay(t.day)} · ${esc(t.title)}</summary><div class="about-sec-body">${Object.keys(t.std).length?`<p>${Object.entries(t.std).map(([s,r])=>`${esc((de?STANDARD_TEXT:STANDARD_TEXT_EN)[s]||s)}: ${pChip(SL[r])}`).join('<br>')}</p>`:''}${rub(t)}<p><b>${T.good}:</b> ${esc(t.good[L])}</p>${t.next[L]?`<p><b>${T.next}:</b> ${esc(t.next[L])}</p>`:''}${(t.focusNext||[]).length?`<p class="small">${de?'Daraus im automatischen Fokus':'In the automatic focus because of this'}: ${t.focusNext.filter(q=>WORLDS[q]).map(q=>esc(WORLDS[q].name)).join(', ')}</p>`:''}<p class="small">${T.quests}: ${t.quests.filter(q=>WORLDS[q]).map(q=>esc(WORLDS[q].name)).join(', ')}</p></div></details>`;
-  return `<h2>${T.h}</h2><p class="small">${T.intro.replace('{d}',fmtDay(d.asOf))}</p><h3 class="psub">${T.std}</h3><div class="tablewrap"><table class="dt"><thead><tr><th>${T.area}</th><th>Standard</th><th>${T.now}</th><th>${T.quests}</th></tr></thead><tbody>${rows}</tbody></table></div>`
-    +(atl?`<h3 class="psub">${T.atl}</h3><p class="small">${T.atlKey}</p><ul>${atl}</ul>`:'')
+  const done=d.tasks.filter(t=>!t.pending).sort((a,b)=>a.day<b.day?1:-1), pend=d.tasks.filter(t=>t.pending);
+  return `<h2>${h}</h2><p class="small">${T.intro.replace('{d}',fmtDay(d.asOf))}</p>`
     +`<h3 class="psub">${T.tasks}</h3><div class="about-menu">${done.map(task).join('')}</div>`
     +(pend.length?`<h3 class="psub">${T.pend}</h3><div class="about-menu">${pend.map(task).join('')}</div>`:'');
 }

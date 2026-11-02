@@ -52,17 +52,17 @@ async function quest(page, name) {
   throw new Error('quest not found ' + name);
 }
 
-test('overview of the school ratings in the grown-ups area: standards, history, assignments, awaiting evaluation', async () => {
+test('school data in the grown-ups area (C1): per subject "From school" with standards, next steps and learning skills; history of the assignments; school rating next to the app status', async () => {
   const { ctx, page, fehler } = await oeffnen();
   await login(page, 'student', 'kathie', 'Tiger-Lamp-River-4271');
   await page.locator('#adultBtn').click(); await login(page, 'adult', 'papa', 'langes-passwort');
   await page.waitForSelector('#parentClose');
+  // history chapter: only the assignments (evaluated and waiting), with rubric and next steps
   await page.locator('details.psec[data-psec="school"] > summary').click();
   const t = await page.locator('details.psec[data-psec="school"]').innerText();
-  assert.match(t, /Rundung|Runden auf Zehner/);
-  assert.match(t, /Runden auf Zehner, Hunderter und Tausender\s+Sicher \(Meeting expectations\) 27\.10\.2026\s+vorher: Wird sicherer \(03\.10\.2026\)/);
-  assert.match(t, /Stellenwert[^\n]*\s+Wird sicherer/);
-  for (const w of ['Mastering Basic Numbers and Calculations – Milestone', 'Persuade for the Park!', 'Friction Frenzy', 'Lesson 4', 'Wartet auf Bewertung', 'Glows and Grows', 'ES = mit Unterstützung']) assert.ok(t.includes(w), w);
+  assert.match(t, /Bewertungen der Schule – Verlauf/);
+  for (const w of ['Mastering Basic Numbers and Calculations – Milestone', 'Persuade for the Park!', 'Friction Frenzy', 'Lesson 4', 'Wartet auf Bewertung']) assert.ok(t.includes(w), w);
+  assert.ok(!t.includes('Standards – zuletzt') && !t.includes('ES = mit Unterstützung'), 'standards table and learning skills moved to the subjects');
   assert.ok(!/Toddle|BIS\b|3B/.test(t), 'neutral wording');
   // rubric: the teacher's rating and the child's own rating side by side (Peter 01.11.)
   await page.locator('details.psec[data-psec="school"] details.about-sec', { hasText: 'Milestone' }).locator('summary').click();
@@ -70,17 +70,30 @@ test('overview of the school ratings in the grown-ups area: standards, history, 
   assert.match(ms, /Sticker combinations: Lehrkraft Wird sicherer \(Consolidating\) · selbst eingeschätzt Darüber hinaus \(Extending\)/);
   assert.match(t, /Alle Einstufungen hier sind die der Lehrkraft/);
   assert.match(ms, /Daraus im automatischen Fokus: Word Problems/);
-  // the school line at the quest
+  // maths: "From school" with the standards of maths and the next steps
   await page.locator('[data-psubj="maths"]').click();
+  const b = await page.locator('#pSchool').innerText();
+  assert.match(b, /Aus der Schule/);
+  assert.match(b, /Runden auf Zehner, Hunderter und Tausender\s+Sicher \(Meeting expectations\) 27\.10\.2026\s+vorher: Wird sicherer \(03\.10\.2026\)/);
+  assert.match(b, /Stellenwert[^\n]*\s+Wird sicherer/);
+  assert.match(b, /Nächste Schritte[\s\S]*Daraus im automatischen Fokus: [^\n]*Word Problems/);
+  assert.ok(!/Friction|S-F1|Kräfte/.test(b), 'no science standard in maths');
+  // the school rating next to the app status at the quest
   const round = await page.locator('.pquest', { has: page.locator('[data-pfocus="round"]') }).innerText();
-  assert.match(round, /🏫 Schule: Sicher \(Meeting expectations\) 27\.10\.2026/);
+  assert.match(round, /🏫 Schule\s+Sicher \(Meeting expectations\)\s+27\.10\.2026/);
   // automatic focus = the teacher's next steps (Peter 01.11.): word problems yes, data detective no
   assert.equal(await page.getAttribute('[data-pfocus="wordprob"]', 'aria-pressed'), 'true');
   assert.equal(await page.getAttribute('[data-pfocus="detective"]', 'aria-pressed'), 'false');
   assert.match(round, /nächster Schritt laut Schule/);
+  // Me as a Learner: learning skills and learner profile
+  await page.locator('#pBack').click();
+  await page.locator('[data-psubj="learner"]').click();
+  assert.match(await page.locator('#pSchool').innerText(), /Lernkompetenzen und Learner Profile[\s\S]*ES = mit Unterstützung/);
   // English
+  await page.locator('#pBack').click(); await page.locator('[data-psubj="maths"]').click();
   await page.locator('.phdr [data-plang="en"]').click();
-  assert.match(await page.locator('.pquest', { has: page.locator('[data-pfocus="round"]') }).innerText(), /🏫 School: Secure/);
+  assert.match(await page.locator('.pquest', { has: page.locator('[data-pfocus="round"]') }).innerText(), /🏫 School\s+Secure/);
+  assert.match(await page.locator('#pSchool').innerText(), /From school/);
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
