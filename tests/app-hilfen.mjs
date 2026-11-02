@@ -78,10 +78,21 @@ export async function elternOeffnen(page){
   await page.waitForSelector('#parentClose');
 }
 
-/** Grown-ups area: overview on top, chapters (sheets, settings, help, guide, about) open in place.
- *  'home' leaves a subject page; every other chapter is opened with a real click on its title. */
+/** Sections in ⚙ Settings (concept "Elternbereich" 5.5, B1); all other chapters are on the overview. */
+export const EINSTELLUNGEN = ['settings', 'backup', 'grants', 'accounts', 'aboutapp'];
+
+/** Grown-ups area: overview on top, chapters (sheets, support, concept, guide) open in place; settings, backup,
+ *  grants, accounts and "about the app" are in ⚙. 'home' leaves a subject page or ⚙; every other chapter is
+ *  opened with real clicks (⚙ first where needed, then its title). */
 export async function elternSeite(page, seite) {
-  if (seite === 'home') { if (await page.$('#pBack')) await page.locator('#pBack').click(); return; }
+  const inSet = !!(await page.$('#pSetBack'));
+  if (seite === 'home') {
+    if (inSet) { await page.locator('#pSetBack').click(); await page.waitForSelector('#pSetBack', { state: 'detached' }); }
+    if (await page.$('#pBack')) await page.locator('#pBack').click();
+    return;
+  }
+  if (EINSTELLUNGEN.includes(seite) && !inSet) { await page.locator('#pSettings').click(); await page.waitForSelector('#pSetBack'); }
+  if (!EINSTELLUNGEN.includes(seite) && inSet) { await page.locator('#pSetBack').click(); await page.waitForSelector('#pSetBack', { state: 'detached' }); }
   const d = page.locator(`#aboutBody details.psec[data-psec="${seite}"]`);
   if (!(await d.evaluate((e) => e.open))) await d.locator('summary').first().click();
   await page.waitForSelector(`#aboutBody details.psec[data-psec="${seite}"][open]`);

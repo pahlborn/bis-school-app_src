@@ -187,8 +187,9 @@ test('Sicherung: nur Eltern des Kindes; Datei vollstaendig ohne Passwoerter; Zur
     await anmelden(b.page, 'student', 'mia', C.mia); await passwortSetzen(b.page, 'Tiger-Lamp-River-4271');
     await b.page.waitForSelector('#home:not([hidden])');
     await elternbereich(b.page, wer, 'langes-passwort');
-    assert.equal(await b.page.locator('details.psec[data-psec="backup"]').count(), 0, wer);
     assert.equal(await b.page.locator('.pbackup-note').count(), 0, wer);
+    await b.page.locator('#pSettings').click(); await b.page.waitForSelector('#pSetBack');   // backup is in ⚙ (B1)
+    assert.equal(await b.page.locator('details.psec[data-psec="backup"]').count(), 0, wer);
     await b.ctx.close();
   }
 
@@ -198,6 +199,7 @@ test('Sicherung: nur Eltern des Kindes; Datei vollstaendig ohne Passwoerter; Zur
   await c.page.waitForSelector('#home:not([hidden])');
   const frisch = await kinderSchluessel(c.page);
   await elternbereich(c.page, 'papa', 'langes-passwort');
+  await c.page.locator('#pSettings').click(); await c.page.waitForSelector('#pSetBack');   // backup is in ⚙ (B1)
   await c.page.locator('details.psec[data-psec="backup"] > summary').click();
   // a changed file is refused
   const veraendert = JSON.parse(JSON.stringify(body)); veraendert.data.total = '78';

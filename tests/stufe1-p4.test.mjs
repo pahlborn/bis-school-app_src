@@ -38,7 +38,12 @@ async function geraet() {
   }
   return g;
 }
+const IN_EINSTELLUNGEN = ['settings', 'backup', 'grants', 'accounts', 'aboutapp'];
 async function kapitel(page, id) {
+  // B1: settings, backup, grants and accounts are in ⚙
+  const inSet = !!(await page.$('#pSetBack'));
+  if (IN_EINSTELLUNGEN.includes(id) && !inSet) { await page.locator('#pSettings').click(); await page.waitForSelector('#pSetBack'); }
+  if (!IN_EINSTELLUNGEN.includes(id) && inSet) { await page.locator('#pSetBack').click(); await page.waitForSelector('#pSetBack', { state: 'detached' }); }
   const d = page.locator(`details.psec[data-psec="${id}"]`);
   if (!(await d.evaluate((e) => e.open))) await d.locator('summary').first().click();
 }
@@ -61,10 +66,16 @@ async function sicht(page) {
     kind: (await page.textContent('.phdr')).includes('mia'),
     fremd: (await page.textContent('.phdr')).includes('lia'),
     profil: (await page.textContent('#aboutBody')).includes('Sonnenschein'),
-    uebersicht: await n('.psubject'), schule: await n('details.psec[data-psec="school"]'), einstellungen: await n('details.psec[data-psec="settings"]'),
-    sicherung: await n('details.psec[data-psec="backup"]'), freigaben: await n('details.psec[data-psec="grants"]'), konten: await n('details.psec[data-psec="accounts"]'), fokus: false, schulzeile: false
+    uebersicht: await n('.psubject'), schule: await n('details.psec[data-psec="school"]'), einstellungen: false,
+    sicherung: false, freigaben: false, konten: false, fokus: false, schulzeile: false
   };
   if (r.uebersicht) { await page.locator('[data-psubj="maths"]').click(); r.fokus = await n('[data-pfocus]'); r.schulzeile = /🏫 Schule/.test(await page.textContent('#aboutBody')); await page.locator('#pBack').click(); }
+  // ⚙ settings (B1): the child's settings (with the profile), backup, grants, accounts
+  await page.locator('#pSettings').click(); await page.waitForSelector('#pSetBack');
+  r.profil = r.profil || (await page.textContent('#aboutBody')).includes('Sonnenschein');
+  r.einstellungen = await n('details.psec[data-psec="settings"]'); r.sicherung = await n('details.psec[data-psec="backup"]');
+  r.freigaben = await n('details.psec[data-psec="grants"]'); r.konten = await n('details.psec[data-psec="accounts"]');
+  await page.locator('#pSetBack').click(); await page.waitForSelector('#pSetBack', { state: 'detached' });
   return r;
 }
 // kind: mia is shown; fremd: lia (the other family's child) is shown
