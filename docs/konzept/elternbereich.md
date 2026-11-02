@@ -277,9 +277,10 @@ Eine Lücke ist **geschlossen**, wenn eines davon eintritt:
 
 ### 6.4 Eine aktive Lücke
 Höchstens **eine** Lücke ist aktiv (mit all ihren Quests); die anderen warten. Reihenfolge:
-1. Lücken, auf denen ein aktuelles Klassenthema aufbaut (Liste der Voraussetzungen, 6.7)
-2. `RS` vor `C`
-3. älteste Einstufung zuerst
+1. `RS` vor `C`
+2. älteste Einstufung zuerst
+
+Aktiv wird die erste Lücke in dieser Reihenfolge, **die etwas Neues bringt**: Eine Lücke, deren Quests alle ohnehin aktuelle Themen sind (nächster Schritt der Lehrkraft oder „braucht Übung“ in der App), wird übersprungen, weil sie schon geübt wird. Sind alle Lücken so abgedeckt, ist die erste aktiv; sie schließt sich weiter, sobald eine ihrer Quests bestätigt sicher ist. Eine von Eltern gewählte Lücke gilt immer. *(D3, Peter 02.11.: „wir versuchen es“. Die Liste der Voraussetzungen wurde nicht freigegeben, Entwurf in `docs/konzept/voraussetzungen-entwurf.md`.)*
 
 Eltern können eine wartende Lücke „jetzt angehen“; sie wird aktiv, die bisher aktive wartet, Fortschritt bleibt erhalten. Wartende Lücken sind nicht im Fokus.
 
@@ -302,7 +303,7 @@ Begründung (in Runden, R10): Bei 2 Lücken-Aufgaben pro Runde braucht eine akti
 - Ehrlicher Satz im Konzept-Kapitel: „Bestätigt sicher heißt: sicher bei den Antworten in der App. Wer geantwortet hat und mit welchen Hilfsmitteln, weiß die App nicht; ob die Aufgaben den Standard so abdecken, wie die Schule ihn prüft, ist je Thema verschieden.“
 
 ### 6.7 Voraussetzungen
-Eine kleine, von Hand gepflegte Liste „Quest A setzt Quest B voraus“, nur Mathe und Deutsch, wo es eindeutig ist. Entwurf durch den Agenten als Tabelle im Prüfbericht, Prüfung durch Peter, erst dann Einbau. Gibt es heute nicht.
+Nicht eingebaut. Der Entwurf „Quest A setzt Quest B voraus“ (Mathe) wurde Peter am 02.11. vorgelegt und nicht freigegeben; er liegt in `docs/konzept/voraussetzungen-entwurf.md`. Stattdessen gilt das Überspringen aus 6.4.
 
 ### 6.8 Prüfung mit echten Daten
 Lokal mit den echten Schuldaten prüfen, im Prüfbericht nur Zahlen nennen: Anzahl offener Lücken, welche Quest zuerst aktiv wird. Bei mehr als 6 offenen Lücken melden, nicht selbst begrenzen.
