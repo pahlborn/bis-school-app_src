@@ -2268,44 +2268,60 @@ const FOCUS=['wordprob','round','combos','units','graphs','sentences','examples'
    Choices of earlier versions (a list, or focusOn/focusOff) are taken over once as a manual choice. */
 function focusAuto(){
   const need=SUBJECTS.flatMap(questsIn).map(assessQuest).filter(a=>a.level==='rs'||a.level==='c').map(a=>a.k);
-  const g=activeGap();   // concept 6.5 (D1): the active gap joins the automatic focus
-  return uniq(classTopics().concat(need, g?[g]:[]));
+  // concept 6.5 (D1/D1b): the quests of the active gap join the automatic focus
+  return uniq(classTopics().concat(need, activeGapQuests()));
 }
-/* ---------- gaps (concept "Elternbereich" 6, package D1) ----------
-   The school rates a topic once and moves on. A quest is a GAP when the latest school rating of its main standard
-   is "requires support" (RS, also N) or "consolidating" (C). The app closes it itself when its own assessment is
-   "secure"/"extending" AND "confirmed" (provisional is not enough), or a newer school rating is at least "meeting".
-   Closed stays closed (stored with the school rating that opened it); only a newer weak school rating opens it
-   again. Never closed by time. Only ONE gap is active; the others wait (RS before C, oldest rating first). Waiting
-   gaps are not in the focus. The difficulty is unchanged (own practice), and the parents' assessment stays own practice.
-   Stored per child under "gaps": {closed:{quest:{at, by:'app'|'parents', schoolDay}}, active:quest|null}. */
+/* ---------- gaps (concept "Elternbereich" 6; D1, per standard since D1b - Peter 02.11.: decision B) ----------
+   The school rates a topic once and moves on. A STANDARD is a GAP when its latest school rating is "requires support"
+   (RS, also N) or "consolidating" (C) and it is the main standard (first in STANDARDS) of at least one quest. All
+   quests with that main standard belong to the gap. The app closes it when ONE of these quests is "secure"/"extending"
+   AND "confirmed" in the app (provisional is not enough); a newer school rating of at least "meeting" ends it too.
+   Closed stays closed (stored with the school rating that opened it); only a newer weak rating opens it again. Never
+   closed by time. Only ONE gap is active (all its quests in the focus); the others wait (RS before C, oldest first).
+   Difficulty and the parents' assessment stay own practice.
+   Stored per child under "gaps": {closed:{standard:{at, by:'app'|'parents', schoolDay, quest}}, active:standard|null}.
+   (D1 stored quests as keys; such records are read as the quest's main standard.) */
 const GAP_WEAK=['RS','C'];
-const gapData = () => { const g=store.get('gaps',null); return {closed:(g&&g.closed)||{}, active:(g&&g.active)||null}; };
-/* the school rating behind a possible gap: {st, day} of the main standard, only when weak */
-function gapRating(k){ const s=schoolStandFor(k); return s && GAP_WEAK.includes(s.st) ? s : null; }
-/* closed for this school rating? (a record for an older rating does not count: a newer weak rating opens it again) */
-function gapClosed(k, s, data){ const c=data.closed[k]; return !!(c && c.schoolDay>=s.day); }
-const gapOrder = (a,b) => (GAP_WEAK.indexOf(a.st)-GAP_WEAK.indexOf(b.st)) || (a.day<b.day?-1:a.day>b.day?1:0) || (a.k<b.k?-1:1);
-/* all open gaps in their order; closes gaps the app has confirmed (written only where the viewer may change data) */
+const mainStd = k => (STANDARDS[k]||[])[0] || null;
+const gapKey = x => (STANDARDS[x] ? mainStd(x) : x);   // a D1 quest key -> its main standard
+function gapData(){
+  const g=store.get('gaps',null)||{}, closed={};
+  for(const [k,v] of Object.entries(g.closed||{})){ const s=gapKey(k); if(s && (!closed[s] || (v.schoolDay||'')>(closed[s].schoolDay||''))) closed[s]=v; }
+  return {closed, active:g.active ? gapKey(g.active) : null};
+}
+/* the quests whose main standard is s (only those that can be in the focus at all) */
+const gapQuests = s => cleanFocus(SUBJECTS.flatMap(questsIn)).filter(k=>mainStd(k)===s);
+/* the latest school rating of a standard: {st, day} */
+function stdRating(s){
+  const d=schoolData(); if(!d) return null;
+  const l=schoolRatings(d)[s]; return l&&l.length?{st:l[0].r==='N'?'RS':l[0].r, day:l[0].day}:null;
+}
+const gapOrder = (a,b) => (GAP_WEAK.indexOf(a.st)-GAP_WEAK.indexOf(b.st)) || (a.day<b.day?-1:a.day>b.day?1:0) || (a.s<b.s?-1:1);
+/* all open gaps {s, st, day, quests} in their order; closes gaps the app has confirmed (written only where the
+   viewer may change data) */
 function openGaps(){
   if(typeof schoolData!=='function' || !schoolData()) return [];
   const data=gapData(), out=[]; let changed=false;
-  for(const k of cleanFocus(SUBJECTS.flatMap(questsIn))){
-    const s=gapRating(k); if(!s || gapClosed(k,s,data)) continue;
-    const a=assessQuest(k);
-    if((a.level==='m'||a.level==='e') && a.sure==='confirmed'){ data.closed[k]={at:dayKey(), by:'app', schoolDay:s.day}; changed=true; continue; }
-    out.push({k, st:s.st, day:s.day});
+  for(const s of uniq(SUBJECTS.flatMap(questsIn).map(mainStd).filter(Boolean))){
+    const r=stdRating(s); if(!r || !GAP_WEAK.includes(r.st)) continue;
+    const c=data.closed[s]; if(c && c.schoolDay>=r.day) continue;
+    const quests=gapQuests(s); if(!quests.length) continue;
+    const done=quests.find(k=>{ const a=assessQuest(k); return (a.level==='m'||a.level==='e') && a.sure==='confirmed'; });
+    if(done){ data.closed[s]={at:dayKey(), by:'app', schoolDay:r.day, quest:done}; changed=true; continue; }
+    out.push({s, st:r.st, day:r.day, quests});
   }
   if(changed && !gapReadOnly()) store.set('gaps',{closed:data.closed, active:data.active});
   return out.sort(gapOrder);
 }
 /* teachers and the admin look through a grant: they never change the child's data */
 const gapReadOnly = () => typeof isTeacher==='function' && accountsOn() && !!adultUser && isTeacher();
-/* the one active gap: the one the parents chose (D4), if still open, otherwise the first in order */
+/* the one active gap (a standard): the one the parents chose (D4), if still open, otherwise the first in order */
 function activeGap(){
   const open=openGaps(), chosen=gapData().active;
-  return (open.find(g=>g.k===chosen) || open[0] || {}).k || null;
+  return (open.find(g=>g.s===chosen) || open[0] || null);
 }
+/* the quests of the active gap (they join the automatic focus) */
+const activeGapQuests = () => { const g=activeGap(); return g ? g.quests : []; };
 /* Class topics (Peter, 01.11.): derived from the school's evaluations - the quests the teacher names as
    next steps ("Areas of development") in the last 8 weeks; if there are none that recent, all of them;
    without evaluations for this child, the hand-made list FOCUS. New evaluations change the focus by themselves. */
@@ -3655,10 +3671,10 @@ function legendHTML(){
 function parentSubjectHTML(key){
   if(accountsOn() && !viewedKid()) return parentHomeHTML();
   const T=PT[PL()], s=SUBJECTS.find(x=>x.key===key), focus=focusTopics(), list=questsIn(s).map(assessQuest), teacher=isTeacher(), man=focusManualMode();
-  const gaps=openGaps(), act=activeGap();
-  const cards=list.map(a=>{ const k=a.k, g=gaps.find(x=>x.k===k);
-    // concept 5.11/6.6 (D1): the gap as a reason for the focus; a waiting gap is marked as waiting
-    const tags=[classTopics().includes(k)?`<span class="ptag school">${T.school}</span>`:'', g?`<span class="ptag ${k===act?'gap':'gapwait'}">${k===act?'🎯 ':''}${T.gap(fmtDay(g.day))}${k===act?'':' · '+T.gapWait}</span>`:'', (a.level==='rs'||a.level==='c')?`<span class="ptag need">${T.need}</span>`:''].join('');
+  const gaps=openGaps(), actG=activeGap(), act=actG&&actG.s;
+  const cards=list.map(a=>{ const k=a.k, g=gaps.find(x=>x.quests.includes(k)), on=g&&g.s===act;
+    // concept 5.11/6.6 (D1/D1b): the gap of the quest's standard as a reason for the focus; a waiting gap is marked
+    const tags=[classTopics().includes(k)?`<span class="ptag school">${T.school}</span>`:'', g?`<span class="ptag ${on?'gap':'gapwait'}">${on?'🎯 ':''}${T.gap(fmtDay(g.day))}${on?'':' · '+T.gapWait}</span>`:'', (a.level==='rs'||a.level==='c')?`<span class="ptag need">${T.need}</span>`:''].join('');
     const sch=schoolStandFor(k);
     return `<div class="pquest"><div class="phead"><div><div class="pqn">${esc(WORLDS[k].name)}</div><div class="small">${esc(qInfo(k,0))}</div></div><div class="pqchips"><span class="pqchip"><span class="small">${PL()==='de'?'App':'App'}</span> ${pChip(a.level,a.sure)}</span>${sch?`<span class="pqchip pqschool"><span class="small">🏫 ${PL()==='de'?'Schule':'School'}</span> ${pChip(SL[sch.st]||'rs')} <span class="small">${fmtDay(sch.day)}</span></span>`:''}</div></div>
       <p class="pline"><b>${T.basis}</b> ${a.n?`${T.tasks(a.n,a.days)}: ${a.self} ${T.self}, ${a.hint} ${T.hint}${a.ex?` (${T.ex(a.ex)})`:''}, ${a.seen}× ${T.seen}.`:T.none+'.'} ${a.due?T.due(a.due)+'.':''}</p>
