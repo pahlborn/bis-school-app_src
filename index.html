@@ -2174,9 +2174,13 @@ function reshuffled(q){
 /* Practise Today: warm-up, due repeats, focus topics at their level, and a challenge when a focus topic is ready for it. */
 function buildToday(){
   const focus=focusTopics();
-  const topics=focus.length ? focus : SUBJECTS.flatMap(questsIn);
+  const all=focus.length ? focus : SUBJECTS.flatMap(questsIn);
+  // concept 6.5 (D2): two lanes - the current topics stay in front, the active gap gets at most 2 of 8 tasks;
+  // without current topics the gap fills the round
+  let gq=gapLaneQuests(focus), topics=all.filter(k=>!gq.includes(k));
+  if(!topics.length){ topics=all; gq=[]; }
   const out=[];
-  const solid=SUBJECTS.flatMap(questsIn).filter(k=>['M','E'].includes(standOf(k)) && topics.indexOf(k)<0);
+  const solid=SUBJECTS.flatMap(questsIn).filter(k=>['M','E'].includes(standOf(k)) && topics.indexOf(k)<0 && gq.indexOf(k)<0);
   const warmFrom=solid.length?pick(solid):pick(topics);
   const warm=WORLDS[warmFrom].build().find(q=>levelOf(q)<3);
   if(warm){ warm.warmup=true; out.push(warm); }
@@ -2184,10 +2188,11 @@ function buildToday(){
   const ready=topics.filter(k=>['M','E'].includes(standOf(k)));
   let challenge=null;
   if(ready.length){ const k=pick(ready); challenge=WORLDS[k].build().concat(WORLDS[k].build()).find(q=>levelOf(q)===3) || null; if(challenge) challenge.challenge=true; }
+  const lane=gapTasks(gq, Math.min(2, 8-out.length-(challenge?1:0)));
   const pools=shuffle(topics).map(k=>adaptRound(k, WORLDS[k].build()).filter(q=>levelOf(q)<3 || standOf(k)!=='NA'));
   const middle=[]; let i=0;
-  while(out.length+middle.length+(challenge?1:0)<8 && pools.some(p=>p.length)){ const p=pools[i%pools.length]; if(p.length) middle.push(p.shift()); i++; }
-  return out.concat(shuffle(middle), challenge?[challenge]:[]).slice(0,8);
+  while(out.length+lane.length+middle.length+(challenge?1:0)<8 && pools.some(p=>p.length)){ const p=pools[i%pools.length]; if(p.length) middle.push(p.shift()); i++; }
+  return out.concat(insertInOrder(shuffle(middle), lane), challenge?[challenge]:[]).slice(0,8);
 }
 /* ======================= WORLDS, SUBJECTS & STUDIOS ======================= */
 const ICONS={
@@ -2266,8 +2271,10 @@ const FOCUS=['wordprob','round','combos','units','graphs','sentences','examples'
    - it adapts by itself. "Manual" = grown-ups decide exactly which quests are in focus (focusManual),
    e.g. before a test. Tapping a switch in automatic mode starts manual mode from the current choice.
    Choices of earlier versions (a list, or focusOn/focusOff) are taken over once as a manual choice. */
+/* the quests where the parents' assessment suggests support ("needs support" / "getting there") */
+const focusNeed = () => SUBJECTS.flatMap(questsIn).map(assessQuest).filter(a=>a.level==='rs'||a.level==='c').map(a=>a.k);
 function focusAuto(){
-  const need=SUBJECTS.flatMap(questsIn).map(assessQuest).filter(a=>a.level==='rs'||a.level==='c').map(a=>a.k);
+  const need=focusNeed();
   // concept 6.5 (D1/D1b): the quests of the active gap join the automatic focus
   return uniq(classTopics().concat(need, activeGapQuests()));
 }
@@ -2322,6 +2329,35 @@ function activeGap(){
 }
 /* the quests of the active gap (they join the automatic focus) */
 const activeGapQuests = () => { const g=activeGap(); return g ? g.quests : []; };
+/* concept 6.5 (D2): the GAP LANE - quests of the active gap that are in the automatic focus only because of the gap
+   (not as the teacher's next step and not because the parents' assessment suggests support). Empty in manual mode. */
+function gapLaneQuests(focus){
+  if(focusManualMode()) return [];
+  const cls=classTopics(), need=focusNeed();
+  return activeGapQuests().filter(k=>focus.includes(k) && !cls.includes(k) && !need.includes(k));
+}
+/* up to max tasks from the gap lane: a foundation task first where the quests have any (many have none; then
+   year level), then year level - never a challenge (small steps first); marked q.gap */
+const GAP_BUILDS=6;
+function gapTasks(quests, max){
+  const out=[]; if(!quests.length || max<1) return out;
+  const pools=shuffle(quests.slice()).map(k=>adaptRound(k, WORLDS[k].build().concat(WORLDS[k].build())));
+  const take=(want)=>{ for(const p of pools){ const i=p.findIndex(want); if(i>=0) return p.splice(i,1)[0]; } return null; };
+  // foundation tasks are rare in some quests (e.g. 1 in 8): build a few more rounds before giving up on one
+  let first=take(q=>levelOf(q)===1);
+  for(let b=0; !first && b<GAP_BUILDS; b++) for(const k of quests){ const q=WORLDS[k].build().find(x=>levelOf(x)===1); if(q){ first=q; break; } }
+  first=first || take(q=>levelOf(q)<3);
+  if(first) out.push(first);
+  while(out.length<max){ const q=take(q=>levelOf(q)===2) || take(q=>levelOf(q)<3); if(!q) break; out.push(q); }
+  out.forEach(q=>{ q.gap=true; });
+  return out;
+}
+/* put the gap tasks into a shuffled list without changing their own order (foundation before year level) */
+function insertInOrder(list, extra){
+  let from=0;
+  for(const q of extra){ const at=from+Math.floor(Math.random()*(list.length-from+1)); list.splice(at,0,q); from=at+1; }
+  return list;
+}
 /* Class topics (Peter, 01.11.): derived from the school's evaluations - the quests the teacher names as
    next steps ("Areas of development") in the last 8 weeks; if there are none that recent, all of them;
    without evaluations for this child, the hand-made list FOCUS. New evaluations change the focus by themselves. */
@@ -3251,10 +3287,15 @@ const strip = h => String(h||'').replace(/<[^>]+>/g,'').replace(/&lt;/g,'<').rep
 const LETTERS='ABCDEF';
 function buildSheet(only){
   const focus=focusTopics();
-  const topics=only||(focus.length?focus:SUBJECTS.flatMap(questsIn));
+  const candidates=only||(focus.length?focus:SUBJECTS.flatMap(questsIn));
+  // concept 6.5 (D2): at most a quarter of the 6 tasks (1) from the active gap; not for a sheet on one topic
+  let gq=only?[]:gapLaneQuests(focus), topics=candidates.filter(k=>!gq.includes(k));
+  if(!topics.length){ topics=candidates; gq=[]; }
+  const lane=gapTasks(gq, Math.floor(6/4)).filter(q=>q.kind!=='order' || q.items.length<=5);
   const pools=shuffle(topics).map(k=>adaptRound(k, WORLDS[k].build()).filter(q=>q.kind!=='order' || q.items.length<=5));
   const items=[]; let i=0;
-  while(items.length<6 && pools.some(p=>p.length)){ const p=pools[i%pools.length]; if(p.length) items.push(p.shift()); i++; }
+  while(items.length+lane.length<6 && pools.some(p=>p.length)){ const p=pools[i%pools.length]; if(p.length) items.push(p.shift()); i++; }
+  insertInOrder(items, lane);
   const german=topics.indexOf('anleitung')>=0 || (!topics.some(k=>['opinion','sentences','examples'].includes(k)) && Math.random()<.5);
   // a running number makes paper and app match, also for two sheets on the same day
   const no=(+store.get('sheetNo',0)||0)+1; store.set('sheetNo',no);
