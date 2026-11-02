@@ -17,9 +17,28 @@ test('jede Geschichte im Vorrat: freigegeben nur mit en und de, Pisolala ohne Au
     assert.ok(!s.occasion || ['halloween', 'advent', 'christmas', 'birthday'].includes(s.occasion), s.id);
     if (!s.approved) continue;
     assert.ok(s.en[1] && s.de[1], 'Stufe 1 (cozy) in beiden Sprachen: ' + s.id);
+    assert.deepEqual(Object.keys(s.en), Object.keys(s.de), 'gleiche Stufen in en und de: ' + s.id);
+    // Pisolala never gets a body: no appearance word in a sentence that names Pisolala (other characters may have fur or ears)
     for (const t of [...Object.values(s.en), ...Object.values(s.de)])
-      for (const w of ['Ohren', 'Augen', 'Fell', 'groß wie', 'aussah', 'ears', 'eyes', 'fur ', 'as big as', 'looked like']) assert.ok(!t.includes(w), 'Pisolala bleibt unsichtbar: ' + s.id + ' ' + w);
+      for (const satz of t.split(/(?<=[.!?“"])\s+/).filter((x) => /Pisolala/.test(x)))
+        for (const w of ['Ohren', 'Augen', 'Fell', 'groß wie', 'aussah', 'ears', 'eyes', 'fur', 'as big as', 'looked like', 'Kleid', 'dress', 'Gesicht', 'face'])
+          assert.ok(!satz.includes(w), 'Pisolala bleibt unsichtbar: ' + s.id + ' ' + w + ' – ' + satz);
   }
+});
+
+test('A6 (Peter, 02.11.): Runde 1 freigegeben – 12 Geschichten in drei Stufen, Anlaesse wie geplant, Englisch amerikanisch', () => {
+  const neu = STORY_LIST.filter((s) => s.id !== 'halloween-2026');
+  assert.equal(neu.length, 12);
+  for (const s of neu) { assert.ok(s.approved, s.id); assert.deepEqual(Object.keys(s.en), ['1', '2', '3'], s.id); }
+  const anlass = (o) => neu.filter((s) => (s.occasion || null) === o).length;
+  assert.deepEqual([anlass('advent'), anlass('christmas'), anlass('birthday'), anlass(null)], [4, 2, 1, 5]);
+  const en = STORY_LIST.flatMap((s) => Object.values(s.en)).join(' ');
+  assert.ok(!/\b(favourite|colour|neighbour|grey|mum|biscuit|metres|centimetres|flavour)\b/i.test(en), 'US spelling and words');
+  assert.ok(/Nobody can see Pisolala/.test(STORY_LIST[0].en[1]));
+  // a normal day starts with the first everyday story; Advent with the first Advent story; the birthday with the birthday story
+  assert.equal(storyNext(STORY_LIST, ctx()).id, 'alltag-stern-trampolin');
+  assert.equal(storyNext(STORY_LIST, ctx({ theme: 'advent' })).id, 'advent-erstes-tuerchen');
+  assert.equal(storyNext(STORY_LIST, ctx({ birthday: true })).id, 'geburtstag-hurra');
 });
 
 test('normaler Tag: nur Geschichten ohne Anlass, jede neu, in Reihenfolge; nicht freigegebene und zu spannende nie', () => {
