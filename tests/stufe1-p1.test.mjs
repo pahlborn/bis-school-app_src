@@ -93,7 +93,7 @@ test('Speicherstellen: jede Stelle im Code steht im Verzeichnis (K11)', () => {
   assert.deepEqual(fehlt, []);
   // dynamic first arguments are only the known ones (advent<year>, langKey(), the profile reset)
   const dyn = [...quelltext.matchAll(/store\.(?:get|set|del)\(\s*([^'\s][^,)]*)/g)].map((m) => m[1].trim());
-  assert.deepEqual([...new Set(dyn)].sort(), ['k', 'key', 'langKey('].sort());
+  assert.deepEqual([...new Set(dyn)].sort(), ['k', 'key', 'langKey(', 'pwKey(u'].sort());
 });
 
 test('Sicherung nimmt genau die Speicherstellen mit "sicherung": true', () => {
@@ -126,7 +126,9 @@ test('Startlink fuellt die Anmeldung einmal aus und entfernt den Code aus der Ad
 // ---------------------------------------------------------------- Sicherung (K6)
 
 // derived celebration markers (title, tree stage): the app recomputes them whenever the start page is drawn
-const ABGELEITET = ['bq2_rankSeen', 'bq2_treeStage'];
+const ABGELEITET = ['rankSeen', 'treeStage'];
+// the logged-in child's storage area (since S11 P2: bq2_<id>__)
+const KIND = () => { const s = JSON.parse(localStorage.getItem('bq2_session')); return { pre: 'bq2_' + s.id + '__', audio: 'bq2_audio__' + s.id }; };
 const KEINE_TEILEN_FUNKTION = () => { Object.defineProperty(navigator, 'canShare', { value: undefined, configurable: true }); };
 const TAG = (n) => { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); };
 const DATEN = {
@@ -137,22 +139,22 @@ const DATEN = {
 async function kindMitDaten(page) {
   await anmelden(page, 'student', 'mia', C.mia); await passwortSetzen(page, 'mond');
   await page.waitForSelector('#home:not([hidden])');
-  await page.evaluate((d) => { for (const [k, v] of Object.entries(d)) localStorage.setItem('bq2_' + k, JSON.stringify(v)); }, DATEN);
-  // one recording, written the way the app stores it (first child: database bq2_audio)
-  await page.evaluate(() => new Promise((res, rej) => {
-    const r = indexedDB.open('bq2_audio', 1);
+  await page.evaluate(([d, kind]) => { const { pre } = new Function('return ' + kind)()(); for (const [k, v] of Object.entries(d)) localStorage.setItem(pre + k, JSON.stringify(v)); }, [DATEN, KIND.toString()]);
+  // one recording, written the way the app stores it (database bq2_audio__<id>)
+  await page.evaluate((kind) => new Promise((res, rej) => {
+    const r = indexedDB.open(new Function('return ' + kind)()().audio, 1);
     r.onupgradeneeded = () => r.result.createObjectStore('rec', { keyPath: 'id' });
     r.onsuccess = () => { const t = r.result.transaction('rec', 'readwrite'); t.objectStore('rec').put({ id: 'r1', created: 1, durationMs: 1000, mime: 'audio/webm', blob: new Blob([new Uint8Array(3000).fill(7)], { type: 'audio/webm' }) }); t.oncomplete = () => { r.result.close(); res(); }; t.onerror = () => rej(t.error); };
     r.onerror = () => rej(r.error);
-  }));
+  }), KIND.toString());
 }
 async function elternbereich(page, wer, pw) {
   await page.locator('#adultBtn').click();
   await anmelden(page, 'adult', wer, C[wer]); await passwortSetzen(page, pw);
   await page.waitForSelector('#parentClose');
 }
-const kinderSchluessel = (page) => page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((k) => /^bq2_[^_]/.test(k) && !k.includes('__') && !/^bq2_(pw_|session|adultSession|sessionPrev|lastBackup|vorRueckspielen|parentLang|muted)/.test(k)).map((k) => [k, localStorage.getItem(k)])));
-const aufnahmen = (page) => page.evaluate(() => new Promise((res) => { const r = indexedDB.open('bq2_audio', 1); r.onupgradeneeded = () => r.result.createObjectStore('rec', { keyPath: 'id' }); r.onsuccess = () => { const q = r.result.transaction('rec').objectStore('rec').getAll(); q.onsuccess = () => { res(q.result.map((x) => [x.id, x.blob.size])); r.result.close(); }; }; }));
+const kinderSchluessel = (page) => page.evaluate((kind) => { const { pre } = new Function('return ' + kind)()(); return Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith(pre)).map((k) => [k.slice(pre.length), localStorage.getItem(k)]).filter(([k]) => !/^(lastBackup|vorRueckspielen|bridgeNext|dayOffset)$/.test(k))); }, KIND.toString());
+const aufnahmen = (page) => page.evaluate((kind) => new Promise((res) => { const r = indexedDB.open(new Function('return ' + kind)()().audio, 1); r.onupgradeneeded = () => r.result.createObjectStore('rec', { keyPath: 'id' }); r.onsuccess = () => { const q = r.result.transaction('rec').objectStore('rec').getAll(); q.onsuccess = () => { res(q.result.map((x) => [x.id, x.blob.size])); r.result.close(); }; }; }), KIND.toString());
 
 test('Sicherung: nur Eltern des Kindes; Datei vollstaendig ohne Passwoerter; Zurueckspielen auf frischem Geraet gleich; falsche oder veraenderte Datei abgelehnt; Rueckgaengig (K6)', async () => {
   // device 1: the child practises, a parent backs up
@@ -169,7 +171,7 @@ test('Sicherung: nur Eltern des Kindes; Datei vollstaendig ohne Passwoerter; Zur
   assert.match(dl.suggestedFilename(), /^big-quest-sicherung-mia-\d{4}-\d{2}-\d{2}\.json$/);
   const body = JSON.parse(await fs.readFile(datei, 'utf8'));
   const beimSichern = await kinderSchluessel(a.page);
-  for (const [k, v] of Object.entries(beimSichern)) if (!/^bq2_(bridgeNext|dayOffset)/.test(k) && !ABGELEITET.includes(k)) assert.equal(body.data[k.slice(4)], v, 'backup holds ' + k);
+  for (const [k, v] of Object.entries(beimSichern)) if (!ABGELEITET.includes(k)) assert.equal(body.data[k], v, 'backup holds ' + k);
   assert.equal(body.format, 'bq-sicherung-1'); assert.match(body.child, ID_RE); assert.equal(body.user, 'mia');
   const keys = Object.keys(body.data);
   for (const k of ['attempts', 'badges', 'total', 'best_round', 'name', 'emoji', 'sheets', 'chk_grow', 'focusMode', 'focusManual']) assert.ok(keys.includes(k), k);
@@ -211,7 +213,7 @@ test('Sicherung: nur Eltern des Kindes; Datei vollstaendig ohne Passwoerter; Zur
   await c.page.locator('#pRestoreGo').click();
   await c.page.waitForFunction(() => /Zurückgespielt/.test(document.querySelector('#pBackupMsg').textContent));
   const nachher = await kinderSchluessel(c.page);
-  for (const [k, v] of Object.entries(body.data)) if (!ABGELEITET.includes('bq2_' + k)) assert.equal(nachher['bq2_' + k], v, k);
+  for (const [k, v] of Object.entries(body.data)) if (!ABGELEITET.includes(k)) assert.equal(nachher[k], v, k);
   assert.deepEqual(await aufnahmen(c.page), [['r1', 3000]]);
   // undo once
   await c.page.locator('[data-restoreundo]').click();

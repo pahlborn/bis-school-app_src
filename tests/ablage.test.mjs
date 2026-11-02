@@ -11,13 +11,15 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { schluesselAusPasswort, schluesselRoh, entschluesseln, tresorAusHuelle, ITERATIONEN, b64 } from '../werkzeug/kern.mjs';
-import { WURZEL, quellenLesen, distBauen } from '../werkzeug/bauen.mjs';
+import { WURZEL, quellenLesen, distBauen, appZusammensetzen } from '../werkzeug/bauen.mjs';
+import { schuleLesen } from '../werkzeug/schule.mjs';
 import { TEST_PW } from './hilfen.mjs';
 import { versionEinsetzen, versionAuslesen } from '../werkzeug/version.mjs';
 import { kontenEinsetzen, kontenLesen } from '../werkzeug/konten.mjs';
 const KONTEN_JETZT = await kontenLesen();
 // S7: the vault holds the app with the build version inserted
-const istApp = (klar) => Buffer.from(klar).equals(kontenEinsetzen(versionEinsetzen(q.app, versionAuslesen(Buffer.from(klar).toString('utf8'))), KONTEN_JETZT));
+const SCHULE_JETZT = await schuleLesen();
+const istApp = (klar) => Buffer.from(klar).equals(appZusammensetzen(q.app, versionAuslesen(Buffer.from(klar).toString('utf8')), KONTEN_JETZT, SCHULE_JETZT));
 
 const tmp = () => fs.mkdtemp(path.join(os.tmpdir(), 'bq-ablage-'));
 const gibtEs = (p) => fs.access(p).then(() => true, () => false);

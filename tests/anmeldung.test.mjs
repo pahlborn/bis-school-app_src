@@ -62,6 +62,9 @@ async function kindDann(page, wer, pw) {
   await page.waitForSelector('#parentClose');
 }
 const lies = (page, k) => page.evaluate((key) => JSON.parse(localStorage.getItem('bq2_' + key) || 'null'), k);
+// S11 P2: every child stores under its ID (bq2_<id>__<key>), passwords under bq2_pw_<id>
+const ID = (n) => KONTEN.users.find((u) => u.user === n).id;
+const NS = (n) => 'bq2_' + ID(n) + '__';
 
 test('with accounts the app starts with the login: role choice, no list of names, nothing behind it reachable', async () => {
   const { ctx, page, fehler } = await oeffnen({ viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true });
@@ -89,9 +92,9 @@ test('student: first login with start code, then own password; stays logged in; 
   assert.match(await page.textContent('#setPwMsg'), /not the same/);
   await passwortSetzen(page, 'mond');
   await page.waitForSelector('#home:not([hidden])');
-  const pw = await lies(page, 'pw_mia');
+  const pw = await lies(page, 'pw_' + ID('mia'));
   assert.match(pw.hash, /^[0-9a-f]{64}$/); assert.ok(!JSON.stringify(pw).includes('mond'), 'password never stored');
-  assert.deepEqual(await lies(page, 'session'), { user: 'mia' });
+  assert.deepEqual(await lies(page, 'session'), { user: 'mia', id: ID('mia') });
   await page.reload(); await page.waitForSelector('#home:not([hidden])');
   assert.ok(await sichtbar(page, '#logoutBtn'));
   await page.locator('#logoutBtn').click();
@@ -210,7 +213,7 @@ test('test account: own data apart from the child, "+1 Tag" with ⓘ, reset clea
   await anmelden(page, 'student', 'mia', CODES.mia); await passwortSetzen(page, 'mond');
   await page.waitForSelector('#home:not([hidden])');
   assert.equal(await page.isVisible('#testBar'), false, 'no test bar for the real child');
-  await page.evaluate(() => localStorage.setItem('bq2_total', '7'));
+  await page.evaluate((ns) => localStorage.setItem(ns + 'total', '7'), NS('mia'));
   await page.locator('#logoutBtn').click();
   // test account
   await anmelden(page, 'student', 'probe', CODES.probe); await passwortSetzen(page, 'probe1');
@@ -228,18 +231,18 @@ test('test account: own data apart from the child, "+1 Tag" with ⓘ, reset clea
   await page.locator('#qAnswers .opt:not(.correct)').first().click().catch(() => {});
   await page.locator('#quitBtn').click();
   const keys = await page.evaluate(() => Object.keys(localStorage));
-  assert.ok(keys.some((k) => k.startsWith('bq2_probe__')), 'test data under its own keys');
-  assert.equal(await page.evaluate(() => localStorage.getItem('bq2_total')), '7', 'child data untouched');
+  assert.ok(keys.some((k) => k.startsWith(NS('probe'))), 'test data under its own keys');
+  assert.equal(await page.evaluate((ns) => localStorage.getItem(ns + 'total'), NS('mia')), '7', 'child data untouched');
   const tag1 = await page.textContent('#testBar');
   await page.locator('#testDay').click();
   assert.notEqual(await page.textContent('#testBar'), tag1);
   assert.match(await page.textContent('#testBar'), /\+1/);
   page.once('dialog', (d) => d.accept());
   await page.locator('#testReset').click();
-  const nachher = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('bq2_probe__')));
-  assert.deepEqual(nachher.filter((k) => k !== 'bq2_probe__rankSeen' && k !== 'bq2_probe__kidLang'), []);
-  assert.equal(await page.evaluate(() => localStorage.getItem('bq2_total')), '7', 'child data still untouched');
-  assert.ok(await page.evaluate(() => localStorage.getItem('bq2_pw_probe')), 'own password survives the reset');
+  const nachher = await page.evaluate((ns) => Object.keys(localStorage).filter((k) => k.startsWith(ns)), NS('probe'));
+  assert.deepEqual(nachher.filter((k) => k !== NS('probe') + 'rankSeen' && k !== NS('probe') + 'kidLang'), []);
+  assert.equal(await page.evaluate((ns) => localStorage.getItem(ns + 'total'), NS('mia')), '7', 'child data still untouched');
+  assert.ok(await page.evaluate((k) => localStorage.getItem(k), 'bq2_pw_' + ID('probe')), 'own password survives the reset');
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
@@ -248,7 +251,7 @@ test('admin: try the test child and come back without a new login; log out retur
   const { ctx, page, fehler } = await oeffnen();
   await anmelden(page, 'student', 'mia', CODES.mia); await passwortSetzen(page, 'mond');
   await page.waitForSelector('#home:not([hidden])');
-  await page.evaluate(() => localStorage.setItem('bq2_total', '7'));
+  await page.evaluate((ns) => localStorage.setItem(ns + 'total', '7'), NS('mia'));
   await page.locator('#adultBtn').click();
   await anmelden(page, 'adult', 'chef', CODES.chef); await passwortSetzen(page, 'langes-passwort');
   await page.waitForSelector('#parentClose');
@@ -343,7 +346,7 @@ async function allesSichtbar(page) {
 }
 test('language: the English grown-ups area has no German left-overs, the German one no English UI labels', async () => {
   const { ctx, page, fehler } = await oeffnen({ viewport: { width: 1200, height: 900 } });
-  await page.evaluate(() => localStorage.setItem('bq2_attempts', JSON.stringify(Array.from({ length: 30 }, (_, i) => ({ day: '2026-10-' + (10 + i % 6), skill: i % 2 ? 'round' : 'units', level: 2, attempt: 1, ok: i % 3 !== 0, help: false })))));
+  await page.evaluate((ns) => localStorage.setItem(ns + 'attempts', JSON.stringify(Array.from({ length: 30 }, (_, i) => ({ day: '2026-10-' + (10 + i % 6), skill: i % 2 ? 'round' : 'units', level: 2, attempt: 1, ok: i % 3 !== 0, help: false })))), NS('mia'));
   await kindDann(page, 'chef', 'langes-passwort');
   await page.locator('.phdr [data-plang="en"]').click();
   // German example sentences for the German-class quest are meant to stay German
@@ -401,7 +404,7 @@ test('accounts file is checked; the build puts accounts only into the vault, nev
   assert.throws(() => kontenPruefen({ users: KONTEN.users }), /Version 2/);
   assert.match(codeErzeugen(), /^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/);
   const ziel = await fs.mkdtemp(path.join(os.tmpdir(), 'bq-konten-'));
-  await distBauen(TEST_PW, { ziel, konten: KONTEN, version: { n: 1, hash: 'abcdef1', date: '31.10.2026 08:00', draft: false } });
+  await distBauen(TEST_PW, { ziel, konten: KONTEN, schule: null, version: { n: 1, hash: 'abcdef1', date: '31.10.2026 08:00', draft: false } });
   const html = await fs.readFile(path.join(ziel, 'index.html'), 'utf8');
   const klar = Buffer.from(await entschluesseln(tresorAusHuelle(html), TEST_PW)).toString('utf8');
   assert.ok(klar.includes('"user":"papa"'));
@@ -414,12 +417,12 @@ test('choose the child in the grown-ups area: all children who use this device, 
   const tag = (b) => { const d = new Date(); d.setDate(d.getDate() - b); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
   const tage = (n) => Array.from({ length: n }, (_, i) => ({ day: tag(i + 1), skill: 'round', level: 2, attempt: 1, ok: true, help: false }));
   await anmelden(page, 'student', 'mia', CODES.mia); await passwortSetzen(page, 'mond');
-  await page.evaluate((a) => localStorage.setItem('bq2_attempts', JSON.stringify(a)), tage(3));
+  await page.evaluate(([ns, a]) => localStorage.setItem(ns + 'attempts', JSON.stringify(a)), [NS('mia'), tage(3)]);
   await page.locator('#logoutBtn').click();
   await anmelden(page, 'student', 'probe', CODES.probe); await passwortSetzen(page, 'probe1');
   await page.locator('#logoutBtn').click();
   await anmelden(page, 'student', 'lia', CODES.lia); await passwortSetzen(page, 'lia1');
-  await page.evaluate((a) => localStorage.setItem('bq2_lia__attempts', JSON.stringify(a)), tage(1));
+  await page.evaluate(([ns, a]) => localStorage.setItem(ns + 'attempts', JSON.stringify(a)), [NS('lia'), tage(1)]);
   await page.locator('#adultBtn').click();
   await anmelden(page, 'adult', 'papa', CODES.papa); await passwortSetzen(page, 'langes-passwort');
   await page.waitForSelector('#parentClose');

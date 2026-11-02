@@ -9,12 +9,15 @@ import http from 'node:http';
 import path from 'node:path';
 import { WURZEL, QUELLEN } from '../werkzeug/bauen.mjs';
 import { kontenEinsetzen, pbkdf2Hex, normCode, ausV1 } from '../werkzeug/konten.mjs';
+import { schuleEinsetzen, schuleLesen } from '../werkzeug/schule.mjs';
 import { browserStarten, zustand } from './app-hilfen.mjs';
 
 const CODES = { kathie: 'KATH-2345', lia: 'LIAA-2345', papa: 'PAPA-2345' };
 const konto = async (user, role, x = {}) => { const salt = Array.from({ length: 16 }, (_, i) => i + user.length); return { user, role, ...x, start: { salt, hash: await pbkdf2Hex(normCode(CODES[user]), salt) } }; };
 const KONTEN = { users: [await konto('kathie', 'student'), await konto('lia', 'student'), await konto('papa', 'parent', { kinder: ['kathie'] })] };
-const app = kontenEinsetzen(await fs.readFile(path.join(WURZEL, QUELLEN.app)), ausV1(KONTEN));
+// school data come from werkzeug/schuldaten.json and are assigned by the ID of the account "kathie" (S11 P2)
+const K2 = ausV1(KONTEN);
+const app = schuleEinsetzen(kontenEinsetzen(await fs.readFile(path.join(WURZEL, QUELLEN.app)), K2), await schuleLesen(), K2);
 let browser, server;
 before(async () => {
   browser = await browserStarten();

@@ -11,7 +11,8 @@ import {
   verschluesseln, entschluesseln, schluesselAusPasswort, passwortPruefen, huelleBauen,
   tresorAusHuelle, ohneTresor, MIN_ZEICHEN, PLATZHALTER
 } from '../werkzeug/kern.mjs';
-import { WURZEL, QUELLEN, ICONS, quellenLesen, oeffentlichPruefen, distBauen } from '../werkzeug/bauen.mjs';
+import { WURZEL, QUELLEN, ICONS, quellenLesen, oeffentlichPruefen, distBauen, appZusammensetzen } from '../werkzeug/bauen.mjs';
+import { schuleLesen } from '../werkzeug/schule.mjs';
 import { TEST_PW } from './hilfen.mjs';
 import { versionEinsetzen } from '../werkzeug/version.mjs';
 import { kontenEinsetzen, kontenLesen } from '../werkzeug/konten.mjs';
@@ -99,7 +100,7 @@ test('dist: alle Dateien da, oeffentlicher Teil sauber, Tresor ergibt die App', 
   assert.deepEqual(oeffentlichPruefen(html, await fs.readFile(path.join(ziel, 'manifest.webmanifest'), 'utf8'), q.woerter), []);
   assert.ok(!html.includes('profileBtn'), 'App-Code darf nicht im Klartext in der Huelle stehen');
   // S7: the vault holds the app with the build version inserted
-  assert.ok(Buffer.from(await entschluesseln(tresorAusHuelle(html), TEST_PW)).equals(kontenEinsetzen(versionEinsetzen(q.app, r.version), await kontenLesen())));
+  assert.ok(Buffer.from(await entschluesseln(tresorAusHuelle(html), TEST_PW)).equals(appZusammensetzen(q.app, r.version, await kontenLesen(), await schuleLesen())));
   for (const icon of ICONS) {
     assert.ok((await fs.readFile(path.join(ziel, icon))).equals(await fs.readFile(path.join(WURZEL, icon))), icon);
   }

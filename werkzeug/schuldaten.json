@@ -1,0 +1,193 @@
+{
+  "_info": "Einstufungen der Schule je Kind (S11 Stufe 1, P2). Schluessel ist der Anmeldename; der Bau setzt die Daten nach der KENNUNG des Kontos in die verschluesselte App (werkzeug/schule.mjs). Quelle: Lernplattform der Schule, nur lesend; Rohdaten nur lokal.",
+  "version": 1,
+  "kinder": {
+    "kathie": {
+      "asOf": "2026-11-01",
+      "tasks": [
+        {
+          "day": "2026-10-27",
+          "area": "math",
+          "title": "Mastering Basic Numbers and Calculations – Milestone",
+          "std": {
+            "M-N1": "C",
+            "M-N2": "M",
+            "M-N3": "M",
+            "M-N4": "C",
+            "M-N5": "C",
+            "M-N6": "C"
+          },
+          "quests": [
+            "wordprob",
+            "combos",
+            "round"
+          ],
+          "focusNext": [
+            "wordprob"
+          ],
+          "rubric": [
+            {
+              "crit": "Sticker combinations",
+              "teacher": "C",
+              "self": "E"
+            },
+            {
+              "crit": "Funny face stickers",
+              "teacher": "C",
+              "self": "E"
+            },
+            {
+              "crit": "Rounding and estimation",
+              "teacher": "C",
+              "self": "E"
+            }
+          ],
+          "good": {
+            "de": "Auf Zehner runden sicher; mit dem Überschlag begründet, warum die Sticker nicht in die Schachtel passen.",
+            "en": "Rounding to the nearest ten is secure; used the estimate to explain why the stickers would not fit in the box."
+          },
+          "next": {
+            "de": "Zahlen in Sachaufgaben genau lesen (die Gesamtzahl wurde verlesen); klare Strategien für Plus- und Minusaufgaben mit mehreren Schritten.",
+            "en": "Read the numbers in word problems carefully (the total was misread); clear strategies for multi-step addition and subtraction."
+          }
+        },
+        {
+          "day": "2026-10-15",
+          "area": "english",
+          "title": "Persuade for the Park! (opinion writing)",
+          "std": {
+            "E-S1": "C",
+            "E-S2": "M"
+          },
+          "atl": {
+            "Caring": "Ind.",
+            "Thinkers": "Obs.",
+            "Connection": "Ind."
+          },
+          "quests": [
+            "opinion",
+            "examples",
+            "sentences"
+          ],
+          "focusNext": [
+            "examples",
+            "sentences"
+          ],
+          "good": {
+            "de": "Meinung am Anfang und am Ende klar formuliert; gute Gründe (Bewegung, Natur erleben).",
+            "en": "Opinion stated clearly at the beginning and the end; good reasons (exercise, learning about nature)."
+          },
+          "next": {
+            "de": "Beispiele genauer und persönlicher; Großbuchstaben am Satzanfang und bei Namen, Satzzeichen prüfen.",
+            "en": "Make examples more specific and personal; capital letters at the start of sentences and for names, check punctuation."
+          }
+        },
+        {
+          "day": "2026-10-15",
+          "area": "math",
+          "title": "Lesson 4 – rounding to the nearest hundred",
+          "std": {},
+          "quests": [
+            "round"
+          ],
+          "focusNext": [
+            "round"
+          ],
+          "good": {
+            "de": "Nachbar-Hunderter 100 und 200 und die Mitte 150 richtig; 120 richtig eingetragen und auf 100 gerundet.",
+            "en": "Benchmark hundreds 100 and 200 and the halfway point 150 correct; placed 120 correctly and rounded it to 100."
+          },
+          "next": {
+            "de": "Genauer erklären, woran man erkennt, welcher Hunderter näher ist (Abstände, Mitte).",
+            "en": "Explain in more detail how you know which hundred is closer (distances, halfway point)."
+          }
+        },
+        {
+          "day": "2026-10-04",
+          "area": "science",
+          "title": "Friction Frenzy (friction experiment)",
+          "std": {
+            "E-W1": "C",
+            "E-W2": "C",
+            "M-D1": "C",
+            "M-M1": "C",
+            "S-F1": "C"
+          },
+          "atl": {
+            "Research skills": "Obs.",
+            "Critical thinking: giving reasons": "Ind.",
+            "Transfer: generalising": "Ind.",
+            "Function": "Ind.",
+            "Responsibility": "ES"
+          },
+          "quests": [
+            "forces",
+            "units",
+            "graphs",
+            "finish",
+            "examples"
+          ],
+          "focusNext": [
+            "examples",
+            "units",
+            "graphs",
+            "finish"
+          ],
+          "good": {
+            "de": "Versteht Reibung (mehr Reibung = kürzere Strecke) und begründet klar; arbeitet gut in der Gruppe mit.",
+            "en": "Understands friction (more friction = shorter distance) and explains it clearly; works well in the group."
+          },
+          "next": {
+            "de": "Genauere Hypothese; Messwerte vollständig und mit richtiger Einheit (cm statt m), Masse notieren; Balkendiagramm vollständig beschriften; jede Frage beantworten.",
+            "en": "More specific hypothesis; record all measurements with the right unit (cm, not m) and the mass; label the bar graph completely; answer every question."
+          }
+        },
+        {
+          "day": "2026-10-03",
+          "area": "math",
+          "title": "Mastering Basic Numbers – Apprentice (Travel for Work)",
+          "std": {
+            "M-N1": "C",
+            "M-N3": "C",
+            "M-N4": "C"
+          },
+          "quests": [
+            "combos",
+            "round",
+            "detective"
+          ],
+          "focusNext": [
+            "combos",
+            "round"
+          ],
+          "good": {
+            "de": "Tabelle richtig gelesen (wenigste und meiste Fahrt); Überschlag durch Runden auf Hunderter richtig; 900 am Zahlenstrahl und mit Gleichungen zerlegt.",
+            "en": "Read the table correctly (least and most travel); estimate by rounding to hundreds correct; broke 900 apart on a number line and with equations."
+          },
+          "next": {
+            "de": "Verschiedene Zerlegungen von 900 finden statt dreimal dieselbe Zahl; begründen, warum auf Hunderter oder auf Zehner gerundet wird.",
+            "en": "Find different ways to break 900 apart instead of the same number three times; explain why to round to hundreds or to tens."
+          }
+        },
+        {
+          "day": "2026-10-21",
+          "pending": true,
+          "area": "learner",
+          "title": "Glows and Grows (self-assessment)",
+          "std": {},
+          "quests": [
+            "school"
+          ],
+          "good": {
+            "de": "Eingereicht am 21.10.; die Bewertung steht noch aus.",
+            "en": "Turned in on Oct 21; the evaluation is still pending."
+          },
+          "next": {
+            "de": "",
+            "en": ""
+          }
+        }
+      ]
+    }
+  }
+}

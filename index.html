@@ -621,26 +621,116 @@ const round10 = n => Math.round(n/10)*10, round100 = n => Math.round(n/100)*100;
 const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7.1L12 17.3 5.7 21l1.7-7.1L2 9.2l7.1-.6z"/></svg>';
 const TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 
-/* Data per child (Peter, 31.10.: own test account). The FIRST student account keeps the existing
-   keys bq2_<key> (no migration). Every other logged-in student gets bq2_<user>__<key>, so a test
-   account never mixes with the child's data. Device-wide keys stay shared. */
-const GLOBAL_KEYS=/^(session|sessionPrev|adultSession|pw_.+|parentPin|muted|parentLang)$/;
+/* Data per child. Since S11 P2 (02.11.): every child - also the first one - stores under its ID,
+   bq2_<id>__<key>; passwords under bq2_pw_<id>. Before (and as a fallback if the move on this device
+   failed): the FIRST student account used bq2_<key>, every other one bq2_<user>__<key>. Device-wide keys
+   stay shared. */
+const GLOBAL_KEYS=/^(session|sessionPrev|adultSession|pw_.+|parentPin|muted|parentLang|migr|kidsHere)$/;
+let ID_STORAGE=false;
+/* account for a stored reference {id} or {user} (id first: login names may change, IDs never do) */
+function accByRef(r){
+  if(!r || !APP_ACCOUNTS || !APP_ACCOUNTS.users) return null;
+  return APP_ACCOUNTS.users.find(u=>r.id ? u.id===r.id : u.user===r.user) || null;
+}
 /* Grown-ups area: whose data is shown (Peter, 01.11.: choose the child). viewUser overrides the child
    logged in on this device - only while a grown-up looks at the data; reset when leaving the area. */
 let viewUser=null;
+function legacyNs(s){
+  const first=APP_ACCOUNTS.users.find(u=>u.role==='student');
+  return s && s.user && first && s.user!==first.user && APP_ACCOUNTS.users.some(u=>u.user===s.user && u.role==='student') ? s.user : '';
+}
 function childNs(){
   if(!APP_ACCOUNTS || !APP_ACCOUNTS.users) return '';
   let s=null; try{ s=JSON.parse(localStorage.getItem('bq2_session')||'null'); }catch(e){}
   if(viewUser) s={user:viewUser};
-  const first=APP_ACCOUNTS.users.find(u=>u.role==='student');
-  return s && s.user && first && s.user!==first.user && APP_ACCOUNTS.users.some(u=>u.user===s.user && u.role==='student') ? s.user : '';
+  if(!ID_STORAGE) return legacyNs(s);
+  const a=accByRef(s); return a && a.role==='student' ? a.id : '';
 }
+const pwKey = u => 'pw_'+(ID_STORAGE ? u.id : u.user);
+const sessionOf = u => ({user:u.user, id:u.id});
 const storeKey = k => { const ns=GLOBAL_KEYS.test(k)?'':childNs(); return 'bq2_'+(ns?ns+'__':'')+k; };
 const store = {
 get(k,d){ try{ const v=localStorage.getItem(storeKey(k)); return v===null?d:JSON.parse(v); }catch(e){ return d; } },
 set(k,v){ try{ localStorage.setItem(storeKey(k), JSON.stringify(v)); }catch(e){} },
 del(k){ try{ localStorage.removeItem(storeKey(k)); }catch(e){} }
 };
+/* ---------- move to IDs (S11 Stufe 1, P2, 02.11.) ----------
+   Once per device, before anything else reads the store: every child's data are COPIED from the old
+   keys (bq2_<key> for the first child, bq2_<user>__<key> for the others, bq2_pw_<user>) to the new ones
+   (bq2_<id>__<key>, bq2_pw_<id>). Then a check compares every copied value character by character. Only
+   if all are equal does the app switch to the new keys; otherwise it removes the partial copy, keeps
+   working with the old keys and tells the grown-ups. The old keys stay for 30 days (way back), then they
+   are deleted. Recordings (IndexedDB) are copied the same way, afterwards, and checked by count and size. */
+function migrState(){ try{ return JSON.parse(localStorage.getItem('bq2_migr')||'null'); }catch(e){ return null; } }
+function migrateToIds(){
+  ID_STORAGE=false;
+  if(!APP_ACCOUNTS || !APP_ACCOUNTS.users || APP_ACCOUNTS.version!==2) return;
+  const m=migrState(); if(m){ ID_STORAGE=!!m.ok; return; }
+  const kids=APP_ACCOUNTS.users.filter(u=>u.role==='student'), first=kids[0], plan=[];
+  const keys=[]; for(let i=0;i<localStorage.length;i++) keys.push(localStorage.key(i));
+  for(const full of keys){
+    if(!full || !full.startsWith('bq2_')) continue;
+    const rest=full.slice(4), sep=rest.indexOf('__');
+    if(sep<0){
+      const pw=/^pw_(.+)$/.exec(rest);
+      if(pw){ const a=APP_ACCOUNTS.users.find(u=>u.user===pw[1]); if(a) plan.push([full,'bq2_pw_'+a.id]); continue; }
+      if(GLOBAL_KEYS.test(rest)) continue;
+      if(first) plan.push([full,'bq2_'+first.id+'__'+rest]);
+    } else {
+      const a=kids.find(u=>u.user===rest.slice(0,sep));
+      if(a) plan.push([full,'bq2_'+a.id+'__'+rest.slice(sep+2)]);
+    }
+  }
+  let ok=true;
+  try{
+    for(const [o,n] of plan) localStorage.setItem(n, localStorage.getItem(o));
+    for(const [o,n] of plan) if(localStorage.getItem(n)!==localStorage.getItem(o)){ ok=false; break; }
+  }catch(e){ ok=false; }
+  if(!ok) for(const [,n] of plan){ try{ localStorage.removeItem(n); }catch(e){} }
+  if(ok){
+    // sessions keep working after a change of the login name: they now carry the ID as well
+    for(const lk of ['bq2_session','bq2_sessionPrev','bq2_adultSession']){
+      try{ const s=JSON.parse(localStorage.getItem(lk)||'null'), a=s && s.user && APP_ACCOUNTS.users.find(u=>u.user===s.user); if(a) localStorage.setItem(lk, JSON.stringify(Object.assign({},s,{id:a.id}))); }catch(e){}
+    }
+  }
+  const oldAudio=kids.map(u=>u===first?'bq2_audio':'bq2_audio__'+u.user);
+  const state={v:1, at:new Date().toISOString(), ok, keys:plan.length, old:ok?plan.map(p=>p[0]):[], audio:ok?'offen':'-', oldAudio:ok?oldAudio:[], cleaned:false};
+  try{ localStorage.setItem('bq2_migr', JSON.stringify(state)); }catch(e){ ok=false; }
+  ID_STORAGE=ok;
+  if(ok) migrateAudio(kids, first);
+}
+function idbOpen(name){ return new Promise((res,rej)=>{ const r=indexedDB.open(name,1); r.onupgradeneeded=()=>r.result.createObjectStore('rec',{keyPath:'id'}); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+async function idbAll(name){ const db=await idbOpen(name); try{ return await new Promise((res,rej)=>{ const q=db.transaction('rec').objectStore('rec').getAll(); q.onsuccess=()=>res(q.result||[]); q.onerror=()=>rej(q.error); }); } finally { db.close(); } }
+async function idbPut(name, items){ const db=await idbOpen(name); try{ await new Promise((res,rej)=>{ const t=db.transaction('rec','readwrite'); items.forEach(x=>t.objectStore('rec').put(x)); t.oncomplete=res; t.onerror=()=>rej(t.error); }); } finally { db.close(); } }
+async function idbExists(name){ try{ if(indexedDB.databases) return (await indexedDB.databases()).some(d=>d.name===name); }catch(e){} return true; }
+async function migrateAudio(kids, first){
+  let result='ok', count=0;
+  try{
+    for(const a of kids){
+      const from=a===first?'bq2_audio':'bq2_audio__'+a.user, to='bq2_audio__'+a.id;
+      if(!(await idbExists(from))) continue;
+      const items=await idbAll(from); if(!items.length) continue;
+      await idbPut(to, items);
+      const back=await idbAll(to);
+      const same=items.every(x=>back.some(y=>y.id===x.id && y.blob && x.blob && y.blob.size===x.blob.size));
+      if(!same) throw new Error('recordings differ');
+      count+=items.length;
+    }
+  }catch(e){ result='fehler'; }
+  const st=migrState(); if(!st) return;
+  st.audio=result; st.audioCount=count;
+  try{ localStorage.setItem('bq2_migr', JSON.stringify(st)); }catch(e){}
+}
+/* 30 days after a successful move: remove the old copies (recordings only if they moved correctly) */
+function migrateCleanup(){
+  const m=migrState(); if(!m || !m.ok || m.cleaned) return;
+  if((Date.now()-Date.parse(m.at))/864e5 < 30) return;
+  for(const k of m.old||[]){ try{ localStorage.removeItem(k); }catch(e){} }
+  if(m.audio==='ok') for(const n of m.oldAudio||[]){ try{ indexedDB.deleteDatabase(n); }catch(e){} }
+  m.cleaned=true; try{ localStorage.setItem('bq2_migr', JSON.stringify(m)); }catch(e){}
+}
+migrateToIds();
+migrateCleanup();
 
 /* ---------- sound ---------- */
 let muted = store.get('muted', false);
@@ -3470,7 +3560,7 @@ function parentHomeHTML(){
   const note=w?`<p class="phow psheet-note">📄 ${wait.length===1?(de?`${sheetName(w)} wartet aufs Eintragen.`:`${sheetName(w)} is waiting to be entered.`):(de?`${wait.length} Übungsblätter warten aufs Eintragen.`:`${wait.length} practice sheets are waiting to be entered.`)} <button type="button" class="btn small" data-opensheet="${w.id}">${de?'Jetzt eintragen':'Enter now'}</button></p>`:'';
   const noKid=accountsOn() && !viewedKid() ? `<p class="phow pnokid">📱 ${de?'Auf diesem Gerät ist kein Kind angemeldet. Den Lernstand sehen Sie auf dem Gerät, auf dem Ihr Kind übt – dort unten „👪 Grown-ups“ antippen.':'No child is logged in on this device. You see your child’s progress on the device where they practice – tap “👪 Grown-ups” at the bottom there.'}</p>` : '';
   if(noKid) return noKid;   // nothing to show: without a logged-in child the data on this device are not the child's
-  return `${note}${backupLine()}<p class="phow">${T.howHome}</p><div class="playout"><div class="psubjects">${tiles}</div><aside class="pside"><div class="pcard" id="pSummary">${summaryHTML(all)}</div><div class="pcard">${legendHTML()}</div></aside></div>`;
+  return `${migrNote()}${note}${backupLine()}<p class="phow">${T.howHome}</p><div class="playout"><div class="psubjects">${tiles}</div><aside class="pside"><div class="pcard" id="pSummary">${summaryHTML(all)}</div><div class="pcard">${legendHTML()}</div></aside></div>`;
 }
 function legendHTML(){
   const T=PT[PL()], de=PL()==='de';
@@ -3518,6 +3608,15 @@ function sheetsPageHTML(){
         return `<div class="sheetrow"><div class="q"><b>${i+1}.</b> ${esc(strip(sheetPrompt(it.q)).slice(0,140))}</div><div class="row">${Object.keys(R).map(r=>`<button type="button" class="btn small${it.res===r?' on':''}" data-sheet="${sh.id}" data-i="${i}" data-res="${r}" aria-pressed="${it.res===r}"${locked?' disabled':''}>${R[r]}</button>`).join('')}</div></div>`; }).join('')
       +(n?'':`<p><button type="button" class="btn small" data-discard="${sh.id}">${de?'Blatt verwerfen':'Discard sheet'}</button></p>`)+'</details>';
   }).join('');
+}
+/* The move to IDs failed on this device: grown-ups see it calmly, with a way to try again. */
+function migrNote(){
+  const m=migrState(); if(!m || (m.ok && m.audio!=='fehler')) return '';
+  const de=PL()==='de';
+  const text=!m.ok
+    ? (de?'Die Umstellung der Daten auf die neue Kennung hat auf diesem Gerät nicht geklappt. Die App arbeitet unverändert mit dem bisherigen Stand weiter.':'Moving the data to the new ID did not work on this device. The app keeps working with the existing data as before.')
+    : (de?'Die Aufnahmen konnten nicht übernommen werden. Sie bleiben 30 Tage im bisherigen Speicher.':'The recordings could not be moved. They stay in the old storage for 30 days.');
+  return `<p class="phow pmigr-note">⚠️ ${text} <button type="button" class="btn small" data-migrretry>${de?'Erneut versuchen':'Try again'}</button></p>`;
 }
 /* ---------- backup (S11 Stufe 1, 02.11.): the child's data as a file, and back ----------
    Only parents of the child. Keys are stored WITHOUT the device namespace, so a backup made now can be
@@ -3655,6 +3754,7 @@ function renderSheets(){
   body.querySelectorAll('[data-backup]').forEach(b=>b.addEventListener('click',makeBackup));
   const rf=$('#pRestoreFile'); if(rf) rf.addEventListener('change',()=>{ if(rf.files && rf.files[0]) readRestoreFile(rf.files[0]); });
   body.querySelectorAll('[data-restoreundo]').forEach(b=>b.addEventListener('click',undoRestore));
+  body.querySelectorAll('[data-migrretry]').forEach(b=>b.addEventListener('click',()=>{ try{ localStorage.removeItem('bq2_migr'); }catch(e){} location.reload(); }));
   bindParentSettings();
 }
 
@@ -3673,7 +3773,7 @@ function parentLock(){
    session; the start code / own password protects the first login. */
 function adultResume(){
   if(!accountsOn()) return false;
-  const s=store.get('adultSession',null), u=s && APP_ACCOUNTS.users.find(x=>x.user===s.user && x.role!=='student');
+  const s=store.get('adultSession',null), a=accByRef(s), u=a && a.role!=='student' ? a : null;
   if(!u){ if(s) store.del('adultSession'); return false; }
   loginDone(u); return true;
 }
@@ -3686,7 +3786,7 @@ const viewedKid = () => accountsOn() ? (viewUser || (studentSession()||{}).user 
 function kidChoices(){
   if(!accountsOn() || !adultUser) return [];
   const me=APP_ACCOUNTS.users.find(u=>u.user===adultUser.user)||{}, cur=(studentSession()||{}).user;
-  return APP_ACCOUNTS.users.filter(u=>u.role==='student' && (!u.test || adultUser.admin) && (adultUser.role!=='teacher' || (me.kinder||[]).includes(u.user)) && (u.user===cur || store.get('pw_'+u.user,null))).map(u=>u.user);
+  return APP_ACCOUNTS.users.filter(u=>u.role==='student' && (!u.test || adultUser.admin) && (adultUser.role!=='teacher' || (me.kinder||[]).includes(u.user)) && (u.user===cur || store.get(pwKey(u),null))).map(u=>u.user);
 }
 const testUserFor = () => accountsOn() && adultUser && adultUser.admin ? APP_ACCOUNTS.users.find(u=>u.role==='student' && u.test) || null : null;
 const isTestUser = user => !!(APP_ACCOUNTS && APP_ACCOUNTS.users.some(u=>u.user===user && u.test));
@@ -3694,14 +3794,14 @@ function switchChild(user){
   if(!APP_ACCOUNTS.users.some(u=>u.user===user && u.role==='student')) return;
   const cur=studentSession();
   // remember who was there before (also "nobody"), so leaving the test account restores exactly that
-  if(isTestUser(user)){ if(!cur || !isTestUser(cur.user)) store.set('sessionPrev',{user:cur?cur.user:null}); }
+  if(isTestUser(user)){ if(!cur || !isTestUser(cur.user)) store.set('sessionPrev',cur?sessionOf(cur):{user:null}); }
   else store.del('sessionPrev');
-  store.set('session',{user}); renderHome();
+  store.set('session',sessionOf(APP_ACCOUNTS.users.find(u=>u.user===user))); renderHome();
 }
 /* Back from the test account to the real child (log out of the grown-ups area, return ticket gone). */
 function restoreRealChild(){
   const prev=store.get('sessionPrev',null);
-  if(prev && isTestAccount()){ if(prev.user) store.set('session',{user:prev.user}); else store.del('session'); }
+  if(prev && isTestAccount()){ const a=accByRef(prev); if(a) store.set('session',sessionOf(a)); else store.del('session'); }
   store.del('sessionPrev'); renderHome();
 }
 /* "Try as test child" (Peter, 31.10.): play the test account without a new login and come back to the
@@ -3742,7 +3842,7 @@ function parentHeaderHTML(){
    long family password, so short children's passwords never protect the app itself. */
 let adultUser=null, loginFails=0, loginBlockedUntil=0;
 const accountsOn = () => !!(APP_ACCOUNTS && APP_ACCOUNTS.users && APP_ACCOUNTS.users.length);
-const studentSession = () => { const s=store.get('session',null); return s && APP_ACCOUNTS && APP_ACCOUNTS.users.some(u=>u.user===s.user && u.role==='student') ? s : null; };
+const studentSession = () => { const a=accByRef(store.get('session',null)); return a && a.role==='student' ? sessionOf(a) : null; };
 const accountOf = (name, adult) => APP_ACCOUNTS.users.find(u=>u.user===String(name||'').trim().toLowerCase() && (adult ? u.role!=='student' : u.role==='student'));
 async function pbkdf2Hex(text, salt){
   const m=await crypto.subtle.importKey('raw',new TextEncoder().encode(text),'PBKDF2',false,['deriveBits']);
@@ -3851,13 +3951,13 @@ function renderLogin(role){
     try{
       const u=accountOf(name, role==='adult'); let ok=false, viaCode=false;
       if(u){
-        const own=store.get('pw_'+u.user,null);
+        const own=store.get(pwKey(u),null);
         if(own && await pbkdf2Hex(pw, own.salt)===own.hash) ok=true;
         else if(await pbkdf2Hex(pw.toUpperCase().replace(/[^A-Z0-9]/g,''), u.start.salt)===u.start.hash){ ok=true; viaCode=true; }
       } else await pbkdf2Hex(pw,[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]); // same effort for unknown names
       if(!ok){ loginFails++; if(loginFails>=5){ loginBlockedUntil=Date.now()+30000; loginFails=0; } msg.textContent=T.wrong; btn.disabled=false; return; }
       loginFails=0;
-      if(viaCode && !store.get('pw_'+u.user,null)) return renderSetPassword(u);
+      if(viaCode && !store.get(pwKey(u),null)) return renderSetPassword(u);
       loginDone(u);
     }catch(err){ msg.textContent='Login is not possible in this browser.'; btn.disabled=false; }
   });
@@ -3872,7 +3972,7 @@ function renderSetPassword(u){
     if(p1.length<min){ msg.textContent=T.short(min); return; }
     if(p1!==p2){ msg.textContent=T.diff; return; }
     const salt=Array.from(crypto.getRandomValues(new Uint8Array(16)));
-    store.set('pw_'+u.user,{salt, hash:await pbkdf2Hex(p1,salt)});
+    store.set(pwKey(u),{salt, hash:await pbkdf2Hex(p1,salt)});
     renderWelcome(u);
   });
   $('#newPw1').focus();
@@ -3890,8 +3990,8 @@ function renderWelcome(u){
 }
 function loginDone(u, welcomed){
   $('#loginBody').innerHTML='';
-  if(u.role==='student'){ store.set('session',{user:u.user}); adultUser=null; if(welcomed) store.set('greetDay',dayKey()); renderHome(); show('home'); }
-  else { store.set('adultSession',{user:u.user}); adultUser={user:u.user, role:u.role, admin:!!u.admin}; parentAccess=true; state.psubj=null; state.popen=state.popen||[]; openAbout('sheets'); }
+  if(u.role==='student'){ store.set('session',sessionOf(u)); adultUser=null; if(welcomed) store.set('greetDay',dayKey()); renderHome(); show('home'); }
+  else { store.set('adultSession',sessionOf(u)); adultUser={user:u.user, role:u.role, admin:!!u.admin}; parentAccess=true; state.psubj=null; state.popen=state.popen||[]; openAbout('sheets'); }
 }
 /* Test account bar (for grown-ups, in their language): clearly marked, separate data, jump ahead one
    day, reset everything, and – while a grown-up is logged in – back to the grown-ups area. */
@@ -3987,32 +4087,14 @@ STANDARD_TEXT['E-S1']='Sprechen und Zuhören: an das Publikum denken';
 STANDARD_TEXT['E-S2']='Sprechen und Zuhören: Meinungen äußern und besprechen';
 /* Ratings the school gave the child (Peter, 01.11.: the tasks should build on them). Read on 01.11.2026
    from the class learning platform (child account, read only): all evaluated assignments and the one
-   awaiting evaluation. Kept per account; only inside the encrypted app; the child never sees it.
+   awaiting evaluation. Since S11 P2 (02.11.) the data live in werkzeug/schuldaten.json; the build puts
+   them into the encrypted app keyed by the account ID - assigned by ID only, never by name. The child
+   never sees them.
    Letters: C = Consolidating, M = Meeting expectations (school legend). ATL/Learner profile:
    ES = emerging with support, Obs. = observed, Ind. = independent. */
-const SCHOOL_DATA={kathie:{asOf:'2026-11-01', tasks:[
-  {day:'2026-10-27', area:'math', title:'Mastering Basic Numbers and Calculations – Milestone', std:{'M-N1':'C','M-N2':'M','M-N3':'M','M-N4':'C','M-N5':'C','M-N6':'C'}, quests:['wordprob','combos','round'], focusNext:['wordprob'],
-   // rubric: teacher = highlighted cell, self = the child's own tick (Peter, 01.11.)
-   rubric:[{crit:'Sticker combinations',teacher:'C',self:'E'},{crit:'Funny face stickers',teacher:'C',self:'E'},{crit:'Rounding and estimation',teacher:'C',self:'E'}],
-   good:{de:'Auf Zehner runden sicher; mit dem Überschlag begründet, warum die Sticker nicht in die Schachtel passen.',en:'Rounding to the nearest ten is secure; used the estimate to explain why the stickers would not fit in the box.'},
-   next:{de:'Zahlen in Sachaufgaben genau lesen (die Gesamtzahl wurde verlesen); klare Strategien für Plus- und Minusaufgaben mit mehreren Schritten.',en:'Read the numbers in word problems carefully (the total was misread); clear strategies for multi-step addition and subtraction.'}},
-  {day:'2026-10-15', area:'english', title:'Persuade for the Park! (opinion writing)', std:{'E-S1':'C','E-S2':'M'}, atl:{'Caring':'Ind.','Thinkers':'Obs.','Connection':'Ind.'}, quests:['opinion','examples','sentences'], focusNext:['examples','sentences'],
-   good:{de:'Meinung am Anfang und am Ende klar formuliert; gute Gründe (Bewegung, Natur erleben).',en:'Opinion stated clearly at the beginning and the end; good reasons (exercise, learning about nature).'},
-   next:{de:'Beispiele genauer und persönlicher; Großbuchstaben am Satzanfang und bei Namen, Satzzeichen prüfen.',en:'Make examples more specific and personal; capital letters at the start of sentences and for names, check punctuation.'}},
-  {day:'2026-10-15', area:'math', title:'Lesson 4 – rounding to the nearest hundred', std:{}, quests:['round'], focusNext:['round'],
-   good:{de:'Nachbar-Hunderter 100 und 200 und die Mitte 150 richtig; 120 richtig eingetragen und auf 100 gerundet.',en:'Benchmark hundreds 100 and 200 and the halfway point 150 correct; placed 120 correctly and rounded it to 100.'},
-   next:{de:'Genauer erklären, woran man erkennt, welcher Hunderter näher ist (Abstände, Mitte).',en:'Explain in more detail how you know which hundred is closer (distances, halfway point).'}},
-  {day:'2026-10-04', area:'science', title:'Friction Frenzy (friction experiment)', std:{'E-W1':'C','E-W2':'C','M-D1':'C','M-M1':'C','S-F1':'C'}, atl:{'Research skills':'Obs.','Critical thinking: giving reasons':'Ind.','Transfer: generalising':'Ind.','Function':'Ind.','Responsibility':'ES'}, quests:['forces','units','graphs','finish','examples'], focusNext:['examples','units','graphs','finish'],
-   good:{de:'Versteht Reibung (mehr Reibung = kürzere Strecke) und begründet klar; arbeitet gut in der Gruppe mit.',en:'Understands friction (more friction = shorter distance) and explains it clearly; works well in the group.'},
-   next:{de:'Genauere Hypothese; Messwerte vollständig und mit richtiger Einheit (cm statt m), Masse notieren; Balkendiagramm vollständig beschriften; jede Frage beantworten.',en:'More specific hypothesis; record all measurements with the right unit (cm, not m) and the mass; label the bar graph completely; answer every question.'}},
-  {day:'2026-10-03', area:'math', title:'Mastering Basic Numbers – Apprentice (Travel for Work)', std:{'M-N1':'C','M-N3':'C','M-N4':'C'}, quests:['combos','round','detective'], focusNext:['combos','round'],
-   good:{de:'Tabelle richtig gelesen (wenigste und meiste Fahrt); Überschlag durch Runden auf Hunderter richtig; 900 am Zahlenstrahl und mit Gleichungen zerlegt.',en:'Read the table correctly (least and most travel); estimate by rounding to hundreds correct; broke 900 apart on a number line and with equations.'},
-   next:{de:'Verschiedene Zerlegungen von 900 finden statt dreimal dieselbe Zahl; begründen, warum auf Hunderter oder auf Zehner gerundet wird.',en:'Find different ways to break 900 apart instead of the same number three times; explain why to round to hundreds or to tens.'}},
-  {day:'2026-10-21', pending:true, area:'learner', title:'Glows and Grows (self-assessment)', std:{}, quests:['school'],
-   good:{de:'Eingereicht am 21.10.; die Bewertung steht noch aus.',en:'Turned in on Oct 21; the evaluation is still pending.'}, next:{de:'',en:''}}
-]}};
-const schoolUser = () => { if(viewUser) return viewUser; try{ return (JSON.parse(localStorage.getItem('bq2_session')||'null')||{}).user||null; }catch(e){ return null; } };
-const schoolData = () => accountsOn() ? (SCHOOL_DATA[schoolUser()]||null) : null;
+const SCHOOL_DATA=/*BQ_SCHULE*/null||{};
+const schoolKid = () => { const n=viewUser || (studentSession()||{}).user, a=n && APP_ACCOUNTS.users.find(u=>u.user===n && u.role==='student'); return a ? a.id : null; };
+const schoolData = () => accountsOn() ? (SCHOOL_DATA[schoolKid()]||null) : null;
 const SL={C:'c',M:'m',E:'e',RS:'rs',N:'rs'};
 /* latest rating per standard: [{day, r}] newest first */
 function schoolRatings(d){
