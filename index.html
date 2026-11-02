@@ -2933,20 +2933,7 @@ function birthdayIn(){ // days until the birthday (0 = today), or null
 }
 
 /* jokes, mystery questions, stories */
-const JOKES=[
-  ['Why did the maths book look sad?','It had too many problems.'],['What do you call a sleeping dinosaur?','A dino-snore!'],
-  ['Why can’t a bicycle stand up by itself?','Because it is two-tired.'],['What has hands but cannot clap?','A clock.'],
-  ['Why are fish so clever?','Because they live in schools.'],['What did one wall say to the other wall?','I’ll meet you at the corner!'],
-  ['How do you make an octopus laugh?','With ten-tickles!'],['What did the ocean say to the beach?','Nothing, it just waved.'],
-  ['Why did the cookie go to the doctor?','Because it felt crummy.'],['What do you call a bear with no teeth?','A gummy bear!'],
-  ['Was ist grün und klopft an die Tür?','Ein Klopfsalat!'],['Was macht ein Pirat am Computer?','Er drückt die Enter-Taste.'],
-  ['Warum können Geister so schlecht lügen?','Weil man durch sie hindurchsieht.'],['Was sagt die Null zur Acht?','Schicker Gürtel!']
-];
-const THEME_JOKES={
-  halloween:[['What is a ghost’s favourite food?','Spook-hetti!'],['What do you call a witch at the beach?','A sand-witch!'],['What room does a ghost not need?','A living room.'],['Was essen Gespenster am liebsten?','Spukhetti!']],
-  advent:[['What do snowmen eat for breakfast?','Snowflakes!'],['What do elves learn at school?','The elf-abet.'],['Wie nennt man einen Schneemann im Sommer?','Eine Pfütze.'],['Why was the snowman looking through the carrots?','He was picking his nose!']],
-  christmas:[['What do you call a reindeer with no eyes?','No idea! (No-eye-deer)'],['Was ist weiß und hüpft durch den Wald?','Ein Schneehase.']]
-};
+/* jokes: module src/module/witze.mjs (JOKE_LIST, jokesFor, jokeNext, jokeForDoor) */
 const MYSTERY=[
   ['I am a number between 30 and 40. Rounded to the nearest ten I am 40. My ones digit is 7. Who am I?','37',['34','47','33']],
   ['What has a neck but no head?','A bottle',['A snake','A pencil','A spoon']],
@@ -2972,7 +2959,15 @@ function mysteryOfDay(d=new Date()){
   const th=themeNow(d), pool=(th && THEME_MYSTERY[th]) ? THEME_MYSTERY[th].concat(MYSTERY) : MYSTERY;
   return pool[dayNo(d)%pool.length];
 }
-const jokePool = () => { const th=themeNow(); return (th && THEME_JOKES[th]) ? THEME_JOKES[th].concat(THEME_JOKES[th], JOKES) : JOKES; };
+/* A3 (Peter, 02.11.): one joke per round - the same key (a round, the greeting of a day) gives the same joke;
+   no joke comes back before all were shown (jokeSeen). Language: storyLang() - English, German only after a Deutsch round. */
+let jokeShown=null;
+function jokeFor(key, lang){
+  if(jokeShown && jokeShown.key===key) return jokeShown.joke;
+  const r=jokeNext(lang, themeNow(), store.get('jokeSeen',[]), rnd);
+  store.set('jokeSeen', r.seen.slice(-200)); jokeShown={key, joke:r.joke};
+  return r.joke;
+}
 
 /* Pisolala: a family character. Never shown, never described – only what happens around Pisolala.
    New stories go in only after a grown-up approved them (approved:true). Excitement: 1 cozy, 2 a bit exciting, 3 adventurous.
@@ -3022,7 +3017,7 @@ function renderAdvent(){
 }
 function openDoor(n){
   const key='advent'+new Date().getFullYear(), opened=store.get(key,[]), body=$('#doorBody');
-  const treat=()=>{ const j=THEME_JOKES.advent.concat(JOKES)[(n*7)%(THEME_JOKES.advent.length+JOKES.length)]; return `<div class="story"><b>Door ${n}</b>\n${esc(j[0])}\n<i>${esc(j[1])}</i></div>`; };
+  const treat=()=>{ const j=jokeForDoor(n); return `<div class="story"><b>Door ${n}</b>\n${esc(j.q)}\n<i>${esc(j.a)}</i></div>`; };
   if(opened.includes(n)){ body.innerHTML=treat(); return; }
   const pool=THEME_MYSTERY.advent.concat(MYSTERY), m=pool[n%pool.length], opts=shuffle([m[1]].concat(m[2]));
   body.innerHTML=`<p><b>Door ${n}:</b> ${esc(m[0])}</p><div class="row">${opts.map(o=>`<button type="button" class="btn small" data-a="${esc(o)}">${esc(o)}</button>`).join('')}</div>`;
@@ -3169,14 +3164,15 @@ function renderAfterRound(k){
   const t=$('#treat');
   const choices=[['joke','😄 Joke'],['mystery','🔍 Mystery Question']].concat(storiesNow().length?[['story','🌙 Pisolala']]:[]);
   t.innerHTML=`<p><b>Choose your treat</b></p><div class="row">${choices.map(c=>`<button type="button" class="btn small" data-treat="${c[0]}">${c[1]}</button>`).join('')}</div><div id="treatBody"></div>`;
-  t.querySelectorAll('[data-treat]').forEach(b=>b.addEventListener('click',()=>showTreat(b.dataset.treat)));
+  const roundKey='round-'+Date.now();
+  t.querySelectorAll('[data-treat]').forEach(b=>b.addEventListener('click',()=>showTreat(b.dataset.treat, roundKey)));
 }
-function showTreat(kind){
+function showTreat(kind, roundKey){
   const body=$('#treatBody');
   if(kind==='joke'){
-    const j=pick(jokePool());
-    body.innerHTML=`<div class="story">${esc(j[0])}</div><button class="btn small" id="jokeAnswer" type="button">Show the answer</button>`;
-    $('#jokeAnswer').addEventListener('click',()=>{ $('#jokeAnswer').outerHTML=`<div class="story"><i>${esc(j[1])}</i></div>`; });
+    const j=jokeFor(roundKey, storyLang());
+    body.innerHTML=`<div class="story" lang="${j.lang}">${esc(j.q)}</div><button class="btn small" id="jokeAnswer" type="button">Show the answer</button>`;
+    $('#jokeAnswer').addEventListener('click',()=>{ $('#jokeAnswer').outerHTML=`<div class="story" lang="${j.lang}"><i>${esc(j.a)}</i></div>`; });
   } else if(kind==='mystery'){
     const m=mysteryOfDay(), done=store.get('mysteryDone','')===dayKey();
     const opts=shuffle([m[1]].concat(m[2]));
@@ -5064,9 +5060,9 @@ function closeGreet(){ store.set('greetDay',dayKey()); const d=$('#greetDlg'); i
 function greetGo(k){
   if(k==='joke'){
     store.set('greetDay',dayKey());
-    const j=pick(jokePool());
-    $('#greetJoke').innerHTML=`<div class="story">${esc(j[0])}</div><button class="btn small" id="greetJokeAnswer" type="button">Show the answer</button>`;
-    $('#greetJokeAnswer').addEventListener('click',()=>{ $('#greetJokeAnswer').outerHTML=`<div class="story"><i>${esc(j[1])}</i></div>`; });
+    const j=jokeFor('greet-'+dayKey(), 'en');
+    $('#greetJoke').innerHTML=`<div class="story">${esc(j.q)}</div><button class="btn small" id="greetJokeAnswer" type="button">Show the answer</button>`;
+    $('#greetJokeAnswer').addEventListener('click',()=>{ $('#greetJokeAnswer').outerHTML=`<div class="story"><i>${esc(j.a)}</i></div>`; });
     $('#greetSkip').textContent='Done ✓';
     return;
   }

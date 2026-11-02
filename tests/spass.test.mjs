@@ -43,8 +43,12 @@ test('nach einer Runde: Leckerli waehlen – Witz mit Aufloesung, Mystery Questi
   assert.equal(await page.textContent('#treatBody p b'), 'Pisolala and the Giggling Pumpkins');
   for (const w of ['Ohren', 'Augen', 'Fell', 'groß wie', 'aussah', 'ears', 'eyes', 'fur', 'as big as', 'looked like']) assert.ok(!geschichte.includes(w), 'Pisolala bleibt unsichtbar: ' + w);
   await klick(page, '#treat [data-treat="joke"]');
+  const witz = await page.textContent('#treatBody .story');
+  assert.equal(await page.getAttribute('#treatBody .story', 'lang'), 'en', 'English joke after a Maths round');
   await klick(page, '#jokeAnswer');
   assert.equal(await page.$$eval('#treatBody .story', (s) => s.length), 2, 'Frage und Aufloesung');
+  // A3 (Peter, 02.11.): one joke per round - pressing "Joke" again shows the same one
+  for (let i = 0; i < 3; i++) { await klick(page, '#treat [data-treat="joke"]'); assert.equal(await page.textContent('#treatBody .story'), witz); }
   await klick(page, '#treat [data-treat="mystery"]');
   await klick(page, '#treatBody [data-m]');
   assert.equal(await lies(page, 'mysteryDone'), tag(0));
@@ -64,6 +68,15 @@ test('Pisolala auf Deutsch nur nach einer Runde im Fach Deutsch (Anleitung)', as
   const geschichte = await page.textContent('#storyText');
   assert.ok(geschichte.includes('Sehen kann Pisolala niemand'));
   assert.equal(await page.getAttribute('#storyText .story', 'lang'), 'de');
+  // A3: jokes follow the same rule - German only after a Deutsch round
+  await page.locator('#treat [data-treat="joke"]').click();
+  assert.equal(await page.getAttribute('#treatBody .story', 'lang'), 'de');
+  const erster = await page.textContent('#treatBody .story');
+  // the next round brings a new joke
+  await page.locator('#againBtn').click();
+  await rundeSpielen(page);
+  await page.locator('#treat [data-treat="joke"]').click();
+  assert.notEqual(await page.textContent('#treatBody .story'), erster, 'new round, new joke');
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
