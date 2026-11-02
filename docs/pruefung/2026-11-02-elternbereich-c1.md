@@ -31,7 +31,7 @@ Peter (02.11.): Die Einstufungen der Schule bestimmen die Aufgabenwahl. Sie geh�
 - Gegenproben (rot):
   - C1-Tests mit der App von `main` (2 von 2).
   - Zuordnung der Standards nur nach Kürzel (T13 rot: Messen stünde in Mathe).
-- `npm test`: 327 bestanden.
+- `npm test`: 327 bestanden; nach dem Merge von `main` (Aufgabe 2b, #69) 328 bestanden.
 - Bildschirmfoto der Fachansicht mit erfundenen Daten durchgesehen.
 
 ## Gefunden, nicht geändert
