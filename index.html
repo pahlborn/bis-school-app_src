@@ -3116,7 +3116,7 @@ function mysteryOfDay(d=new Date()){
 }
 /* A3 (Peter, 02.11.): one joke per round - the same key (a round, the greeting of a day) gives the same joke;
    no joke comes back before all were shown (jokeSeen). Language: storyLang() - English, German only after a Deutsch round. */
-let jokeShown=null;
+let jokeShown=null, treatRounds=0;
 function jokeFor(key, lang){
   if(jokeShown && jokeShown.key===key) return jokeShown.joke;
   const r=jokeNext(lang, themeNow(), store.get('jokeSeen',[]), rnd);
@@ -3316,7 +3316,7 @@ function renderAfterRound(k){
   const t=$('#treat');
   const choices=[['joke','😄 Joke'],['mystery','🔍 Mystery Question']].concat(storyNext(STORY_LIST, storyCtx(storyLang()))?[['story','🌙 Pisolala']]:[]);
   t.innerHTML=`<p><b>Choose your treat</b></p><div class="row">${choices.map(c=>`<button type="button" class="btn small" data-treat="${c[0]}">${c[1]}</button>`).join('')}</div><div id="treatBody"></div>`;
-  const roundKey='round-'+Date.now();
+  const roundKey='round-'+(++treatRounds);   // a counter, not the clock: two rounds in the same millisecond (or a frozen test clock) stay apart
   t.querySelectorAll('[data-treat]').forEach(b=>b.addEventListener('click',()=>showTreat(b.dataset.treat, roundKey)));
 }
 function showTreat(kind, roundKey){
