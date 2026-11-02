@@ -3005,6 +3005,9 @@ function jokeFor(key, lang){
   store.set('jokeSeen', r.seen.slice(-200)); jokeShown={key, joke:r.joke};
   return r.joke;
 }
+/* A4: English jokes carry flag and country above the question; a short explanation comes with the answer. */
+const jokeHTML = (j, btn) => `${j.lang==='en'?`<p class="small joke-from">${esc(jokeOrigin(j))}</p>`:''}<div class="story" lang="${j.lang}">${esc(j.q)}</div><button class="btn small" id="${btn}" type="button">Show the answer</button>`;
+const jokeAnswerHTML = j => `<div class="story" lang="${j.lang}"><i>${esc(j.a)}</i></div>${j.note?`<p class="small joke-note">💡 ${esc(j.note)}</p>`:''}`;
 
 /* Pisolala: a family character. Never shown, never described – only what happens around Pisolala.
    New stories go in only after a grown-up approved them (approved:true). Excitement: 1 cozy, 2 a bit exciting, 3 adventurous.
@@ -3054,7 +3057,7 @@ function renderAdvent(){
 }
 function openDoor(n){
   const key='advent'+new Date().getFullYear(), opened=store.get(key,[]), body=$('#doorBody');
-  const treat=()=>{ const j=jokeForDoor(n); return `<div class="story"><b>Door ${n}</b>\n${esc(j.q)}\n<i>${esc(j.a)}</i></div>`; };
+  const treat=()=>{ const j=jokeForDoor(n); return `<div class="story"><b>Door ${n}</b>\n${j.lang==='en'?`<span class="small joke-from">${esc(jokeOrigin(j))}</span>\n`:''}${esc(j.q)}\n<i>${esc(j.a)}</i>${j.note?`\n<span class="small joke-note">💡 ${esc(j.note)}</span>`:''}</div>`; };
   if(opened.includes(n)){ body.innerHTML=treat(); return; }
   const pool=THEME_MYSTERY.advent.concat(MYSTERY), m=pool[n%pool.length], opts=shuffle([m[1]].concat(m[2]));
   body.innerHTML=`<p><b>Door ${n}:</b> ${esc(m[0])}</p><div class="row">${opts.map(o=>`<button type="button" class="btn small" data-a="${esc(o)}">${esc(o)}</button>`).join('')}</div>`;
@@ -3208,8 +3211,8 @@ function showTreat(kind, roundKey){
   const body=$('#treatBody');
   if(kind==='joke'){
     const j=jokeFor(roundKey, storyLang());
-    body.innerHTML=`<div class="story" lang="${j.lang}">${esc(j.q)}</div><button class="btn small" id="jokeAnswer" type="button">Show the answer</button>`;
-    $('#jokeAnswer').addEventListener('click',()=>{ $('#jokeAnswer').outerHTML=`<div class="story" lang="${j.lang}"><i>${esc(j.a)}</i></div>`; });
+    body.innerHTML=jokeHTML(j, 'jokeAnswer');
+    $('#jokeAnswer').addEventListener('click',()=>{ $('#jokeAnswer').outerHTML=jokeAnswerHTML(j); });
   } else if(kind==='mystery'){
     const m=mysteryOfDay(), done=store.get('mysteryDone','')===dayKey();
     const opts=shuffle([m[1]].concat(m[2]));
@@ -5101,8 +5104,8 @@ function greetGo(k){
   if(k==='joke'){
     store.set('greetDay',dayKey());
     const j=jokeFor('greet-'+dayKey(), 'en');
-    $('#greetJoke').innerHTML=`<div class="story">${esc(j.q)}</div><button class="btn small" id="greetJokeAnswer" type="button">Show the answer</button>`;
-    $('#greetJokeAnswer').addEventListener('click',()=>{ $('#greetJokeAnswer').outerHTML=`<div class="story"><i>${esc(j.a)}</i></div>`; });
+    $('#greetJoke').innerHTML=jokeHTML(j, 'greetJokeAnswer');
+    $('#greetJokeAnswer').addEventListener('click',()=>{ $('#greetJokeAnswer').outerHTML=jokeAnswerHTML(j); });
     $('#greetSkip').textContent='Done ✓';
     return;
   }

@@ -45,6 +45,7 @@ test('nach einer Runde: Leckerli waehlen – Witz mit Aufloesung, Mystery Questi
   await klick(page, '#treat [data-treat="joke"]');
   const witz = await page.textContent('#treatBody .story');
   assert.equal(await page.getAttribute('#treatBody .story', 'lang'), 'en', 'English joke after a Maths round');
+  assert.match(await page.textContent('#treatBody .joke-from'), /^\S+ A joke from (the UK|the USA|Canada|India|around the world)$/, 'A4: flag and country');
   await klick(page, '#jokeAnswer');
   assert.equal(await page.$$eval('#treatBody .story', (s) => s.length), 2, 'Frage und Aufloesung');
   // A3 (Peter, 02.11.): one joke per round - pressing "Joke" again shows the same one
