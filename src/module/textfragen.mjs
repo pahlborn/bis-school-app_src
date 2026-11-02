@@ -53,3 +53,59 @@ export const SPECIFIC_EXPLAIN={
   2:"Both sound full, but only one says who, when and where. That is the specific one.",
   3:"Both sound good. The better one tells ONE real moment: who, when and where. The other one is true in general – that is more like a reason."
 };
+
+/* ---------- A8: Opinion Writing ---------- */
+
+/** Opinion questions (quest Opinion Writing). Almost-right wrong answers: an opinion without a reason, a reason
+ *  that goes in a circle ("… because it is the best"), a fact that sounds like an opinion. */
+export const OPINION_MC=[
+ // level 1 - the wrong answers are plain facts or have nothing to do with it
+ ["Which sentence states a <b>clear opinion</b> about the park?","I strongly believe our park must stay open.",["The park opens at eight o’clock every day.","There are six wooden benches by the pond.","The park has a big pond, a slide and swings."],"An opinion says what someone thinks. The others are facts – you can check them.",1],
+ ["Which sentence <b>restates</b> the opinion at the end?","That is why the council must keep our park open!",["For example, I saw a woodpecker by the pond.","One reason is that children can play there.","The park opened a long time ago, in 1950."],"The last O says the opinion again, with power: ‘That is why …’.",1],
+ ["Which reason supports ‘the park is good for exercise’?","People can run, climb and play football there.",["The council meets in the town hall on Mondays.","I got a pair of new red shoes for my birthday.","The grass is green and the sky above is blue."],"A reason says WHY. Running, climbing and football are exercise.",1],
+ ["Which sentence is an opinion with a reason?","Dogs are the best pets because they are loyal.",["Dogs have four legs, a tail and a wet nose.","My dog is called Bruno and he is three.","Dogs often bark when someone knocks at the door."],"Opinion + because + reason. That persuades!",1],
+ // level 2 - almost right: no reason, a reason in a circle, a fact
+ ["Which sentence is an opinion with a reason?","Cats are great pets because they keep themselves clean.",["Cats are great pets because they are the best pets.","Cats are great pets, and I really, really love them.","Most cats sleep for more than twelve hours a day."],"‘Because they are the best pets’ just says the opinion again – that is not a reason. ‘I love them’ has no because. The last one is a fact.",2],
+ ["Which sentence states a <b>clear opinion</b> about school lunch?","School lunch should have more fresh fruit.",["School lunch is served at twelve o’clock.","Some children have school lunch every day.","School lunch might be nice, or it might not."],"‘Should’ shows a clear opinion. ‘Might be nice, or might not’ does not say what you think.",2],
+ ["Which sentence <b>restates</b> the opinion at the end?","That is why recess should be longer for everyone!",["For example, after recess I finish my maths faster.","One reason is that running helps us to focus.","Some people think recess is already long enough."],"‘That is why …’ brings the reader back to the opinion. ‘For example’ starts an example, ‘One reason’ starts a reason.",2],
+ ["Which reason supports ‘everyone should learn to swim’?","Swimming keeps you safe when you are near water.",["Swimming is good, because everyone should swim.","Swimming pools are usually blue and full of water.","Lots of people go swimming on hot summer days."],"A reason explains WHY. ‘Because everyone should swim’ just says the opinion again.",2],
+ // level 3 - several answers sound good: pick the strongest
+ ["Which reason supports ‘our park must stay open’ <b>best</b>?","It is the only place nearby where children can play outside.",["It is a nice place, and lots of people like it a lot.","It has a pond with ducks, and the ducks are very cute.","It is the very best park, because no park is better."],"The strongest reason shows why the park really matters: without it, children have nowhere to play. ‘No park is better’ goes in a circle.",3],
+ ["Which sentence is an opinion with a reason that <b>really</b> explains why?","Everyone should read before bed, because it helps you relax.",["Everyone should read before bed, because reading is good.","Everyone should read before bed, because I say they should.","Everyone should read before bed. It is a really great idea."],"All four have the same opinion. Only one reason tells the reader something new: reading helps you relax.",3],
+ ["Which sentence <b>restates</b> the opinion at the end in the <b>strongest</b> way?","That is why every town must protect its park!",["So maybe the park could stay open, if possible.","That is why I wrote about our park for you today.","In conclusion, the park has lots of trees in it."],"A strong ending says the opinion again with power words like ‘must’. ‘Maybe … if possible’ sounds unsure.",3],
+ ["Which reason supports ‘dogs are the best pets’ <b>best</b>?","Dogs stay by your side and help you feel safe.",["Dogs are the best pets, because they are great.","Dogs are animals with fur, paws and a long tail.","Lots of my friends have a dog at their house."],"The strongest reason tells WHY dogs are great pets. ‘Because they are great’ goes in a circle; the others are facts.",3]
+];
+
+/** OREO writing plan (Opinion – Reason – Example – Opinion restated). */
+export const OREO_MC=[
+ // level 1 - what the letters mean, what comes first
+ ["In the OREO writing plan, what does the first <b>O</b> stand for?","Opinion",["Opening","Outline","Order"],"O is for Opinion. That is what you think.",1],
+ ["In the OREO writing plan, what does <b>R</b> stand for?","Reason",["Report","Result","Rhyme"],"R is for Reason. That is why you think it.",1],
+ ["In the OREO writing plan, what does <b>E</b> stand for?","Example",["Ending","Explain","Extra idea"],"E is for Example. A real thing that shows your reason is true.",1],
+ ["In the OREO writing plan, what does the last <b>O</b> stand for?","Opinion restated",["Other opinions","Outline of ideas","Our own ending"],"The last O says your opinion again. Like ‘That is why…’.",1],
+ ["In ‘Persuade for the Park’, who needs to hear why the park should stay open?","The local council",["The fire brigade","The football club","The ice cream van"],"The council decides about the park. Your words must convince them.",1],
+ ["What should you do FIRST before writing your persuasive text?","Plan it with the OREO sheet",["Start writing straight away","Write the ending first","Choose a nice title first"],"Plan first: opinion, reasons, examples. With a plan, the text has a clear order.",1],
+ // level 2 - sentence starters and what persuasive writing needs
+ ["Which words are a good start for a <b>reason</b> sentence?","One reason is…",["For example…","In conclusion…","I think that…"],"A reason often starts with ‘One reason is…’ or ‘because…’.",2],
+ ["Which words are a good start for an <b>example</b> sentence?","For example…",["One reason is…","I think that…","That is why…"],"An example often starts with ‘For example…’.",2],
+ ["Which words are a good start for <b>restating your opinion</b>?","That is why…",["For example…","One reason is…","Another reason…"],"‘That is why…’ tells the reader: I am finishing now.",2],
+ ["What is persuasive writing for?","To make the reader agree with you",["To tell the reader a funny story","To list facts about a topic","To describe what a thing looks like"],"Persuade means: make someone agree with you. A list of facts informs, but it does not persuade.",2],
+ ["How many reasons should you brainstorm on your OREO planning sheet for the park?","At least three",["Just one good one","Exactly two","As many as ten"],"Three reasons with three examples make a strong letter.",2],
+ ["Which is a REASON why the park is valuable?","It is a place where the community can meet.",["I went to the park last Tuesday after school.","The council wants to close the park next year.","The park is the best place in the whole town."],"A reason says WHY. ‘The best place in town’ is an opinion, not a reason. ‘Last Tuesday’ is an example.",2],
+ ["Which words make your writing more persuasive?","must, important, everyone",["maybe, sort of, perhaps","nice, good, okay, fine","the, and, a, of, to"],"Strong words convince people. ‘Maybe’ and ‘sort of’ sound unsure.",2],
+ ["How do you finish an OREO text?","Say your opinion again, strongly",["Give one more example from life","Start a brand new reason there","Say thank you and sign it"],"Say your opinion again at the end. Then the reader remembers it.",2],
+ // level 3 - reason or example? what is missing?
+ ["Your OREO paragraph has an opinion, a reason and an example. What is still <b>missing</b>?","The opinion said again at the end",["A second example from your life","A reason why you like the topic","A title written in capitals"],"O-R-E-O: Opinion, Reason, Example, Opinion restated. The last O is missing.",3],
+ ["Which sentence is a <b>reason</b>, not an example?","Parks give children a safe place to play.",["Last week I played tag by the big oak tree.","For example, my sister learnt to ride there.","On Sunday we fed the ducks at the pond."],"A reason is true in general – it explains WHY. An example tells one real moment: last week, on Sunday.",3]
+];
+
+/** "Opinion or fact?" - sets of three opinions and three facts, all about the same length.
+ *  Level 1: clear opinion words (best, yummiest); 2: opinions without those words; 3: facts with ‘biggest’ or
+ *  ‘highest’ (you can check them) and opinions that sound like facts. note = extra sentence for the explanation. */
+export const OPFACT=[
+ {level:1, op:["Chocolate is the best ice cream flavour.","Ice cream tastes better in a cone.","Strawberry ice cream is the yummiest."], fact:["Ice cream melts quickly in the hot sun.","Ice cream is made with milk or cream.","Most ice cream is kept in a freezer."]},
+ {level:1, op:["Puppies are the cutest animals of all.","Rainy days are the most boring days.","Pizza is the yummiest food in the world."], fact:["Puppies are born with their eyes shut.","Rain falls from clouds in the sky.","Pizza is usually baked in a hot oven."]},
+ {level:2, op:["The park is too small for our town.","Parks are more fun than cinemas.","Every town should have a bigger park."], fact:["The park has a pond with ten ducks.","Trees and flowers grow in the park.","The park has two swings and a slide."]},
+ {level:2, op:["Homework should be banned for children.","Summer holidays are far too short.","Football is more exciting than tennis."], fact:["Homework is school work you do at home.","Summer holidays usually start in July.","A football team has eleven players."]},
+ {level:3, note:"Careful: ‘biggest’ or ‘highest’ can be a fact – you can check it in a book.", op:["Dogs are much smarter than cats are.","Winter is a better season than summer.","Maths is a lot harder than reading is."], fact:["The blue whale is the biggest animal.","Mount Everest is the highest mountain.","Paris is the capital city of France."]}
+];

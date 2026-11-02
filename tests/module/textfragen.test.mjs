@@ -16,8 +16,11 @@ const MAX_ANTEIL = 0.4;
 // je Frage: die richtige Antwort ist hoechstens 20 % laenger oder kuerzer als der Schnitt der falschen
 const MAX_ABWEICHUNG = 0.2;
 
-/** MC-Banken des Moduls: [Name, Eintraege]. A8 ergaenzt OPINION_MC und OREO_MC. */
-const banken = () => ['HYPO', 'OPINION_MC', 'OREO_MC'].filter((n) => T[n]).map((n) => [n, T[n]]);
+/** MC-Banken des Moduls: [Name, Eintraege] - A7 HYPO, A8 OPINION_MC und OREO_MC. */
+const banken = () => ['HYPO', 'OPINION_MC', 'OREO_MC'].map((n) => [n, T[n]]);
+
+/** "Opinion or fact?" wie die App sie stellt: je Satz einer Seite als richtige Antwort, die drei der anderen als falsche. */
+const meinungFakt = () => T.OPFACT.flatMap((s) => [[s.op, s.fact], [s.fact, s.op]].flatMap(([r, w]) => r.map((x) => ({ stufe: s.level, r: x, w }))));
 
 test('Bank-Eintraege sind vollstaendig: Frage, richtige Antwort, falsche Antworten, Erklaerung, Stufe 1-3', () => {
   for (const [name, bank] of banken()) for (const r of bank) {
@@ -68,8 +71,25 @@ test('Specific Examples: beide Beispiele etwa gleich lang, das genaue ist nicht 
   assert.ok(anteil >= 0.3 && anteil <= 0.7, `genaues Beispiel laenger in ${laenger}/${T.SPECIFIC.length}`);
 });
 
+test('Opinion or fact: drei Meinungen, drei Fakten je Satz, alle Stufen, Laenge verraet nichts', () => {
+  for (const s of T.OPFACT) {
+    assert.equal(s.op.length, 3); assert.equal(s.fact.length, 3);
+    assert.ok([1, 2, 3].includes(s.level));
+    assert.equal(new Set([...s.op, ...s.fact]).size, 6);
+  }
+  for (const l of [1, 2, 3]) assert.ok(T.OPFACT.some((s) => s.level === l), `OPFACT: Stufe ${l} fehlt`);
+  const fragen = meinungFakt();
+  const laengste = fragen.filter((f) => f.r.length > Math.max(...f.w.map((x) => x.length))).length;
+  const kuerzeste = fragen.filter((f) => f.r.length < Math.min(...f.w.map((x) => x.length))).length;
+  assert.ok(laengste / fragen.length <= MAX_ANTEIL, `laengste richtig in ${laengste}/${fragen.length}`);
+  assert.ok(kuerzeste / fragen.length <= MAX_ANTEIL, `kuerzeste richtig in ${kuerzeste}/${fragen.length}`);
+  const zuWeit = fragen.filter((f) => Math.abs(f.r.length / schnitt(f.w.map((x) => x.length)) - 1) > MAX_ABWEICHUNG).map((f) => f.r);
+  assert.deepEqual(zuWeit, []);
+});
+
 test('alte Scherz-Antworten sind weg (Praxistest 02.11.)', () => {
   const alles = JSON.stringify(T);
-  for (const s of ['The car will be happy.', 'Carpet is my favourite.', 'The ramp is pretty.', 'Something will happen.', 'I like the park.', 'Reading is nice.'])
+  for (const s of ['The car will be happy.', 'Carpet is my favourite.', 'The ramp is pretty.', 'Something will happen.', 'I like the park.', 'Reading is nice.',
+    'The park has a pond.', 'Dogs bark.', 'I have new shoes.', 'The end.', 'Orange', 'Rocket', 'Ice cream is cold.'])
     assert.ok(!alles.includes(`"${s}"`), s);
 });
