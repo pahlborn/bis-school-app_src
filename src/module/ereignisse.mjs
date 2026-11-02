@@ -58,6 +58,9 @@ const EV_SPEC = {
   device_removed: ['device:did', ''],
   key_rotated: ['version:pos', ''],
   snapshot: ['upTo:utc count:int state:obj', ''],
+  // gaps per school (index.html "gaps", task 3b-0): one standard per event; day = the app's day (index.html dayKey)
+  gap_state: ['standard:str state:enum(closed|hold|open) by:enum(app|parents) schoolDay:day day:day', 'quest:str'],
+  gap_active: ['standard:nstr', ''],
 };
 function evParse(text) {
   const out = {};
@@ -155,7 +158,7 @@ export function mergeLog(logs, now) {
 
 /* ---------- "last wins" fields ----------
    type -> payload fields that name the field. Everything else is a protocol event (not listed here). */
-const EV_LAST_WINS = { profile_set: ['field'], setting_set: ['setting'], day_flag: ['flag'], checklist_set: ['studio', 'index'], rank_seen: [] };
+const EV_LAST_WINS = { profile_set: ['field'], setting_set: ['setting'], day_flag: ['flag'], checklist_set: ['studio', 'index'], rank_seen: [], gap_state: ['standard'], gap_active: [] };
 /* key of the field an event sets, e.g. "profile_set:name"; null for protocol events */
 export function fieldKey(e) {
   if (!evObj(e) || !evObj(e.payload) || !evOwn(EV_LAST_WINS, e.type)) return null;
@@ -166,13 +169,21 @@ export function fieldKey(e) {
    Every device decides the same, whatever order it got the events in. Returns { fieldKey: event }. */
 export function lastWins(events, now) {
   const best = new Map();
+  for (const e of lastWinsOrder(events, now)) best.set(fieldKey(e), e);   // ascending: the last one per field wins
+  return Object.fromEntries([...best.keys()].sort().map((k) => [k, best.get(k)]));
+}
+/* the valid "last wins" events (fieldKey not null) in the order "last wins" uses: effective time, then device ID,
+   then event id - ascending, so the later one counts. The same id counts once. For values that are replayed
+   step by step instead of taking only the winner (gaps, module ableitung): every device gets the same order. */
+export function lastWinsOrder(events, now) {
+  const rows = [], seen = new Set();
   for (const e of Array.isArray(events) ? events : []) {
-    const key = fieldKey(e);
-    if (!key || checkEvent(e).length) continue;                  // invalid events never win
+    if (!fieldKey(e) || checkEvent(e).length) continue;          // invalid events never win
     const t = effectiveTime(e.at, now);
-    if (Number.isNaN(t)) continue;
-    const cur = best.get(key);
-    if (!cur || t > cur.t || (t === cur.t && (e.device > cur.e.device || (e.device === cur.e.device && e.id > cur.e.id)))) best.set(key, { e, t });
+    if (Number.isNaN(t) || seen.has(e.id)) continue;
+    seen.add(e.id);
+    rows.push({ e, t });
   }
-  return Object.fromEntries([...best.keys()].sort().map((k) => [k, best.get(k).e]));
+  rows.sort((a, b) => (a.t - b.t) || evCmp(a.e.device, b.e.device) || evCmp(a.e.id, b.e.id));
+  return rows.map((x) => x.e);
 }

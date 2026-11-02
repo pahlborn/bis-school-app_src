@@ -5,7 +5,7 @@
 // The result looks exactly like what index.html keeps today, so the app can later read it unchanged:
 //   attempts, ev, due, total, best_<quest>, badges, tried, treeStage, rankSeen, sheets, sheetNo
 //   and the "last wins" values name, birthday, emoji, kidLang, focusMode, focusManual, unlocked, storyCap,
-//   greetDay, mysteryDone, bdayParty, chk_<studio>.
+//   greetDay, mysteryDone, bdayParty, chk_<studio>; and gaps (task 3b-0: {closed, active, hold}, see abGaps).
 // Not here: grants and their log (task 4), school data, recordings, everything that stays on the device.
 //
 // How: the events are merged (mergeLog: one id once, sorted by time) and then replayed one by one - each event does
@@ -15,7 +15,7 @@
 //
 // Names: helpers start with "ab"/"AB" because all modules and index.html share one scope in the app.
 
-import { mergeLog, lastWins, effectiveTime } from './ereignisse.mjs';
+import { mergeLog, lastWins, lastWinsOrder, effectiveTime } from './ereignisse.mjs';
 
 /* the limits of today's app (index.html: slice(-200) in attempts, EVIDENCE_MAX, DUE_MAX, GAPS, slice(-8) in sheets,
    TREE_AT, RANKS); the browser test compares them with the app */
@@ -142,6 +142,47 @@ function abApplyWinner(st, e) {
   }
 }
 
+/* gaps per school (concept "Elternbereich" 6; task 3b-0): today's key "gaps" =
+     { closed: { <standard>: { at, by: 'app'|'parents', schoolDay, quest? } }, active: <standard>|null, hold: { <standard>: { at, schoolDay } } }
+   One event per standard ("last wins" per standard, key gap_state:<standard>) and gap_active. The events are replayed
+   in "last wins" order (lastWinsOrder: the same on every device), each one doing what index.html does today:
+     closed by "app"     openGaps: closed[s] = {at, by:'app', schoolDay, quest}; an older hold stays as it is
+     closed by "parents" gapAct 'close': closed[s] = {at, by:'parents', schoolDay}; hold[s] goes; active goes if it was s
+     hold                gapAct 'hold': closed[s] goes; hold[s] = {at, schoolDay}; active = s
+     open                (no button today) closed[s] and hold[s] go
+     gap_active          gapAct 'go': active = standard (or null)
+   So "close" and "hold" need no extra gap_active event, and a choice made on another phone is not undone by them.
+   One rule beyond the order: an automatic close does not count while the parents keep the gap open for the same or a
+   newer school rating (hold.schoolDay >= schoolDay) - index.html openGaps never closes a held gap; the event can only
+   come from a device that did not know the hold yet. "Closed stays closed until a newer weak rating" is decided by the
+   app when reading (schoolDay), not here. Without any gap event (and without gaps in the base) there is no key. */
+function abGaps(st, list, now) {
+  const order = lastWinsOrder(list, now).filter((e) => e.type === 'gap_state' || e.type === 'gap_active');
+  if (!order.length) return;
+  const b = st.gaps && typeof st.gaps === 'object' ? st.gaps : {};
+  const copy = (o) => Object.fromEntries(Object.entries(o && typeof o === 'object' ? o : {}));   // own keys only, safe for any name
+  const g = { closed: copy(b.closed), active: b.active === undefined ? null : b.active, hold: copy(b.hold) };
+  for (const e of order) {
+    const p = e.payload, s = p.standard;
+    if (e.type === 'gap_active') { g.active = s; continue; }
+    if (s === '__proto__') continue;                                            // a name from an event is never an object property
+    const held = abOwn(g.hold, s) && g.hold[s] && g.hold[s].schoolDay >= p.schoolDay;
+    if (p.state === 'closed' && p.by === 'app') {
+      if (held) continue;
+      g.closed[s] = p.quest === undefined ? { at: p.day, by: 'app', schoolDay: p.schoolDay } : { at: p.day, by: 'app', schoolDay: p.schoolDay, quest: p.quest };
+    } else if (p.state === 'closed') {
+      g.closed[s] = p.quest === undefined ? { at: p.day, by: 'parents', schoolDay: p.schoolDay } : { at: p.day, by: 'parents', schoolDay: p.schoolDay, quest: p.quest };
+      delete g.hold[s];
+      if (g.active === s) g.active = null;
+    } else if (p.state === 'hold') {
+      delete g.closed[s];
+      g.hold[s] = { at: p.day, schoolDay: p.schoolDay };
+      g.active = s;
+    } else { delete g.closed[s]; delete g.hold[s]; }                            // open
+  }
+  st.gaps = g;
+}
+
 /* derive(events, { now, base }): the state in today's storage format.
    events: any list (any order, doubles are fine); invalid ones are ignored (see mergeLog for the report).
    now:    milliseconds / Date / UTC text - needed for the clock rule (a time more than 24 h ahead counts as "now").
@@ -160,6 +201,7 @@ export function derive(events, { now, base } = {}) {
   }
   for (const e of list) abApply(st, ctx, e);
   for (const e of Object.values(lastWins(list, now))) abApplyWinner(st, e);
+  abGaps(st, list, now);
   st.treeStage = Math.max(st.treeStage || 0, abStage(ctx.days.size));         // the tree only grows (index.html keeps the highest stage)
   st._days = [...ctx.days].sort();
   return st;

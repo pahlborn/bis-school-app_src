@@ -53,6 +53,8 @@ function payloadFor(type, author, device) {
     device_removed: { device: 'd_k1' },
     key_rotated: { version: 2 },
     snapshot: { upTo: '2026-11-02T16:00:00Z', count: 5000, state: {} },
+    gap_state: { standard: 'MA.3.NBT.2', state: 'closed', by: 'app', schoolDay: '2026-10-20', day: DAY, quest: 'round' },
+    gap_active: { standard: 'MA.3.NBT.2' },
   }[type];
 }
 let n = 0;
@@ -63,13 +65,14 @@ const reason = async (item, z = Z) => { const r = await acceptEvent(item, z); re
 
 /* ---------- the expected table, written out here on purpose (concept 6 "Schreiben", 5.2, 9.3) ----------
    c = child, p = parent, t = teacher, a = admin. A9/A10 (02.11.): the child enters its sheet itself, so
-   sheet_result (and the review and badge it causes) belongs to the child; parents write no learning data at all. */
+   sheet_result (and the review and badge it causes) belongs to the child; parents write no learning data at all.
+   Gaps (3b-0): gap_state 'cp' with the sample "closed by app" - the child may ONLY write that one (test below). */
 const ERWARTET = {
   answer: 'c', round_done: 'c', practice_day: 'c', rank_seen: 'c', checklist_set: 'c', day_flag: 'c',
   badge: 'c', review: 'c', sheet_result: 'c',
-  profile_set: 'cp', sheet_created: 'cp', device_added: 'cp',
+  profile_set: 'cp', sheet_created: 'cp', device_added: 'cp', gap_state: 'cp',
   sheet_discarded: 'p', setting_set: 'p', school_import: 'p', grant_set: 'p', grant_revoked: 'p',
-  member_added: 'p', member_removed: 'p', device_removed: 'p', key_rotated: 'p', snapshot: 'p',
+  member_added: 'p', member_removed: 'p', device_removed: 'p', key_rotated: 'p', snapshot: 'p', gap_active: 'p',
   grant_opened: 'ta',
 };
 const darf = (role, type) => ERWARTET[type].includes(role[0]);
@@ -78,7 +81,7 @@ const darf = (role, type) => ERWARTET[type].includes(role[0]);
 test('Annehmen: gueltig unterschriebene Ereignisse je Rolle und erlaubtem Typ zaehlen', async () => {
   let k = 0;
   for (const role of ROLES) for (const type of EVENT_TYPES) if (darf(role, type)) { assert.equal(await reason(await signed(role, type)), 'ok', `${role} ${type}`); k++; }
-  assert.equal(k, 9 + 3 * 2 + 10 + 2, 'every allowed pair was tried once');
+  assert.equal(k, 9 + 4 * 2 + 11 + 2, 'every allowed pair was tried once');
   const p2 = await signEvent(mk('setting_set', 'p_e2', 'd_e3'), AREA, KEYS.p_e2);
   assert.deepEqual(await acceptEvent(p2, Z), { ok: true }, 'second parent from his second device');
 });
@@ -162,9 +165,9 @@ test('canonicalBytes: feste Bytefolge, unabhaengig von der Schluesselreihenfolge
 });
 
 /* ---------- 5 matrix ---------- */
-test('Matrix: alle 23 Typen x 4 Rollen gegen die hier ausgeschriebene Tabelle', async () => {
+test('Matrix: alle 25 Typen x 4 Rollen gegen die hier ausgeschriebene Tabelle', async () => {
   assert.deepEqual(Object.keys(ERWARTET).sort(), EVENT_TYPES.slice().sort(), 'the table covers every type');
-  assert.equal(EVENT_TYPES.length, 23);
+  assert.equal(EVENT_TYPES.length, 25);
   const falsch = [];
   for (const type of EVENT_TYPES) for (const role of ROLES) {
     const got = await reason(await signed(role, type)), want = darf(role, type) ? 'ok' : 'rolle-darf-nicht';
@@ -173,6 +176,30 @@ test('Matrix: alle 23 Typen x 4 Rollen gegen die hier ausgeschriebene Tabelle', 
   assert.deepEqual(falsch, []);
   for (const role of ROLES) assert.deepEqual(ANNAHME_RECHTE[role].slice().sort(), EVENT_TYPES.filter((t) => darf(role, t)).sort(), 'exported table ' + role);
   assert.ok(Object.isFrozen(ANNAHME_RECHTE) && Object.isFrozen(ANNAHME_RECHTE.child), 'the exported table cannot be changed');
+});
+
+/* ---------- 5b gaps (task 3b-0) ---------- */
+test('3b-0 Luecken: Kind nur "automatisch geschlossen" (closed, by app); Eltern alles; Lehrkraft und Admin nichts', async () => {
+  const lk = (role, type, payload) => { const [pid, did] = WHO[role]; return signEvent(mk(type, pid, did, payload), AREA, KEYS[pid]); };
+  const st = (state, by, extra = {}) => ({ standard: 'MA.3.NBT.2', state, by, schoolDay: '2026-10-20', day: DAY, ...extra });
+  assert.equal(await reason(await lk('child', 'gap_state', st('closed', 'app', { quest: 'round' }))), 'ok', 'child: the automatic close');
+  assert.equal(await reason(await lk('child', 'gap_state', st('closed', 'app'))), 'ok', 'child: also without quest');
+  for (const [state, by] of [['hold', 'parents'], ['open', 'parents'], ['closed', 'parents'], ['hold', 'app'], ['open', 'app']]) {
+    assert.equal(await reason(await lk('child', 'gap_state', st(state, by))), 'rolle-darf-nicht', `child ${state} by ${by}`);
+  }
+  for (const s of ['MA.3.NBT.2', null]) assert.equal(await reason(await lk('child', 'gap_active', { standard: s })), 'rolle-darf-nicht', 'child chooses no gap: ' + s);
+  for (const [state, by] of [['closed', 'app'], ['closed', 'parents'], ['hold', 'parents'], ['open', 'parents']]) {
+    assert.equal(await reason(await lk('parent', 'gap_state', st(state, by))), 'ok', `parent ${state} by ${by}`);
+  }
+  for (const s of ['MA.3.NBT.2', null]) assert.equal(await reason(await lk('parent', 'gap_active', { standard: s })), 'ok', 'parent chooses ' + s);
+  const p2 = await signEvent(mk('gap_state', 'p_e2', 'd_e2', st('hold', 'parents')), AREA, KEYS.p_e2);
+  assert.equal(await reason(p2), 'ok', 'the second parent, too');
+  for (const role of ['teacher', 'admin']) {
+    for (const [state, by] of [['closed', 'app'], ['hold', 'parents']]) assert.equal(await reason(await lk(role, 'gap_state', st(state, by))), 'rolle-darf-nicht', `${role} ${state}`);
+    assert.equal(await reason(await lk(role, 'gap_active', { standard: 'MA.3.NBT.2' })), 'rolle-darf-nicht', role + ' gap_active');
+  }
+  const gut = await lk('child', 'gap_state', st('closed', 'app'));
+  assert.equal(await reason({ event: { ...gut.event, payload: { ...gut.event.payload, state: 'zu' } }, sig: gut.sig }), 'format', 'a wrong state is a format error first');
 });
 
 /* ---------- 6 reasons ---------- */

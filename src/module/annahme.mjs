@@ -24,10 +24,13 @@ export const ANNAHME_GRUENDE = ['format', 'autor-unbekannt', 'geraet-fremd', 'un
             A9/A10 (02.11.): the child enters its sheet itself (index.html sheetResult); grown-ups only see the state.
             So "sheet_result" - and the review and the badge "principled" it causes - are the child's; the former
             exception for parents (review, badge "principled") is gone.
+   gaps (task 3b-0, index.html openGaps/gapAct): parents choose, close, keep open; the child's device only does
+            what the app does there today: close a gap automatically (state "closed", by "app"). The parents'
+            devices close automatically, too, so parents may write by "app" as well.
    teacher, admin: only the protocol entry "opened" for their own grant (5.2); they never write into child data */
 const ANN_RIGHTS = {
-  child: ['answer', 'round_done', 'badge', 'review', 'practice_day', 'profile_set', 'rank_seen', 'sheet_created', 'sheet_result', 'checklist_set', 'day_flag', 'device_added'],
-  parent: ['profile_set', 'sheet_created', 'sheet_discarded', 'setting_set', 'school_import', 'grant_set', 'grant_revoked', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated', 'snapshot'],
+  child: ['answer', 'round_done', 'badge', 'review', 'practice_day', 'profile_set', 'rank_seen', 'sheet_created', 'sheet_result', 'checklist_set', 'day_flag', 'device_added', 'gap_state'],
+  parent: ['profile_set', 'sheet_created', 'sheet_discarded', 'setting_set', 'school_import', 'grant_set', 'grant_revoked', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated', 'snapshot', 'gap_state', 'gap_active'],
   teacher: ['grant_opened'],
   admin: ['grant_opened'],
 };
@@ -37,6 +40,7 @@ export const ANNAHME_RECHTE = Object.freeze(Object.fromEntries(Object.entries(AN
 const ANN_LIMITS = {
   device_added: (e) => e.payload.device === e.device,                         // a device registers itself, nobody adds a foreign device
   grant_opened: (e) => e.payload.grantee === e.author,                        // the recipient logs his own opening, nobody else's
+  gap_state: (e, role) => role !== 'child' || (e.payload.state === 'closed' && e.payload.by === 'app'),   // the child: only the automatic close
 };
 
 /* ---------- helpers ---------- */
