@@ -38,11 +38,14 @@
     { "key": "pw_", "praefix": true, "bereich": "geraet", "abgleich": "lokal", "sicherung": false },
     { "key": "parentPin", "bereich": "geraet", "abgleich": "lokal", "sicherung": false, "hinweis": "alt" },
     { "key": "muted", "bereich": "geraet", "abgleich": "lokal", "sicherung": false },
-    { "key": "parentLang", "bereich": "geraet", "abgleich": "letzte-gilt", "sicherung": false, "hinweis": "ab Stufe 2 Personen-Bereich" }
+    { "key": "parentLang", "bereich": "geraet", "abgleich": "letzte-gilt", "sicherung": false, "hinweis": "ab Stufe 2 Personen-Bereich" },
+    { "key": "migr", "bereich": "geraet", "abgleich": "lokal", "sicherung": false, "hinweis": "Protokoll des Umzugs auf Kennungen (S11 P2)" },
+    { "key": "kidsHere", "bereich": "geraet", "abgleich": "lokal", "sicherung": false, "hinweis": "Kinder, die sich auf diesem Geraet angemeldet haben (S11 P3)" }
   ],
   "localStorageDirekt": [
     { "key": "bq_schluessel", "bereich": "geraet", "hinweis": "gemerkter Familienschluessel der Huelle" },
-    { "key": "bq2_session", "bereich": "geraet", "hinweis": "Sitzung, direkt gelesen" }
+    { "key": "bq2_session", "bereich": "geraet", "hinweis": "Sitzung, direkt gelesen" },
+    { "key": "bq2_migr", "bereich": "geraet", "hinweis": "Umzug auf Kennungen, vor dem Store gelesen" }
   ],
   "sessionStorage": [
     { "key": "bqUpdateTo", "bereich": "geraet", "hinweis": "Update-Merker" }

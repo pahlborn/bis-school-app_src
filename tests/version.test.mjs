@@ -8,7 +8,8 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { WURZEL, QUELLEN, distBauen, liveVergleichen } from '../werkzeug/bauen.mjs';
+import { WURZEL, QUELLEN, distBauen, liveVergleichen, appZusammensetzen } from '../werkzeug/bauen.mjs';
+import { schuleLesen } from '../werkzeug/schule.mjs';
 import { entschluesseln, tresorAusHuelle, ohneTresor } from '../werkzeug/kern.mjs';
 import { versionErmitteln, versionEinsetzen, versionAuslesen, berlinZeit, MARKE } from '../werkzeug/version.mjs';
 import { TEST_PW } from './hilfen.mjs';
@@ -53,7 +54,7 @@ test('dist: vault holds the app with version byte for byte; shell and manifest c
   const r = await distBauen(TEST_PW, { ziel, version: V });
   const html = await fs.readFile(path.join(ziel, 'index.html'), 'utf8');
   const klar = Buffer.from(await entschluesseln(tresorAusHuelle(html), TEST_PW));
-  assert.ok(klar.equals(kontenEinsetzen(versionEinsetzen(appQuelle, V), await kontenLesen())));
+  assert.ok(klar.equals(appZusammensetzen(appQuelle, V, await kontenLesen(), await schuleLesen())));
   assert.deepEqual(r.version, V);
   const offen = ohneTresor(html) + await fs.readFile(path.join(ziel, 'manifest.webmanifest'), 'utf8');
   for (const x of ['a1b2c3d', '30.10.2026 14:05', 'v13', 'APP_VERSION']) assert.ok(!offen.includes(x), x);

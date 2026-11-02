@@ -21,6 +21,12 @@ import {
 } from './kern.mjs';
 import { versionErmitteln, versionEinsetzen, versionAuslesen, versionText } from './version.mjs';
 import { kontenLesen, kontenEinsetzen } from './konten.mjs';
+import { schuleLesen, schuleEinsetzen } from './schule.mjs';
+
+/** The app as it goes into the vault: version, accounts (S3/S11) and school data by ID (S11 P2). */
+export function appZusammensetzen(app, version, konten, schule) {
+  return schuleEinsetzen(kontenEinsetzen(versionEinsetzen(app, version), konten), konten ? schule : null, konten);
+}
 
 export const WURZEL = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -64,7 +70,7 @@ export function oeffentlichPruefen(html, manifest, woerter) {
  * Schluessel-Bytes (schluesselablage.mjs). Mit Passwort wird zusaetzlich
  * mit dem Passwort probe-entschluesselt, also genau so, wie die Huelle es tut.
  */
-export async function distBauen(zugang, { wurzel = WURZEL, ziel = path.join(wurzel, 'dist'), version = null, konten } = {}) {
+export async function distBauen(zugang, { wurzel = WURZEL, ziel = path.join(wurzel, 'dist'), version = null, konten, schule } = {}) {
   const passwort = typeof zugang === 'string' ? zugang : null;
   if (passwort === null && !(zugang && zugang.schluesselRoh)) throw new Error('distBauen braucht ein Passwort oder einen gemerkten Schluessel.');
   if (passwort !== null) passwortPruefen(passwort);
@@ -74,7 +80,7 @@ export async function distBauen(zugang, { wurzel = WURZEL, ziel = path.join(wurz
   const v = version || versionErmitteln(WURZEL);
   // Accounts (S3): from werkzeug/konten.json if present; without the file the app runs without login.
   const k = konten !== undefined ? konten : await kontenLesen(wurzel);
-  const app = kontenEinsetzen(versionEinsetzen(q.app, v), k);
+  const app = appZusammensetzen(q.app, v, k, schule !== undefined ? schule : await schuleLesen(wurzel));
 
   const schluessel = passwort !== null
     ? await schluesselAusPasswort(passwort, q.salt)

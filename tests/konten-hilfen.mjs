@@ -6,6 +6,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { WURZEL, QUELLEN } from '../werkzeug/bauen.mjs';
 import { kontenEinsetzen, pbkdf2Hex, normCode, ausV1 } from '../werkzeug/konten.mjs';
+import { schuleEinsetzen } from '../werkzeug/schule.mjs';
 
 /** Konto im alten Format (Name, Rolle, Kinder) mit Startcode-Hash. */
 export async function konto(user, role, code, extra = {}) {
@@ -14,10 +15,14 @@ export async function konto(user, role, code, extra = {}) {
 }
 
 /** Testserver mit eingesetzten Konten (altes Format wird mit ausV1 ins Kontenmodell v2 umgestellt). */
-export async function kontenServer(konten, { anpassen } = {}) {
-  let app = kontenEinsetzen(await fs.readFile(path.join(WURZEL, QUELLEN.app)), ausV1(konten)).toString('utf8');
+export async function kontenServer(konten, { anpassen, schule } = {}) {
+  const k2 = ausV1(konten);
+  let app = schuleEinsetzen(kontenEinsetzen(await fs.readFile(path.join(WURZEL, QUELLEN.app)), k2), schule || null, k2).toString('utf8');
   if (anpassen) app = anpassen(app);
-  const server = http.createServer((q, r) => { if (q.url.split('?')[0] !== '/') { r.writeHead(404); return r.end(); } r.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); r.end(app); });
+  const server = http.createServer((q, r) => {
+    // /leer: an empty page of the same origin, to prepare storage before the app runs (S11 P2 tests)
+    if (q.url.split('?')[0] === '/leer') { r.writeHead(200, { 'content-type': 'text/html' }); return r.end('<!doctype html><title>leer</title>'); }
+    if (q.url.split('?')[0] !== '/') { r.writeHead(404); return r.end(); } r.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); r.end(app); });
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   server.url = `http://127.0.0.1:${server.address().port}/`;
   return server;
