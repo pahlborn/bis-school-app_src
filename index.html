@@ -871,7 +871,8 @@ function orderQ(prompt, items, slots, explain, extra){
   return Object.assign({kind:'order', prompt:prompt, items:idx.map(i=>items[i]), correct:items.map((_,i)=>idx.indexOf(i)), slots:slots, explain:explain, visual:''}, extra||{});
 }
 function takeFrom(bank, n){ return shuffle(bank).slice(0,n); }
-const bankMC = (bank, tag) => r => mc(r[0], r[1], r[2], r[3], tag);
+// a bank entry may carry its level as 5th field (module textfragen); without it the question is year level
+const bankMC = (bank, tag) => r => mc(r[0], r[1], r[2], r[3], typeof r[4]==='number' ? Object.assign({level:r[4]}, tag) : tag);
 const fromBank = (bank, tag, n) => takeFrom(bank, n).map(bankMC(bank, tag));
 
 /* ======================= PAST · FORCES LAB (Friction Frenzy) ======================= */
@@ -1441,25 +1442,12 @@ function endMarkQ(){
   return Object.assign({kind:'mc', prompt:"Which end mark does this sentence need?", visual:quote(r[0]+" ___"), options:['.','?','!'], answer:['.','?','!'].indexOf(r[1]), grid3:true,
     explain:(r[1]==='?'?"It asks a question, so it needs a question mark.":r[1]==='!'?"It is exciting or a command, so it needs an exclamation mark.":"It is a plain statement, so it ends with a full stop.")}, SEN);
 }
-const SPECIFIC=[
- ["The park is a place for play.","Last Sunday I climbed the big oak tree in the park with my brother.","I like the park."],
- ["The park is good for nature.","On Tuesday I saw a woodpecker and two squirrels near the pond.","There are animals in the park."],
- ["The park is good for exercise.","Every Saturday morning my dad and I run three laps around the park.","People can run there."],
- ["The park brings people together.","At the summer picnic my family met our new neighbours by the slide.","People meet there."],
- ["Dogs are loyal.","My dog Bruno waits by the door every day at four o’clock until I come home.","Dogs like people."],
- ["Reading before bed is calming.","When I read my dinosaur book, I feel sleepy after ten minutes.","Reading is nice."],
- ["Experiments help us learn.","In the Friction Roll our car went 120 cm on wood but only 40 cm on carpet.","We did an experiment."]
-];
+/* SPECIFIC, SPECIFIC_EXPLAIN and HYPO: module textfragen (A7, Peter 02.11.) - both examples about the same length, three levels. */
 function specificExampleQ(){
-  const r=pick(SPECIFIC), swap=rnd(2)===0;
+  const r=pick(SPECIFIC), swap=rnd(2)===0, level=r[3]||2;
   return two("Which example is more <b>specific and personal</b>?", swap?[r[2],r[1]]:[r[1],r[2]], swap?1:0,
-    "A good example says who, when and where. Then the reader can see it in their head.", Object.assign({visual:quote("Reason: "+r[0])}, SEN));
+    SPECIFIC_EXPLAIN[level], Object.assign({visual:quote("Reason: "+r[0]), level:level}, SEN));
 }
-const HYPO=[
- ["Which hypothesis is the most <b>specific</b>?","If I roll the car on sandpaper, it will roll a shorter distance than on tiles, because sandpaper is rough and has more friction.",["The car will roll somewhere.","Something will happen.","I think the car is fast."],"A good guess says: what will happen, on which surface, and why."],
- ["Which prediction could you actually test?","The car will roll farther on wood than on carpet.",["The car will be happy.","Carpet is my favourite.","The ramp is pretty."],"You can test this one. Just measure!"],
- ["Your hypothesis says ‘The car will go far.’ How can you make it better?","Say on which surface it will go farther and why",["Make it shorter","Add a drawing","Write it in capital letters"],"Add the surface and the reason. Then it is a real guess."]
-];
 const SEQ_SETS=[
  ["Put the recount in a logical order.",["First we put the velcro surface on the ramp.","Next we set up the metre sticks.","Then we let the car go without pushing.","Finally we wrote the distance in our table."]],
  ["Put the instructions in a logical order.",["First, spread butter on two slices of bread.","Next, put cheese on one slice.","Then, place the other slice on top.","Finally, cut the sandwich in half."]],
@@ -2755,6 +2743,7 @@ const LANG_EXAMPLES={
     [/more specific and personal/, ()=>ex1('Which example is more specific: “I play there.” or “Last Sunday I played tag with my brother by the big oak tree.”?', 'Last Sunday I played tag with my brother by the big oak tree.', 'It says WHEN (last Sunday), WHO (my brother), WHAT (tag) and WHERE (by the big oak tree).')],
     [/most specific/, ()=>ex1('Which hypothesis is more specific: “The ball will bounce.” or “The ball will bounce higher on wood than on carpet.”?', 'The ball will bounce higher on wood than on carpet.', 'It says what will happen AND what you compare – so you can test it.')],
     [/How can you make it better/, ()=>ex1('“Plants grow.” How can you make it more specific?', 'The plant by the window will grow taller than the plant in the dark cupboard.', 'Say what you compare (window or cupboard) and what you measure (how tall).')],
+    [/What is missing in this hypothesis/, ()=>ex1('What is missing: “The plant by the window will grow taller than the plant in the dark cupboard.”?', 'The reason why (because …)', 'It says what you compare (window and cupboard) and what happens (taller). The “because …” part is missing: plants need light to grow.')],
     [/prediction could you actually test/, ()=>ex1('Which can you test: “Cats are happy.” or “Ice melts faster in the sun than in the shade.”?', 'Ice melts faster in the sun than in the shade.', 'You can put two ice cubes in the sun and in the shade and watch. “Happy” cannot be measured.')],
     [/in a logical order/, ()=>ex1('Put “making toast” in order.', 'Put bread in the toaster → wait → take the toast out → spread butter', 'Ask: what has to happen first so the next step is possible?')]
   ],
