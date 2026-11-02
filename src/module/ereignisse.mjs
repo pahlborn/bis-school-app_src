@@ -1,0 +1,178 @@
+// Module ereignisse - event format v1 and merge rules for stage 2 (concept 9.1 and 9.2; EP7: US7.1, US7.3, US7.4).
+// Pure functions: no screen, no storage, no network. Clock and randomness are passed in (now, rand).
+// Test build only (module.json: bau "test"). Signing, encryption and the rights check come in later tasks.
+//
+//   event:       { id: "e_" + 24 hex characters, v: 1, type, at: UTC time, author: "p_...", device: "d_...", payload }
+//   merge:       protocol events are united; the same id counts once; order by time, on a tie by id (E4)
+//   last wins:   per field the youngest time; on a tie the larger device ID, then the larger event id
+//   clock:       a time more than 24 hours ahead of "now" counts as "now" when merging (a wrong iPad clock)
+//
+// Names: every helper starts with "ev"/"EV_" because all modules and index.html share one scope in the app.
+
+export const EVENT_VERSION = 1;
+export const EVENT_FUTURE_MS = 24 * 3600 * 1000;
+
+/* ---------- field checks ---------- */
+const evObj = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
+const evStr = (x) => typeof x === 'string' && x.length > 0;
+const evDayOk = (s) => { if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false; const t = Date.parse(s + 'T00:00:00Z'); return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === s; };
+const evMs = (s) => {      // strict UTC time "YYYY-MM-DDTHH:MM:SS[.mmm]Z" -> milliseconds, else NaN
+  if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/.test(s)) return NaN;
+  const t = Date.parse(s);
+  return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 19) === s.slice(0, 19) ? t : NaN;   // rejects 30 February, hour 24, ...
+};
+const evField = {
+  day: evDayOk, str: evStr, nstr: (x) => x === null || evStr(x), bool: (x) => typeof x === 'boolean', any: (x) => x !== undefined,
+  int: (x) => Number.isInteger(x) && x >= 0, pos: (x) => Number.isInteger(x) && x >= 1, lvl: (x) => x === 1 || x === 2 || x === 3,
+  arr: Array.isArray, obj: evObj, utc: (x) => !Number.isNaN(evMs(x)),
+  pid: (x) => typeof x === 'string' && /^p_[0-9A-Za-z]{1,40}$/.test(x),
+  did: (x) => typeof x === 'string' && /^d_[0-9A-Za-z]{1,40}$/.test(x),
+  scope: (x) => Array.isArray(x) && x.length > 0 && new Set(x).size === x.length && x.every((s) => s === 'learning' || s === 'school'),
+};
+
+/* ---------- the types and their payloads ----------
+   [required, optional]: "name:kind" separated by blanks; enum(a|b) = one of these words.
+   answer follows what the app stores today for an attempt (index.html, "attempts"); the others are derived from
+   the storage places in werkzeug/speicherstellen.json (concept 7.2) and kept short. */
+const EV_SPEC = {
+  answer: ['day:day skill:str level:lvl attempt:pos ok:bool qid:str', 'family:nstr response:any help:bool example:bool hintShown:bool exampleShown:bool solutionShown:bool beforeTry:bool sheet:str'],
+  round_done: ['day:day skill:str stars:int count:pos', ''],
+  badge: ['day:day badge:str', ''],
+  review: ['day:day qid:str box:int', 'dueAt:day question:obj'],
+  practice_day: ['day:day', ''],
+  profile_set: ['field:enum(name|birthday|emoji|kidLang) value:any', ''],
+  rank_seen: ['rank:str', ''],
+  sheet_created: ['sheet:str day:day no:pos writing:enum(de|en) items:arr', ''],
+  sheet_result: ['sheet:str index:int res:enum(ok|no|help)', ''],
+  sheet_discarded: ['sheet:str', ''],
+  setting_set: ['setting:enum(focusMode|focusManual|unlocked|storyCap) value:any', ''],
+  checklist_set: ['studio:str index:int value:bool', ''],
+  day_flag: ['flag:enum(greetDay|mysteryDone|bdayParty) day:day', ''],
+  school_import: ['asOf:day data:obj', 'source:str'],
+  grant_set: ['grant:str grantee:pid scope:scope from:day until:day', 'text:str'],
+  grant_revoked: ['grant:str grantee:pid', ''],
+  grant_opened: ['grant:str grantee:pid', 'scope:scope'],
+  member_added: ['person:pid', 'role:str'],
+  member_removed: ['person:pid', ''],
+  device_added: ['device:did', 'label:str'],
+  device_removed: ['device:did', ''],
+  key_rotated: ['version:pos', ''],
+  snapshot: ['upTo:utc count:int state:obj', ''],
+};
+function evParse(text) {
+  const out = {};
+  for (const tok of text.split(' ').filter(Boolean)) {
+    const [name, kind] = tok.split(':'), m = /^enum\((.+)\)$/.exec(kind);
+    out[name] = m ? ((words) => (x) => words.includes(x))(m[1].split('|')) : evField[kind];
+    if (!out[name]) throw new Error('ereignisse: unknown field kind in ' + tok);
+  }
+  return out;
+}
+const EV_PARSED = Object.fromEntries(Object.entries(EV_SPEC).map(([type, [req, opt]]) => [type, { req: evParse(req), opt: evParse(opt) }]));
+export const EVENT_TYPES = Object.keys(EV_SPEC);
+export const PAYLOAD_FIELDS = Object.fromEntries(EVENT_TYPES.map((t) => [t, Object.keys(EV_PARSED[t].req)]));
+export const PAYLOAD_OPTIONAL = Object.fromEntries(EVENT_TYPES.map((t) => [t, Object.keys(EV_PARSED[t].opt)]));
+const EV_KEYS = ['id', 'v', 'type', 'at', 'author', 'device', 'payload'];
+
+const evOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+const evHas = (o, k) => evOwn(o, k) && o[k] !== undefined;
+const evRandom = (n) => globalThis.crypto.getRandomValues(new Uint8Array(n));
+const evToMs = (x) => (typeof x === 'number' ? x : x instanceof Date ? x.getTime() : evMs(x));   // a time: UTC text, Date or milliseconds
+
+/* ---------- build and check ---------- */
+/* rand: (n) => Uint8Array (tests pass fixed values). The payload is copied, so the event is plain JSON. */
+export function newEvent({ type, author, device, payload, at }, { rand = evRandom } = {}) {
+  const hex = Array.from(rand(12), (b) => b.toString(16).padStart(2, '0')).join('');
+  return { id: 'e_' + hex, v: EVENT_VERSION, type, at, author, device, payload: payload === undefined ? null : JSON.parse(JSON.stringify(payload)) };
+}
+/* list of problems (strings); empty = valid */
+export function checkEvent(e) {
+  if (!evObj(e)) return ['event: not an object'];
+  const err = [];
+  for (const k of Object.keys(e)) if (!EV_KEYS.includes(k)) err.push(`event.${k}: unknown field`);
+  if (e.v !== EVENT_VERSION) err.push(`v: must be ${EVENT_VERSION}`);
+  if (typeof e.id !== 'string' || !/^e_[0-9a-f]{24}$/.test(e.id)) err.push('id: must be "e_" and 24 hex characters');
+  if (!evField.utc(e.at)) err.push('at: must be a UTC time like 2026-11-02T16:04:11Z');
+  if (!evField.pid(e.author)) err.push('author: must be a person ID starting with p_');
+  if (!evField.did(e.device)) err.push('device: must be a device ID starting with d_');
+  const known = EVENT_TYPES.includes(e.type);
+  if (!known) err.push('type: unknown');
+  if (!evObj(e.payload)) err.push('payload: not an object');
+  else if (known) {
+    const { req, opt } = EV_PARSED[e.type];
+    for (const [f, ok] of Object.entries(req)) { if (!evHas(e.payload, f)) err.push(`payload.${f}: missing`); else if (!ok(e.payload[f])) err.push(`payload.${f}: invalid`); }
+    for (const [f, ok] of Object.entries(opt)) if (evHas(e.payload, f) && !ok(e.payload[f])) err.push(`payload.${f}: invalid`);
+    for (const k of Object.keys(e.payload)) if (!evOwn(req, k) && !evOwn(opt, k)) err.push(`payload.${k}: unknown field`);
+  }
+  return err;
+}
+
+/* ---------- time ---------- */
+/* milliseconds; a time more than 24 hours after "now" counts as "now" (concept 9.2). NaN if a time cannot be read. */
+export function effectiveTime(at, now) {
+  const t = evToMs(at), n = evToMs(now);
+  if (Number.isNaN(t) || Number.isNaN(n)) return NaN;
+  return t > n + EVENT_FUTURE_MS ? n : t;
+}
+
+/* ---------- merge (protocol events) ---------- */
+function evCanon(x) {
+  if (x === null || typeof x !== 'object') return JSON.stringify(x);
+  if (Array.isArray(x)) return '[' + x.map((v) => evCanon(v === undefined ? null : v)).join(',') + ']';
+  return '{' + Object.keys(x).sort().filter((k) => x[k] !== undefined).map((k) => JSON.stringify(k) + ':' + evCanon(x[k])).join(',') + '}';
+}
+const evCmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+/* Unites lists of events (e.g. [own log, what the other device sent]); logs: array of arrays.
+   - the same id counts once; the result does not depend on the order or on how often something is merged
+   - sorted by effective time, on a tie by id
+   - the same id with different content is a conflict: reported, never overwritten silently; the variant with the
+     smaller canonical text stays, so every device keeps the same one
+   - events that fail checkEvent are not merged but reported as invalid
+   Returns { events, conflicts: [{ id, kept, rejected }], invalid: [{ event, errors }] }. Inputs are not changed. */
+export function mergeLog(logs, now) {
+  const byId = new Map(), invalid = [];
+  for (const list of Array.isArray(logs) ? logs : []) {
+    for (const e of Array.isArray(list) ? list : []) {
+      const errors = checkEvent(e);
+      if (errors.length) { invalid.push({ event: e, errors }); continue; }
+      const variants = byId.get(e.id);
+      if (!variants) byId.set(e.id, [e]);
+      else if (!variants.some((x) => evCanon(x) === evCanon(e))) variants.push(e);
+    }
+  }
+  const conflicts = [], rows = [];
+  for (const variants of byId.values()) {
+    variants.sort((a, b) => evCmp(evCanon(a), evCanon(b)));
+    if (variants.length > 1) conflicts.push({ id: variants[0].id, kept: variants[0], rejected: variants.slice(1) });
+    rows.push(variants[0]);
+  }
+  const timed = rows.map((e) => ({ e, t: effectiveTime(e.at, now) }));
+  timed.sort((a, b) => (a.t - b.t) || evCmp(a.e.id, b.e.id));
+  conflicts.sort((a, b) => evCmp(a.id, b.id));
+  invalid.sort((a, b) => evCmp(evCanon(a.event), evCanon(b.event)));
+  return { events: timed.map((x) => x.e), conflicts, invalid };
+}
+
+/* ---------- "last wins" fields ----------
+   type -> payload fields that name the field. Everything else is a protocol event (not listed here). */
+const EV_LAST_WINS = { profile_set: ['field'], setting_set: ['setting'], day_flag: ['flag'], checklist_set: ['studio', 'index'], rank_seen: [] };
+/* key of the field an event sets, e.g. "profile_set:name"; null for protocol events */
+export function fieldKey(e) {
+  if (!evObj(e) || !evObj(e.payload) || !evOwn(EV_LAST_WINS, e.type)) return null;
+  const parts = EV_LAST_WINS[e.type].map((f) => e.payload[f]);
+  return parts.some((p) => p === undefined || p === null) ? null : [e.type, ...parts].join(':');
+}
+/* per field the winning event: youngest effective time; tie -> larger device ID; then larger event id.
+   Every device decides the same, whatever order it got the events in. Returns { fieldKey: event }. */
+export function lastWins(events, now) {
+  const best = new Map();
+  for (const e of Array.isArray(events) ? events : []) {
+    const key = fieldKey(e);
+    if (!key || checkEvent(e).length) continue;                  // invalid events never win
+    const t = effectiveTime(e.at, now);
+    if (Number.isNaN(t)) continue;
+    const cur = best.get(key);
+    if (!cur || t > cur.t || (t === cur.t && (e.device > cur.e.device || (e.device === cur.e.device && e.id > cur.e.id)))) best.set(key, { e, t });
+  }
+  return Object.fromEntries([...best.keys()].sort().map((k) => [k, best.get(k).e]));
+}
