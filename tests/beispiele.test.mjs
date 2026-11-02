@@ -70,7 +70,8 @@ test('English, German, Science, Library: an easier example wherever a task type 
         const label = await page.textContent('#helpBtn');
         const angeboten = (await page.isVisible('#helpBtn')) && /Show me an example|Zeig mir ein Beispiel/.test(label);
         const norm = text.replace(/\d[\d,.:]*/g, '#');
-        if (!WISSEN.test(norm)) { zaehlt++; if (angeboten) mit++; else ohne.add(q.world + ': ' + norm.slice(0, 70)); }
+        // support level (1) has nothing easier - like maths (since A7/A8 the text questions have levels)
+        if (!WISSEN.test(norm) && (q.level || 2) > 1) { zaehlt++; if (angeboten) mit++; else ohne.add(q.world + ': ' + norm.slice(0, 70)); }
         if (angeboten) {
           await page.locator('#helpBtn').click();
           const fb = await page.textContent('#feedback');

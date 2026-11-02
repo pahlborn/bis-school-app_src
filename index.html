@@ -169,6 +169,8 @@ button{font:inherit;color:inherit}
 .ptag{border-radius:999px;padding:2px 8px;font-size:.78rem;font-weight:700}
 .ptag.school{background:#DDF4FF;color:#0B5876}.ptag.need{background:#FFF1DC;color:#8A4B00}
 .ptag.gap{background:#FDE7EC;color:#8A1C33}.ptag.gapwait{background:var(--soft);color:var(--muted)}
+.pgaps{list-style:none;padding:0;margin:6px 0}.pgap{margin:6px 0;padding:8px 10px;border-radius:12px;background:var(--soft)}.pgap.on{background:#FDE7EC}.pgap.done{background:#E3F6EA}
+.pgapbar{display:inline-block;vertical-align:middle;width:120px;height:10px;border-radius:999px;background:var(--line);overflow:hidden}.pgapbar i{display:block;height:100%;background:#C2364F}
 .phelp{background:#F4F7FF;border-radius:10px;padding:8px 10px;margin:8px 0;font-size:.92rem}
 .pv-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
 .ppreview h3{margin:0 0 4px}
@@ -874,7 +876,8 @@ function orderQ(prompt, items, slots, explain, extra){
   return Object.assign({kind:'order', prompt:prompt, items:idx.map(i=>items[i]), correct:items.map((_,i)=>idx.indexOf(i)), slots:slots, explain:explain, visual:''}, extra||{});
 }
 function takeFrom(bank, n){ return shuffle(bank).slice(0,n); }
-const bankMC = (bank, tag) => r => mc(r[0], r[1], r[2], r[3], tag);
+// a bank entry may carry its level as 5th field (module textfragen); without it the question is year level
+const bankMC = (bank, tag) => r => mc(r[0], r[1], r[2], r[3], typeof r[4]==='number' ? Object.assign({level:r[4]}, tag) : tag);
 const fromBank = (bank, tag, n) => takeFrom(bank, n).map(bankMC(bank, tag));
 
 /* ======================= PAST · FORCES LAB (Friction Frenzy) ======================= */
@@ -1117,22 +1120,7 @@ function buildRounding(){ return shuffle([roundThousandQ(), nearestHundredQ(), b
 
 /* ======================= PAST · WORD WORKSHOP (OREO + Persuade for the Park) ======================= */
 const WRD={label:'Word Building', world:'words'};
-const OREO_MC=[
- ["In the OREO writing plan, what does the first <b>O</b> stand for?","Opinion",["Order","Orange","Only"],"O is for Opinion. That is what you think."],
- ["In the OREO writing plan, what does <b>R</b> stand for?","Reason",["Rhyme","Reading","Rocket"],"R is for Reason. That is why you think it."],
- ["In the OREO writing plan, what does <b>E</b> stand for?","Example",["Ending","Every","Extra"],"E is for Example. A real thing that shows your reason is true."],
- ["In the OREO writing plan, what does the last <b>O</b> stand for?","Opinion restated",["Opposite","Over","Out"],"The last O says your opinion again. Like ‘That is why…’."],
- ["Which words are a good start for a <b>reason</b> sentence?","One reason is…",["For example…","The end.","Once upon a time…"],"A reason often starts with ‘One reason is…’."],
- ["Which words are a good start for an <b>example</b> sentence?","For example…",["I think…","In conclusion…","Dear diary…"],"An example often starts with ‘For example…’."],
- ["Which words are a good start for <b>restating your opinion</b>?","That is why…",["For example…","One reason is…","Dear Sir or Madam…"],"‘That is why…’ tells the reader: I am finishing now."],
- ["What is persuasive writing for?","To convince the reader to agree with you",["To tell a funny joke","To list the days of the week","To describe a clock"],"Persuade means: make someone agree with you."],
- ["In ‘Persuade for the Park’, who needs to hear why the park should stay open?","The local council",["The fire brigade","A football team","The zoo keeper"],"The council decides about the park. Your words must convince them."],
- ["How many reasons should you brainstorm on your OREO planning sheet for the park?","At least three",["One","Ten","None"],"Three reasons with three examples make a strong letter."],
- ["Which is a REASON why the park is valuable?","It is a place where the community can meet.",["I went there on Tuesday.","The council is closing it.","My shoes are red."],"A reason says WHY."],
- ["What should you do FIRST before writing your persuasive text?","Plan it with the OREO sheet: opinion, reasons, examples",["Start writing straight away","Write the ending first","Only choose a title"],"Plan first. With a plan, the text has a clear order."],
- ["Which words make your writing more persuasive?","must, important, everyone",["maybe, sort of, perhaps","the, and, a","blue, green, red"],"Strong words convince people."],
- ["How do you finish an OREO text?","Restate your opinion in a powerful way",["Write your phone number","Start a new topic","Draw a picture"],"Say your opinion again at the end. Then the reader remembers it."]
-];
+/* OREO_MC, OPFACT and OPINION_MC: module textfragen (A8, Peter 02.11.) - almost-right answers of the same length, three levels. */
 const OREO_SETS=[
  ["Our community park must stay open.","One reason is that it is a place where everyone can play and meet.","For example, my family had a picnic there last summer and we met new friends.","That is why the council must keep our park open!"],
  ["Dogs are the best pets.","One reason is that dogs are very loyal.","For example, my dog waits for me at the door every day.","That is why dogs are the best pets."],
@@ -1146,11 +1134,6 @@ const SENT=[
  ["I think recess should be longer.",0],["One reason is that playing outside helps us focus in class.",1],["For example, after a long recess I finish my maths faster.",2],["So that is why recess should be longer!",3],
  ["Our park must not be closed.",0],["One reason is that it is the only place nearby to ride bikes.",1],["For instance, every Saturday my brother and I ride around the pond.",2],["In conclusion, the park has to stay open.",3],
  ["In my opinion, everyone should learn to swim.",0],["Another reason is that swimming keeps you safe near water.",1],["For instance, my cousin swam to the side when he fell off the boat.",2],["In conclusion, learning to swim is really important.",3]
-];
-const OPFACT=[
- {op:["Chocolate is the best ice cream flavour.","Ice cream tastes better in a cone.","Everyone should eat ice cream every day."],fact:["Ice cream is cold.","Ice cream melts in the sun.","Ice cream is made with milk or cream."]},
- {op:["Our park is the best place in town.","Parks are more fun than cinemas.","Every town needs a bigger park."],fact:["The park has a pond.","Trees grow in the park.","The park has swings and a slide."]},
- {op:["Paris is the most beautiful city in the world.","Pretzels taste better than bread rolls.","Winter is the nicest season."],fact:["Paris is the capital of France.","France is a country in Europe.","Pretzels are made from dough."]}
 ];
 const PREFIX=[
  ["Add a prefix to make the opposite of <b>happy</b>.","unhappy",["rehappy","prehappy","dishappy"],"‘un-’ means not. Unhappy = not happy."],
@@ -1186,10 +1169,10 @@ function oreoOrder(){
     "Opinion first, then a Reason, then an Example, and finish by restating your Opinion.", WRD);
 }
 function opinionFact(){
-  const s=pick(OPFACT), askOp=rnd(2)===0;
+  const s=pick(OPFACT), askOp=rnd(2)===0, tag=Object.assign({level:s.level||2}, WRD), note=s.note?' '+s.note:'';
   return askOp
-    ? mc("Which sentence is an <b>opinion</b>?", pick(s.op), s.fact, "An opinion is what someone thinks or feels. Other people might disagree.", WRD)
-    : mc("Which sentence is a <b>fact</b>?", pick(s.fact), s.op, "A fact is true for everyone and can be checked.", WRD);
+    ? mc("Which sentence is an <b>opinion</b>?", pick(s.op), s.fact, "An opinion is what someone thinks or feels. Other people might disagree."+note, tag)
+    : mc("Which sentence is a <b>fact</b>?", pick(s.fact), s.op, "A fact is true for everyone and can be checked."+note, tag);
 }
 function sentenceType(){
   const r=pick(SENT);
@@ -1444,25 +1427,12 @@ function endMarkQ(){
   return Object.assign({kind:'mc', prompt:"Which end mark does this sentence need?", visual:quote(r[0]+" ___"), options:['.','?','!'], answer:['.','?','!'].indexOf(r[1]), grid3:true,
     explain:(r[1]==='?'?"It asks a question, so it needs a question mark.":r[1]==='!'?"It is exciting or a command, so it needs an exclamation mark.":"It is a plain statement, so it ends with a full stop.")}, SEN);
 }
-const SPECIFIC=[
- ["The park is a place for play.","Last Sunday I climbed the big oak tree in the park with my brother.","I like the park."],
- ["The park is good for nature.","On Tuesday I saw a woodpecker and two squirrels near the pond.","There are animals in the park."],
- ["The park is good for exercise.","Every Saturday morning my dad and I run three laps around the park.","People can run there."],
- ["The park brings people together.","At the summer picnic my family met our new neighbours by the slide.","People meet there."],
- ["Dogs are loyal.","My dog Bruno waits by the door every day at four o’clock until I come home.","Dogs like people."],
- ["Reading before bed is calming.","When I read my dinosaur book, I feel sleepy after ten minutes.","Reading is nice."],
- ["Experiments help us learn.","In the Friction Roll our car went 120 cm on wood but only 40 cm on carpet.","We did an experiment."]
-];
+/* SPECIFIC, SPECIFIC_EXPLAIN and HYPO: module textfragen (A7, Peter 02.11.) - both examples about the same length, three levels. */
 function specificExampleQ(){
-  const r=pick(SPECIFIC), swap=rnd(2)===0;
+  const r=pick(SPECIFIC), swap=rnd(2)===0, level=r[3]||2;
   return two("Which example is more <b>specific and personal</b>?", swap?[r[2],r[1]]:[r[1],r[2]], swap?1:0,
-    "A good example says who, when and where. Then the reader can see it in their head.", Object.assign({visual:quote("Reason: "+r[0])}, SEN));
+    SPECIFIC_EXPLAIN[level], Object.assign({visual:quote("Reason: "+r[0]), level:level}, SEN));
 }
-const HYPO=[
- ["Which hypothesis is the most <b>specific</b>?","If I roll the car on sandpaper, it will roll a shorter distance than on tiles, because sandpaper is rough and has more friction.",["The car will roll somewhere.","Something will happen.","I think the car is fast."],"A good guess says: what will happen, on which surface, and why."],
- ["Which prediction could you actually test?","The car will roll farther on wood than on carpet.",["The car will be happy.","Carpet is my favourite.","The ramp is pretty."],"You can test this one. Just measure!"],
- ["Your hypothesis says ‘The car will go far.’ How can you make it better?","Say on which surface it will go farther and why",["Make it shorter","Add a drawing","Write it in capital letters"],"Add the surface and the reason. Then it is a real guess."]
-];
 const SEQ_SETS=[
  ["Put the recount in a logical order.",["First we put the velcro surface on the ramp.","Next we set up the metre sticks.","Then we let the car go without pushing.","Finally we wrote the distance in our table."]],
  ["Put the instructions in a logical order.",["First, spread butter on two slices of bread.","Next, put cheese on one slice.","Then, place the other slice on top.","Finally, cut the sandwich in half."]],
@@ -1595,12 +1565,6 @@ function splitQ(){
   const r=pick(sets);
   return mc("Which equation correctly splits <b>"+r[0]+"</b>?", r[1], r[2], "Check: the addends must add up to the total.", DET);
 }
-const OPINION_MC=[
- ["Which sentence states a <b>clear opinion</b> about the park?","I strongly believe our park must stay open for everyone.",["The park has a pond.","The park opens at 8 o’clock.","There are benches in the park."],"A strong opinion at the start and at the end. You do this well!"],
- ["Which sentence <b>restates</b> the opinion at the end?","That is why the council must keep our park open!",["The park has a pond.","One reason is exercise.","For example, I saw a bird."],"The last O says the opinion again, with power."],
- ["Which reason supports ‘the park is good for exercise’?","People can run, climb and play football there.",["The park is green.","The council meets on Mondays.","I have new shoes."],"A reason says WHY."],
- ["Which sentence is an opinion with a reason?","Dogs are the best pets because they are loyal.",["Dogs have four legs.","My dog is called Bruno.","Dogs bark."],"Opinion + because + reason. That persuades!"]
-];
 const COOP_MC=[
  ["In PE’s Adventure Challenge, what helped the class solve problems with greater ease?","Working together and sharing ideas",["Working alone in silence","Being the fastest","Ignoring the others"],"Working together solves problems faster."],
  ["A team mate gives you feedback you don’t like. What do you do?","Listen, think about it and try it out",["Walk away","Say they are wrong","Stop playing"],"Listen to the feedback. Then try it."],
@@ -2297,8 +2261,10 @@ const gapKey = x => (STANDARDS[x] ? mainStd(x) : x);   // a D1 quest key -> its 
 function gapData(){
   const g=store.get('gaps',null)||{}, closed={};
   for(const [k,v] of Object.entries(g.closed||{})){ const s=gapKey(k); if(s && (!closed[s] || (v.schoolDay||'')>(closed[s].schoolDay||''))) closed[s]=v; }
-  return {closed, active:g.active ? gapKey(g.active) : null};
+  // hold (D4, "keep practising"): the parents keep a gap open the app had closed - {standard:{at, schoolDay}}
+  return {closed, active:g.active ? gapKey(g.active) : null, hold:g.hold||{}};
 }
+const gapSave = d => store.set('gaps',{closed:d.closed, active:d.active, hold:d.hold});
 /* the quests whose main standard is s (only those that can be in the focus at all) */
 const gapQuests = s => cleanFocus(SUBJECTS.flatMap(questsIn)).filter(k=>mainStd(k)===s);
 /* the latest school rating of a standard: {st, day} */
@@ -2316,11 +2282,12 @@ function openGaps(){
     const r=stdRating(s); if(!r || !GAP_WEAK.includes(r.st)) continue;
     const c=data.closed[s]; if(c && c.schoolDay>=r.day) continue;
     const quests=gapQuests(s); if(!quests.length) continue;
-    const done=quests.find(k=>{ const a=assessQuest(k); return (a.level==='m'||a.level==='e') && a.sure==='confirmed'; });
+    const held=data.hold[s] && data.hold[s].schoolDay>=r.day;   // kept open by the parents: the app does not close it
+    const done=!held && quests.find(k=>{ const a=assessQuest(k); return (a.level==='m'||a.level==='e') && a.sure==='confirmed'; });
     if(done){ data.closed[s]={at:dayKey(), by:'app', schoolDay:r.day, quest:done}; changed=true; continue; }
-    out.push({s, st:r.st, day:r.day, quests});
+    out.push({s, st:r.st, day:r.day, quests, held:!!held});
   }
-  if(changed && !gapReadOnly()) store.set('gaps',{closed:data.closed, active:data.active});
+  if(changed && !gapReadOnly()) gapSave(data);
   return out.sort(gapOrder);
 }
 /* teachers and the admin look through a grant: they never change the child's data */
@@ -2337,6 +2304,52 @@ function activeGap(){
 }
 /* the quests of the active gap (they join the automatic focus) */
 const activeGapQuests = () => { const g=activeGap(); return g ? g.quests : []; };
+/* D4: what the parents can do with a gap (never a teacher or the admin through a grant) */
+const gapCanAct = () => typeof parentAccess!=='undefined' && parentAccess && !gapReadOnly();
+function gapAct(action, s){
+  if(!gapCanAct()) return;
+  const d=gapData(), r=stdRating(s); if(!r) return;
+  if(action==='go'){ d.active=s; }
+  else if(action==='close'){ d.closed[s]={at:dayKey(), by:'parents', schoolDay:r.day}; delete d.hold[s]; if(d.active===s) d.active=null; }
+  else if(action==='hold'){ delete d.closed[s]; d.hold[s]={at:dayKey(), schoolDay:r.day}; d.active=s; }
+  gapSave(d);
+}
+/* progress towards "confirmed secure" in tasks (R10: never in days as a deadline): the quest of the gap that is furthest */
+function gapProgress(g){
+  let best=null; for(const k of g.quests){ const a=assessQuest(k); if(!best || a.n>best.n) best=a; }
+  const n=best?best.n:0, left=Math.max(0,20-n), days=best?best.days:0;
+  return {frac:Math.min(n,20)/20, left, moreDays:left===0?Math.max(0,5-days):0};
+}
+function gapProgressHTML(g){
+  const de=PL()==='de', p=gapProgress(g);
+  const txt=p.left>0 ? (de?`noch etwa ${p.left} Aufgaben`:`about ${p.left} more tasks`)
+    : p.moreDays>0 ? (de?`noch an ${p.moreDays} weiteren Übungstagen`:`on ${p.moreDays} more practice days`)
+    : (de?'noch nicht ganz sicher – weiter üben':'not quite secure yet – keep practising');
+  return `<span class="pgapbar" role="img" aria-label="${txt}"><i style="width:${Math.round(p.frac*100)}%"></i></span> <span class="small">${txt}</span>`;
+}
+/* the gaps of a subject (by the subject of their standard) for the block "From school": open (active / waiting),
+   kept open, closed - with the parents' buttons */
+function gapsSubjectHTML(key){
+  if(typeof schoolData!=='function' || !schoolData()) return '';
+  const de=PL()==='de', open=openGaps(), act=(activeGap()||{}).s, d=gapData(), can=gapCanAct();
+  const name=s=>esc((de?STANDARD_TEXT:STANDARD_TEXT_EN)[s]||s), qn=g=>g.quests.map(k=>esc(WORLDS[k].name)).join(', ');
+  const btn=(a,s,label)=>can?` <button type="button" class="btn small" data-gapact="${a}" data-gapstd="${s}">${label}</button>`:'';
+  const rows=[];
+  for(const g of open.filter(x=>stdSubject(x.s)===key)){
+    const on=g.s===act;
+    rows.push(`<li class="pgap ${on?'on':'wait'}"><b>${on?'🎯 ':''}${name(g.s)}</b> <span class="small">(${de?'Einstufung':'rating'} ${fmtDay(g.day)} · ${qn(g)})</span><br>`
+      +`${on?gapProgressHTML(g):`<span class="small">${de?'wartet':'waiting'}</span>`}`
+      +(g.held?` <span class="small">· ${de?'von Ihnen offen gehalten':'kept open by you'} (${fmtDay(d.hold[g.s].at)})</span>`:'')
+      +(on?'':btn('go',g.s,de?'Jetzt angehen':'Work on it now'))+btn('close',g.s,de?'Als geschlossen markieren':'Mark as closed')+`</li>`);
+  }
+  for(const [s,c] of Object.entries(d.closed)){
+    const r=stdRating(s); if(!r || stdSubject(s)!==key || c.schoolDay<r.day || !GAP_WEAK.includes(r.st)) continue;
+    rows.push(`<li class="pgap done"><b>${de?'Lücke geschlossen':'Gap closed'} ✓</b> ${name(s)} <span class="small">(${fmtDay(c.at)} · ${c.by==='parents'?(de?'von Ihnen geschlossen':'closed by you'):(de?'laut den Antworten in der App':'according to the answers in the app')})</span>`
+      +(c.by==='app'?btn('hold',s,de?'Weiter üben':'Keep practising'):'')+`</li>`);
+  }
+  if(!rows.length) return '';
+  return `<h4 class="psub">${de?'Lücken laut Schule':'Gaps per school'} <button type="button" class="info-btn" data-help="gaps" aria-label="Info">ⓘ</button></h4><ul class="pgaps">${rows.join('')}</ul>`;
+}
 /* concept 6.5 (D2): the GAP LANE - quests of the active gap that are in the automatic focus only because of the gap
    (not as the teacher's next step and not because the parents' assessment suggests support). Empty in manual mode. */
 function gapLaneQuests(focus){
@@ -2782,6 +2795,8 @@ const LANG_EXAMPLES={
     [/^Which sentence is an opinion\?/, ()=>ex1('Which is an opinion: “Cats have four legs” or “Cats are the cutest animals”?', 'Cats are the cutest animals', '“Cutest” is what someone thinks – an opinion. Legs can be counted – a fact.')],
     [/^Which sentence is a fact\?/, ()=>ex1('Which is a fact: “Pizza is yummy” or “Pizza is baked in an oven”?', 'Pizza is baked in an oven', 'You can check how pizza is made – a fact. “Yummy” is what someone thinks.')],
     [/what does \w stand for/, q=>/Reason/.test(qAns(q))?ex1('In OREO, what does E stand for?', 'Example', 'O = Opinion, R = Reason, E = Example, O = Opinion again.'):ex1('In OREO, what does R stand for?', 'Reason', 'O = Opinion, R = Reason, E = Example, O = Opinion again.')],
+    [/What is still missing/, ()=>ex1('A paragraph has an opinion, a reason and the opinion again at the end. What is missing?', 'An example', 'O-R-E-O: Opinion, Reason, Example, Opinion restated. Here the E is missing – one real moment that shows the reason is true.')],
+    [/a reason, not an example/, ()=>ex1('Which is a reason: “Dogs keep you company.” or “Yesterday my dog played ball with me.”?', 'Dogs keep you company.', 'A reason is true in general – it explains WHY. “Yesterday …” tells one real moment – that is an example.')],
     [/good start for a reason sentence/, ()=>ex1('Which start fits an EXAMPLE sentence?', 'For example, …', '“For example” starts an example. A reason often starts with “because” or “One reason is …”.')]
   ],
   sentences:[
@@ -2794,6 +2809,7 @@ const LANG_EXAMPLES={
     [/more specific and personal/, ()=>ex1('Which example is more specific: “I play there.” or “Last Sunday I played tag with my brother by the big oak tree.”?', 'Last Sunday I played tag with my brother by the big oak tree.', 'It says WHEN (last Sunday), WHO (my brother), WHAT (tag) and WHERE (by the big oak tree).')],
     [/most specific/, ()=>ex1('Which hypothesis is more specific: “The ball will bounce.” or “The ball will bounce higher on wood than on carpet.”?', 'The ball will bounce higher on wood than on carpet.', 'It says what will happen AND what you compare – so you can test it.')],
     [/How can you make it better/, ()=>ex1('“Plants grow.” How can you make it more specific?', 'The plant by the window will grow taller than the plant in the dark cupboard.', 'Say what you compare (window or cupboard) and what you measure (how tall).')],
+    [/What is missing in this hypothesis/, ()=>ex1('What is missing: “The plant by the window will grow taller than the plant in the dark cupboard.”?', 'The reason why (because …)', 'It says what you compare (window and cupboard) and what happens (taller). The “because …” part is missing: plants need light to grow.')],
     [/prediction could you actually test/, ()=>ex1('Which can you test: “Cats are happy.” or “Ice melts faster in the sun than in the shade.”?', 'Ice melts faster in the sun than in the shade.', 'You can put two ice cubes in the sun and in the shade and watch. “Happy” cannot be measured.')],
     [/in a logical order/, ()=>ex1('Put “making toast” in order.', 'Put bread in the toaster → wait → take the toast out → spread butter', 'Ask: what has to happen first so the next step is possible?')]
   ],
@@ -4133,6 +4149,7 @@ function renderSheets(){
   const back=$('#pBack'); if(back) back.addEventListener('click',()=>{ state.psubj=null; renderSheets(); window.scrollTo(0,0); });
   body.querySelectorAll('[data-pfocus]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; toggleFocus(b.dataset.pfocus); renderHome(); renderSheets(); }));
   body.querySelectorAll('[data-punlock]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; const k=b.dataset.punlock, u=store.get('unlocked',[]); store.set('unlocked', u.includes(k)?u.filter(x=>x!==k):u.concat([k])); renderHome(); renderSheets(); }));
+  body.querySelectorAll('[data-gapact]').forEach(b=>b.addEventListener('click',()=>{ if(!gapCanAct()) return; gapAct(b.dataset.gapact, b.dataset.gapstd); renderHome(); renderSheets(); }));
   body.querySelectorAll('[data-fmode]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; setFocusMode(b.dataset.fmode); renderHome(); renderSheets(); }));
   body.querySelectorAll('[data-psheetq]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; printSheet([b.dataset.psheetq]); renderSheets(); }));
   body.querySelectorAll('[data-discard]').forEach(b=>b.addEventListener('click',()=>discardSheet(b.dataset.discard)));
@@ -4311,6 +4328,7 @@ const HELP={
   tree:{kid:true,title:'Your learning tree',text:'<p>Your tree grows on every day you practise – in the app or on a practice sheet. It never wilts, even if you take a break.</p><p>Your badges show how you learn: trying a challenge, thinking hard, finishing a sheet.</p>'},
   record:{kid:true,title:'Recording yourself',text:'<p>Tap “● Aufnahme starten”, read aloud, tap “■ Stopp”. Then listen to yourself!</p><p>The last three recordings stay on this iPad. To hand one in, tap “Teilen / Sichern” together with a grown-up.</p>'},
   sheet:{kid:true,title:'Practice sheet',text:'<p>A sheet with 6 tasks and a writing task, plus an answer page for grown-ups.</p><p>Share it as a PDF (by mail, message or into Files) or print it. When you are done on paper, tap your sheet under “My sheets” and type in your answers.</p>'},
+  gaps:{title:'Lücken laut Schule',text:'<p>Hat die Schule einen Standard mit „Requires support“ oder „Consolidating“ eingestuft, übt die App ihn als <b>Lücke</b>: immer eine zur Zeit, höchstens 2 von 8 Aufgaben pro Runde. Lücken, die ohnehin aktuelles Thema sind, werden übersprungen.</p><p>Geschlossen ist eine Lücke, wenn eine ihrer Quests in der App <b>bestätigt sicher</b> ist. Das heißt: sicher bei den Antworten in der App. Wer geantwortet hat und mit welchen Hilfsmitteln, weiß die App nicht; ob die Aufgaben den Standard so abdecken, wie die Schule ihn prüft, ist je Thema verschieden.</p><p>Sie entscheiden: <b>Jetzt angehen</b>, <b>Als geschlossen markieren</b> oder – nach dem Schließen durch die App – <b>Weiter üben</b>.</p>'},
   overview:{title:'Wie entsteht die Einschätzung?',text:'<p>Gezählt wird nur der <b>erste Versuch</b> jeder Aufgabe: selbst gelöst, mit Hinweis oder Lösungsweg angesehen. Eine Einschätzung gibt es erst ab <b>8 Aufgaben an 3 Tagen</b> – vorher „Noch nicht einschätzbar“, das sagt nichts Schlechtes.</p><p><b>Vorläufig</b> heißt: erste Einschätzung. <b>Bestätigt</b> erst nach etwa 20 Aufgaben an 5 Tagen über zwei Wochen. Eine <b>Tendenz</b> steht nur da, wenn zwei Zeiträume genug Aufgaben haben. Nach mehr als 3 Wochen Pause steht „ältere Belege“ – Ferien sind kein Leistungsabfall.</p><p>Das ist <b>keine schulische Bewertung</b> und wird dem Kind nie gezeigt.</p><p>Die App weiß nicht, wer eine Aufgabe gelöst hat und mit welchen Hilfsmitteln. Die Einschätzung ist ein Hinweis; die Verantwortung liegt bei den Eltern.</p>'},
   focus:{title:'Fokus-Themen',text:'<p>Aus diesen Themen stellt „Practise Today“ die 8 Fragen zusammen; auch die Übungsblätter nutzen sie. Auf der Startseite tragen sie das Zeichen „Focus“.</p><p>Die App wählt sie selbst: was die Lehrkraft als nächste Schritte nennt und wo Übung hilft. Unter „🎯 Fokus“ können Sie auf „Manuell“ umstellen und selbst wählen.</p>'},
   school:{title:'Einstufungen der Schule',text:'<p>Die Einstufungen stammen aus den bewerteten Aufgaben auf der Lernplattform der Schule. Solange in der App für eine Quest noch zu wenig geübt wurde (weniger als 6 Antworten oder 2 Tage), richtet die App die Schwierigkeit der Aufgaben danach aus. Danach zählt die eigene Übung.</p><p>Die Einschätzung im Elternbereich beruht nur auf der Übung in der App. Neue Bewertungen der Schule werden bei Gelegenheit übernommen.</p>'},
@@ -4324,6 +4342,7 @@ const HELP={
 };
 /* Grown-ups help in English: meaning-based, American English (Peter, 31.10.). */
 const HELP_EN={
+  gaps:{title:'Gaps per school',text:'<p>When the school rated a standard “requires support” or “consolidating”, the app practises it as a <b>gap</b>: one at a time, at most 2 of 8 tasks per round. Gaps that are a current topic anyway are skipped.</p><p>A gap is closed when one of its quests is <b>confirmed secure</b> in the app. That means: secure in the answers in the app. The app does not know who answered or with what help; whether the tasks cover the standard the way the school tests it differs from topic to topic.</p><p>You decide: <b>Work on it now</b>, <b>Mark as closed</b> or – after the app closed it – <b>Keep practising</b>.</p>'},
   overview:{title:'How is the summary made?',text:'<p>Only the <b>first try</b> at each task counts: solved on their own, with a hint, or after viewing the solution. A judgment appears only after <b>8 tasks on 3 days</b> – until then it says “not enough to tell yet”, which says nothing bad.</p><p><b>Provisional</b> means a first judgment. <b>Confirmed</b> only after about 20 tasks on 5 days over two weeks. A <b>trend</b> is shown only when two periods have enough tasks. After a break of more than 3 weeks it says “older evidence” – vacations are not a drop in ability.</p><p>This is <b>not a school assessment</b> and is never shown to your child.</p><p>The app does not know who solved a task or with what help. The summary is a hint; responsibility lies with the parents.</p>'},
   focus:{title:'Focus topics',text:'<p>“Practise Today” builds its 8 questions from these topics; practice sheets use them too. On the start page they carry the “Focus” sign.</p><p>The app picks them by itself: what the teacher names as next steps and where practice helps. Under “🎯 Focus” you can switch to “Manual” and choose yourself.</p>'},
   school:{title:'School ratings',text:'<p>The ratings come from the evaluated assignments on the school’s learning platform. While there is too little practice in the app for a quest (fewer than 6 answers or 2 days), the app sets the difficulty of the tasks by them. After that, the app’s own practice counts.</p><p>The summary in the grown-ups area is based only on practice in the app. New school evaluations are added from time to time.</p>'},
@@ -4582,10 +4601,11 @@ function schoolSubjectHTML(key){
     const f=(t.focusNext||[]).filter(q=>WORLDS[q] && mine.includes(q));
     return `<li><b>${fmtDay(t.day)} · ${esc(t.title)}:</b> ${esc(t.next[L])}${f.length?`<br><span class="small">${de?'Daraus im automatischen Fokus':'In the automatic focus because of this'}: ${f.map(q=>esc(WORLDS[q].name)).join(', ')}</span>`:''}</li>`; }).join('');
   const atl=key==='learner' ? d.tasks.filter(t=>t.atl).map(t=>Object.entries(t.atl).map(([a,v])=>`<li>${esc(a)}: <b>${esc(v)}</b> <span class="small">(${esc(t.title)}, ${fmtDay(t.day)})</span></li>`).join('')).join('') : '';
-  if(!rows && !steps && !atl) return '';
+  if(!rows && !steps && !atl && !gapsSubjectHTML(key)) return '';
   return `<div class="pcard pschool" id="pSchool"><h3>🏫 ${de?'Aus der Schule':'From school'}</h3><p class="small">${de?'Von der Lernplattform übernommen, Stand':'From the learning platform, as of'} ${fmtDay(d.asOf)}.</p>`
     +(rows?`<div class="tablewrap"><table class="dt"><thead><tr><th>Standard</th><th>${T.now}</th><th>${T.quests}</th></tr></thead><tbody>${rows}</tbody></table></div>`:'')
     +(steps?`<h4 class="psub">${T.next}</h4><ul class="psteps">${steps}</ul>`:'')
+    +gapsSubjectHTML(key)
     +(atl?`<h4 class="psub">${T.atl}</h4><p class="small">${T.atlKey}</p><ul>${atl}</ul>`:'')+`</div>`;
 }
 /* the weakest current school rating among the standards of a subject (for the dot on the subject tile) */
