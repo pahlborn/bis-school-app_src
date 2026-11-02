@@ -22,5 +22,5 @@ Jede Quest-Karte war ein langer Block: Grundlage-Satz („18 erste Versuche an 6
   - `elternansicht`: Ebene 2 und Tabelle; Fokus-Satz und ⓘ.
   - `anmeldung`: Sprachprüfung fand die britische Schreibweise.
 - Gegenprobe: E1-Test mit der App von `main` rot.
-- `npm test`: 353 bestanden.
+- `npm test`: 353 bestanden; nach dem Merge von `main` (#78) 360 bestanden.
 - Bildschirmfoto einer Karte (aktive Lücke, aufgeklappte Tabelle) mit erfundenen Daten durchgesehen.
