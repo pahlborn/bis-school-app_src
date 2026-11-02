@@ -102,10 +102,15 @@ test('Umzug abgebrochen, wenn eine Kopie nicht gelingt: App arbeitet mit den alt
   await page.reload(); await page.waitForSelector('#home:not([hidden])');
   assert.equal(await page.textContent('#totalStars'), '77', 'old data in use after a restart');
   assert.equal((await migr(page)).ok, false);
-  // grown-ups see a calm note with "try again"
+  // grown-ups see a calm warning line; "view" leads to ⚙ → backup & data with the note and "try again" (B4)
   await page.locator('#adultBtn').click();
   await anmelden(page, 'adult', 'papa', 'langes-passwort');
   await page.waitForSelector('#parentClose');
+  assert.match(await page.textContent('.pmigr-line'), /Datenumzug nicht abgeschlossen/);
+  assert.equal(await page.locator('.pmigr-note').count(), 0, 'the full note is not on the overview');
+  await page.locator('.pmigr-line [data-pgoto]').click();
+  await page.waitForSelector('#pSetBack');
+  assert.ok(await page.locator('details.psec[data-psec="backup"]').evaluate((d) => d.open), 'backup & data open');
   assert.match(await page.textContent('.pmigr-note'), /nicht geklappt/);
   // free the storage, try again
   await page.evaluate(() => { for (let i = 0; i < 1000; i++) localStorage.removeItem('junk' + i); });
