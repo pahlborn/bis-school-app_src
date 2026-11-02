@@ -2,6 +2,7 @@
   "hinweis": "Reihenfolge = Reihenfolge in der App. bau: live (immer) oder test (nur Testinstanz, Stufe 2). browserTests: Browser-Tests des Bereichs fuer npm run test:bereich.",
   "module": [
     { "name": "rechte", "bau": "live", "browserTests": ["stufe1-p4", "stufe1-p3", "stufe1-ist", "anmeldung", "schule"] },
-    { "name": "passwort", "bau": "live", "browserTests": ["stufe1-p3", "anmeldung", "hilfe-rollen"] }
+    { "name": "passwort", "bau": "live", "browserTests": ["stufe1-p3", "anmeldung", "hilfe-rollen"] },
+    { "name": "krypto", "bau": "test", "browserTests": ["testbau"] }
   ]
 }

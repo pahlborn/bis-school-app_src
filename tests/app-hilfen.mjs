@@ -16,11 +16,13 @@ import path from 'node:path';
 import { chromium } from 'playwright';
 import { WURZEL, QUELLEN } from '../werkzeug/bauen.mjs';
 
-export async function appServer() {
+// bauart 'test' = with the stage-2 modules; anpassen(text) changes the page (e.g. a test hook)
+export async function appServer({ bauart = 'live', anpassen } = {}) {
+  const inhalt = anpassen ? anpassen(appLesen('utf8', { bauart })) : appLesen(null, { bauart });
   const server = http.createServer(async (req, res) => {
     if (req.url.split('?')[0] !== '/') { res.writeHead(404); return res.end(); }
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-    res.end(await appLesen());
+    res.end(inhalt);
   });
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   server.url = `http://127.0.0.1:${server.address().port}/`;
