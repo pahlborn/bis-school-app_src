@@ -80,6 +80,7 @@ Die Gegenprobe „Merker eines anderen Bereichs“ blieb im ersten Lauf grün, w
 | `tests/module/speicher.test.mjs` (16 Tests) | 0,1 s |
 | `npm run test:module` (119 Tests) | 1,5 s |
 | volle Reihe (381 Tests, alle grün, Stand `main` v86 + dieser Zweig, eigener Arbeitsordner) | 225 s |
+| volle Reihe nach Einmischen von Elternbereich E3 (#88) (383 Tests, alle grün) | 320 s |
 
 Live-Bau: Die SHA-256 der Live-App von `main` (v86) und von diesem Zweig sind identisch (`682f2a54…4c36c2`, Form mit LF). Der Testbau enthält das Modul.
 
