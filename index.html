@@ -4216,10 +4216,12 @@ function openGuide(kind){
   openAbout('info', PL()==='de'?'Anleitung für Erwachsene':'Guide for grown-ups');
 }
 /* Short help on the login screen: the app (and its guides in "About") is not open yet here. */
-const LOGIN_HELP=`<details class="login-help"><summary>❓ Help / Hilfe</summary>
-<p><b>Students:</b> tap 🎒 Student. Tap your name under “Who's here?” or type it, then your password. The first time, use the start code (or the link or QR code) from your grown-up, then choose a strong password – take the idea with three words and a number and let the iPad remember it.</p>
-<p><b>Erwachsene:</b> „👪 Parent / Teacher“, Benutzername und Startcode beim ersten Mal (oder Startlink/QR-Code öffnen), dann ein eigenes Passwort (mindestens 12 Zeichen – oder der Vorschlag der App aus drei Wörtern und einer Zahl; im Passwortspeicher sichern). Das Passwort gilt derzeit nur auf diesem Gerät. Eltern sehen nur ihre eigenen Kinder; Lehrkräfte sehen ein Kind nur mit Freigabe der Eltern.</p>
-<p>Passwort vergessen? / Forgot your password? Kinder fragen ihre Eltern. Erwachsene: Der Startcode funktioniert weiter, sonst gibt der Admin einen neuen. Nach 5 Fehlversuchen 30 Sekunden warten. Nach der Anmeldung: Kinder tippen „❓ Help“, Erwachsene finden ihre Anleitung im Elternbereich. / Children ask their parents. After logging in: children tap “❓ Help”, grown-ups find their guide in the grown-ups area.</p></details>`;
+/* A2 (Peter, 02.11.): the help on the login page in US English only - no mix of languages. */
+const LOGIN_HELP=`<details class="login-help"><summary>❓ Help</summary>
+<p><b>Students:</b> Tap 🎒 Student. Tap your name under “Who's here?” or type it, then enter your password. The first time, use the start code (or the link or QR code) from your grown-up. Then choose a strong password: three words and a number work well. Let the iPad remember it.</p>
+<p><b>Parents and teachers:</b> Tap 👪 Parent / Teacher. The first time, enter your user name and start code (or open the start link or QR code). Then choose your own password: at least 12 characters, or take the app's suggestion of three words and a number. Save it in your password manager. For now, the password only works on this device. Parents see only their own children. Teachers see a child only with the parents' permission.</p>
+<p><b>Forgot your password?</b> Students: ask your parents. Grown-ups: your start code still works; if not, the admin can give you a new one. After 5 wrong tries, wait 30 seconds.</p>
+<p>After logging in, students tap “❓ Help”. Grown-ups find their guide in the grown-ups area.</p></details>`;
 /* "Who's here?" (S11 Stufe 1, P3): on a device where children have logged in before, they pick themselves
    instead of typing the name; the password is still asked (the password manager fills it in). */
 function whosHereHTML(){
