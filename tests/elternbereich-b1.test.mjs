@@ -45,10 +45,12 @@ test('T1 header on 320 px: child, flags, ?, ⚙ and log out in view; no version 
   const b = await oeffnen(browser, server, { viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true });
   await anmelden(b.page, 'adult', 'chef', C.chef); await passwortSetzen(b.page, 'Moon-Glass-Paper-8812');
   await b.page.waitForSelector('#parentClose');
-  assert.equal(await b.page.locator('.phdr #pPlayTest').count(), 0);
+  // B5: "▶ Play as test child" is in the test data row, not in the header row and not in ⚙
+  assert.equal(await b.page.locator('.phdr .phdr-row:first-child #pPlayTest').count(), 0);
+  assert.ok(await b.page.locator('.phdr-test #pPlayTest').isVisible(), 'in the test data row');
   await einstellungen(b.page);
   await b.page.locator('details.psec[data-psec="accounts"] > summary').click();
-  assert.ok(await b.page.locator('#pPlayTest').isVisible(), 'test child in ⚙ → Konten');
+  assert.equal(await b.page.locator('details.psec[data-psec="accounts"] #pPlayTest').count(), 0, 'not in ⚙ → Konten any more');
   assert.deepEqual([...fehler, ...b.fehler], []);
   await ctx.close(); await b.ctx.close();
 });
@@ -89,7 +91,7 @@ test('T2 ⚙ per role: parent, teacher, admin see exactly their sections; overvi
   const a = await oeffnen(browser, server);
   await kindDann(a.page, 'chef');
   await einstellungen(a.page);
-  assert.deepEqual(await abschnitte(a.page), ['accounts', 'aboutapp'], 'admin');
+  assert.deepEqual(await abschnitte(a.page), ['settings', 'accounts', 'aboutapp'], 'admin: the test child shown (B5) has its settings');
   assert.deepEqual([...p.fehler, ...l.fehler, ...a.fehler], []);
   await p.ctx.close(); await l.ctx.close(); await a.ctx.close();
 });
