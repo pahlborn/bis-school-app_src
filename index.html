@@ -218,6 +218,7 @@ button{font:inherit;color:inherit}
 .phdr-act{display:flex;align-items:center;gap:6px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
 .phdr .flags{margin-left:0}
 .phdr-test{background:#F1EEFF;border-radius:12px;padding:6px 10px}
+.phdr-kidsel{font:inherit;font-size:16px;font-weight:700;min-height:40px;padding:4px 10px;border-radius:12px;border:2px solid var(--line);background:var(--surface);color:var(--ink);max-width:100%}
 .psub{margin:16px 0 4px}
 .test-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center}
 .quick{background:var(--soft);border-left:5px solid var(--sun);border-radius:12px;padding:8px 14px;margin:6px 0 12px}.quick ol{margin:6px 0 0;padding-left:1.3em}.quick li{margin:3px 0}
@@ -3835,10 +3836,7 @@ function settingsSecs(){
   if(!teacher && kidOk) s.push(['settings', kid?(de?'👧 Für ':'👧 For ')+esc(kid):T.settings, storyCapHTML()+reminderHTML()+profileAdminHTML()]);
   if(canBackup()) s.push(['backup', de?'💾 Sicherung & Daten':'💾 Backup & data', backupHTML()]);
   if(canBackup()) s.push(['grants', de?'🔐 Zugriff & Freigaben':'🔐 Access & grants', grantsHTML()]);
-  if(accountsOn() && adultUser && adultUser.admin){
-    const t=testUserFor();
-    s.push(['accounts', de?'🛠 Konten':'🛠 Accounts', accountsAdminHTML()+(t?`<p><button type="button" class="btn small" id="pPlayTest">🧪 ${de?'Testkind':'Test child'}</button></p>`:'')]);
-  }
+  if(accountsOn() && adultUser && adultUser.admin) s.push(['accounts', de?'🛠 Konten':'🛠 Accounts', accountsAdminHTML()]);
   s.push(['aboutapp', de?'ℹ️ Über die App':'ℹ️ About the app', aboutAppHTML()]);
   return s;
 }
@@ -3938,7 +3936,7 @@ function renderSheets(){
   [['#pSettings','settings'],['#pHelp','help']].forEach(([sel,view])=>{ const b=$(sel); if(b) b.addEventListener('click',()=>{ if(!parentAccess) return; if(state.pview===view) closeParentView(); else openParentView(view); }); });
   ['#pSetBack','#pHelpBack'].forEach(sel=>{ const b=$(sel); if(b) b.addEventListener('click',closeParentView); });
   const real=$('#pRealData'); if(real) real.addEventListener('click',()=>{ if(!parentAccess) return; restoreRealChild(); renderSheets(); });
-  body.querySelectorAll('[data-pkid]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess || !kidChoices().includes(b.dataset.pkid)) return; const s=studentSession(); viewUser=(s && s.user===b.dataset.pkid)?null:b.dataset.pkid; state.psubj=null; renderSheets(); }));
+  const kidSel=$('#pKidSel'); if(kidSel) kidSel.addEventListener('change',()=>{ const k=kidSel.value; if(!parentAccess || !kidChoices().includes(k)) return; const s=studentSession(); viewUser=(s && s.user===k)?null:k; state.psubj=null; renderSheets(); });
   const play=$('#pPlayTest'); if(play) play.addEventListener('click',playTest);
   body.querySelectorAll('[data-psubj]').forEach(b=>b.addEventListener('click',()=>{ state.psubj=b.dataset.psubj; renderSheets(); window.scrollTo(0,0); }));
   const back=$('#pBack'); if(back) back.addEventListener('click',()=>{ state.psubj=null; renderSheets(); window.scrollTo(0,0); });
@@ -3995,7 +3993,9 @@ function kidHasData(u){
   for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k && k.startsWith(pre)) return true; }
   return false;
 }
-function kidChoices(){ return myKids().filter(kidHasData).map(u=>u.user); }
+/* Concept 5.2 (B5): test children (only visible in the admin account, see visibleKids) are always offered, even without
+   data on this device, so a new test child can be chosen at once; they come last. Real children need data here. */
+function kidChoices(){ return myKids().filter(u=>u.test || kidHasData(u)).sort((a,b)=>(a.test?1:0)-(b.test?1:0)).map(u=>u.user); }
 /* whose data: for grown-ups the child chosen here, else the child logged in on this device if it is one of
    theirs, else their first child with data here; for children their own login */
 const viewedKid = () => {
@@ -4017,7 +4017,6 @@ function myKidsNote(){
   if(!kids.length) return `<p class="phow pnokid">👧 ${adultUser && (adultUser.role==='teacher' || adultUser.admin) ? (de?'Noch keine Freigabe: Den Lernstand eines Kindes sehen Sie, sobald seine Eltern Ihnen Einblick geben – auf dem Gerät, auf dem das Kind übt.':'No grant yet: you see a child’s progress once its parents give you access – on the device where the child practices.') : (de?'Ihnen ist noch kein Kind zugeordnet.':'No child is assigned to you yet.')}</p>`;
   return `<div class="pcard pnokid"><h2>${de?'Meine Kinder':'My children'}</h2>${kids.map(u=>`<p>👧 <b>${esc(u.user)}</b> – ${de?'Daten auf dem Gerät des Kindes. Sie sehen sie dort; der Abgleich zwischen Geräten folgt mit Stufe 2.':'data on your child’s device. You can see them there; syncing between devices follows with stage 2.'}</p>`).join('')}</div>`;
 }
-const testUserFor = () => accountsOn() && adultUser && adultUser.admin ? APP_ACCOUNTS.users.find(u=>u.role==='student' && u.test) || null : null;
 const isTestUser = user => !!(APP_ACCOUNTS && APP_ACCOUNTS.users.some(u=>u.user===user && u.test));
 function switchChild(user){
   if(!APP_ACCOUNTS.users.some(u=>u.user===user && u.role==='student')) return;
@@ -4037,7 +4036,8 @@ function restoreRealChild(){
    grown-ups area with one tap. The grown-up stays logged in meanwhile (stored session). */
 function playTest(){
   if(!parentAccess || !accountsOn() || !adultUser) return;
-  const t=testUserFor(); if(!t) return;
+  // the test child chosen in the child list (B5)
+  const k=viewedKid(), t=k && isTestUser(k) ? APP_ACCOUNTS.users.find(u=>u.user===k) : null; if(!t) return;
   if((studentSession()||{}).user!==t.user) switchChild(t.user);
   parentLock(); renderHome(); show('home'); window.scrollTo(0,0);
 }
@@ -4053,14 +4053,16 @@ function parentHeaderHTML(){
   // whose data is shown (Peter, 01.11.): the child logged in on this device - data stay on the device
   // whose data: the child chosen here or the one logged in on this device; a choice when several children use this device
   const kid=viewedKid(), kids=kidChoices();
+  // concept 5.1 (B5): a list from two children on; test children (admin account only) in a group of their own
+  const opt=u=>`<option value="${esc(u)}"${u===kid?' selected':''}>${isTestUser(u)?'🧪':'👧'} ${esc(u)}</option>`, real=kids.filter(u=>!isTestUser(u)), tests=kids.filter(isTestUser);
   const kidChip=!accountsOn()?'':kids.length>1
-    ? `<span class="phdr-kids" role="group" aria-label="${de?'Kind':'Child'}">${kids.map(u=>`<button type="button" class="btn small${u===kid?' primary':''}" data-pkid="${esc(u)}" aria-pressed="${u===kid}">${isTestUser(u)?'🧪':'👧'} ${esc(u)}</button>`).join('')}</span>`
+    ? `<select class="phdr-kidsel" id="pKidSel" aria-label="${de?'Kind':'Child'}">${real.map(opt).join('')}${tests.length?`<optgroup label="🧪 ${de?'Testkinder':'Test children'}">${tests.map(opt).join('')}</optgroup>`:''}</select>`
     : `<span class="phdr-kid" id="pKid">${kid?(isTestUser(kid)?'🧪 ':'👧 ')+esc(kid):(de?'👧 keine Daten Ihrer Kinder auf diesem Gerät':'👧 none of your children’s data on this device')}</span>`;
   // Concept "Elternbereich" 5.1 (B1): child, flags, ? help, ⚙ settings, log out. The version is in ⚙ "About the app",
-  // the test child button in ⚙ "Accounts" (until B5).
+  // test children are chosen in the child list (B5).
   const onSet=state.pview==='settings', onHelp=state.pview==='help';
   let h=`<header class="phdr"><div class="phdr-row"><span class="phdr-who">👪 ${who}</span>${kidChip}<span class="phdr-act">${flagsHTML()}<button type="button" class="btn small phdr-icon${onHelp?' primary':''}" id="pHelp" aria-label="${de?'Hilfe':'Help'}" title="${de?'Hilfe':'Help'}" aria-pressed="${onHelp}">?</button><button type="button" class="btn small phdr-icon${onSet?' primary':''}" id="pSettings" aria-label="${de?'Einstellungen':'Settings'}" title="${de?'Einstellungen':'Settings'}" aria-pressed="${onSet}">⚙️</button><button class="btn small" id="parentClose" type="button">${close}</button></span></div>`;
-  if(accountsOn() && kid && isTestUser(kid)) h+=`<div class="phdr-row phdr-test">🧪 <b>${de?'Hier stehen Testdaten.':'You are looking at test data.'}</b>${store.get('sessionPrev',null)?`<button type="button" class="btn small" id="pRealData">${de?'Zurück zu echten Daten':'Back to real data'}</button>`:''}</div>`;
+  if(accountsOn() && kid && isTestUser(kid)) h+=`<div class="phdr-row phdr-test">🧪 <b>${de?'Hier stehen Testdaten.':'You are looking at test data.'}</b><button type="button" class="btn small primary" id="pPlayTest">▶ ${de?'Als Testkind spielen':'Play as test child'}</button>${store.get('sessionPrev',null)?`<button type="button" class="btn small" id="pRealData">${de?'Zurück zu echten Daten':'Back to real data'}</button>`:''}</div>`;
   return h+'</header>';
 }
 /* ---------- login (S3, Peter 30.10.) ----------

@@ -62,12 +62,11 @@ async function kindDann(page, wer, pw) {
   await anmelden(page, 'adult', wer, CODES[wer]); await passwortSetzen(page, pw);
   await page.waitForSelector('#parentClose');
 }
-/** B1: the test child button is in ⚙ → 🛠 Accounts (until B5). Real clicks. */
+/** B5: the admin chooses the test child in the child list; "▶ Play as test child" is in the test data row. Real clicks. */
 async function testkindSpielen(page) {
-  if (!(await page.$('#pSetBack'))) { await page.locator('#pSettings').click(); await page.waitForSelector('#pSetBack'); }
-  const d = page.locator('#aboutBody details.psec[data-psec="accounts"]');
-  if (!(await d.evaluate((e) => e.open))) await d.locator(':scope > summary').click();
-  await page.locator('#pPlayTest').click();
+  if (await page.$('#pSetBack')) { await page.locator('#pSetBack').click(); await page.waitForSelector('#pSetBack', { state: 'detached' }); }
+  if (await page.$('#pKidSel')) await page.selectOption('#pKidSel', 'probe');
+  await page.locator('.phdr-test #pPlayTest').click();
 }
 const lies = (page, k) => page.evaluate((key) => JSON.parse(localStorage.getItem('bq2_' + key) || 'null'), k);
 // S11 P2: every child stores under its ID (bq2_<id>__<key>), passwords under bq2_pw_<id>
@@ -269,7 +268,9 @@ test('admin: try the test child and come back without a new login; log out retur
   await page.locator('#adultBtn').click();
   await anmelden(page, 'adult', 'chef', CODES.chef); await passwortSetzen(page, 'langes-passwort');
   await page.waitForSelector('#parentClose');
-  assert.equal(await page.locator('.phdr-test').count(), 0, 'real data at the start');
+  // B5: the admin sees the test child at once (its own data); the device still belongs to the real child
+  assert.match(await page.textContent('.phdr-test'), /Testdaten/);
+  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('bq2_session')).user), 'mia', 'nothing switched yet');
   await testkindSpielen(page);
   await page.waitForSelector('#home:not([hidden])');
   assert.match(await page.textContent('#testBar'), /Testkonto/);
@@ -470,12 +471,13 @@ test('Meine Kinder (B1 behoben): Eltern waehlen nur zwischen ihren eigenen Kinde
   await page.locator('#adultBtn').click();
   await anmelden(page, 'adult', 'papa', CODES.papa); await passwortSetzen(page, 'langes-passwort');
   await page.waitForSelector('#parentClose');
-  assert.deepEqual(await page.$$eval('[data-pkid]', (b) => b.map((x) => x.dataset.pkid)), ['mia', 'tim'], 'only own children: no lia (B1), no test child');
-  assert.equal(await page.getAttribute('[data-pkid="mia"]', 'aria-pressed'), 'true', 'the logged-in child is not his: his first child is shown');
+  // B5: a list from two children on
+  assert.deepEqual(await page.$$eval('#pKidSel option', (o) => o.map((x) => x.value)), ['mia', 'tim'], 'only own children: no lia (B1), no test child');
+  assert.equal(await page.$eval('#pKidSel', (s) => s.value), 'mia', 'the logged-in child is not his: his first child is shown');
   const zeile = async () => page.textContent('#pSummary');
   assert.match(await zeile(), /an 3 Tagen geübt/);
-  await page.locator('[data-pkid="tim"]').click();
-  assert.equal(await page.getAttribute('[data-pkid="tim"]', 'aria-pressed'), 'true');
+  await page.selectOption('#pKidSel', 'tim');
+  await page.waitForFunction(() => document.querySelector('#pKidSel')?.value === 'tim');
   assert.match(await zeile(), /an 1 Tag geübt/);
   assert.ok(!/an 5 Tagen geübt/.test(await zeile()) && !(await page.textContent('.phdr')).includes('lia'), 'nothing of lia');
   // leaving: the device still belongs to the child logged in (lia), nothing was switched
@@ -486,7 +488,7 @@ test('Meine Kinder (B1 behoben): Eltern waehlen nur zwischen ihren eigenen Kinde
   await page.locator('#adultBtn').click();
   await anmelden(page, 'adult', 'chef', CODES.chef); await passwortSetzen(page, 'langes-passwort');
   await page.waitForSelector('#parentClose');
-  assert.equal(await page.locator('[data-pkid]').count(), 0, 'one child only: no choice');
+  assert.equal(await page.locator('#pKidSel').count(), 0, 'one child only: no choice');
   assert.match(await page.textContent('#pKid'), /probe/);
   assert.match(await page.textContent('.phdr-test'), /Testdaten/);
   assert.deepEqual(fehler, []);
