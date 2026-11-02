@@ -32,13 +32,13 @@ function payloadFor(type, author, device) {
   return {
     answer: { day: DAY, skill: 'round', level: 2, attempt: 1, ok: true, qid: 'q1' },
     round_done: { day: DAY, skill: 'round', stars: 7, count: 8 },
-    badge: { day: DAY, badge: 'inquirer' },
+    badge: { day: DAY, badge: 'principled' },
     review: { day: DAY, qid: 'q1', box: 1 },
     practice_day: { day: DAY },
     profile_set: { field: 'name', value: 'Kim' },
     rank_seen: { rank: 'Investigator' },
     sheet_created: { sheet: DAY + '-abc', day: DAY, no: 1, writing: 'en', items: [] },
-    sheet_result: { sheet: DAY + '-abc', index: 0, res: 'ok' },
+    sheet_result: { sheet: DAY + '-abc', index: 0, res: 'ok', day: DAY, qid: 'q1' },
     sheet_discarded: { sheet: DAY + '-abc' },
     setting_set: { setting: 'storyCap', value: 2 },
     checklist_set: { studio: 'grow', index: 0, value: true },
@@ -62,10 +62,11 @@ const signed = (role, type, opts = {}) => { const [pid, did] = WHO[role]; return
 const reason = async (item, z = Z) => { const r = await acceptEvent(item, z); return r.ok ? 'ok' : r.grund; };
 
 /* ---------- the expected table, written out here on purpose (concept 6 "Schreiben", 5.2, 9.3) ----------
-   c = child, p = parent, t = teacher, a = admin; "-" = nobody */
+   c = child, p = parent, t = teacher, a = admin. review and badge also for parents: entering a sheet result writes
+   them (index.html enterResult); parents only the badge "principled" (own test below). */
 const ERWARTET = {
-  answer: 'c', round_done: 'c', badge: 'c', review: 'c', practice_day: 'c', rank_seen: 'c', checklist_set: 'c', day_flag: 'c',
-  profile_set: 'cp', sheet_created: 'cp', device_added: 'cp',
+  answer: 'c', round_done: 'c', practice_day: 'c', rank_seen: 'c', checklist_set: 'c', day_flag: 'c',
+  badge: 'cp', review: 'cp', profile_set: 'cp', sheet_created: 'cp', device_added: 'cp',
   sheet_result: 'p', sheet_discarded: 'p', setting_set: 'p', school_import: 'p', grant_set: 'p', grant_revoked: 'p',
   member_added: 'p', member_removed: 'p', device_removed: 'p', key_rotated: 'p', snapshot: 'p',
   grant_opened: 'ta',
@@ -76,7 +77,7 @@ const darf = (role, type) => ERWARTET[type].includes(role[0]);
 test('Annehmen: gueltig unterschriebene Ereignisse je Rolle und erlaubtem Typ zaehlen', async () => {
   let k = 0;
   for (const role of ROLES) for (const type of EVENT_TYPES) if (darf(role, type)) { assert.equal(await reason(await signed(role, type)), 'ok', `${role} ${type}`); k++; }
-  assert.equal(k, 8 + 3 * 2 + 11 + 2, 'every allowed pair was tried once');
+  assert.equal(k, 6 + 5 * 2 + 11 + 2, 'every allowed pair was tried once');
   const p2 = await signEvent(mk('setting_set', 'p_e2', 'd_e3'), AREA, KEYS.p_e2);
   assert.deepEqual(await acceptEvent(p2, Z), { ok: true }, 'second parent from his second device');
 });
@@ -101,6 +102,11 @@ test('E10: nur fuer sich selbst - Geraet anmelden und "angesehen" protokollieren
   assert.equal(await reason(await signEvent(mk('grant_opened', 'p_l1', 'd_l1', { grant: 'g1', grantee: 'p_a1' }), AREA, KEYS.p_l1)), 'rolle-darf-nicht', 'teacher logs for the admin');
   assert.equal(await reason(await signEvent(mk('grant_opened', 'p_e1', 'd_e1', { grant: 'g1', grantee: 'p_e1' }), AREA, KEYS.p_e1)), 'rolle-darf-nicht', 'parent cannot fake an opening');
   assert.equal(await reason(await signEvent(mk('device_removed', 'p_k1', 'd_k1', { device: 'd_k1' }), AREA, KEYS.p_k1)), 'rolle-darf-nicht', 'the child does not remove devices (concept 6)');
+  for (const badge of ['inquirer', 'thinker', 'reflective']) {
+    assert.equal(await reason(await signEvent(mk('badge', 'p_e1', 'd_e1', { day: DAY, badge }), AREA, KEYS.p_e1)), 'rolle-darf-nicht', 'parent cannot hand out ' + badge);
+    assert.equal(await reason(await signEvent(mk('badge', 'p_k1', 'd_k1', { day: DAY, badge }), AREA, KEYS.p_k1)), 'ok', 'child earns ' + badge);
+  }
+  assert.equal(await reason(await signEvent(mk('answer', 'p_e1', 'd_e1'), AREA, KEYS.p_e1)), 'rolle-darf-nicht', 'parents never answer for the child');
   const z = { area: AREA, members: { ...Z.members, p_k1: { ...Z.members.p_k1, role: 'guest' } } };
   assert.equal(await reason(await signed('child', 'answer'), z), 'rolle-darf-nicht', 'unknown role has no rights');
   const z3 = { area: AREA, members: { ...Z.members, p_k1: { ...Z.members.p_k1, role: 'toString' } } };
