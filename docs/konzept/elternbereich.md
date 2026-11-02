@@ -263,18 +263,20 @@ Alle Quests gleich, drei Ebenen:
 Die Schule bewertet ein Thema einmal und geht weiter; alte Themen werden nicht neu eingestuft. Wer eine Lücke hat, gerät ins Hintertreffen, vor allem wenn das neue Thema darauf aufbaut. Die App führt den Nachweis deshalb selbst. Heute fehlt das (B18).
 
 ### 6.2 Begriff
-Eine Quest ist eine **Lücke**, wenn die letzte Schul-Einstufung ihres **Hauptstandards** (`schoolStandFor(k)`, erster Eintrag in `STANDARDS[k]`) „Requires support“ (`RS`, auch `N`) oder „Consolidating“ (`C`) ist.
+Ein **Standard** ist eine **Lücke**, wenn seine letzte Schul-Einstufung „Requires support“ (`RS`, auch `N`) oder „Consolidating“ (`C`) ist und er **Hauptstandard** (erster Eintrag in `STANDARDS[k]`) mindestens einer Quest ist. Zur Lücke gehören **alle Quests mit diesem Hauptstandard**.
+
+*Entscheidung Peter, 02.11. (B, umgesetzt in D1b):* Lücke je Standard statt je Quest. Mit den echten Daten wurden aus 10 Lücken je Quest 7 je Standard; derselbe schwache Standard muss so nicht mehrmals „geschlossen“ werden.
 
 ### 6.3 Ende
 Eine Lücke ist **geschlossen**, wenn eines davon eintritt:
-1. Die App schätzt die Quest als „Sicher“ oder „Darüber hinaus“ **und „bestätigt“** ein (heutige Schwellen in `assessQuest()`: 20 erste Versuche an 5 Tagen über mindestens 14 Tage; Klassenniveau mindestens 6 Antworten, 80 %, an 3 Tagen). Vorläufig reicht nicht.
+1. Die App schätzt **eine** der Quests der Lücke als „Sicher“ oder „Darüber hinaus“ **und „bestätigt“** ein (heutige Schwellen in `assessQuest()`: 20 erste Versuche an 5 Tagen über mindestens 14 Tage; Klassenniveau mindestens 6 Antworten, 80 %, an 3 Tagen). Vorläufig reicht nicht.
 2. Eine neuere Schul-Einstufung dieses Standards ist mindestens „Meeting“ (`M`/`E`).
 3. Eltern markieren sie als geschlossen (6.6).
 
-**Geschlossen bleibt geschlossen** (Zeitpunkt und auslösende Einstufung je Kind und Quest speichern). Fällt die App-Einschätzung später ab, greift der normale Fokus über „braucht Unterstützung / wird sicherer“. Eine **neuere** schwache Schul-Einstufung öffnet die Lücke wieder. Eine Lücke endet nie durch Zeit.
+**Geschlossen bleibt geschlossen** (Zeitpunkt, auslösende Einstufung und schließende Quest je Kind und Standard speichern). Fällt die App-Einschätzung später ab, greift der normale Fokus über „braucht Unterstützung / wird sicherer“. Eine **neuere** schwache Schul-Einstufung öffnet die Lücke wieder. Eine Lücke endet nie durch Zeit.
 
 ### 6.4 Eine aktive Lücke
-Höchstens **eine** Lücke ist aktiv; die anderen warten. Reihenfolge:
+Höchstens **eine** Lücke ist aktiv (mit all ihren Quests); die anderen warten. Reihenfolge:
 1. Lücken, auf denen ein aktuelles Klassenthema aufbaut (Liste der Voraussetzungen, 6.7)
 2. `RS` vor `C`
 3. älteste Einstufung zuerst
@@ -284,8 +286,8 @@ Eltern können eine wartende Lücke „jetzt angehen“; sie wird aktiv, die bis
 Begründung (in Runden, R10): Bei 2 Lücken-Aufgaben pro Runde braucht eine aktive Lücke etwa 10 Runden bis 20 erste Versuche; drei gleichzeitig je etwa 30 Runden, und keine schließt vorher. Nacheinander ist nicht langsamer, und jede geschlossene Lücke ist ein sichtbarer Erfolg. Üben in der Quest außerhalb von Practise Today zählt mit.
 
 ### 6.5 Anteil in Practise Today und Übungsblatt
-- `focusAuto() = uniq( classTopics() ∪ need ∪ [activeGap()] )`.
-- Practise Today: zwei Spuren. **Aktuelle Themen** (`classTopics() ∪ need`) bleiben vorn; aus der **aktiven Lücke** höchstens **2 von 8** Aufgaben (wenn sie nicht ohnehin in den aktuellen Themen liegt). Gibt es keine aktuellen Themen, füllt die Lücke die Runde.
+- `focusAuto() = uniq( classTopics() ∪ need ∪ activeGapQuests() )`.
+- Practise Today: zwei Spuren. **Aktuelle Themen** (`classTopics() ∪ need`) bleiben vorn; aus den Quests der **aktiven Lücke**, soweit sie nicht ohnehin in den aktuellen Themen liegen, zusammen höchstens **2 von 8** Aufgaben. Gibt es keine aktuellen Themen, füllt die Lücke die Runde.
 - In der Lücken-Spur erst eine Grundlage-Aufgabe, dann Klassenniveau.
 - Übungsblatt: höchstens 1/4 der Aufgaben aus der aktiven Lücke.
 - Schwierigkeit unverändert: Startwert aus der Schule bis 6 Antworten an 2 Tagen, danach eigene Übung.
