@@ -47,6 +47,7 @@
     { "key": "migr", "bereich": "geraet", "abgleich": "lokal", "sicherung": false, "hinweis": "Protokoll des Umzugs auf Kennungen (S11 P2)" },
     { "key": "conceptSeen", "bereich": "geraet", "abgleich": "lokal", "sicherung": false, "hinweis": "Erwachsene, die \"So funktioniert Big Quest\" auf diesem Geraet schon geoeffnet haben (Hinweis \"Neu hier?\", Konzept Elternbereich B4)" },
     { "key": "lastSeen", "bereich": "geraet", "abgleich": "lokal", "sicherung": false, "hinweis": "letzte Anmeldung je Konto auf diesem Geraet (Admin-Metadaten, S11 P4)" },
+    { "key": "glance", "bereich": "geraet", "abgleich": "lokal", "sicherung": false, "hinweis": "Auf einen Blick: Stand beim letzten Besuch je Erwachsenem und Kind (Elternbereich E3)" },
     { "key": "kidsHere", "bereich": "geraet", "abgleich": "lokal", "sicherung": false, "hinweis": "Kinder, die sich auf diesem Geraet angemeldet haben (S11 P3)" }
   ],
   "localStorageDirekt": [

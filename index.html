@@ -154,6 +154,7 @@ button{font:inherit;color:inherit}
 .pside{display:flex;flex-direction:column;gap:12px}
 .pcard{background:var(--surface);border:2px solid var(--line);border-radius:16px;padding:12px 14px}
 .pcard h2{font-size:1.1rem;margin-bottom:6px}
+.pglance{margin:10px 0}.pglance p{margin:4px 0}.pglance .pgmore{text-align:right;margin-top:6px}
 .ph{font-weight:800;margin:10px 0 2px}
 .pdisc{font-size:.8rem;color:var(--muted);border-top:1px solid var(--line);margin-top:10px;padding-top:6px}
 .pleg{margin:4px 0;display:inline-flex;gap:6px;align-items:center}
@@ -635,7 +636,7 @@ const TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4
    bq2_<id>__<key>; passwords under bq2_pw_<id>. Before (and as a fallback if the move on this device
    failed): the FIRST student account used bq2_<key>, every other one bq2_<user>__<key>. Device-wide keys
    stay shared. */
-const GLOBAL_KEYS=/^(session|sessionPrev|adultSession|pw_.+|parentPin|muted|parentLang|migr|kidsHere|lastSeen|conceptSeen)$/;
+const GLOBAL_KEYS=/^(session|sessionPrev|adultSession|pw_.+|parentPin|muted|parentLang|migr|kidsHere|lastSeen|conceptSeen|glance)$/;
 let ID_STORAGE=false;
 /* account for a stored reference {id} or {user} (id first: login names may change, IDs never do) */
 function accByRef(r){
@@ -3769,6 +3770,58 @@ function summaryHTML(list, scope){
   return h+`<div class="pdisc">${T.disc}</div>`;
 }
 const isTeacher = () => !!(accountsOn() && adultUser && (adultUser.role==='teacher' || viewerGrant()));
+/* concept 5.10 (E3): "At a glance" - since your last visit, what works, what we work on, an idea for home.
+   The last visit per grown-up and child is kept on this device (glance, not in the backup: an old backup would
+   bring back an old visit). A visit lasts from opening the grown-ups area until it is locked (parentEpoch). */
+let glanceVisit={epoch:-1, base:{}};
+function glanceId(){ const a=accountsOn()&&adultUser?accByRef({user:adultUser.user}):null, k=accountsOn()?kidAccount():null; return (a?a.id:'parent')+'|'+(k?k.id:'kid'); }
+function glanceNow(){
+  const b=store.get('badges',{});
+  return {at:dayKey(), n:store.get('attempts',[]).filter(a=>a.attempt===1).length, b:Object.values(b).reduce((s,x)=>s+(+x||0),0), rank:shownRank(store.get('total',0)), closed:Object.keys(gapData().closed)};
+}
+/* the stand at the start of this visit (read once per visit, then the new stand is stored) */
+function glanceBase(){
+  if(glanceVisit.epoch!==parentEpoch) glanceVisit={epoch:parentEpoch, base:{}};
+  const id=glanceId();
+  if(!glanceVisit.base[id]){
+    const all=store.get('glance',{}), prev=all[id]||null, now=glanceNow();
+    now.idea=prev?(prev.idea||0)+1:0;
+    glanceVisit.base[id]=prev?Object.assign({}, prev, {idea:now.idea}):{first:true, idea:0};
+    all[id]=now; store.set('glance',all);
+  }
+  return glanceVisit.base[id];
+}
+function glanceHTML(){
+  const de=PL()==='de', T=PT[PL()], teacher=isTeacher(), nm=(viewerGrant() ? viewedKid() : playerName()||viewedKid())||T.child;
+  openGaps();   // closes gaps the app has confirmed, before counting
+  const base=glanceBase(), now=glanceNow(), rows=[];
+  const std=s=>esc((de?STANDARD_TEXT:STANDARD_TEXT_EN)[s]||s);
+  // 🌱 since your last visit (not on the first visit, not for teachers)
+  if(!base.first && !teacher){
+    const n=Math.max(0,now.n-(base.n||0)), b=Math.max(0,now.b-(base.b||0)), r=now.rank!==base.rank && rankIdx(now.rank)>rankIdx(base.rank), cl=now.closed.filter(s=>!(base.closed||[]).includes(s));
+    if(!n && !b && !r && !cl.length) rows.push(`🌱 ${de?'Seit Ihrem letzten Besuch wurde nicht geübt – das ist in Ordnung.':'No practice since your last visit – that is fine.'}`);
+    else { const p=[];
+      if(n) p.push(de?`${n} ${n===1?'Aufgabe':'Aufgaben'}`:`${n} ${n===1?'task':'tasks'}`);
+      if(b) p.push(de?`${b} ${b===1?'neues Abzeichen':'neue Abzeichen'}`:`${b} new ${b===1?'badge':'badges'}`);
+      if(r) p.push(de?`neuer Titel: ${esc(now.rank)}`:`new title: ${esc(now.rank)}`);
+      for(const s of cl) p.push(`${de?'Lücke geschlossen':'Gap closed'} ✓ ${std(s)}`);
+      rows.push(`🌱 <b>${de?'Seit Ihrem letzten Besuch':'Since your last visit'}:</b> ${p.join(', ')}`); }
+  }
+  // ⭐ what works: up to 2 quests practiced last with secure or beyond
+  const all=SUBJECTS.flatMap(questsIn).map(assessQuest);
+  const good=all.filter(a=>(a.level==='m'||a.level==='e') && a.last).sort((x,y)=>x.last<y.last?1:x.last>y.last?-1:y.n-x.n).slice(0,2);
+  if(good.length) rows.push(`⭐ <b>${de?'Das gelingt':'Going well'}:</b> ${good.map(a=>esc(WORLDS[a.k].name)).join(', ')}`);
+  // 🎯 what we work on: the active gap with its bar, otherwise the first current class topic in the focus
+  const g=activeGap(), focus=focusTopics();
+  const qs=g ? g.quests : [classTopics().find(k=>focus.includes(k)) || focus[0]].filter(k=>k && WORLDS[k]);
+  if(qs.length) rows.push(`🎯 <b>${de?'Daran arbeiten wir':'What we work on'}:</b> ${qs.map(k=>esc(WORLDS[k].name)).join(', ')}${g?` <span class="small">(${de?'Lücke':'gap'})</span> ${gapProgressHTML(g)}`:''}`);
+  // 💡 an idea for home from "How you can help" of that quest - the next one on every visit
+  const ideas=qs.flatMap(k=>HELP_Q[k]?HELP_Q[k][PL()][2]:[]);
+  if(ideas.length) rows.push(`💡 <b>${de?'Idee für zu Hause':'Idea for home'}:</b> ${esc(ideas[base.idea%ideas.length])}`);
+  if(!rows.length) return '';
+  const subj=qs.length ? SUBJECTS.find(s=>questsIn(s).includes(qs[0])) : null;
+  return `<div class="pcard pglance" id="pGlance"><h2>${de?'Auf einen Blick':'At a glance'} · ${esc(nm)}</h2>${rows.map(r=>`<p>${r}</p>`).join('')}${subj?`<p class="pgmore"><button type="button" class="btn small" data-pmore="${subj.key}">${de?'Mehr dazu':'More'} → ${esc(subj.name)}</button></p>`:''}</div>`;
+}
 function parentHomeHTML(){
   const T=PT[PL()], de=PL()==='de', focus=focusTopics(), all=[];
   const tiles=SUBJECTS.map(s=>{ const qs=questsIn(s), list=qs.map(assessQuest); all.push(...list); const f=qs.filter(k=>focus.includes(k)).length;
@@ -3780,7 +3833,7 @@ function parentHomeHTML(){
   const noKid=accountsOn() && !viewedKid() ? myKidsNote() : '';
   if(noKid) return noKid;   // nothing to show: without a logged-in child the data on this device are not the child's
   // concept 5.3 (B4): notes only when something is to do - data move, backup, waiting sheet, "new here?"
-  return `${migrLine()}${backupLine()}${note}${newHereLine()}<div class="playout"><div class="psubjects">${tiles}</div><aside class="pside"><div class="pcard" id="pSummary">${summaryHTML(all)}</div><div class="pcard">${legendHTML()}</div></aside></div>`;
+  return `${migrLine()}${backupLine()}${note}${newHereLine()}${glanceHTML()}<div class="playout"><div class="psubjects">${tiles}</div><aside class="pside"><div class="pcard" id="pSummary">${summaryHTML(all)}</div><div class="pcard">${legendHTML()}</div></aside></div>`;
 }
 function legendHTML(){
   // one line, dot + word (concept 5.3, B4); "provisional / confirmed" is explained in the ⓘ of the summary
@@ -4172,7 +4225,7 @@ function renderSheets(){
   const real=$('#pRealData'); if(real) real.addEventListener('click',()=>{ if(!parentAccess) return; restoreRealChild(); renderSheets(); });
   const kidSel=$('#pKidSel'); if(kidSel) kidSel.addEventListener('change',()=>{ const k=kidSel.value; if(!parentAccess || !kidChoices().includes(k)) return; const s=studentSession(); viewUser=(s && s.user===k)?null:k; state.psubj=null; renderSheets(); });
   const play=$('#pPlayTest'); if(play) play.addEventListener('click',playTest);
-  body.querySelectorAll('[data-psubj]').forEach(b=>b.addEventListener('click',()=>{ state.psubj=b.dataset.psubj; renderSheets(); window.scrollTo(0,0); }));
+  body.querySelectorAll('[data-psubj],[data-pmore]').forEach(b=>b.addEventListener('click',()=>{ state.psubj=b.dataset.psubj||b.dataset.pmore; renderSheets(); window.scrollTo(0,0); }));
   const back=$('#pBack'); if(back) back.addEventListener('click',()=>{ state.psubj=null; renderSheets(); window.scrollTo(0,0); });
   body.querySelectorAll('[data-pfocus]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; toggleFocus(b.dataset.pfocus); renderHome(); renderSheets(); }));
   body.querySelectorAll('[data-punlock]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; const k=b.dataset.punlock, u=store.get('unlocked',[]); store.set('unlocked', u.includes(k)?u.filter(x=>x!==k):u.concat([k])); renderHome(); renderSheets(); }));
