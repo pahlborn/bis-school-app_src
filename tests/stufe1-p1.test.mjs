@@ -28,14 +28,14 @@ after(async () => { await browser?.close(); server?.close(); });
 
 // ---------------------------------------------------------------- werkzeug
 
-test('Kontenmodell v2: Umstellung behaelt Reihenfolge und Startcodes; Admin wird kein Elternteil (B3); Lehrkraft-Zuordnung bleibt', () => {
+test('Kontenmodell v2: Umstellung behaelt Reihenfolge und Startcodes; Admin wird kein Elternteil (B3); Lehrkraft-Zuordnung entfaellt (P4: nur Freigaben)', () => {
   const v2 = ausV1(V1);
   assert.equal(v2.version, 2);
   assert.deepEqual(v2.users.map((u) => u.user), ['mia', 'lia', 'papa', 'chef', 'frau']);
   for (const [i, u] of v2.users.entries()) { assert.match(u.id, ID_RE); assert.deepEqual(u.start, V1.users[i].start); }
   const id = (n) => v2.users.find((u) => u.user === n).id;
   assert.deepEqual(v2.guardians.map((g) => [g.adult, g.child]), [[id('papa'), id('mia')]], 'only papa is a parent; the admin is not (B3)');
-  assert.deepEqual(v2.users.find((u) => u.user === 'frau').teacherOf, [id('mia')]);
+  assert.equal('teacherOf' in v2.users.find((u) => u.user === 'frau'), false, 'teachers only through grants');
   assert.equal(v2.users.find((u) => u.user === 'chef').admin, true);
   assert.equal(new Set(v2.users.map((u) => u.id)).size, 5);
   kontenPruefen(v2);

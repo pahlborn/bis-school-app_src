@@ -174,7 +174,7 @@ test('grown-ups header: language flags, version and log out always in view; info
   assert.match(await page.textContent('.phdr'), /Grown-ups area/);
   assert.match(await page.textContent('#parentClose'), /Log out/);
   assert.deepEqual(await page.$$eval('#aboutBody details.psec > summary', (s) => s.map((x) => x.textContent.trim())),
-    ['🏫 School ratings', '📄 Practice sheets', '💾 Backup', '👧 For your child', '🤝 Supporting your child', '📖 How Big Quest works', '📱 Using the app']);
+    ['🏫 School ratings', '📄 Practice sheets', '💾 Backup', '🔐 Access & grants', '👧 For your child', '🤝 Supporting your child', '📖 How Big Quest works', '📱 Using the app']);
   // guide and info pages are one reading chapter: reading keeps the grown-up logged in
   await page.locator('#aboutBody details.psec[data-psec="concept"] > summary').click();
   const ab = page.locator('#aboutBody details.psec[data-psec="concept"] details.about-sec').first();
@@ -397,7 +397,14 @@ test('whose data: grown-ups see only their own children; without their data on t
 
 test('teacher sees observations read-only: no focus, settings, profile or sheet entry', async () => {
   const { ctx, page } = await oeffnen();
-  await kindDann(page, 'frau', 'lehrkraft-123');
+  // S11 P4: a teacher sees a child only with a grant from its parents
+  await anmelden(page, 'student', 'mia', CODES.mia); await passwortSetzen(page, 'Tiger-Lamp-River-4271');
+  await page.waitForSelector('#home:not([hidden])');
+  const heute = new Date(), tag = (d) => d.toISOString().slice(0, 10);
+  await page.evaluate(([ns, g]) => localStorage.setItem(ns + 'grants', JSON.stringify([g])), [NS('mia'), { id: 'g1', grantee: ID('frau'), scope: ['learning', 'school'], from: tag(heute), until: tag(new Date(Date.now() + 13 * 864e5)), by: ID('papa') }]);
+  await page.locator('#adultBtn').click();
+  await anmelden(page, 'adult', 'frau', CODES.frau); await passwortSetzen(page, 'lehrkraft-123');
+  await page.waitForSelector('#parentClose');
   const t = await page.textContent('#aboutBody');
   assert.ok(t.includes('Lehrkraft-Ansicht') && t.includes('Einschätzung'));
   assert.ok(t.includes('Bedienung & Technik') && t.includes('Ihr Kind unterstützen') && t.includes('So funktioniert Big Quest'), 'support, concept and app guide in the grown-ups area');

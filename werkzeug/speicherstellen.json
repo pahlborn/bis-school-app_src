@@ -1,6 +1,8 @@
 {
   "_info": "Jede Stelle, an der die App etwas speichert (Rechte- und Speicherkonzept, Abschnitt 7.2; S11 Stufe 1). bereich: kind | eltern | geraet. abgleich (ab Stufe 2): protokoll | abgeleitet | letzte-gilt | lokal. sicherung: gehoert in die Sicherungsdatei eines Kindes. Test: tests/stufe1-p1.test.mjs - eine Stelle im Code ohne Eintrag hier macht den Test rot.",
   "localStorage": [
+    { "key": "grants", "bereich": "eltern", "abgleich": "protokoll", "sicherung": true, "hinweis": "Freigaben fuer Lehrkraft/Admin (S11 P4)" },
+    { "key": "grantlog", "bereich": "eltern", "abgleich": "protokoll", "sicherung": true, "hinweis": "Protokoll der Freigaben (S11 P4)" },
     { "key": "attempts", "bereich": "kind", "abgleich": "protokoll", "sicherung": true },
     { "key": "ev", "bereich": "kind", "abgleich": "abgeleitet", "sicherung": true },
     { "key": "due", "bereich": "kind", "abgleich": "abgeleitet", "sicherung": true },
@@ -40,6 +42,7 @@
     { "key": "muted", "bereich": "geraet", "abgleich": "lokal", "sicherung": false },
     { "key": "parentLang", "bereich": "geraet", "abgleich": "letzte-gilt", "sicherung": false, "hinweis": "ab Stufe 2 Personen-Bereich" },
     { "key": "migr", "bereich": "geraet", "abgleich": "lokal", "sicherung": false, "hinweis": "Protokoll des Umzugs auf Kennungen (S11 P2)" },
+    { "key": "lastSeen", "bereich": "geraet", "abgleich": "lokal", "sicherung": false, "hinweis": "letzte Anmeldung je Konto auf diesem Geraet (Admin-Metadaten, S11 P4)" },
     { "key": "kidsHere", "bereich": "geraet", "abgleich": "lokal", "sicherung": false, "hinweis": "Kinder, die sich auf diesem Geraet angemeldet haben (S11 P3)" }
   ],
   "localStorageDirekt": [

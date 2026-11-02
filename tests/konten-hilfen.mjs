@@ -25,6 +25,7 @@ export async function kontenServer(konten, { anpassen, schule } = {}) {
     if (q.url.split('?')[0] !== '/') { r.writeHead(404); return r.end(); } r.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); r.end(app); });
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   server.url = `http://127.0.0.1:${server.address().port}/`;
+  server.konten = k2;   // accounts v2 with their IDs (for tests that prepare data under an ID)
   return server;
 }
 
