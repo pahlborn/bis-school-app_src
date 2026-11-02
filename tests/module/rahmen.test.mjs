@@ -29,6 +29,17 @@ test('die App enthaelt jedes Live-Modul genau einmal und ohne import/export', ()
   assert.doesNotMatch(app.slice(app.indexOf('<script>')), /^\s*export\s/m);
 });
 
+test('echte App: Testbau setzt sich ohne Namenskonflikt zusammen; Live-Bau enthaelt keine Stufe-2-Module (US11.1)', () => {
+  const live = appLesen('utf8'), testbau = appLesen('utf8', { bauart: 'test' });
+  const nurTest = modulListe('test').filter((m) => m.bau === 'test');
+  assert.ok(nurTest.some((m) => m.name === 'krypto'));
+  for (const m of nurTest) {
+    assert.equal(live.includes(`/* ---- Modul ${m.name} `), false, m.name + ' not live');
+    assert.equal(testbau.includes(`/* ---- Modul ${m.name} `), true, m.name + ' in the test build');
+  }
+  for (const wort of ['sealEntry', 'wrapKeyFor', 'api.github.com', 'bqt_']) assert.equal(live.includes(wort), false, 'live: ' + wort);
+});
+
 test('Testbau-Module fehlen im Live-Bau', () => {
   const o = ordner([{ name: 'a', bau: 'live' }, { name: 'b', bau: 'test' }], { a: 'export const aa = 1;\n', b: 'export const bb = 2;\n' });
   const live = moduleEinsetzen(APP, { ordner: o }), test = moduleEinsetzen(APP, { ordner: o, bauart: 'test' });
