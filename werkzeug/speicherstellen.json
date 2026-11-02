@@ -3,6 +3,7 @@
   "localStorage": [
     { "key": "grants", "bereich": "eltern", "abgleich": "protokoll", "sicherung": true, "hinweis": "Freigaben fuer Lehrkraft/Admin (S11 P4)" },
     { "key": "grantlog", "bereich": "eltern", "abgleich": "protokoll", "sicherung": true, "hinweis": "Protokoll der Freigaben (S11 P4)" },
+    { "key": "gaps", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true, "hinweis": "Luecken laut Schule: geschlossene (mit ausloesender Einstufung) und die von Eltern gewaehlte aktive (Konzept Elternbereich 6, D1)" },
     { "key": "attempts", "bereich": "kind", "abgleich": "protokoll", "sicherung": true },
     { "key": "ev", "bereich": "kind", "abgleich": "abgeleitet", "sicherung": true },
     { "key": "due", "bereich": "kind", "abgleich": "abgeleitet", "sicherung": true },
