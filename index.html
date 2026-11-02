@@ -168,6 +168,7 @@ button{font:inherit;color:inherit}
 .ptags{display:flex;gap:6px;flex-wrap:wrap}
 .ptag{border-radius:999px;padding:2px 8px;font-size:.78rem;font-weight:700}
 .ptag.school{background:#DDF4FF;color:#0B5876}.ptag.need{background:#FFF1DC;color:#8A4B00}
+.ptag.gap{background:#FDE7EC;color:#8A1C33}.ptag.gapwait{background:var(--soft);color:var(--muted)}
 .phelp{background:#F4F7FF;border-radius:10px;padding:8px 10px;margin:8px 0;font-size:.92rem}
 .pv-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
 .ppreview h3{margin:0 0 4px}
@@ -2267,7 +2268,43 @@ const FOCUS=['wordprob','round','combos','units','graphs','sentences','examples'
    Choices of earlier versions (a list, or focusOn/focusOff) are taken over once as a manual choice. */
 function focusAuto(){
   const need=SUBJECTS.flatMap(questsIn).map(assessQuest).filter(a=>a.level==='rs'||a.level==='c').map(a=>a.k);
-  return uniq(classTopics().concat(need));
+  const g=activeGap();   // concept 6.5 (D1): the active gap joins the automatic focus
+  return uniq(classTopics().concat(need, g?[g]:[]));
+}
+/* ---------- gaps (concept "Elternbereich" 6, package D1) ----------
+   The school rates a topic once and moves on. A quest is a GAP when the latest school rating of its main standard
+   is "requires support" (RS, also N) or "consolidating" (C). The app closes it itself when its own assessment is
+   "secure"/"extending" AND "confirmed" (provisional is not enough), or a newer school rating is at least "meeting".
+   Closed stays closed (stored with the school rating that opened it); only a newer weak school rating opens it
+   again. Never closed by time. Only ONE gap is active; the others wait (RS before C, oldest rating first). Waiting
+   gaps are not in the focus. The difficulty is unchanged (own practice), and the parents' assessment stays own practice.
+   Stored per child under "gaps": {closed:{quest:{at, by:'app'|'parents', schoolDay}}, active:quest|null}. */
+const GAP_WEAK=['RS','C'];
+const gapData = () => { const g=store.get('gaps',null); return {closed:(g&&g.closed)||{}, active:(g&&g.active)||null}; };
+/* the school rating behind a possible gap: {st, day} of the main standard, only when weak */
+function gapRating(k){ const s=schoolStandFor(k); return s && GAP_WEAK.includes(s.st) ? s : null; }
+/* closed for this school rating? (a record for an older rating does not count: a newer weak rating opens it again) */
+function gapClosed(k, s, data){ const c=data.closed[k]; return !!(c && c.schoolDay>=s.day); }
+const gapOrder = (a,b) => (GAP_WEAK.indexOf(a.st)-GAP_WEAK.indexOf(b.st)) || (a.day<b.day?-1:a.day>b.day?1:0) || (a.k<b.k?-1:1);
+/* all open gaps in their order; closes gaps the app has confirmed (written only where the viewer may change data) */
+function openGaps(){
+  if(typeof schoolData!=='function' || !schoolData()) return [];
+  const data=gapData(), out=[]; let changed=false;
+  for(const k of cleanFocus(SUBJECTS.flatMap(questsIn))){
+    const s=gapRating(k); if(!s || gapClosed(k,s,data)) continue;
+    const a=assessQuest(k);
+    if((a.level==='m'||a.level==='e') && a.sure==='confirmed'){ data.closed[k]={at:dayKey(), by:'app', schoolDay:s.day}; changed=true; continue; }
+    out.push({k, st:s.st, day:s.day});
+  }
+  if(changed && !gapReadOnly()) store.set('gaps',{closed:data.closed, active:data.active});
+  return out.sort(gapOrder);
+}
+/* teachers and the admin look through a grant: they never change the child's data */
+const gapReadOnly = () => typeof isTeacher==='function' && accountsOn() && !!adultUser && isTeacher();
+/* the one active gap: the one the parents chose (D4), if still open, otherwise the first in order */
+function activeGap(){
+  const open=openGaps(), chosen=gapData().active;
+  return (open.find(g=>g.k===chosen) || open[0] || {}).k || null;
 }
 /* Class topics (Peter, 01.11.): derived from the school's evaluations - the quests the teacher names as
    next steps ("Areas of development") in the last 8 weeks; if there are none that recent, all of them;
@@ -2293,7 +2330,7 @@ function focusTopics(){
   migrateFocus();
   const raw=k=>{ try{ return localStorage.getItem(storeKey(k))||''; }catch(e){ return ''; } };
   // computed once per change of the data (the start page asks for it many times)
-  const key=[storeKey('x'),raw('attempts').length,raw('ev').length,raw('focusMode'),raw('focusManual'),raw('unlocked'),dayKey()].join('|');
+  const key=[storeKey('x'),raw('attempts').length,raw('ev').length,raw('focusMode'),raw('focusManual'),raw('unlocked'),raw('gaps'),dayKey()].join('|');
   if(focusMemo.key!==key) focusMemo={key, val:cleanFocus(focusManualMode()?store.get('focusManual',[]):focusAuto())};
   return focusMemo.val.slice();
 }
@@ -3440,7 +3477,7 @@ const PT={
     howSheets:'<b>So geht’s:</b> Blatt antippen (die Nummer steht auch auf dem Papier) und pro Aufgabe wählen, wie es lief. Vertippt? Einfach den richtigen Knopf antippen. „Mit Hilfe“ und „Noch nicht“ sind gut so: Die App bietet dann leichtere Schritte an und wiederholt die Aufgabe später. Ein Blatt, das nicht eingetragen wird, zählt einfach nicht.',
     howSettings:'<b>Was kann ich hier tun?</b> Fokus-Themen als Liste, Spannung der Pisolala-Geschichten, eine freiwillige Kalender-Erinnerung, Profilangaben des Kindes und die App-Version. Nichts davon ist Pflicht.',
     howHelp:'<b>Was kann ich hier tun?</b> Kurz nachlesen, wie die Schule ein Thema zeigt, und mit drei Fragen helfen statt vorzurechnen.',
-    back:'← Alle Fächer',focus:'Im Fokus',fm:'🎯 Fokus',pvT:'Ausblick: Themen für später',pvTxt:'Diese Themen kommen meist später im Schuljahr. Ihr Kind sieht sie erst, wenn Sie sie hier freigeben – zum Beispiel, wenn sie in der Schule drankommen oder Ihr Kind neugierig ist.',pvBtn:'Für das Kind freigegeben',pvOn:'freigegeben',pvOff:'nicht freigegeben',fAuto:'Automatisch',fMan:'Manuell',fAutoTxt:'Die App wählt selbst: die Themen, die die Lehrkraft in ihren Bewertungen als nächste Schritte nennt, und dazu alles, wo die Einschätzung Unterstützung nahelegt. Das passt sich von selbst an. Tippen Sie bei einer Quest auf „Im Fokus“, wechselt die Wahl auf „Manuell“.',fManTxt:'Sie legen selbst fest, woraus „Practise Today“ und das Übungsblatt Aufgaben nehmen – zum Beispiel vor einem Test. Mit „Automatisch“ übernimmt wieder die App.',fNote:'Alle Quests bleiben für das Kind spielbar; der Fokus bestimmt nur, was „Practise Today“ und das Übungsblatt bevorzugen.',school:'nächster Schritt laut Schule',need:'braucht Übung',how:'💡 So helfen Sie',
+    back:'← Alle Fächer',focus:'Im Fokus',fm:'🎯 Fokus',pvT:'Ausblick: Themen für später',pvTxt:'Diese Themen kommen meist später im Schuljahr. Ihr Kind sieht sie erst, wenn Sie sie hier freigeben – zum Beispiel, wenn sie in der Schule drankommen oder Ihr Kind neugierig ist.',pvBtn:'Für das Kind freigegeben',pvOn:'freigegeben',pvOff:'nicht freigegeben',fAuto:'Automatisch',fMan:'Manuell',fAutoTxt:'Die App wählt selbst: die Themen, die die Lehrkraft in ihren Bewertungen als nächste Schritte nennt, und dazu alles, wo die Einschätzung Unterstützung nahelegt. Das passt sich von selbst an. Tippen Sie bei einer Quest auf „Im Fokus“, wechselt die Wahl auf „Manuell“.',fManTxt:'Sie legen selbst fest, woraus „Practise Today“ und das Übungsblatt Aufgaben nehmen – zum Beispiel vor einem Test. Mit „Automatisch“ übernimmt wieder die App.',fNote:'Alle Quests bleiben für das Kind spielbar; der Fokus bestimmt nur, was „Practise Today“ und das Übungsblatt bevorzugen.',school:'nächster Schritt laut Schule',need:'braucht Übung',gap:d=>'Lücke laut Schule ('+d+')',gapWait:'wartet',how:'💡 So helfen Sie',
     basis:'Worauf beruht das?',trend:'Tendenz',recent:'Aktualität',sure:'Wie sicher?',when:'Belastbar ab etwa 20 Aufgaben an 5 Tagen über zwei Wochen.',
     tasks:(n,d)=>`${n} Aufgaben an ${d} ${d===1?'Tag':'Tagen'}`,self:'selbst gelöst',hint:'mit Hilfe',ex:n=>`davon ${n} mit Beispiel`,seen:'Lösungsweg angesehen',due:n=>`${n} Wiederholung${n===1?'':'en'} offen`,
     none:'noch nicht geübt',ago:n=>n===0?'heute geübt':n===1?'gestern geübt':`vor ${n} Tagen geübt`,old:'Ältere Belege – bei Gelegenheit neu prüfen',
@@ -3457,7 +3494,7 @@ const PT={
     howSheets:'<b>How it works:</b> tap a sheet (its number is also on the paper) and choose for each task how it went. Tapped the wrong one? Just tap the right button. “With help” and “Not yet” are fine: the app then offers easier steps and brings the task back later. A sheet that isn’t entered simply doesn’t count.',
     howSettings:'<b>What can I do here?</b> Focus topics as a list, how exciting Pisolala stories may be, an optional calendar reminder, the child\'s profile details and the app version. None of this is required.',
     howHelp:'<b>What can I do here?</b> Read briefly how the school teaches a topic and help with three questions instead of calculating for the child.',
-    back:'← All subjects',focus:'In focus',fm:'🎯 Focus',pvT:'Coming up: topics for later',pvTxt:'These topics usually come later in the school year. Your child only sees them once you turn them on here – for example when they come up at school or your child is curious.',pvBtn:'Visible to your child',pvOn:'turned on',pvOff:'turned off',fAuto:'Automatic',fMan:'Manual',fAutoTxt:'The app chooses by itself: the topics the teacher names as next steps in the evaluations, plus everything where the summary suggests support. It adapts by itself. Tapping “In focus” at a quest switches to “Manual”.',fManTxt:'You decide where “Practise Today” and the practice sheet take their tasks from – for example before a test. Choose “Automatic” to let the app take over again.',fNote:'All quests stay playable for your child; the focus only decides what “Practise Today” and the practice sheet prefer.',school:'next step per school',need:'needs practice',how:'💡 How you can help',
+    back:'← All subjects',focus:'In focus',fm:'🎯 Focus',pvT:'Coming up: topics for later',pvTxt:'These topics usually come later in the school year. Your child only sees them once you turn them on here – for example when they come up at school or your child is curious.',pvBtn:'Visible to your child',pvOn:'turned on',pvOff:'turned off',fAuto:'Automatic',fMan:'Manual',fAutoTxt:'The app chooses by itself: the topics the teacher names as next steps in the evaluations, plus everything where the summary suggests support. It adapts by itself. Tapping “In focus” at a quest switches to “Manual”.',fManTxt:'You decide where “Practise Today” and the practice sheet take their tasks from – for example before a test. Choose “Automatic” to let the app take over again.',fNote:'All quests stay playable for your child; the focus only decides what “Practise Today” and the practice sheet prefer.',school:'next step per school',need:'needs practice',gap:d=>'gap per school ('+d+')',gapWait:'waiting',how:'💡 How you can help',
     basis:'What is this based on?',trend:'Trend',recent:'How recent',sure:'How sure?',when:'Reliable from about 20 tasks on 5 days over two weeks.',
     tasks:(n,d)=>`${n} tasks on ${d} ${d===1?'day':'days'}`,self:'on own',hint:'with help',ex:n=>`${n} of them with an example`,seen:'solution viewed',due:n=>`${n} review${n===1?'':'s'} open`,
     none:'not practiced yet',ago:n=>n===0?'practiced today':n===1?'practiced yesterday':`practiced ${n} days ago`,old:'Older evidence – check again when convenient',
@@ -3621,7 +3658,10 @@ function legendHTML(){
 function parentSubjectHTML(key){
   if(accountsOn() && !viewedKid()) return parentHomeHTML();
   const T=PT[PL()], s=SUBJECTS.find(x=>x.key===key), focus=focusTopics(), list=questsIn(s).map(assessQuest), teacher=isTeacher(), man=focusManualMode();
-  const cards=list.map(a=>{ const k=a.k, tags=[classTopics().includes(k)?`<span class="ptag school">${T.school}</span>`:'', (a.level==='rs'||a.level==='c')?`<span class="ptag need">${T.need}</span>`:''].join('');
+  const gaps=openGaps(), act=activeGap();
+  const cards=list.map(a=>{ const k=a.k, g=gaps.find(x=>x.k===k);
+    // concept 5.11/6.6 (D1): the gap as a reason for the focus; a waiting gap is marked as waiting
+    const tags=[classTopics().includes(k)?`<span class="ptag school">${T.school}</span>`:'', g?`<span class="ptag ${k===act?'gap':'gapwait'}">${k===act?'🎯 ':''}${T.gap(fmtDay(g.day))}${k===act?'':' · '+T.gapWait}</span>`:'', (a.level==='rs'||a.level==='c')?`<span class="ptag need">${T.need}</span>`:''].join('');
     const sch=schoolStandFor(k);
     return `<div class="pquest"><div class="phead"><div><div class="pqn">${esc(WORLDS[k].name)}</div><div class="small">${esc(qInfo(k,0))}</div></div><div class="pqchips"><span class="pqchip"><span class="small">${PL()==='de'?'App':'App'}</span> ${pChip(a.level,a.sure)}</span>${sch?`<span class="pqchip pqschool"><span class="small">🏫 ${PL()==='de'?'Schule':'School'}</span> ${pChip(SL[sch.st]||'rs')} <span class="small">${fmtDay(sch.day)}</span></span>`:''}</div></div>
       <p class="pline"><b>${T.basis}</b> ${a.n?`${T.tasks(a.n,a.days)}: ${a.self} ${T.self}, ${a.hint} ${T.hint}${a.ex?` (${T.ex(a.ex)})`:''}, ${a.seen}× ${T.seen}.`:T.none+'.'} ${a.due?T.due(a.due)+'.':''}</p>
@@ -3771,7 +3811,7 @@ function accountsAdminHTML(){
    restored after the move to IDs (S11 P2). Which keys belong to a child is fixed in
    werkzeug/speicherstellen.json (checked by tests/stufe1-p1.test.mjs). Never in a backup: passwords,
    sessions, device keys. Recordings are included (the file stays with the family). */
-const BACKUP_KEYS={exact:['grants','grantlog','attempts','ev','due','total','badges','tried','treeStage','rankSeen','name','birthday','emoji','bdayParty','sheets','sheetNo','focusMode','focusManual','unlocked','storyCap','focus','focusOn','focusOff','greetDay','mysteryDone','kidLang'], prefix:['best_','chk_','advent']};
+const BACKUP_KEYS={exact:['grants','grantlog','attempts','ev','due','total','badges','tried','treeStage','rankSeen','name','birthday','emoji','bdayParty','sheets','sheetNo','focusMode','focusManual','unlocked','gaps','storyCap','focus','focusOn','focusOff','greetDay','mysteryDone','kidLang'], prefix:['best_','chk_','advent']};
 const isBackupKey = k => BACKUP_KEYS.exact.includes(k) || BACKUP_KEYS.prefix.some(p=>k.startsWith(p));
 function childStoreKeys(){
   const pre=storeKey('x').slice(0,-1), plain=pre==='bq2_', out=[];
