@@ -3009,25 +3009,19 @@ function jokeFor(key, lang){
 const jokeHTML = (j, btn) => `${j.lang==='en'?`<p class="small joke-from">${esc(jokeOrigin(j))}</p>`:''}<div class="story" lang="${j.lang}">${esc(j.q)}</div><button class="btn small" id="${btn}" type="button">Show the answer</button>`;
 const jokeAnswerHTML = j => `<div class="story" lang="${j.lang}"><i>${esc(j.a)}</i></div>${j.note?`<p class="small joke-note">💡 ${esc(j.note)}</p>`:''}`;
 
-/* Pisolala: a family character. Never shown, never described – only what happens around Pisolala.
-   New stories go in only after a grown-up approved them (approved:true). Excitement: 1 cozy, 2 a bit exciting, 3 adventurous.
-   Language (Peter, 30.10.): English; German only in the Deutsch subject. Each story has en and de. */
-const STORIES=[
-  {id:'halloween-2026', approved:true /* freigegeben von Peter am 30.10.2026 (de); en = wortgetreue Übersetzung */,
-   title:{en:'Pisolala and the Giggling Pumpkins', de:'Pisolala und die kichernden Kürbisse'},
-   en:{
-    1:'On Halloween night a warm little wind blew through the garden. It smelled of cocoa and cinnamon – that is how it always smells when Pisolala is near. Nobody can see Pisolala. But if you listen carefully, you can hear a soft giggle between the leaves.\n\nNofretete was already waiting in her pumpkin costume, and Hoppel, the cuddly bunny, carried a tiny lantern.\n\n“Trick or joke?” the wind whispered at the first door. The neighbour laughed: “A joke, please!” Then something rustled: “What is a ghost’s favourite food? Spook-ghetti!”\n\nLittle pumpkins stood by the fence. Nofretete counted: “… 36, 37, 38!” The wind hummed: “About 40!” Because 38 is closer to 40 than to 30.\n\nAt home there was cocoa. Nofretete fell asleep with Hoppel in her arms, and outside a soft wind song was humming. “Good night, Pisolala.” And somewhere something giggled: “Good night.”',
-    2:'On Halloween night a warm little wind blew through the garden. It smelled of cocoa and cinnamon – that is how it always smells when Pisolala is near. Nobody can see Pisolala. But if you listen carefully, you can hear a soft giggle between the leaves.\n\nNofretete was waiting in her pumpkin costume, and Hoppel carried a tiny lantern. “Trick or joke?” the wind whispered at the first door. “What is a ghost’s favourite food? Spook-ghetti!” The neighbour laughed out loud.\n\nThen the path grew dark. Something creaked behind the fence. A long shadow slipped across the stones. Nofretete stopped. “I’m a little bit scared.” Then it became very warm beside her. “Take a deep breath,” something whispered, “and imagine the little lantern in your heart.”\n\nNofretete breathed in and out. Hoppel’s lantern shone brighter – and the shadow was … a cat with a pumpkin hat! It meowed and ran away. Everyone had to laugh.\n\nAt home there was cocoa. “Good night, Pisolala.” And somewhere something giggled: “Good night.”'
-   },
-   de:{
-    1:'Am Halloween-Abend wehte ein warmer, kleiner Wind durch den Garten. Er roch nach Kakao und Zimt – so riecht es immer, wenn Pisolala in der Nähe ist. Sehen kann Pisolala niemand. Aber wer genau hinhört, hört ein leises Kichern zwischen den Blättern.\n\nNofretete wartete schon in ihrem Kürbiskostüm, und Hoppel, der Kuschelhase, trug eine winzige Laterne.\n\n„Süßes oder Witz?“, flüsterte der Wind an der ersten Tür. Die Nachbarin lachte: „Einen Witz, bitte!“ Da raschelte es: „Was essen Gespenster am liebsten? Spukhetti!“\n\nAm Zaun standen kleine Kürbisse. Nofretete zählte: „… 36, 37, 38!“ Der Wind summte: „Ungefähr 40!“ Denn 38 liegt näher an 40 als an 30.\n\nZu Hause gab es Kakao. Nofretete schlief mit Hoppel im Arm ein, und draußen summte ein leises Windlied. „Gute Nacht, Pisolala.“ Und irgendwo kicherte es: „Gute Nacht.“',
-    2:'Am Halloween-Abend wehte ein warmer, kleiner Wind durch den Garten. Er roch nach Kakao und Zimt – so riecht es immer, wenn Pisolala in der Nähe ist. Sehen kann Pisolala niemand. Aber wer genau hinhört, hört ein leises Kichern zwischen den Blättern.\n\nNofretete wartete in ihrem Kürbiskostüm, und Hoppel trug eine winzige Laterne. „Süßes oder Witz?“, flüsterte der Wind an der ersten Tür. „Was essen Gespenster am liebsten? Spukhetti!“ Die Nachbarin lachte laut.\n\nDann wurde der Weg dunkel. Hinter dem Zaun knarrte etwas. Ein langer Schatten huschte über die Steine. Nofretete blieb stehen. „Ich hab ein bisschen Angst.“ Da wurde es neben ihr ganz warm. „Atme tief ein“, flüsterte es, „und stell dir die kleine Laterne in deinem Herzen vor.“\n\nNofretete atmete ein und aus. Hoppels Laterne leuchtete heller – und der Schatten war … eine Katze mit einem Kürbishut! Sie miaute und lief davon. Alle mussten lachen.\n\nZu Hause gab es Kakao. „Gute Nacht, Pisolala.“ Und irgendwo kicherte es: „Gute Nacht.“'
-   }}
-];
+/* Pisolala stories: module src/module/geschichten.mjs (STORY_LIST, storyNext, storyMarkRead) */
 /* German only after a round in the Deutsch subject; everywhere else English. */
 const storyLang = () => SUBJECTS.find(s=>s.key==='deutsch').items.includes(state.world) ? 'de' : 'en';
 const EXCITE={1:'🌙 cozy', 2:'⭐ a bit exciting', 3:'⚡ adventurous'};
-const storiesNow = () => STORIES.filter(s=>s.approved);
+/* A5 (Peter, 02.11.): a new story each time, fitting the day (birthday, Halloween, Advent, Christmas); one story
+   per round like the jokes. A story counts as read once its text was opened (storyRead, oldest first). */
+let storyShown=null;
+const storyCtx = lang => ({lang, cap:store.get('storyCap',2), theme:themeNow(), birthday:birthdayIn()===0, read:store.get('storyRead',[])});
+function storyFor(key, lang){
+  if(storyShown && storyShown.key===key && storyShown.lang===lang) return storyShown.story;
+  storyShown={key, lang, story:storyNext(STORY_LIST, storyCtx(lang))};
+  return storyShown.story;
+}
 
 /* home: theme icon, birthday, advent calendar, tree and badges */
 function renderFun(){
@@ -3202,7 +3196,7 @@ function renderAfterRound(k){
     $('#didIt').addEventListener('click',()=>{ addBadge('balanced'); r.innerHTML='<p>Balanced! 🌿</p>'; });
   }
   const t=$('#treat');
-  const choices=[['joke','😄 Joke'],['mystery','🔍 Mystery Question']].concat(storiesNow().length?[['story','🌙 Pisolala']]:[]);
+  const choices=[['joke','😄 Joke'],['mystery','🔍 Mystery Question']].concat(storyNext(STORY_LIST, storyCtx(storyLang()))?[['story','🌙 Pisolala']]:[]);
   t.innerHTML=`<p><b>Choose your treat</b></p><div class="row">${choices.map(c=>`<button type="button" class="btn small" data-treat="${c[0]}">${c[1]}</button>`).join('')}</div><div id="treatBody"></div>`;
   const roundKey='round-'+Date.now();
   t.querySelectorAll('[data-treat]').forEach(b=>b.addEventListener('click',()=>showTreat(b.dataset.treat, roundKey)));
@@ -3223,9 +3217,13 @@ function showTreat(kind, roundKey){
       body.querySelectorAll('[data-m]').forEach(x=>x.disabled=true);
     }));
   } else {
-    const cap=store.get('storyCap',2), list=storiesNow(), lang=storyLang();
-    body.innerHTML=list.map(s=>`<p lang="${lang}"><b>${esc(s.title[lang])}</b></p><div class="row">${Object.keys(s[lang]).map(Number).filter(l=>l<=cap).map(l=>`<button type="button" class="btn small" data-story="${s.id}" data-l="${l}">${EXCITE[l]}</button>`).join('')}</div>`).join('')+'<div id="storyText"></div>';
-    body.querySelectorAll('[data-story]').forEach(b=>b.addEventListener('click',()=>{ const s=STORIES.find(x=>x.id===b.dataset.story); $('#storyText').innerHTML=`<div class="story" lang="${lang}">${esc(s[lang][b.dataset.l])}</div>`; }));
+    const cap=store.get('storyCap',2), lang=storyLang(), s=storyFor(roundKey, lang);
+    if(!s){ body.innerHTML=''; return; }
+    body.innerHTML=`<p lang="${lang}"><b>${esc(s.title[lang])}</b></p><div class="row">${Object.keys(s[lang]).map(Number).filter(l=>l<=cap).map(l=>`<button type="button" class="btn small" data-story="${s.id}" data-l="${l}">${EXCITE[l]}</button>`).join('')}</div><div id="storyText"></div>`;
+    body.querySelectorAll('[data-story]').forEach(b=>b.addEventListener('click',()=>{
+      $('#storyText').innerHTML=`<div class="story" lang="${lang}">${esc(s[lang][b.dataset.l])}</div>`;
+      store.set('storyRead', storyMarkRead(store.get('storyRead',[]), s.id));
+    }));
   }
 }
 
