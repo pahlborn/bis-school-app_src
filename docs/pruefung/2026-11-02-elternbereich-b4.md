@@ -40,8 +40,9 @@ Die Kapitel standen in der alten Reihenfolge.
 - Gegenproben (rot):
   - B4-Tests mit der App von `main` (3 von 3).
   - Sicherungs-Hinweis ohne die Bedingung „neue Übung“: T18 rot.
-- `npm test`: 292 bestanden.
+- `npm test`: 292 bestanden; nach dem Merge von `main` (Stufe 2 Aufgabe 3a, #65) 311 bestanden.
 - Bildschirmfoto der Übersicht (Desktop) durchgesehen.
 
 ## Gefunden, nicht geändert
 - In der schmalen Seitenspalte bricht die Legende auf mehrere Zeilen um; sie bleibt kompakt. Die Karte „Auf einen Blick“ (E3) wird die Seitenspalte ohnehin neu ordnen.
+- `tests/themen.test.mjs` („neue Themen …“) ist in einem vollen `npm test`-Lauf nach dem Merge **einmal** fehlgeschlagen; beide fehlschlagenden Prüfungen darin enden mit einem leeren Array, welche es war, zeigt die Ausgabe nicht. Nicht nachvollziehbar: 60 Einzelläufe grün, ein zweiter voller Lauf grün, und eine Probe mit 8 758 erzeugten Aufgaben ergab keine Aufgabe ohne eigenes Beispiel und keine mit gleicher Lösung. Wahrscheinlich war es die Prüfung auf Seitenfehler unter Volllast. Der Test berührt nichts aus diesem Paket. Vorschlag für später: Den Test so ändern, dass er bei einem Fehlschlag ausgibt, welche Prüfung es war.
