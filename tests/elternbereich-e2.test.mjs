@@ -106,3 +106,15 @@ test('E2c German: "Anleitung schreiben" shortened; the goal no longer repeats "h
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
+
+test('E2d science: Forces, Units, Bar Graphs shortened', async () => {
+  const { ctx, page, fehler } = await appOeffnen(browser, server.url);
+  await elternOeffnen(page);
+  await fachPruefen(page, 'science', ['forces', 'units', 'graphs'], (de) => {
+    const t = de.map((q) => q.alles).join('\n');
+    for (const s of ['Messwerte vollständig', 'die Vermutung zählt mehr', '5 m und 500 cm']) assert.ok(!t.includes(s), 'old text gone: ' + s);
+    assert.equal(de.find((q) => q.k === 'units').ziel, 'Längen (cm, m) und Gewichte (g, kg) schätzen und messen, immer mit Einheit.');
+  });
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
