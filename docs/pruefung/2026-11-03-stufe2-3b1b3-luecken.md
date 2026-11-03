@@ -26,4 +26,4 @@ Mit Konten zeigt die App die Startseite schon hinter der Anmeldung. Dabei speich
 - Schreibt ein Admin bei offenem Erwachsenenbereich (nicht über eine Freigabe), speichert die App die Lücke, das Ereignis würde aber abgelehnt (Admin darf keine Lücken-Ereignisse schreiben). Gleiches Muster wie der Befund `storyCap` aus 3b-1b-1 – gehört zu den Rechten im Elternbereich.
 
 ## Volle Reihe
-**452/452 grün** (298 s, eigener Arbeitsordner, Stand `main` mit #107).
+**452/452 grün** (298 s, Stand `main` mit #107); nach dem Einmergen von P3b (#108): **465/465 grün** (317 s).
