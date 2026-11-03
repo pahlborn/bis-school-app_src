@@ -81,7 +81,7 @@ Je ein absichtlicher Fehler im Modul (Skript `%TEMP%\opencode\p3a2-gegenproben.m
 | `tests/module/abgleich.test.mjs` (11 Tests) | ca. 1 s |
 | `npm run test:module` | ca. 2,5 s |
 | Gegenproben (17 Läufe) | ca. 30 s |
-| volle Reihe (Stand `main` v92 + dieser Zweig, eigener Arbeitsordner) | VOLL |
+| volle Reihe (410 Tests, alle grün; Stand `main` v92 + dieser Zweig, eigener Arbeitsordner) | 350 s |
 
 Live-Bau: Die SHA-256 der Live-App von `main` (v92) und von diesem Zweig sind identisch (`d4fd4cce…bcba27`, Form mit LF). Der Testbau enthält das Modul.
 
