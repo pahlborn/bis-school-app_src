@@ -35,12 +35,12 @@ test('B2 ? opens the guide of the own role in a view of its own; no guide chapte
   await hilfe(page);
   assert.match(await page.textContent('#aboutBody h2.psubjtitle'), /Hilfe/);
   const t = await page.locator('.phelp-view').innerText();
-  assert.ok(t.includes('Kurzanleitung für Eltern') && t.includes('Meine Kinder'), 'parents guide');
+  assert.ok(t.includes('Hilfe für Eltern') && t.includes('Kind anmelden'), 'parents guide');
   assert.equal(await page.locator('.psubject, details.psec').count(), 0, 'nothing else in the help view');
   assert.equal(await page.getAttribute('#pHelp', 'aria-pressed'), 'true');
   assert.ok(await page.locator('.phdr #parentClose').isVisible(), 'log out stays in view');
   await page.locator('.phdr [data-plang="en"]').click();
-  await page.waitForFunction(() => document.querySelector('.phelp-view')?.innerText.includes('Quick guide for parents'));
+  await page.waitForFunction(() => document.querySelector('.phelp-view')?.innerText.includes('Help for parents'));
   assert.match(await page.textContent('#pHelpBack'), /Back to the overview/);
   await page.locator('.phdr [data-plang="de"]').click();
   // teacher: own guide
@@ -48,7 +48,7 @@ test('B2 ? opens the guide of the own role in a view of its own; no guide chapte
   await kindDann(l.page, 'frau');
   await hilfe(l.page);
   const lt = await l.page.locator('.phelp-view').innerText();
-  assert.ok(lt.includes('Kurzanleitung für Lehrkräfte') && !lt.includes('Kurzanleitung für Eltern'), 'teacher guide');
+  assert.ok(lt.includes('Hilfe für Lehrkräfte') && !lt.includes('Hilfe für Eltern'), 'teacher guide');
   assert.deepEqual([...fehler, ...l.fehler], []);
   await ctx.close(); await l.ctx.close();
 });
