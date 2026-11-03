@@ -27,7 +27,7 @@ import { acceptAll, ANNAHME_GRUENDE } from './annahme.mjs';
 /* at most this many events per bundle (file size on GitHub) */
 export const ABGLEICH_BUENDEL_MAX = 100;
 /* reasons for a rejected entry: the bundle or entry cannot be read, the entry does not match its event, or annahme */
-export const ABGLEICH_GRUENDE = Object.freeze(['entschluesseln', 'eintrag-passt-nicht', ...ANNAHME_GRUENDE]);
+export const ABGLEICH_GRUENDE = Object.freeze(['entschluesseln', 'eintrag-passt-nicht', ...ANNAHME_GRUENDE, 'nach-entfernung']);
 
 const ABG_KEYS = ['bereich', 'geraet', 'ausgang', 'unterwegs', 'naechsteNr', 'merker', 'wartend', 'log'];
 const abgObj = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
@@ -174,15 +174,26 @@ export async function holen(stand, { zugang, schluessel, zulassung, now } = {}) 
       let item;
       try { item = JSON.parse(text); } catch (e) { verworfen.push({ kennung, id, grund: 'format' }); continue; }
       if (abgObj(item) && abgObj(item.event) && item.event.id !== id) { verworfen.push({ kennung, id, grund: 'eintrag-passt-nicht' }); continue; }
-      kandidaten.set(item, { kennung, id });
+      kandidaten.set(item, { kennung, id, kv: b.kv });
     }
   }
   // the admission may also be a function (module zulassung, task P3b-2): it gets the log and the decrypted, well-formed
   // candidates and builds the admission from the area's own events - members added in this very fetch count, too
   const z = typeof zulassung === 'function' ? await zulassung([...stand.log, ...[...kandidaten.keys()].filter((x) => abgEintragOk(x))]) : zulassung;
   const pruefung = await acceptAll([...kandidaten.keys()], z);
-  for (const v of pruefung.verworfen) verworfen.push({ ...kandidaten.get(v.item), grund: v.grund });
-  const angenommen = pruefung.angenommen.filter((x) => abgEintragOk(x)).map((x) => ({ event: x.event, sig: x.sig }));
+  const ohneKv = (m) => ({ kennung: m.kennung, id: m.id });
+  for (const v of pruefung.verworfen) verworfen.push({ ...ohneKv(kandidaten.get(v.item)), grund: v.grund });
+  // task P3b-2b: after a key change, a bundle of a person removed by it, with an older key version and a number beyond
+  // the stand of the change (bundles per device when the key changed), is dropped - whatever time its events carry,
+  // because a removed holder could backdate them. Later bundles with the new version (he was admitted again) count.
+  const wechsel = [...stand.log, ...pruefung.angenommen].filter((x) => abgObj(x) && abgObj(x.event) && x.event.type === 'key_rotated').map((x) => x.event.payload);
+  const angenommen = [];
+  for (const x of pruefung.angenommen) {
+    const m = kandidaten.get(x), [dev, nrText] = m.kennung.split('/'), nr = Number(nrText);
+    const zuSpaet = wechsel.some((w) => m.kv < w.version && w.entfernt.includes(x.event.author) && nr > (Object.prototype.hasOwnProperty.call(w.stand, dev) ? w.stand[dev] : 0));
+    if (zuSpaet) verworfen.push({ ...ohneKv(m), grund: 'nach-entfernung' });
+    else if (abgEintragOk(x)) angenommen.push({ event: x.event, sig: x.sig });
+  }
 
   // one step: from here on nothing can fail half-way
   const vorher = new Set(stand.log.map((x) => x.event.id));

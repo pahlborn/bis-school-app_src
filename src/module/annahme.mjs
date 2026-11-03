@@ -7,17 +7,23 @@
 //             the signature is valid, its type (for profile_set: the field) belongs into this area (module bereiche,
 //             task P3b) and the role may write this type. Checked in exactly this order; the first failing check is
 //             the reason. An area name outside the scheme of module bereiche fits no event.
-//   admission (input, computed from member_* / device_* events later, EP9):
+//   admission (input; module zulassung builds it from the area's own events, task P3b-2a):
 //             { area, members: { <personId>: { role: 'child'|'parent'|'teacher'|'admin', pub: { ecdh, ecdsa }, devices: [<deviceId>] } } }
+//   at this time (task P3b-2b): if a member carries perioden ([{ von, bis, role, pub }]) and geraete ({ <deviceId>:
+//             [{ von, bis }] }), the admission must carry "now" and the event counts only in a period of its author
+//             (von included, bis not: the moment of a change belongs to the new state; null = open) - signed with the
+//             key of THAT period, with the role of that period - and only from a device registered at that time.
+//             The time is the event's effective time (ereignisse.effectiveTime: more than 24 h ahead counts as now).
+//             Reasons: nicht-mitglied (no period at that time), geraet-nicht-angemeldet (device known, not at that time).
 //
 // Names: every helper starts with "ann"/"ANN_" because all modules and index.html share one scope in the app.
 
 import { signBytes, verifyBytes } from './krypto.mjs';
-import { checkEvent } from './ereignisse.mjs';
+import { checkEvent, effectiveTime } from './ereignisse.mjs';
 import { passtZumBereich } from './bereiche.mjs';
 
 /* reasons, in the order they are checked */
-export const ANNAHME_GRUENDE = ['format', 'autor-unbekannt', 'geraet-fremd', 'unterschrift', 'bereich-falsch', 'rolle-darf-nicht'];
+export const ANNAHME_GRUENDE = ['format', 'autor-unbekannt', 'nicht-mitglied', 'geraet-fremd', 'geraet-nicht-angemeldet', 'unterschrift', 'bereich-falsch', 'rolle-darf-nicht'];
 
 /* ---------- who may write which type (concept 6 "Schreiben", table 7.2, 5.2, 9.3) ----------
    child:   learning progress, profile, own sheets (create, enter the results), day hints, checklist; registers its own device
@@ -60,6 +66,19 @@ function annCanon(x) {
 function annCheckAdmission(z) {
   if (!annObj(z) || typeof z.area !== 'string' || !z.area || !annObj(z.members)) throw new Error('annahme: Zulassung braucht area und members.');
 }
+/* the entry of a list of periods that holds at time t (von included, bis excluded; null = open) */
+const annZur = (liste, t) => liste.find((p) => annObj(p) && (p.von === null || p.von <= t) && (p.bis === null || t < p.bis)) || null;
+/* the member as it was at the time of the event -> { member } or { grund } (periods only if the admission has them) */
+function annZuDerZeit(member, e, zulassung) {
+  if (!Array.isArray(member.perioden)) return { member };
+  if (zulassung.now === undefined || zulassung.now === null) throw new Error('annahme: Zulassung mit Zeitraeumen braucht now.');
+  const t = effectiveTime(e.at, zulassung.now), p = annZur(member.perioden, t);
+  if (!p) return { grund: 'nicht-mitglied' };
+  const g = annObj(member.geraete) && annOwn(member.geraete, e.device) && Array.isArray(member.geraete[e.device]) ? member.geraete[e.device] : null;
+  if (!g) return { grund: 'geraet-fremd' };
+  if (!annZur(g, t)) return { grund: 'geraet-nicht-angemeldet' };
+  return { member: { role: p.role, pub: p.pub, devices: [e.device] } };
+}
 
 /* ---------- sign ---------- */
 /* the fixed byte sequence that is signed: area + event with sorted keys */
@@ -81,8 +100,11 @@ export async function acceptEvent(item, zulassung) {
   annCheckAdmission(zulassung);
   if (!annObj(item) || Object.keys(item).some((k) => k !== 'event' && k !== 'sig') || checkEvent(item.event).length) return { ok: false, grund: 'format' };
   const e = item.event;
-  const member = annOwn(zulassung.members, e.author) ? zulassung.members[e.author] : null;
-  if (!annObj(member)) return { ok: false, grund: 'autor-unbekannt' };
+  const eintrag = annOwn(zulassung.members, e.author) ? zulassung.members[e.author] : null;
+  if (!annObj(eintrag)) return { ok: false, grund: 'autor-unbekannt' };
+  const zeit = annZuDerZeit(eintrag, e, zulassung);
+  if (zeit.grund) return { ok: false, grund: zeit.grund };
+  const member = zeit.member;
   if (!Array.isArray(member.devices) || !member.devices.includes(e.device)) return { ok: false, grund: 'geraet-fremd' };
   if (typeof item.sig !== 'string' || !item.sig || !annObj(member.pub) || !(await verifyBytes(member.pub, canonicalBytes(e, zulassung.area), item.sig))) return { ok: false, grund: 'unterschrift' };
   if (!passtZumBereich(e, zulassung.area)) return { ok: false, grund: 'bereich-falsch' };
