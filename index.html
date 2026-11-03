@@ -636,7 +636,7 @@ const TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4
    bq2_<id>__<key>; passwords under bq2_pw_<id>. Before (and as a fallback if the move on this device
    failed): the FIRST student account used bq2_<key>, every other one bq2_<user>__<key>. Device-wide keys
    stay shared. */
-const GLOBAL_KEYS=/^(session|sessionPrev|adultSession|pw_.+|parentPin|muted|parentLang|migr|kidsHere|lastSeen|conceptSeen|glance)$/;
+const GLOBAL_KEYS=/^(session|sessionPrev|adultSession|pw_.+|parentPin|muted|parentLang|migr|kidsHere|lastSeen|conceptSeen|glance|evDevice)$/;
 let ID_STORAGE=false;
 /* account for a stored reference {id} or {user} (id first: login names may change, IDs never do) */
 function accByRef(r){
@@ -665,6 +665,30 @@ get(k,d){ try{ const v=localStorage.getItem(storeKey(k)); return v===null?d:JSON
 set(k,v){ try{ localStorage.setItem(storeKey(k), JSON.stringify(v)); }catch(e){} },
 del(k){ try{ localStorage.removeItem(storeKey(k)); }catch(e){} }
 };
+/* Stage 2, task 3b-1: where the app stores something that is synced later, it also hands the change to
+   eventHook(type, payload). Only the test build has the module "schreiber"; there the event goes to
+   bq2_<child>__events (who acts: the child, or the grown-up while the grown-ups' area is open). The live build
+   has no such module: eventHook does nothing there and the app keeps working exactly as before. */
+let eventSink=null; const eventErrors=[];
+function eventWho(){
+  if(parentAccess){
+    if(!accountsOn()) return {person:'p_eltern', role:'parent'};
+    const a=adultUser && accByRef({user:adultUser.user});
+    return a ? {person:a.id, role:adultUser.admin?'admin':adultUser.role==='teacher'?'teacher':'parent'} : null;
+  }
+  if(!accountsOn()) return {person:'p_kind', role:'child'};
+  const s=studentSession(); return s ? {person:s.id, role:'child'} : null;
+}
+function eventHook(type, payload){
+  if(typeof evSchreiber!=='function') return;
+  try{
+    if(!eventSink){
+      let d=store.get('evDevice',null); if(!d){ d=newDeviceId(); store.set('evDevice',d); }
+      eventSink=evSchreiber({read:()=>store.get('events',[]), write:l=>store.set('events',l), device:d, who:eventWho, now:()=>Date.now()});
+    }
+    eventSink.write(type, payload);
+  }catch(e){ eventErrors.push(type+': '+String(e&&e.message||e)); }
+}
 /* ---------- move to IDs (S11 Stufe 1, P2, 02.11.) ----------
    Once per device, before anything else reads the store: every child's data are COPIED from the old
    keys (bq2_<key> for the first child, bq2_<user>__<key> for the others, bq2_pw_<user>) to the new ones
@@ -2026,14 +2050,17 @@ function rememberWrong(q){
   const due=store.get('due',[]), id=q.dueId||qId(q);
   const copy=JSON.parse(JSON.stringify(q)); ['retry','warmup','assisted','bridge','bridgePart','bridgeSource','challenge','accepted'].forEach(k=>delete copy[k]); copy.dueId=id;
   const old=due.findIndex(d=>d.id===id); if(old>=0) due.splice(old,1);
-  due.push({id:id, box:0, at:addDays(dayKey(),GAPS[0]), q:copy});
+  const at=addDays(dayKey(),GAPS[0]);
+  due.push({id:id, box:0, at:at, q:copy});
   store.set('due', due.slice(-DUE_MAX));
+  eventHook('review', {day:dayKey(), qid:id, box:0, dueAt:at, question:copy});
 }
 function advanceDue(q){
   const due=store.get('due',[]), i=due.findIndex(d=>d.id===q.dueId); if(i<0) return;
   const d=due[i]; d.box++;
   if(d.box>=GAPS.length) due.splice(i,1); else d.at=addDays(dayKey(),GAPS[d.box]);
   store.set('due',due);
+  eventHook('review', d.box>=GAPS.length ? {day:dayKey(), qid:d.id, box:d.box} : {day:dayKey(), qid:d.id, box:d.box, dueAt:d.at});
 }
 /* Stored copies of older questions (reviews, bridges, sheets) may still name the class,
    school, teachers or places. They are rewritten when shown and, since A1 (02.11.), also in storage
@@ -2460,9 +2487,9 @@ function shownRank(total){ const r=rankFor(total), seen=store.get('rankSeen',nul
 function renderRank(total){
   const r=rankFor(total), seen=store.get('rankSeen',null), note=$('#rankNote');
   note.hidden=true;
-  if(rankIdx(seen)<0) store.set('rankSeen',r);                       // first start: remember quietly
+  if(rankIdx(seen)<0){ store.set('rankSeen',r); eventHook('rank_seen',{rank:r}); }   // first start: remember quietly
   else if(rankIdx(r)>rankIdx(seen)){                                   // new title: celebrate once
-    store.set('rankSeen',r);
+    store.set('rankSeen',r); eventHook('rank_seen',{rank:r});
     note.textContent='New title: '+RANK_META[r].icon+' '+r+'!'; note.hidden=false;
     setTimeout(confetti,300);
   }
@@ -2567,7 +2594,7 @@ function startRound(k){
     store.set('bridgeNext',pending.slice(use.length));
   }
   state.noteShown=false; state.noteNow=null;
-  if(WORLDS[k].build!==buildToday && k.indexOf('mix_')!==0 && store.get('best_'+k,null)===null && !store.get('tried',[]).includes(k)){ addBadge('inquirer'); store.set('tried', store.get('tried',[]).concat([k])); }
+  if(WORLDS[k].build!==buildToday && k.indexOf('mix_')!==0 && store.get('best_'+k,null)===null && !store.get('tried',[]).includes(k)){ addBadge('inquirer', k); store.set('tried', store.get('tried',[]).concat([k])); }
   state.pendingNote=maybeNote('start',.25);
   $('#worldChip').textContent=WORLDS[k].name;
   $('#roundStars').textContent='0';
@@ -2700,9 +2727,12 @@ function observeAttempt(q, ok, response){
     state.firstResponse=response; recordAnswer(state.hinted?Object.assign({},q,{assisted:true}):q,ok); state.evidenceRecorded=true;
     if(!ok) rememberWrong(q);
   }
-  const log=store.get('attempts',[]);
-  log.push({day:dayKey(),skill:q.world,family:q.coach?q.coach.family:null,level:levelOf(q),attempt:state.attempts,ok:ok,response:response,qid:q.dueId||qId(q),help:state.attempts>1||!!q.assisted||!!state.hinted,example:!!state.exampled});
-  store.set('attempts',log.slice(-200));
+  logAttempt({day:dayKey(),skill:q.world,family:q.coach?q.coach.family:null,level:levelOf(q),attempt:state.attempts,ok:ok,response:response,qid:q.dueId||qId(q),help:state.attempts>1||!!q.assisted||!!state.hinted,example:!!state.exampled});
+}
+/* one row of the attempt log (the last 200 stay); a row of a practice sheet is written as sheet_result instead */
+function logAttempt(row){
+  const log=store.get('attempts',[]); log.push(row); store.set('attempts',log.slice(-200));
+  if(!row.sheet) eventHook('answer', row);
 }
 function hintFeedback(q, response){
   const h=guidance(q,response,false), fb=$('#feedback');
@@ -2889,7 +2919,7 @@ function showExample(){
   if(state.answered || !state.example) return;
   const q=state.round[state.idx], ex=state.example, de=q.world==='anleitung', h=ex.coach?guidance(ex,null,true):{text:ex.explain,visual:ex.visual||''}, fb=$('#feedback');
   state.exampled=true;
-  if(!state.sheet){ const log=store.get('attempts',[]); log.push({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,exampleShown:true,qid:q.dueId||qId(q)}); store.set('attempts',log.slice(-200)); }
+  if(!state.sheet) logAttempt({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,exampleShown:true,qid:q.dueId||qId(q)});
   const answer=ex.kind==='mc'?esc(strip(ex.options[ex.answer])):esc(ex.answer);
   fb.className='feedback hint'; fb.hidden=false;
   fb.innerHTML=`<span class="mark">${de?'Ein leichteres Beispiel':'An easier example'}</span><div class="worked"><p>${ex.prompt}</p>${h.visual?`<div class="visual">${h.visual}</div>`:''}<p>${esc(h.text)}</p><p><b>${de?'Lösung':'Answer'}: ${answer}</b></p></div><p><b>${de?'Jetzt du – deine Aufgabe oben.':'Now you – your question above.'}</b></p>`;
@@ -2899,7 +2929,7 @@ function showExample(){
 }
 function showHint(){
   const q=state.round[state.idx], de=q.world==='anleitung', h=guidance(q,null,false), fb=$('#feedback');
-  if(!state.hinted && !state.sheet){ const log=store.get('attempts',[]); log.push({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,hintShown:true,qid:q.dueId||qId(q)}); store.set('attempts',log.slice(-200)); }
+  if(!state.hinted && !state.sheet) logAttempt({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,hintShown:true,qid:q.dueId||qId(q)});
   state.hinted=true; afterTip(q);
   fb.className='feedback hint'; fb.hidden=false;
   fb.innerHTML=`<span class="mark">${de?'So kannst du vorgehen':'Here’s a way to do it'}</span><p>${esc(h.text)}</p>${h.visual?`<div class="visual">${h.visual}</div>`:''}`;
@@ -2916,7 +2946,7 @@ function showWorked(){
       // answer shown without an own try: not passed, at support level (Peter, 01.11.)
       recordAnswer(Object.assign({},q,{assisted:true}),false);
     }
-    const log=store.get('attempts',[]); log.push(Object.assign({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,solutionShown:true,qid:q.dueId||qId(q)},beforeTry?{beforeTry:true}:{})); store.set('attempts',log.slice(-200));
+    logAttempt(Object.assign({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,solutionShown:true,qid:q.dueId||qId(q)},beforeTry?{beforeTry:true}:{}));
   }
   if(beforeTry){
     state.answered=true; state.results[state.idx]='seen'; if(!state.sheet) queueBridge(q);
@@ -3015,6 +3045,7 @@ function showResults(){
   const n=state.round.length, s=state.stars, k=state.world, name=playerName();
   const total=store.get('total',0)+s; store.set('total',total);
   const best=store.get('best_'+k,0); if(s>best) store.set('best_'+k,s);
+  eventHook('round_done', {day:dayKey(), skill:k, stars:s, count:n});
   $('#resWorld').textContent=state.sheet?$('#worldChip').textContent:WORLDS[k].name;
   $('#againBtn').hidden=!!state.sheet;   // a sheet is entered once
   $('#resScore').textContent=s;
@@ -3044,7 +3075,7 @@ const NOTES={
   tree:['Your tree is growing, and so are you!']
 };
 const BADGES={riskTaker:'Risk-taker', thinker:'Thinker', openMinded:'Open-minded', reflective:'Reflective', principled:'Principled', balanced:'Balanced', inquirer:'Inquirer', knowledgeable:'Knowledgeable'};
-function addBadge(k){ const b=store.get('badges',{}); b[k]=(b[k]||0)+1; store.set('badges',b); }
+function addBadge(k, skill){ const b=store.get('badges',{}); b[k]=(b[k]||0)+1; store.set('badges',b); eventHook('badge', skill?{day:dayKey(), badge:k, skill}:{day:dayKey(), badge:k}); }
 function maybeNote(kind, chance){ if(state.noteShown || Math.random()>=chance) return null; state.noteShown=true; return pick(NOTES[kind]); }
 
 /* practice days: any day with an answer in the app or an entered practice sheet */
@@ -3368,6 +3399,7 @@ function buildSheet(only){
   const no=(+store.get('sheetNo',0)||0)+1; store.set('sheetNo',no);
   const sheet={id:dayKey()+'-'+Date.now().toString(36), day:dayKey(), no, items:items.map(q=>({q:q, res:null})), writing:german?'de':'en'};
   const all=store.get('sheets',[]); all.push(sheet); store.set('sheets', all.slice(-8));
+  eventHook('sheet_created', {sheet:sheet.id, day:sheet.day, no, writing:sheet.writing, items:sheet.items});
   return sheet;
 }
 function paperTask(q, nr, checkBox){
@@ -3553,16 +3585,17 @@ function sheetResult(sheetId, idx, res){
   else { recordAnswer(q,false); rememberWrong(q); }
   const list=(store.get('ev',{})[q.world])||[];
   it.rec={ev:list[list.length-1]||null, key, due:res==='no'?(q.dueId||qId(q)):null};
-  const log=store.get('attempts',[]); log.push({day:dayKey(), skill:q.world, level:levelOf(q), attempt:1, ok:res!=='no', help:res==='help', sheet:key}); store.set('attempts',log.slice(-200));
+  logAttempt({day:dayKey(), skill:q.world, level:levelOf(q), attempt:1, ok:res!=='no', help:res==='help', sheet:key});
   it.res=res;
   /* Principled (01.11.): a practice sheet finished to the end – every task has a result. Counts once per sheet. */
+  eventHook('sheet_result', {sheet:sheetId, index:idx, res, day:dayKey(), qid:q.dueId||qId(q)});
   if(!sh.principled && sh.items.every(i=>i.res)){ sh.principled=true; store.set('sheets',all); addBadge('principled'); } else store.set('sheets',all);
 }
 function discardSheet(sheetId){
   if(!parentAccess) return;
   const all=store.get('sheets',[]), sh=all.find(s=>s.id===sheetId); if(!sh || sh.items.some(i=>i.res)) return;
   if(!confirm(PL()==='de'?'Dieses Blatt verwerfen? Es zählt dann einfach nicht.':'Discard this sheet? It simply won’t count.')) return;
-  store.set('sheets', all.filter(s=>s!==sh)); renderSheets();
+  store.set('sheets', all.filter(s=>s!==sh)); eventHook('sheet_discarded', {sheet:sheetId}); renderSheets();
 }
 const EXCITE_DE={1:'🌙 gemütlich', 2:'⭐ ein bisschen spannend', 3:'⚡ abenteuerlich'};
 const storyCapHTML = () => { const de=PL()==='de', X=de?EXCITE_DE:EXCITE;
