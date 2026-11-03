@@ -204,7 +204,7 @@ test('About: Hinweis, Leitgedanken, Lernlogik, Herkunft, Datenschutz und Quellen
   const { ctx, page, fehler } = await app();
   await klick(page, '#aboutBtn');
   const de = await page.textContent('#aboutBody');
-  for (const t of ['Wichtiger Hinweis', 'ohne pädagogische Herkunft', 'Leitgedanken', 'Lernlogik', 'Herkunft der Aufgaben', 'Datenschutz', 'Quellen', 'KI-Assistenten']) assert.ok(de.includes(t), t);
+  for (const t of ['Wichtiger Hinweis', 'ohne pädagogische Herkunft', 'Leitgedanken', 'So lernt das Kind', 'Herkunft der Aufgaben', 'Datenschutz', 'Quellen', 'KI-Assistenten']) assert.ok(de.includes(t), t);
   // Peter 30./31.10.: topics open in place - the sources are only visible when opened
   assert.equal(await page.locator('#aboutBody a[href^="https://"]:visible').count(), 0, 'overview without visible source list');
   await aboutAbschnitt(page, 'Quellen');
