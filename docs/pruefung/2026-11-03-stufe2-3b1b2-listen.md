@@ -36,4 +36,4 @@ Freischalten / Advent / Fokus umschalten / manuell / automatisch ohne Haken, aut
 3. **Übernahme der alten Fokus-Form schreibt Ereignisse**, unter dem, der gerade handelt. Tut das ein Kindergerät, werden sie abgelehnt und gemeldet (das Kind darf den Fokus nicht setzen). Alte Daten wandelt ohnehin Aufgabe 3c um.
 
 ## Volle Reihe
-Siehe PR.
+**451/451 grün** (378 s, eigener Arbeitsordner, nach dem Einmergen von `main` mit #105).
