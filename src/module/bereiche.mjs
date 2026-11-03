@@ -7,10 +7,11 @@
 //     kind:privat:<childId>  rest of the profile, settings, day hints ...  child, parents
 //     schule:<childId>       school data and gaps (the child's app computes with them, never shows them)
 //                                                                          child, parents, grant with "school"
-//     eltern:allg:<childId>  grants, members, devices, key changes         parents
+//     eltern:allg:<childId>  grants (later: last backup)                   parents
 //     freigabe:<grantId>     the recipient's log "opened" (grant_opened)    parents, the recipient while the grant runs
 //     person:<personId>      settings of one grown-up                       the person
-//   The area follows from the event type (for profile_set: from the field); snapshot fits every area.
+//   The area follows from the event type (for profile_set: from the field). snapshot and the admission events
+//   (member_*, device_*, key_rotated; task P3b-2) fit every area: each area carries its own admission.
 //
 //   key entry in the storage (speicher.keys / putKey), one per holder and area:
 //     { v: 1, von: <personId of the distributor>, versionen: { "<n>": wrapped key (krypto.wrapKeyFor) }, sig }
@@ -33,9 +34,10 @@ const BER_TYP = {
   profile_set: { name: 'kind:lern', birthday: 'kind:privat', emoji: 'kind:privat', kidLang: 'kind:privat' },
   setting_set: 'kind:privat', list_set: 'kind:privat', checklist_set: 'kind:privat', day_flag: 'kind:privat', advent_open: 'kind:privat',
   school_import: 'schule', gap_state: 'schule', gap_active: 'schule',
-  grant_set: 'eltern:allg', grant_revoked: 'eltern:allg', member_added: 'eltern:allg', member_removed: 'eltern:allg',
-  device_added: 'eltern:allg', device_removed: 'eltern:allg', key_rotated: 'eltern:allg',
+  grant_set: 'eltern:allg', grant_revoked: 'eltern:allg',
   grant_opened: 'freigabe',
+  // every area carries its own admission (task P3b-2): members, devices and key changes of THIS area
+  member_added: '*', member_removed: '*', device_added: '*', device_removed: '*', key_rotated: '*',
   snapshot: '*',
 };
 export const BEREICH_JE_TYP = Object.freeze(Object.fromEntries(Object.entries(BER_TYP).map(([t, b]) => [t, typeof b === 'string' ? b : Object.freeze({ ...b })])));
@@ -154,7 +156,7 @@ async function berGueltige(zugang, bereich, mitglieder) {
     if (m && berObj(m.pub) && await verifyBytes(m.pub, berSignTeil(bereich, h, e), e.sig)) gueltig.set(h, e);
     else ungueltig.push(h);
   }
-  return { gueltig, ungueltig };
+  return { gueltig, ungueltig, alle };
 }
 function berRing(bereich, gueltig) {
   const ring = { area: bereich, current: 0, versions: {} };
@@ -174,14 +176,23 @@ async function berMeine(ring, ich, meineSchluessel) {
   return out;
 }
 
-/* the keys of one person for one area, ready for module abgleich -> { aktuell, keys: Map version -> key, ungueltig }
+/* the keys of one person for one area, ready for module abgleich -> { aktuell, keys: Map version -> key, lesbar, ungueltig }
    aktuell = the newest version any valid entry knows (0 = no key yet). A person without the current version can
    still read what was written before, but cannot write (abgleich: "aktueller Schluessel fehlt"). */
 export async function schluesselLesen(zugang, bereich, { ich, meineSchluessel, mitglieder } = {}) {
   if (!bereichZerlegen(bereich) || !berPid(ich) || !berObj(mitglieder)) throw berFehler('schluesselLesen braucht Bereich, ich und mitglieder.');
-  const { gueltig, ungueltig } = await berGueltige(zugang, bereich, mitglieder);
-  const ring = berRing(bereich, gueltig);
-  return { aktuell: ring.current, keys: await berMeine(ring, ich, meineSchluessel), ungueltig };
+  const { gueltig, ungueltig, alle } = await berGueltige(zugang, bereich, mitglieder);
+  const ring = berRing(bereich, gueltig), keys = await berMeine(ring, ich, meineSchluessel);
+  // lesbar (task P3b-2): also the versions of my own entry whose distributor I do not know yet (a new device knows
+  // only the anchor; the second parent who changed the key becomes known by reading). Reading with them is safe -
+  // module annahme checks every event against the admission anchored at the founding parent. Writing: keys only.
+  const lesbar = new Map(keys), eigen = berOwn(alle, ich) ? alle[ich] : null;
+  if (!gueltig.has(ich) && berObj(eigen) && berObj(eigen.versionen)) {
+    const roh = { area: bereich, current: 0, versions: {} };
+    for (const [v, w] of Object.entries(eigen.versionen)) if (/^[1-9][0-9]{0,8}$/.test(v) && berObj(w)) roh.versions[v] = { [ich]: w };
+    for (const [v, k] of await berMeine(roh, ich, meineSchluessel)) if (!lesbar.has(v)) lesbar.set(v, k);
+  }
+  return { aktuell: ring.current, keys, lesbar, ungueltig };
 }
 
 /* brings the keys of the area in line with "soll" (= halter(...)); only a distributor may do it:
@@ -190,7 +201,10 @@ export async function schluesselLesen(zugang, bereich, { ich, meineSchluessel, m
                                        earlier versions stay, so everybody keeps reading what he could read before
    - somebody in soll lacks the current version -> he gets every version the distributor has ("ergaenzt"), so a
                                        second parent or a new grant reads the history, too
-   -> { aktion: 'angelegt' | 'gewechselt' | 'ergaenzt' | 'unveraendert', version, neu: [id], entfernt: [id] } */
+   -> { aktion: 'angelegt' | 'gewechselt' | 'ergaenzt' | 'unveraendert', version, neu: [id], entfernt: [id], ereignisse }
+   ereignisse (task P3b-2): what the distributor must write into this area now, as [{ type, payload }] - member_added
+   for everybody new (role and public keys from mitglieder), member_removed and key_rotated (with the bundles per device
+   at the change, speicher.list) for everybody removed. The app signs and sends them like any other event. */
 export async function schluesselVerteilen(zugang, bereich, { soll, ich, meineSchluessel, mitglieder } = {}) {
   if (!bereichZerlegen(bereich) || !berObj(mitglieder) || !Array.isArray(soll)) throw berFehler('schluesselVerteilen braucht Bereich, soll und mitglieder.');
   if (!berVerteiler(bereich, mitglieder).includes(ich)) throw berFehler('nur Eltern verteilen Schluessel (person: nur die Person selbst).');
@@ -233,5 +247,10 @@ export async function schluesselVerteilen(zugang, bereich, { soll, ich, meineSch
     const e = { v: 1, von: ich, versionen };
     await zugang.putKey(bereich, h, { ...e, sig: await signBytes(meineSchluessel, berSignTeil(bereich, h, e)) });
   }
-  return { aktion, version, neu, entfernt };
+  const ereignisse = neu.map((id) => ({ type: 'member_added', payload: { person: id, role: mitglieder[id].role, pub: { ...soll.find((h) => h.id === id).pub } } }));
+  if (aktion === 'gewechselt') {
+    for (const id of entfernt) ereignisse.push({ type: 'member_removed', payload: { person: id } });
+    ereignisse.push({ type: 'key_rotated', payload: { version, entfernt: entfernt.slice(), stand: { ...(await zugang.list(bereich, null)).merker.stand } } });
+  }
+  return { aktion, version, neu, entfernt, ereignisse };
 }

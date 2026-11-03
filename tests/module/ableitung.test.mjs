@@ -531,7 +531,7 @@ function appGaps() {
   const html = fs.readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
   const a = html.indexOf("const GAP_WEAK=['RS','C'];"), b = html.indexOf('/* progress towards "confirmed secure"');
   assert.ok(a > 0 && b > a, 'the gap code of index.html was found (markers GAP_WEAK ... "progress towards")');
-  const ctx = vm.createContext({ T: { mem: {}, ratings: {}, confirmed: new Set(), day: D1 } });
+  const ctx = vm.createContext({ T: { mem: {}, ratings: {}, confirmed: new Set(), day: D1, hooks: [] } });
   vm.runInContext(`
     const STANDARDS = { q1:['X','Y'], q2:['X'], q3:['Y'], q4:['Z'], q5:['Z','X'], q6:['W'] };
     const SUBJECTS = ['math','english'], questsIn = k => k === 'math' ? ['q1','q2','q3','q4'] : ['q5','q6'];
@@ -541,6 +541,7 @@ function appGaps() {
     const assessQuest = k => T.confirmed.has(k) ? { level:'m', sure:'confirmed', n:20, days:5 } : { level:'c', sure:'provisional', n:3, days:1 };
     const classTopics = () => [], focusNeed = () => [], accountsOn = () => false, adultUser = null;
     var parentAccess = true;
+    const eventHook = (t, p) => T.hooks.push([t, JSON.parse(JSON.stringify(p))]);   // 3b-1b-3: what the app hands to the writer
     ${html.slice(a, b)}
     globalThis.api = { openGaps, gapAct, gapData, stdRating };`, ctx);
   return ctx;
@@ -577,6 +578,12 @@ test('3b-0 gaps (Test 5): derive ergibt genau das gaps-Objekt, das der echte Cod
     const app = 'gaps' in T.mem ? JSON.parse(T.mem.gaps) : undefined;
     if (app) zahl.gespeichert++;
     assert.deepEqual(run(v.list).gaps, app, 'run ' + lauf);
+    // 3b-1b-3: the app's own hooks write exactly these events - and derive of them gives the stored gaps, too
+    const hooks = JSON.parse(JSON.stringify(T.hooks));                               // (objects of the sandbox: copy into this realm)
+    const sortiert = (l) => l.map(([ty, p]) => ty + JSON.stringify(Object.fromEntries(Object.entries(p).sort()))).sort();                    // (one look may close several standards: any order)
+    assert.deepEqual(sortiert(hooks), sortiert(v.list.map((e) => [e.type, e.payload])), 'hooks = the table, run ' + lauf);
+    const w = story(5000 + lauf); for (const [ty, p] of hooks) w.add(ty, p, { device: 'd_e1' });
+    assert.deepEqual(run(w.list).gaps, app, 'derive of the hooked events, run ' + lauf);
   }
   console.log('  3b-0 Test 5:', JSON.stringify(zahl));
   for (const [k, n] of Object.entries(zahl)) assert.ok(n >= 20, `the story reaches "${k}" often enough (${n})`);

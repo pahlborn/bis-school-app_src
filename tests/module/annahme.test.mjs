@@ -50,11 +50,11 @@ function payloadFor(type, author, device) {
     grant_set: { grant: 'g1', grantee: 'p_l1', scope: ['learning'], from: DAY, until: '2026-11-16' },
     grant_revoked: { grant: 'g1', grantee: 'p_l1' },
     grant_opened: { grant: 'g1', grantee: author },
-    member_added: { person: 'p_e9', role: 'parent' },
+    member_added: { person: 'p_e9', role: 'parent', pub: { ecdh: 'QUJD', ecdsa: 'REVG' } },
     member_removed: { person: 'p_e9' },
     device_added: { device },
     device_removed: { device: 'd_k1' },
-    key_rotated: { version: 2 },
+    key_rotated: { version: 2, entfernt: [], stand: { d_e1: 1 } },
     snapshot: { upTo: '2026-11-02T16:00:00Z', count: 5000, idsHash: '0'.repeat(64), state: {} },
     gap_state: { standard: 'MA.3.NBT.2', state: 'closed', by: 'app', schoolDay: '2026-10-20', day: DAY, quest: 'round' },
     gap_active: { standard: 'MA.3.NBT.2' },
@@ -77,7 +77,7 @@ const reason = async (item, z = zOf(item)) => { const r = await acceptEvent(item
 const ERWARTET = {
   answer: 'c', round_done: 'c', practice_day: 'c', rank_seen: 'c', checklist_set: 'c', day_flag: 'c',
   badge: 'c', review: 'c', sheet_result: 'c',
-  profile_set: 'cp', sheet_created: 'cp', device_added: 'cp', gap_state: 'cp',
+  profile_set: 'cp', sheet_created: 'cp', gap_state: 'cp', device_added: 'cpta',
   sheet_discarded: 'p', setting_set: 'p', school_import: 'p', grant_set: 'p', grant_revoked: 'p',
   member_added: 'p', member_removed: 'p', device_removed: 'p', key_rotated: 'p', snapshot: 'p', gap_active: 'p', list_set: 'p', advent_open: 'cp',
   grant_opened: 'ta',
@@ -88,7 +88,7 @@ const darf = (role, type) => ERWARTET[type].includes(role[0]);
 test('Annehmen: gueltig unterschriebene Ereignisse je Rolle und erlaubtem Typ zaehlen', async () => {
   let k = 0;
   for (const role of ROLES) for (const type of EVENT_TYPES) if (darf(role, type)) { assert.equal(await reason(await signed(role, type)), 'ok', `${role} ${type}`); k++; }
-  assert.equal(k, 9 + 5 * 2 + 12 + 2, 'every allowed pair was tried once');
+  assert.equal(k, 9 + 4 * 2 + 4 + 12 + 2, 'every allowed pair was tried once');
   const p2 = await sg(mk('setting_set', 'p_e2', 'd_e3'), KEYS.p_e2);
   assert.deepEqual(await acceptEvent(p2, zOf(p2)), { ok: true }, 'second parent from his second device');
 });
