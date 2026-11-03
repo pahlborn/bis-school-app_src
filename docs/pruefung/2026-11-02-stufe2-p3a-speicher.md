@@ -30,6 +30,8 @@ Alle Funktionen sind `async`; Fehler kommen als abgelehntes Promise mit `err.cod
 Gültige Kennungen (Bereich, Gerät, Halter, Lookup, Einladung): Buchstabe am Anfang, dann Buchstaben, Ziffern, `_ : -`, höchstens 128 Zeichen. Damit gibt es keine Pfade (`/`, `..`) und kein `__proto__` – wichtig für die Dateiablage auf GitHub (`events/<Bereich>/<Gerät>/<Nummer>.json`, Konzept 12).
 
 ## Abweichungen und Entscheidungen (Peter kann widersprechen)
+**Von Peter bestätigt am 03.11.** (alle sechs; P3a-2 baut darauf auf).
+
 1. **Lückenlose Nummern.** Die Aufgabe verlangt nur „gleiche Nummer zweimal → Fehler“. Zusätzlich muss jede Nummer genau die nächste sein (`luecke`). Grund: Dann reicht als Merker „höchste Nummer je Gerät“, und das lässt sich auf GitHub und iCloud ohne Server-Zähler umsetzen. Zudem fällt ein verlorenes Bündel sofort auf. Konzept 9.4 („setzt mit dem nächsten fehlenden Bündel fort“) passt dazu.
 2. **`vorhanden` mit `gleicherInhalt`.** Ging die Antwort auf ein `put` verloren (Netz weg), sieht das Gerät beim Wiederholen `vorhanden` und weiß über `gleicherInhalt`, ob sein Bündel schon angekommen ist. Für P3a-2 wichtig.
 3. **`list` nennt auch eigene Bündel.** Ein Gerät, das neu anfängt (`seit = null`), bekommt so auch seine eigenen alten Bündel. P3a-2 überspringt eigene Kennungen leicht (Gerät steht vorn).
