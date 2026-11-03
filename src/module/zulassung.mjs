@@ -13,11 +13,11 @@
 //              member_added again with the same role and keys changes nothing; with others it starts a new period.
 //              member_removed ends the membership and all devices of that person; device_removed ends the device
 //              for everybody who had it (a shared iPad).
-//   result:    { area, members: { <personId>: { role, pub, devices, perioden, geraete } }, verworfen: [{ id, grund }] }
+//   result:    { area, now, members: { <personId>: { role, pub, devices, perioden, geraete } }, verworfen: [{ id, grund }] }
 //              role, pub: of the latest period; devices: every device ever registered; perioden: [{ von, bis, role,
 //              pub }] and geraete: { <deviceId>: [{ von, bis }] } in milliseconds (von null = from the start, bis null
 //              = still). Former members stay in the list, so what they wrote while they belonged keeps its signature.
-//              Task 2b checks "at this time" with perioden and geraete; until then module annahme uses role, pub, devices.
+//              Module annahme checks "at this time" with perioden and geraete (task P3b-2b; now = the clock used here).
 //
 // Names: every helper starts with "zul"/"ZUL_" because all modules and index.html share one scope in the app.
 
@@ -103,7 +103,7 @@ export async function zulassungAus(eintraege, { area, anker, now } = {}) {
       geraete: Object.fromEntries([...pe.geraete.keys()].sort(zulCmp).map((d) => [d, pe.geraete.get(d).map((g) => ({ ...g }))])),
     };
   }
-  return { area, members, verworfen };
+  return { area, now, members, verworfen };
 }
 
 /* members who belong now (for the check of key entries: a removed parent's signature no longer counts) */
