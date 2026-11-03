@@ -428,7 +428,7 @@ grep -ln "psec\|data-psec\|Bedienung\|Using the app\|pVersion\|pPlayTest\|data-p
 ---
 
 ## 9. Veröffentlichen
-Bauen und Veröffentlichen (`node werkzeug/verschluesseln.mjs`, `dist/` → `bis-school-app`) macht Peter lokal; der Schlüssel liegt DPAPI-geschützt auf seinem Rechner. Agenten bauen nur zur Probe.
+Bauen und Veröffentlichen: siehe `docs/veroeffentlichen.md` (jeder Agent auf Peters Rechner nach Peters ausdrücklicher Freigabe; der Schlüssel liegt DPAPI-geschützt auf seinem Rechner, Cloud-Agenten bauen nur zur Probe; Notzugang mit dem Familienpasswort).
 
 ## 10. Offen
 - **Impressum:** später (5.8).
