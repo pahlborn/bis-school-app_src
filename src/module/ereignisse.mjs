@@ -41,7 +41,7 @@ const EV_SPEC = {
   badge: ['day:day badge:str', 'skill:str'],
   review: ['day:day qid:str box:int', 'dueAt:day question:obj'],
   practice_day: ['day:day', ''],
-  profile_set: ['field:enum(name|birthday|emoji|kidLang) value:any', ''],
+  profile_set: ['field:enum(name|birthday|emoji|kidLang|muted) value:any', ''],   // muted: the child's sound switch (3b-1b-4)
   rank_seen: ['rank:str', ''],
   sheet_created: ['sheet:str day:day no:pos writing:enum(de|en) items:arr', ''],
   sheet_result: ['sheet:str index:int res:enum(ok|no|help) day:day qid:str', ''],
@@ -67,6 +67,10 @@ const EV_SPEC = {
   list_set: ['list:enum(unlocked|focusManual) item:str on:bool', ''],
   // Advent calendar: a door is opened (only opening, never closing; index.html openDoor, key advent<year>)
   advent_open: ['year:pos door:pos', ''],
+  // jokes shown and stories read (task 3b-1b-4; before only on the device). A joke goes to the end; forget = the ids the
+  // app drops when every joke of the moment was shown and the round starts again (witze.mjs jokeNext)
+  joke_seen: ['joke:str', 'forget:arr'],
+  story_read: ['story:str', ''],                                       // the story moves to the end (geschichten.mjs storyMarkRead)
 };
 function evParse(text) {
   const out = {};

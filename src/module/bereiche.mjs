@@ -30,8 +30,9 @@ export const BEREICH_ARTEN = Object.freeze(['kind:lern', 'kind:privat', 'schule'
 const BER_TYP = {
   answer: 'kind:lern', round_done: 'kind:lern', badge: 'kind:lern', review: 'kind:lern', practice_day: 'kind:lern', rank_seen: 'kind:lern',
   sheet_created: 'kind:lern', sheet_result: 'kind:lern', sheet_discarded: 'kind:lern',
-  profile_set: { name: 'kind:lern', birthday: 'kind:privat', emoji: 'kind:privat', kidLang: 'kind:privat' },
+  profile_set: { name: 'kind:lern', birthday: 'kind:privat', emoji: 'kind:privat', kidLang: 'kind:privat', muted: 'kind:privat' },
   setting_set: 'kind:privat', list_set: 'kind:privat', checklist_set: 'kind:privat', day_flag: 'kind:privat', advent_open: 'kind:privat',
+  joke_seen: 'kind:privat', story_read: 'kind:privat',
   school_import: 'schule', gap_state: 'schule', gap_active: 'schule',
   grant_set: 'eltern:allg', grant_revoked: 'eltern:allg', member_added: 'eltern:allg', member_removed: 'eltern:allg',
   device_added: 'eltern:allg', device_removed: 'eltern:allg', key_rotated: 'eltern:allg',

@@ -188,7 +188,7 @@ test('Waechter (3b-1): jede Schreibstelle eines abzugleichenden Schluessels hat 
   assert.deepEqual(ohne, [], 'write sites without eventHook');
   for (const k of offen) assert.ok(pflicht.some((s) => s.eintrag.key === k && !s.haken), `"${k}" is in OFFEN but has no open site any more - remove it from the list`);
   const mitHaken = new Set(pflicht.filter((s) => s.haken).map((s) => s.eintrag.key));
-  for (const k of ['attempts', 'due', 'badges', 'rankSeen', 'sheets']) assert.ok(mitHaken.has(k), 'hooked: ' + k);
+  for (const k of ['attempts', 'due', 'badges', 'rankSeen', 'sheets', 'name', 'chk_', 'unlocked', 'focusManual', 'advent', 'gaps', 'jokeSeen', 'storyRead', 'muted']) assert.ok(mitHaken.has(k), 'hooked: ' + k);   // 3a, 3b-1b-1 ... -4
   console.log(`  Waechter: ${stellen.length} Schreibstellen, ${pflicht.filter((s) => s.haken).length} mit Haken, offen: ${pflicht.filter((s) => !s.haken).length} (${[...new Set(pflicht.filter((s) => !s.haken).map((s) => s.eintrag.key))].join(', ')})`);
 });
 
