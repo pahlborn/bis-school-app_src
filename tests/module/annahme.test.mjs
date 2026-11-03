@@ -7,9 +7,12 @@ import fs from 'node:fs';
 import { canonicalBytes, signEvent, acceptEvent, acceptAll, roleMayWrite, ANNAHME_GRUENDE, ANNAHME_RECHTE } from '../../src/module/annahme.mjs';
 import { newPersonKeys, publicKeysOf, signBytes, bytesToB64, b64ToBytes } from '../../src/module/krypto.mjs';
 import { newEvent, EVENT_TYPES } from '../../src/module/ereignisse.mjs';
+import { bereichVonEreignis, bereichName } from '../../src/module/bereiche.mjs';
 
-/* ---------- the family: one person per role, each with one device ---------- */
-const AREA = 'kid:p_k1';
+/* ---------- the family: one person per role, each with one device ----------
+   Since P3b every type has its area (module bereiche); AREA is the learning area of the child. */
+const AREA = 'kind:lern:p_k1';
+const areaOf = (e) => { const art = bereichVonEreignis(e); return !art || art === '*' ? AREA : bereichName(art, art === 'freigabe' ? e.payload.grant : 'p_k1'); };
 const WHO = { child: ['p_k1', 'd_k1'], parent: ['p_e1', 'd_e1'], teacher: ['p_l1', 'd_l1'], admin: ['p_a1', 'd_a1'] };
 const ROLES = Object.keys(WHO);
 let KEYS = {}, Z;            // KEYS: personId -> private keys; Z: the admission for AREA
@@ -60,8 +63,10 @@ function payloadFor(type, author, device) {
 let n = 0;
 const rand = (k) => { n++; return Uint8Array.from({ length: k }, (_, i) => (n * 31 + i * 7) & 255); };
 const mk = (type, author, device, payload = payloadFor(type, author, device), at = '2026-11-02T16:04:11.123Z') => newEvent({ type, author, device, payload, at }, { rand });
-const signed = (role, type, opts = {}) => { const [pid, did] = WHO[role]; return signEvent(mk(type, pid, did), opts.area || AREA, opts.keys || KEYS[pid]); };
-const reason = async (item, z = Z) => { const r = await acceptEvent(item, z); return r.ok ? 'ok' : r.grund; };
+const signed = (role, type, opts = {}) => { const [pid, did] = WHO[role]; const e = mk(type, pid, did); return signEvent(e, opts.area || areaOf(e), opts.keys || KEYS[pid]); };
+const sg = (e, keys) => signEvent(e, areaOf(e), keys);                       // signed for the area of its type
+const zOf = (item) => ({ ...Z, area: item && item.event ? areaOf(item.event) : AREA });
+const reason = async (item, z = zOf(item)) => { const r = await acceptEvent(item, z); return r.ok ? 'ok' : r.grund; };
 
 /* ---------- the expected table, written out here on purpose (concept 6 "Schreiben", 5.2, 9.3) ----------
    c = child, p = parent, t = teacher, a = admin. A9/A10 (02.11.): the child enters its sheet itself, so
@@ -82,8 +87,8 @@ test('Annehmen: gueltig unterschriebene Ereignisse je Rolle und erlaubtem Typ za
   let k = 0;
   for (const role of ROLES) for (const type of EVENT_TYPES) if (darf(role, type)) { assert.equal(await reason(await signed(role, type)), 'ok', `${role} ${type}`); k++; }
   assert.equal(k, 9 + 4 * 2 + 11 + 2, 'every allowed pair was tried once');
-  const p2 = await signEvent(mk('setting_set', 'p_e2', 'd_e3'), AREA, KEYS.p_e2);
-  assert.deepEqual(await acceptEvent(p2, Z), { ok: true }, 'second parent from his second device');
+  const p2 = await sg(mk('setting_set', 'p_e2', 'd_e3'), KEYS.p_e2);
+  assert.deepEqual(await acceptEvent(p2, zOf(p2)), { ok: true }, 'second parent from his second device');
 });
 
 /* ---------- 2 E10 ---------- */
@@ -101,11 +106,11 @@ test('E10: Lehrkraft schreibt answer -> verworfen; fremdes Geraet; unbekannter A
 });
 
 test('E10: nur fuer sich selbst - Geraet anmelden und "angesehen" protokollieren', async () => {
-  assert.equal(await reason(await signEvent(mk('device_added', 'p_k1', 'd_k1', { device: 'd_x2' }), AREA, KEYS.p_k1)), 'rolle-darf-nicht', 'child adds a foreign device');
-  assert.equal(await reason(await signEvent(mk('device_added', 'p_e1', 'd_e1', { device: 'd_k1' }), AREA, KEYS.p_e1)), 'rolle-darf-nicht', 'parent adds a device that is not his');
-  assert.equal(await reason(await signEvent(mk('grant_opened', 'p_l1', 'd_l1', { grant: 'g1', grantee: 'p_a1' }), AREA, KEYS.p_l1)), 'rolle-darf-nicht', 'teacher logs for the admin');
-  assert.equal(await reason(await signEvent(mk('grant_opened', 'p_e1', 'd_e1', { grant: 'g1', grantee: 'p_e1' }), AREA, KEYS.p_e1)), 'rolle-darf-nicht', 'parent cannot fake an opening');
-  assert.equal(await reason(await signEvent(mk('device_removed', 'p_k1', 'd_k1', { device: 'd_k1' }), AREA, KEYS.p_k1)), 'rolle-darf-nicht', 'the child does not remove devices (concept 6)');
+  assert.equal(await reason(await sg(mk('device_added', 'p_k1', 'd_k1', { device: 'd_x2' }), KEYS.p_k1)), 'rolle-darf-nicht', 'child adds a foreign device');
+  assert.equal(await reason(await sg(mk('device_added', 'p_e1', 'd_e1', { device: 'd_k1' }), KEYS.p_e1)), 'rolle-darf-nicht', 'parent adds a device that is not his');
+  assert.equal(await reason(await sg(mk('grant_opened', 'p_l1', 'd_l1', { grant: 'g1', grantee: 'p_a1' }), KEYS.p_l1)), 'rolle-darf-nicht', 'teacher logs for the admin');
+  assert.equal(await reason(await sg(mk('grant_opened', 'p_e1', 'd_e1', { grant: 'g1', grantee: 'p_e1' }), KEYS.p_e1)), 'rolle-darf-nicht', 'parent cannot fake an opening');
+  assert.equal(await reason(await sg(mk('device_removed', 'p_k1', 'd_k1', { device: 'd_k1' }), KEYS.p_k1)), 'rolle-darf-nicht', 'the child does not remove devices (concept 6)');
   for (const badge of ['inquirer', 'thinker', 'reflective', 'principled']) {
     assert.equal(await reason(await signEvent(mk('badge', 'p_e1', 'd_e1', { day: DAY, badge }), AREA, KEYS.p_e1)), 'rolle-darf-nicht', 'parent cannot hand out ' + badge);
     assert.equal(await reason(await signEvent(mk('badge', 'p_k1', 'd_k1', { day: DAY, badge }), AREA, KEYS.p_k1)), 'ok', 'child earns ' + badge);
@@ -146,10 +151,12 @@ test('Unterschrift: anderer Schluessel, ein veraendertes Byte, fehlende oder kap
 test('Bereich: dasselbe unterschriebene Ereignis in einem anderen Bereich wird verworfen', async () => {
   const good = await signed('parent', 'school_import');
   assert.equal(await reason(good), 'ok');
-  for (const area of ['kid:p_k2', 'parents:p_k1', 'kid:p_k1 ', 'KID:p_k1']) assert.equal(await reason(good, { ...Z, area }), 'unterschrift', area);
-  const there = await signed('parent', 'school_import', { area: 'kid:p_k2' });
+  for (const area of ['schule:p_k2', 'kind:lern:p_k1', 'kid:p_k2', 'parents:p_k1', 'schule:p_k1 ', 'SCHULE:p_k1']) assert.equal(await reason(good, { ...Z, area }), 'unterschrift', area);
+  const there = await signed('parent', 'school_import', { area: 'schule:p_k2' });
   assert.equal(await reason(there), 'unterschrift', 'signed for another area, read here');
-  assert.equal(await reason(there, { ...Z, area: 'kid:p_k2' }), 'ok', 'fine in its own area');
+  assert.equal(await reason(there, { ...Z, area: 'schule:p_k2' }), 'ok', 'fine in its own area');
+  // P3b: signed for the area it was read in, but the type does not belong there -> bereich-falsch
+  for (const area of ['kind:lern:p_k1', 'eltern:allg:p_k1', 'kid:p_k1']) assert.equal(await reason(await signed('parent', 'school_import', { area }), { ...Z, area }), 'bereich-falsch', area);
 });
 
 test('canonicalBytes: feste Bytefolge, unabhaengig von der Schluesselreihenfolge; Bereich gehoert dazu', () => {
@@ -157,7 +164,7 @@ test('canonicalBytes: feste Bytefolge, unabhaengig von der Schluesselreihenfolge
   const turned = Object.fromEntries(Object.entries(e).reverse()); turned.payload = Object.fromEntries(Object.entries(e.payload).reverse());
   const a = Buffer.from(canonicalBytes(e, AREA)).toString('utf8');
   assert.equal(Buffer.from(canonicalBytes(turned, AREA)).toString('utf8'), a);
-  assert.ok(a.startsWith('bq-sig1|kid:p_k1|{"at":'), a.slice(0, 40));
+  assert.ok(a.startsWith('bq-sig1|kind:lern:p_k1|{"at":'), a.slice(0, 40));
   assert.ok(a.includes('"payload":{"attempt":1,"day":"2026-11-02","level":2,"ok":true,"qid":"q1","skill":"round"}'), 'sorted, no blanks');
   assert.notEqual(Buffer.from(canonicalBytes(e, 'kid:p_k2')).toString('utf8'), a);
   assert.notEqual(Buffer.from(canonicalBytes({ ...e, payload: { ...e.payload, ok: false } }, AREA)).toString('utf8'), a);
@@ -180,7 +187,7 @@ test('Matrix: alle 25 Typen x 4 Rollen gegen die hier ausgeschriebene Tabelle', 
 
 /* ---------- 5b gaps (task 3b-0) ---------- */
 test('3b-0 Luecken: Kind nur "automatisch geschlossen" (closed, by app); Eltern alles; Lehrkraft und Admin nichts', async () => {
-  const lk = (role, type, payload) => { const [pid, did] = WHO[role]; return signEvent(mk(type, pid, did, payload), AREA, KEYS[pid]); };
+  const lk = (role, type, payload) => { const [pid, did] = WHO[role]; return sg(mk(type, pid, did, payload), KEYS[pid]); };
   const st = (state, by, extra = {}) => ({ standard: 'MA.3.NBT.2', state, by, schoolDay: '2026-10-20', day: DAY, ...extra });
   assert.equal(await reason(await lk('child', 'gap_state', st('closed', 'app', { quest: 'round' }))), 'ok', 'child: the automatic close');
   assert.equal(await reason(await lk('child', 'gap_state', st('closed', 'app'))), 'ok', 'child: also without quest');
@@ -192,7 +199,7 @@ test('3b-0 Luecken: Kind nur "automatisch geschlossen" (closed, by app); Eltern 
     assert.equal(await reason(await lk('parent', 'gap_state', st(state, by))), 'ok', `parent ${state} by ${by}`);
   }
   for (const s of ['MA.3.NBT.2', null]) assert.equal(await reason(await lk('parent', 'gap_active', { standard: s })), 'ok', 'parent chooses ' + s);
-  const p2 = await signEvent(mk('gap_state', 'p_e2', 'd_e2', st('hold', 'parents')), AREA, KEYS.p_e2);
+  const p2 = await sg(mk('gap_state', 'p_e2', 'd_e2', st('hold', 'parents')), KEYS.p_e2);
   assert.equal(await reason(p2), 'ok', 'the second parent, too');
   for (const role of ['teacher', 'admin']) {
     for (const [state, by] of [['closed', 'app'], ['hold', 'parents']]) assert.equal(await reason(await lk(role, 'gap_state', st(state, by))), 'rolle-darf-nicht', `${role} ${state}`);
@@ -206,7 +213,7 @@ test('roleMayWrite (fuer den Schreiber, 3b-1): dieselbe Regel wie beim Annehmen,
   for (const type of EVENT_TYPES) for (const role of ROLES) {
     const [pid, did] = WHO[role], e = mk(type, pid, did);
     assert.equal(roleMayWrite(role, e), darf(role, type), `${role} ${type}`);
-    assert.equal(roleMayWrite(role, e), (await reason(await signEvent(e, AREA, KEYS[pid]))) === 'ok', `${role} ${type}: same as acceptEvent`);
+    assert.equal(roleMayWrite(role, e), (await reason(await sg(e, KEYS[pid]))) === 'ok', `${role} ${type}: same as acceptEvent`);
   }
   const st = (state, by) => mk('gap_state', 'p_k1', 'd_k1', { standard: 'X', state, by, schoolDay: DAY, day: DAY });
   assert.equal(roleMayWrite('child', st('closed', 'app')), true);
@@ -216,9 +223,12 @@ test('roleMayWrite (fuer den Schreiber, 3b-1): dieselbe Regel wie beim Annehmen,
 });
 
 /* ---------- 6 reasons ---------- */
-test('Gruende: feste Reihenfolge format -> autor-unbekannt -> geraet-fremd -> unterschrift -> rolle-darf-nicht', async () => {
-  assert.deepEqual(ANNAHME_GRUENDE, ['format', 'autor-unbekannt', 'geraet-fremd', 'unterschrift', 'rolle-darf-nicht']);
+test('Gruende: feste Reihenfolge format -> autor-unbekannt -> geraet-fremd -> unterschrift -> bereich-falsch -> rolle-darf-nicht', async () => {
+  assert.deepEqual(ANNAHME_GRUENDE, ['format', 'autor-unbekannt', 'geraet-fremd', 'unterschrift', 'bereich-falsch', 'rolle-darf-nicht']);
   const t = await signed('teacher', 'answer');
+  const tPriv = await signed('teacher', 'setting_set', { area: AREA });
+  assert.equal(await reason(tPriv, Z), 'bereich-falsch', 'teacher + wrong area: area first');
+  assert.equal(await reason({ ...tPriv, sig: t.sig }, Z), 'unterschrift', 'wrong area + bad signature: signature first');
   const bad = { ...t, sig: t.sig.slice(0, -4) + 'AAAA' };
   assert.equal(await reason(bad), 'unterschrift', 'teacher + bad signature: signature first');
   assert.equal(await reason({ event: { ...t.event, device: 'd_k1' }, sig: 'x' }), 'geraet-fremd', 'teacher + foreign device + bad signature');
@@ -231,16 +241,17 @@ test('Gruende: feste Reihenfolge format -> autor-unbekannt -> geraet-fremd -> un
 
 test('acceptAll: liefert jeden Eintrag genau einmal, Verworfene mit Grund, Reihenfolge bleibt', async () => {
   const items = [
-    await signed('child', 'answer'), await signed('teacher', 'answer'), await signed('parent', 'setting_set'),
-    await signed('child', 'setting_set'), null, await signEvent(mk('answer', 'p_x1', 'd_x1'), AREA, stranger),
-    await signEvent(mk('answer', 'p_k1', 'd_e1'), AREA, KEYS.p_k1), { ...(await signed('child', 'badge')), sig: '' }, await signed('admin', 'grant_opened'),
+    await signed('child', 'answer'), await signed('teacher', 'answer'), await signed('parent', 'sheet_discarded'),
+    await signed('child', 'sheet_discarded'), null, await signEvent(mk('answer', 'p_x1', 'd_x1'), AREA, stranger),
+    await signEvent(mk('answer', 'p_k1', 'd_e1'), AREA, KEYS.p_k1), { ...(await signed('child', 'badge')), sig: '' }, await signed('parent', 'profile_set'),
+    await signed('parent', 'setting_set', { area: AREA }),
   ];
   const before = JSON.stringify(items);
   const r = await acceptAll(items, Z);
   assert.equal(JSON.stringify(items), before, 'inputs unchanged');
   assert.deepEqual(r.angenommen, [items[0], items[2], items[8]]);
-  assert.deepEqual(r.verworfen.map((x) => x.grund), ['rolle-darf-nicht', 'rolle-darf-nicht', 'format', 'autor-unbekannt', 'geraet-fremd', 'unterschrift']);
-  assert.deepEqual(r.verworfen.map((x) => x.item), [items[1], items[3], items[4], items[5], items[6], items[7]]);
+  assert.deepEqual(r.verworfen.map((x) => x.grund), ['rolle-darf-nicht', 'rolle-darf-nicht', 'format', 'autor-unbekannt', 'geraet-fremd', 'unterschrift', 'bereich-falsch']);
+  assert.deepEqual(r.verworfen.map((x) => x.item), [items[1], items[3], items[4], items[5], items[6], items[7], items[9]]);
   assert.equal(r.angenommen.length + r.verworfen.length, items.length, 'nothing lost');
   for (const v of r.verworfen) assert.ok(ANNAHME_GRUENDE.includes(v.grund), 'known reason');
   assert.deepEqual(await acceptAll([], Z), { angenommen: [], verworfen: [] });

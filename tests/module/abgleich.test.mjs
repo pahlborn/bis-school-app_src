@@ -13,7 +13,7 @@ import { signEvent } from '../../src/module/annahme.mjs';
 import { derive } from '../../src/module/ableitung.mjs';
 
 /* ---------- die Familie: Kind (iPad d_k1, d_k2), ein Elternteil (iPhone d_e1, Laptop d_e2, neues Geraet d_e3), Lehrkraft ---------- */
-const AREA = 'kid:p_k1', AREA2 = 'kid:p_k2';
+const AREA = 'kind:lern:p_k1', AREA2 = 'kind:lern:p_k2';      // since P3b: learning area (module bereiche)
 const PERSONEN = { p_k1: ['child', ['d_k1', 'd_k2']], p_e1: ['parent', ['d_e1', 'd_e2', 'd_e3']], p_l1: ['teacher', ['d_l1']] };
 const PERSON_VON = { d_k1: 'p_k1', d_k2: 'p_k1', d_e1: 'p_e1', d_e2: 'p_e1', d_e3: 'p_e1', d_l1: 'p_l1' };
 const KEYS = {}, PUB = {};
@@ -40,7 +40,7 @@ function nutzlast(type) {
   return {
     answer: { day: TAG, skill: 'round', level: 2, attempt: 1, ok: qn % 2 === 0, qid: 'q' + qn },
     round_done: { day: TAG, skill: 'round', stars: 5, count: 8 },
-    setting_set: { setting: 'storyCap', value: qn },
+    profile_set: { field: 'name', value: 'Kim ' + qn },             // parents' event in the learning area
     sheet_created: { sheet: TAG + '-s' + qn, day: TAG, no: qn, writing: 'en', items: [] },
   }[type];
 }
@@ -54,7 +54,7 @@ const json = (x) => JSON.parse(JSON.stringify(x));
 
 test('E1/E4: drei Geraete ueben zehn Runden abwechselnd offline/online -> gleiches Protokoll und gleicher Stand', async () => {
   const s = lokalerSpeicher();
-  const geraete = [['d_k1', ['answer', 'round_done']], ['d_e1', ['setting_set', 'sheet_created']], ['d_e2', ['sheet_created', 'setting_set']]]
+  const geraete = [['d_k1', ['answer', 'round_done']], ['d_e1', ['profile_set', 'sheet_created']], ['d_e2', ['sheet_created', 'profile_set']]]
     .map(([id, typen]) => ({ id, typen, z: s.geraet(id), st: abgleichStand(AREA, id) }));
   const alle = new Set();
   let antworten = 0, warOffline = 0;
@@ -96,7 +96,7 @@ test('Offline: 250 Ereignisse -> offline, nichts verloren; online -> Buendel 100
   const a = s.geraet('d_e1'), b = s.geraet('d_k1'), c = s.geraet('d_e2');
   const sa = abgleichStand(AREA, 'd_e1');
   a.offline();
-  for (let i = 0; i < 250; i++) vormerken(sa, await ereignis('d_e1', 'setting_set'), { now: JETZT });
+  for (let i = 0; i < 250; i++) vormerken(sa, await ereignis('d_e1', 'profile_set'), { now: JETZT });
   const r1 = await abgleichen(sa, opts(a));
   assert.deepEqual([r1.ok, r1.fehler, r1.gesendet], [false, 'offline', 0]);
   assert.deepEqual([sa.ausgang.length, sa.log.length, sa.naechsteNr], [250, 250, 1]);
@@ -140,7 +140,7 @@ test('Alte Sicherung: keine Ueberschreibung, weiter mit freier Nummer, Protokoll
   const s = lokalerSpeicher(), a = s.geraet('d_e1'), b = s.geraet('d_k1');
   let st = abgleichStand(AREA, 'd_e1');
   const e = [];
-  const neu = async () => { const x = await ereignis('d_e1', 'setting_set'); e.push(x.event.id); vormerken(st, x, { now: JETZT }); };
+  const neu = async () => { const x = await ereignis('d_e1', 'profile_set'); e.push(x.event.id); vormerken(st, x, { now: JETZT }); };
   await neu(); await neu();
   assert.equal((await abgleichen(st, opts(a))).ok, true);
   const sicherung = JSON.stringify(st);
@@ -174,7 +174,7 @@ test('Alte Sicherung: keine Ueberschreibung, weiter mit freier Nummer, Protokoll
 test('Faelschungen neben gueltigen Eintraegen: jeweils der richtige Grund, die gueltigen kommen an (E10)', async () => {
   const s = lokalerSpeicher(), angreifer = s.geraet('d_x1');
   const versiegeln = async (item, { bereich = AREA, id = item.event.id } = {}) => ({ id, ...(await sealEntry(K1, JSON.stringify(item), entryAad(bereich, 1, id))) });
-  const gut1 = await ereignis('d_k1', 'answer'), gut2 = await ereignis('d_e1', 'setting_set');
+  const gut1 = await ereignis('d_k1', 'answer'), gut2 = await ereignis('d_e1', 'profile_set');
   const kaputt = await versiegeln(await ereignis('d_k1', 'answer'));
   const bytes = b64ToBytes(kaputt.ct); bytes[3] ^= 1; kaputt.ct = bytesToB64(bytes);                 // ein Byte veraendert
   const falscheSig = await ereignis('d_k1', 'answer', { keys: stranger });                             // Kind, aber fremde Unterschrift
@@ -233,7 +233,7 @@ test('Schluesselwechsel: Buendel mit Version 2, Geraet kennt nur 1 -> wartend; n
   const sk = abgleichStand(AREA, 'd_k1'), se = abgleichStand(AREA, 'd_e1');
   for (let i = 0; i < 2; i++) vormerken(sk, await ereignis('d_k1', 'answer'), { now: JETZT });
   assert.equal((await abgleichen(sk, opts(k, { schluessel: schK }))).ok, true);          // altes Buendel mit Version 1
-  for (let i = 0; i < 3; i++) vormerken(se, await ereignis('d_e1', 'setting_set'), { now: JETZT });
+  for (let i = 0; i < 3; i++) vormerken(se, await ereignis('d_e1', 'profile_set'), { now: JETZT });
   const re = await abgleichen(se, opts(e, { schluessel: schE }));
   assert.deepEqual([re.ok, re.neu, (await e.get(AREA, 'd_e1/1')).kv], [true, 2, 2]);
 
@@ -256,7 +256,7 @@ test('Schluesselwechsel: Buendel mit Version 2, Geraet kennt nur 1 -> wartend; n
 
 test('Geraetestand als JSON: nach jedem Schritt gespeichert und geladen -> gleiches Ergebnis; zweimal holen ohne Neues aendert nichts', async () => {
   const eintraege = { d_k1: [], d_e1: [] };
-  for (let i = 0; i < 12; i++) { eintraege.d_k1.push(await ereignis('d_k1', i % 2 ? 'answer' : 'round_done')); eintraege.d_e1.push(await ereignis('d_e1', 'setting_set')); }
+  for (let i = 0; i < 12; i++) { eintraege.d_k1.push(await ereignis('d_k1', i % 2 ? 'answer' : 'round_done')); eintraege.d_e1.push(await ereignis('d_e1', 'profile_set')); }
   async function ablauf(rund) {
     const r = (x) => (rund ? json(x) : x);
     const s = lokalerSpeicher(), z = { d_k1: s.geraet('d_k1'), d_e1: s.geraet('d_e1') };
@@ -310,7 +310,7 @@ test('Neues Geraet desselben Elternteils bekommt alles, auch die alten Buendel d
   const h2 = await holen(neuInstalliert, opts(e1));
   assert.deepEqual([h2.neu, ids(neuInstalliert), neuInstalliert.naechsteNr], [6, ids(se), 4]);
   const alt = await e1.get(AREA, 'd_e1/3');
-  vormerken(neuInstalliert, await ereignis('d_e1', 'setting_set'), { now: JETZT });
+  vormerken(neuInstalliert, await ereignis('d_e1', 'profile_set'), { now: JETZT });
   assert.equal((await abgleichen(neuInstalliert, opts(e1))).gesendet, 1);
   assert.deepEqual((await e1.list(AREA)).kennungen.filter((k) => k.startsWith('d_e1/')), ['d_e1/1', 'd_e1/2', 'd_e1/3', 'd_e1/4']);
   assert.deepEqual(await e1.get(AREA, 'd_e1/3'), alt);
@@ -319,7 +319,7 @@ test('Neues Geraet desselben Elternteils bekommt alles, auch die alten Buendel d
 test('Netzabbruch mitten im Holen oder Senden: Stand unveraendert bis auf Bestaetigtes', async () => {
   const s = lokalerSpeicher(), a = s.geraet('d_e1'), echt = s.geraet('d_k1');
   const sa = abgleichStand(AREA, 'd_e1');
-  for (let i = 0; i < 150; i++) vormerken(sa, await ereignis('d_e1', 'setting_set'), { now: JETZT });
+  for (let i = 0; i < 150; i++) vormerken(sa, await ereignis('d_e1', 'profile_set'), { now: JETZT });
   assert.equal((await abgleichen(sa, opts(a))).ok, true);                         // zwei Buendel liegen bereit
   let gets = 0;
   const wackelig = { ...echt, get: async (...x) => { if (++gets === 2) { const e = new Error('speicher: offline'); e.code = 'offline'; throw e; } return echt.get(...x); } };
@@ -346,7 +346,7 @@ test('Netzabbruch mitten im Holen oder Senden: Stand unveraendert bis auf Bestae
 
 test('Eingaben: nur eigene, gueltige Eintraege vormerken; holen braucht now; senden braucht den aktuellen Schluessel', async () => {
   const st = abgleichStand(AREA, 'd_k1'), z = lokalerSpeicher().geraet('d_k1');
-  const fremd = await ereignis('d_e1', 'setting_set');
+  const fremd = await ereignis('d_e1', 'profile_set');
   assert.throws(() => vormerken(st, fremd), /nur Ereignisse dieses Geraets/);
   assert.throws(() => vormerken(st, { event: fremd.event }), /Eintrag ungueltig/);
   assert.throws(() => vormerken({ ...st, extra: 1 }, fremd), /Geraetestand ungueltig/);

@@ -4,8 +4,9 @@
 //   sign:     the author signs a fixed byte sequence: "bq-sig1|" + area + "|" + the event with sorted keys.
 //             The area is part of the signature, so an event cannot be copied into another area.
 //   accept:   an event counts only if it is well-formed, its author is admitted, the device belongs to the author,
-//             the signature is valid and the role may write this type. Checked in exactly this order; the first
-//             failing check is the reason.
+//             the signature is valid, its type (for profile_set: the field) belongs into this area (module bereiche,
+//             task P3b) and the role may write this type. Checked in exactly this order; the first failing check is
+//             the reason. An area name outside the scheme of module bereiche fits no event.
 //   admission (input, computed from member_* / device_* events later, EP9):
 //             { area, members: { <personId>: { role: 'child'|'parent'|'teacher'|'admin', pub: { ecdh, ecdsa }, devices: [<deviceId>] } } }
 //
@@ -13,9 +14,10 @@
 
 import { signBytes, verifyBytes } from './krypto.mjs';
 import { checkEvent } from './ereignisse.mjs';
+import { passtZumBereich } from './bereiche.mjs';
 
 /* reasons, in the order they are checked */
-export const ANNAHME_GRUENDE = ['format', 'autor-unbekannt', 'geraet-fremd', 'unterschrift', 'rolle-darf-nicht'];
+export const ANNAHME_GRUENDE = ['format', 'autor-unbekannt', 'geraet-fremd', 'unterschrift', 'bereich-falsch', 'rolle-darf-nicht'];
 
 /* ---------- who may write which type (concept 6 "Schreiben", table 7.2, 5.2, 9.3) ----------
    child:   learning progress, profile, own sheets (create, enter the results), day hints, checklist; registers its own device
@@ -80,6 +82,7 @@ export async function acceptEvent(item, zulassung) {
   if (!annObj(member)) return { ok: false, grund: 'autor-unbekannt' };
   if (!Array.isArray(member.devices) || !member.devices.includes(e.device)) return { ok: false, grund: 'geraet-fremd' };
   if (typeof item.sig !== 'string' || !item.sig || !annObj(member.pub) || !(await verifyBytes(member.pub, canonicalBytes(e, zulassung.area), item.sig))) return { ok: false, grund: 'unterschrift' };
+  if (!passtZumBereich(e, zulassung.area)) return { ok: false, grund: 'bereich-falsch' };
   if (!roleMayWrite(member.role, e)) return { ok: false, grund: 'rolle-darf-nicht' };
   return { ok: true };
 }
