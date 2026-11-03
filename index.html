@@ -2358,7 +2358,10 @@ function buildToday(){
   const pools=shuffle(topics).map(k=>adaptRound(k, WORLDS[k].build()).filter(q=>levelOf(q)<3 || standOf(k)!=='NA'));
   const middle=[]; let i=0;
   while(out.length+lane.length+middle.length+(challenge?1:0)<8 && pools.some(p=>p.length)){ const p=pools[i%pools.length]; if(p.length) middle.push(p.shift()); i++; }
-  return out.concat(insertInOrder(shuffle(middle), lane), challenge?[challenge]:[]).slice(0,8);
+  const round=out.concat(insertInOrder(shuffle(middle), lane), challenge?[challenge]:[]).slice(0,8);
+  // no task twice (module runde): warm-up, due repeats, gap tasks and the challenge stay; a repeated topic task is
+  // replaced by another one of the same level from the current topics
+  return ohneDoppelte(round, ()=>{ const k=pick(topics); return adaptRound(k, WORLDS[k].build()); }, {id:qId, level:levelOf, keep:q=>!!(q.warmup||q.dueId||q.gap||q.challenge)});
 }
 /* ======================= WORLDS, SUBJECTS & STUDIOS ======================= */
 const ICONS={
@@ -2657,6 +2660,9 @@ const isArchived = d => !!d && (d.archived===true || (!!d.until && todayISO>d.un
 /* Coming up (01.11.): a preview quest stays hidden from the child until grown-ups turn it on for this child. */
 const isLocked = k => !!(WORLDS[k] && WORLDS[k].preview) && !store.get('unlocked',[]).includes(k);
 SUBJECTS.forEach(s=>{ if(questsIn(s).length>1) WORLDS['mix_'+s.key]={name:s.name+' Mix', sub:'A bit of everything in '+s.name, color:s.color, icon:'mix', build:()=>mixFrom(questsIn(s))}; });
+/* No task twice in one round (Peter 03.11.; module runde): every quest and mix replaces a repeated task by another
+   one of the same level from a new round of the same quest. Practise Today checks its whole round (buildToday). */
+for(const [k,w] of Object.entries(WORLDS)) if(k!=='today' && typeof w.build==='function'){ const b=w.build; w.build=()=>ohneDoppelte(b(), b, {id:qId, level:levelOf}); }
 const STUDIOS={
   grow:{name:'My Work Checklist', sub:'Tick what you did in your work this week', color:'var(--w-grow)', icon:'grow',
     intro:'The teachers asked for these habits. Tick each one when you did it in your work this week. Start with one.',

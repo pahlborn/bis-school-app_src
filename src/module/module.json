@@ -7,6 +7,7 @@
     { "name": "geschichten", "bau": "live", "browserTests": ["spass"] },
     { "name": "textfragen", "bau": "live", "browserTests": ["fragen", "lernlogik", "neutral"] },
     { "name": "grundlage", "bau": "live", "browserTests": ["auftrag1-grundlage", "fragen", "lernlogik", "elternbereich-d2"] },
+    { "name": "runde", "bau": "live", "browserTests": ["runde-ohne-doppelte", "fragen", "lernlogik", "elternbereich-d2"] },
     { "name": "krypto", "bau": "test", "browserTests": ["testbau"] },
     { "name": "ereignisse", "bau": "test", "browserTests": ["testbau"] },
     { "name": "ableitung", "bau": "test", "browserTests": ["ableitung-vergleich"] },
