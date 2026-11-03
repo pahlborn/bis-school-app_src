@@ -4828,68 +4828,76 @@ const SCHOOL_SOURCES=[
   ['Website der Schule – Grundschule / School website – elementary school','https://www.bis-school.com/academic-life/primary-school-haimhausen'],
   ['Website der Schule – Elternmaterial / School website – resources','https://www.bis-school.com/admissions/resources']
 ];
-const schoolSourcesHTML=()=>{ const de=PL()==='de'; return `<h4>${de?'Website der Schule':'School website'}</h4><p class="small">${de?'Belege für die Leitgedanken der App.':'Evidence for the app’s guiding principles.'}</p><ol>`+SCHOOL_SOURCES.map(s=>{ const t=s[0].split(' / ')[de?0:1]; return `<li><a href="${s[1]}" target="_blank" rel="noopener">${esc(t)}</a></li>`; }).join('')+'</ol>'; };
+const schoolSourcesHTML=()=>{ const de=PL()==='de'; return `<p class="small"><b>${de?'Website der Schule':'School website'}</b> – ${de?'Belege für die Leitgedanken der App.':'evidence for the app’s guiding principles.'}</p><ol>`+SCHOOL_SOURCES.map(s=>{ const t=s[0].split(' / ')[de?0:1]; return `<li><a href="${s[1]}" target="_blank" rel="noopener">${esc(t)}</a></li>`; }).join('')+'</ol>'; };
 const ABOUT_SOURCES=[
-  ['International Baccalaureate – PYP curriculum framework','https://www.ibo.org/programmes/primary-years-programme/curriculum/'],
-  ['International Baccalaureate – PYP learning and teaching (ATL, assessment)','https://www.ibo.org/programmes/primary-years-programme/curriculum/learning-and-teaching/'],
-  ['Education Endowment Foundation – Feedback','https://educationendowmentfoundation.org.uk/education-evidence/teaching-learning-toolkit/feedback'],
-  ['IES Practice Guide – Organizing Instruction and Study to Improve Student Learning (spacing, retrieval)','https://ies.ed.gov/ncee/wwc/PracticeGuide/1'],
-  ['The Learning Scientists – Interleaving','https://www.learningscientists.org/blog/2016/8/11-1'],
-  ['Deci, Koestner & Ryan (1999): extrinsic rewards and intrinsic motivation','https://pubmed.ncbi.nlm.nih.gov/10589297/'],
-  ['Shute (2008) – Formative feedback','https://doi.org/10.3102/0034654307313795'],
-  ['Hattie & Timperley (2007) – The power of feedback','https://doi.org/10.3102/003465430298487'],
-  ['Van der Kleij et al. (2015) – Feedback meta-analysis','https://doi.org/10.3102/0034654314564881'],
-  ['Aleven et al. (2003) – Help seeking and help design in interactive learning environments; bibliografisch geprüft','https://doi.org/10.3102/00346543073003277'],
-  ['Koedinger & Aleven (2007) – The assistance dilemma (when to give hints, when to let pupils try); bibliografisch geprüft','https://doi.org/10.1007/s10648-007-9049-0'],
-  ['Epstein et al. (2002) – Immediate feedback','https://doi.org/10.1007/BF03395423'],
-  ['Treagust (1988) – Diagnostic questions','https://doi.org/10.1080/0950069880100204'],
-  ['Wood & Middleton (1975) – Assisted problem-solving; bibliografisch geprüft','https://doi.org/10.1111/j.2044-8295.1975.tb01454.x'],
-  ['Van de Pol et al. (2010) – Scaffolding review; bibliografisch geprüft','https://doi.org/10.1007/s10648-010-9127-6'],
-  ['Kulik et al. (1990) – Mastery learning; bibliografisch geprüft','https://doi.org/10.3102/00346543060002265'],
-  ['Renkl & Atkinson (2003) – Worked examples; bibliografisch geprüft','https://doi.org/10.1207/S15326985EP3801_3'],
-  ['Patall et al. (2008) – Parent involvement','https://doi.org/10.3102/0034654308325185'],
-  ['Maloney et al. (2015) – Parents’ maths anxiety (association, not causal proof)','https://doi.org/10.1177/0956797615592630'],
-  ['Sisk et al. (2018) – Growth mindset','https://doi.org/10.1177/0956797617739704'],
-  ['Metcalfe et al. (2009) – Feedback timing, Grade 6 vocabulary','https://doi.org/10.3758/MC.37.8.1077'],
-  ['SFUSD Mathematics – current curriculum; old unit order unconfirmed','https://www.sfusd.edu/departments/mathematics'],
-  ['SFUSD – Family resources','https://www.sfusd.edu/departments/mathematics-department-page/math-family-resources'],
-  ['Common Core Grade 3 – unofficial mirror, supplementary curriculum map','https://www.thecorestandards.org/Math/Content/3/'],
-  ['Common Core English – unofficial mirror','https://www.thecorestandards.org/ELA-Literacy/'],
-  ['NGSS Science – supplementary; not confirmed by the school','https://www.nextgenscience.org/overview-dci'],
-  ['LehrplanPLUS Deutsch 3/4 – supplementary, not the school curriculum','https://www.lehrplanplus.bayern.de/fachlehrplan/grundschule/3/deutsch'],
-  ['England Primary curriculum – comparison only','https://www.gov.uk/government/publications/national-curriculum-in-england-primary-curriculum'],
-  ['Cambridge Primary – comparison only','https://www.cambridgeinternational.org/programmes-and-qualifications/cambridge-primary/curriculum/'],
-  ['IB – Copyright and reuse','https://www.ibo.org/terms-and-conditions/intellectual-property/'],
-  ['Diagnostic Questions – practice example, not proof of effectiveness','https://diagnosticquestions.com/'],
-  ['youcubed – Parent resources','https://www.youcubed.org/resource/parent-resources/'],
-  ['California – Common Core mathematics standards','https://www.cde.ca.gov/be/st/ss/documents/ccssmathstandardaug2013.pdf'],
-  ['Common Core – archived licence; examples have separate rights','https://web.archive.org/web/20220304134704/http://www.corestandards.org/public-license/'],
-  ['IES/WWC – Foundational reading skills','https://ies.ed.gov/ncee/wwc/PracticeGuide/21'],
-  ['Grundschulkönig – Vorgangsbeschreibung, comparative resource','https://www.grundschulkoenig.de/deutsch/4-klasse/vorgangsbeschreibung/'],
-  ['Duolingo – Streak mechanics, comparison rather than a model for pressure','https://blog.duolingo.com/how-duolingo-streak-builds-habit/'],
-  ['Sofatutor – Practice product comparison','https://www.sofatutor.com/'],
-  ['Bettermarks – Practice product comparison','https://de.bettermarks.com/'],
-  ['Prodigy – Parent resources, comparison','https://www.prodigygame.com/main-en/parents/'],
-  ['BBC – Dance Mat Typing, not confirmed as a school tool','https://www.bbc.co.uk/bitesize/articles/z3c6tfr'],
-  ['TypingClub – Product comparison, not confirmed as a school tool','https://www.typingclub.com/'],
-  ['Typing.com – Product comparison, not confirmed as a school tool','https://www.typing.com/'],
-  ['H5P Standalone – Evaluated technical alternative','https://github.com/tunapanda/h5p-standalone'],
-  ['ts-fsrs – Evaluated technical alternative','https://github.com/open-spaced-repetition/ts-fsrs'],
-  ['SurveyJS – Evaluated technical alternative and licensing','https://surveyjs.io/licensing'],
-  ['ICO – Children’s Code','https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/childrens-information/childrens-code-guidance-and-resources/age-appropriate-design-a-code-of-practice-for-online-services/code-standards/'],
-  ['MDN – Periodic Background Sync availability','https://developer.mozilla.org/en-US/docs/Web/API/Web_Periodic_Background_Synchronization_API'],
-  ['MDN – Service workers and offline operation','https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers'],
-  ['Attali (2015) – Multiple-try feedback; bibliografisch, nicht inhaltlich geprüft','https://doi.org/10.1016/j.compedu.2015.08.011'],
-  ['Fyfe et al. (2012) – Prior knowledge and feedback; bibliografisch, nicht inhaltlich geprüft','https://doi.org/10.1037/a0028389'],
-  ['Fyfe & Rittle-Johnson (2016) – Feedback; bibliografisch, nicht inhaltlich geprüft','https://doi.org/10.1016/j.jecp.2016.03.009'],
-  ['Kapur (2012) – Productive failure; bibliografisch, nicht inhaltlich geprüft','https://doi.org/10.1080/00461520.2012.683559'],
-  ['Roediger & Butler (2011) – Retrieval practice; bibliografisch, nicht inhaltlich geprüft','https://doi.org/10.1016/j.tics.2010.09.003'],
-  ['Kluger & DeNisi (1996) – Feedback interventions; bibliografisch, nicht inhaltlich geprüft','https://doi.org/10.1037/0033-2909.119.2.254']
+  ['International Baccalaureate – PYP curriculum framework','https://www.ibo.org/programmes/primary-years-programme/curriculum/',2],
+  ['International Baccalaureate – PYP learning and teaching (ATL, assessment)','https://www.ibo.org/programmes/primary-years-programme/curriculum/learning-and-teaching/',2],
+  ['Education Endowment Foundation – Feedback','https://educationendowmentfoundation.org.uk/education-evidence/teaching-learning-toolkit/feedback',1],
+  ['IES Practice Guide – Organizing Instruction and Study to Improve Student Learning (spacing, retrieval)','https://ies.ed.gov/ncee/wwc/PracticeGuide/1',1],
+  ['The Learning Scientists – Interleaving','https://www.learningscientists.org/blog/2016/8/11-1',1],
+  ['Deci, Koestner & Ryan (1999): extrinsic rewards and intrinsic motivation','https://pubmed.ncbi.nlm.nih.gov/10589297/',1],
+  ['Shute (2008) – Formative feedback','https://doi.org/10.3102/0034654307313795',1],
+  ['Hattie & Timperley (2007) – The power of feedback','https://doi.org/10.3102/003465430298487',1],
+  ['Van der Kleij et al. (2015) – Feedback meta-analysis','https://doi.org/10.3102/0034654314564881',1],
+  ['Aleven et al. (2003) – Help seeking and help design in interactive learning environments; bibliografisch geprüft','https://doi.org/10.3102/00346543073003277',1],
+  ['Koedinger & Aleven (2007) – The assistance dilemma (when to give hints, when to let pupils try); bibliografisch geprüft','https://doi.org/10.1007/s10648-007-9049-0',1],
+  ['Epstein et al. (2002) – Immediate feedback','https://doi.org/10.1007/BF03395423',1],
+  ['Treagust (1988) – Diagnostic questions','https://doi.org/10.1080/0950069880100204',1],
+  ['Wood & Middleton (1975) – Assisted problem-solving; bibliografisch geprüft','https://doi.org/10.1111/j.2044-8295.1975.tb01454.x',1],
+  ['Van de Pol et al. (2010) – Scaffolding review; bibliografisch geprüft','https://doi.org/10.1007/s10648-010-9127-6',1],
+  ['Kulik et al. (1990) – Mastery learning; bibliografisch geprüft','https://doi.org/10.3102/00346543060002265',1],
+  ['Renkl & Atkinson (2003) – Worked examples; bibliografisch geprüft','https://doi.org/10.1207/S15326985EP3801_3',1],
+  ['Patall et al. (2008) – Parent involvement','https://doi.org/10.3102/0034654308325185',1],
+  ['Maloney et al. (2015) – Parents’ maths anxiety (association, not causal proof)','https://doi.org/10.1177/0956797615592630',1],
+  ['Sisk et al. (2018) – Growth mindset','https://doi.org/10.1177/0956797617739704',1],
+  ['Metcalfe et al. (2009) – Feedback timing, Grade 6 vocabulary','https://doi.org/10.3758/MC.37.8.1077',1],
+  ['SFUSD Mathematics – current curriculum; old unit order unconfirmed','https://www.sfusd.edu/departments/mathematics',3],
+  ['SFUSD – Family resources','https://www.sfusd.edu/departments/mathematics-department-page/math-family-resources',3],
+  ['Common Core Grade 3 – unofficial mirror, supplementary curriculum map','https://www.thecorestandards.org/Math/Content/3/',3],
+  ['Common Core English – unofficial mirror','https://www.thecorestandards.org/ELA-Literacy/',3],
+  ['NGSS Science – supplementary; not confirmed by the school','https://www.nextgenscience.org/overview-dci',3],
+  ['LehrplanPLUS Deutsch 3/4 – supplementary, not the school curriculum','https://www.lehrplanplus.bayern.de/fachlehrplan/grundschule/3/deutsch',3],
+  ['England Primary curriculum – comparison only','https://www.gov.uk/government/publications/national-curriculum-in-england-primary-curriculum',3],
+  ['Cambridge Primary – comparison only','https://www.cambridgeinternational.org/programmes-and-qualifications/cambridge-primary/curriculum/',3],
+  ['IB – Copyright and reuse','https://www.ibo.org/terms-and-conditions/intellectual-property/',2],
+  ['Diagnostic Questions – practice example, not proof of effectiveness','https://diagnosticquestions.com/',4],
+  ['youcubed – Parent resources','https://www.youcubed.org/resource/parent-resources/',4],
+  ['California – Common Core mathematics standards','https://www.cde.ca.gov/be/st/ss/documents/ccssmathstandardaug2013.pdf',3],
+  ['Common Core – archived licence; examples have separate rights','https://web.archive.org/web/20220304134704/http://www.corestandards.org/public-license/',3],
+  ['IES/WWC – Foundational reading skills','https://ies.ed.gov/ncee/wwc/PracticeGuide/21',3],
+  ['Grundschulkönig – Vorgangsbeschreibung, comparative resource','https://www.grundschulkoenig.de/deutsch/4-klasse/vorgangsbeschreibung/',4],
+  ['Duolingo – Streak mechanics, comparison rather than a model for pressure','https://blog.duolingo.com/how-duolingo-streak-builds-habit/',4],
+  ['Sofatutor – Practice product comparison','https://www.sofatutor.com/',4],
+  ['Bettermarks – Practice product comparison','https://de.bettermarks.com/',4],
+  ['Prodigy – Parent resources, comparison','https://www.prodigygame.com/main-en/parents/',4],
+  ['BBC – Dance Mat Typing, not confirmed as a school tool','https://www.bbc.co.uk/bitesize/articles/z3c6tfr',4],
+  ['TypingClub – Product comparison, not confirmed as a school tool','https://www.typingclub.com/',4],
+  ['Typing.com – Product comparison, not confirmed as a school tool','https://www.typing.com/',4],
+  ['H5P Standalone – Evaluated technical alternative','https://github.com/tunapanda/h5p-standalone',5],
+  ['ts-fsrs – Evaluated technical alternative','https://github.com/open-spaced-repetition/ts-fsrs',5],
+  ['SurveyJS – Evaluated technical alternative and licensing','https://surveyjs.io/licensing',5],
+  ['ICO – Children’s Code','https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/childrens-information/childrens-code-guidance-and-resources/age-appropriate-design-a-code-of-practice-for-online-services/code-standards/',5],
+  ['MDN – Periodic Background Sync availability','https://developer.mozilla.org/en-US/docs/Web/API/Web_Periodic_Background_Synchronization_API',5],
+  ['MDN – Service workers and offline operation','https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers',5],
+  ['Attali (2015) – Multiple-try feedback; bibliografisch, nicht inhaltlich geprüft','https://doi.org/10.1016/j.compedu.2015.08.011',1],
+  ['Fyfe et al. (2012) – Prior knowledge and feedback; bibliografisch, nicht inhaltlich geprüft','https://doi.org/10.1037/a0028389',1],
+  ['Fyfe & Rittle-Johnson (2016) – Feedback; bibliografisch, nicht inhaltlich geprüft','https://doi.org/10.1016/j.jecp.2016.03.009',1],
+  ['Kapur (2012) – Productive failure; bibliografisch, nicht inhaltlich geprüft','https://doi.org/10.1080/00461520.2012.683559',1],
+  ['Roediger & Butler (2011) – Retrieval practice; bibliografisch, nicht inhaltlich geprüft','https://doi.org/10.1016/j.tics.2010.09.003',1],
+  ['Kluger & DeNisi (1996) – Feedback interventions; bibliografisch, nicht inhaltlich geprüft','https://doi.org/10.1037/0033-2909.119.2.254',1]
 ];
 /* Sources in both languages (Peter, 31.10.: German view without English left-overs). */
 const sourceLabel = (t,de) => de ? t : t.replace('; bibliografisch, nicht inhaltlich geprüft','; bibliographic details checked, content not reviewed').replace('; bibliografisch geprüft','; bibliographic details checked');
-const sourcesHTML=(lang='en')=>{ const de=lang==='de';
-  return `<p class="small">${de?'Die Forschung hat die Gestaltung geprägt; sie belegt weder diese App noch ihre genauen Schwellenwerte. Rein bibliografisch geprüfte Angaben sind als solche gekennzeichnet. Produktvergleiche sind kein Beleg für Lernwirksamkeit.':'Research informs the design; it does not validate this app or its exact thresholds. References checked only for their bibliographic details are marked as such. Product comparisons are not evidence of educational effectiveness.'}</p><ol>${ABOUT_SOURCES.map(s=>`<li>${esc(sourceLabel(s[0],de))}<br><a href="${s[1]}" target="_blank" rel="noopener">${s[1]}</a></li>`).join('')}</ol><p class="small">${de?'Nicht öffentliche Quellen: Unterrichtsmaterialien, Bewertungsraster, Arbeitsaufträge und Standards der 3. Klasse, von der Familie am 29. Oktober 2026 auf der Lernplattform der Schule gelesen; Bewertungslegenden von der Familie. Diese nur mit Konto zugänglichen Seiten und die Unterlagen des Kindes werden nicht als Quellen veröffentlicht. Pisolala ist eine Erfindung der Familie. Historische Bezüge: Bloom (1968), Learning for Mastery; Wood, Bruner & Ross (1976), The role of tutoring in problem solving. Deren Originaltexte wurden für diese Gestaltung nicht gelesen.':'Private sources: Grade 3 class materials, rubrics, assignments and standards that the family read on the school’s learning platform on October 29, 2026; assessment legends supplied by the family. These account-only pages and the child’s records are not published as sources. Pisolala is a family creation. Historical references: Bloom (1968), Learning for Mastery; Wood, Bruner & Ross (1976), The role of tutoring in problem solving. Their original texts were not reviewed for this design.'}</p>`; };
+/* F4 (concept 7.4): the sources in six folded groups, none dropped; the school website joins group 2 only in the
+   grown-ups area (aboutSectionsHTML fills <!--school-->; the child-reachable page never links the school) */
+const SOURCE_GROUPS={de:['Forschung zu Lernen, Feedback und Hilfe','IB und Schule','Lehrpläne zum Vergleich','Lernprogramme und Materialien','Technik und Datenschutz','Nicht öffentliche Quellen'],
+  en:['Research on learning, feedback and help','IB and school','Curricula for comparison','Learning programs and materials','Technology and privacy','Non-public sources']};
+const sourcesHTML=(lang='en')=>{ const de=lang==='de', G=SOURCE_GROUPS[de?'de':'en'];
+  const li=s=>`<li>${esc(sourceLabel(s[0],de))}<br><a href="${s[1]}" target="_blank" rel="noopener">${s[1]}</a></li>`;
+  const grp=(i,body)=>`<details class="about-sub psrc" data-src="${i}"><summary>${G[i-1]}</summary>${body}</details>`;
+  const intro=de?'Die Forschung hat die Gestaltung geprägt; sie belegt weder diese App noch ihre genauen Schwellenwerte. Rein bibliografisch geprüfte Angaben sind als solche gekennzeichnet. Produktvergleiche sind kein Beleg für Lernwirksamkeit.':'Research informs the design; it does not validate this app or its exact thresholds. References checked only for their bibliographic details are marked as such. Product comparisons are not evidence of educational effectiveness.';
+  const priv=de?'Nicht öffentliche Quellen: Unterrichtsmaterialien, Bewertungsraster, Arbeitsaufträge und Standards der 3. Klasse, von der Familie am 29. Oktober 2026 auf der Lernplattform der Schule gelesen; Bewertungslegenden von der Familie. Diese nur mit Konto zugänglichen Seiten und die Unterlagen des Kindes werden nicht als Quellen veröffentlicht. Pisolala ist eine Erfindung der Familie. Historische Bezüge: Bloom (1968), Learning for Mastery; Wood, Bruner & Ross (1976), The role of tutoring in problem solving. Deren Originaltexte wurden für diese Gestaltung nicht gelesen.':'Private sources: Grade 3 class materials, rubrics, assignments and standards that the family read on the school’s learning platform on October 29, 2026; assessment legends supplied by the family. These account-only pages and the child’s records are not published as sources. Pisolala is a family creation. Historical references: Bloom (1968), Learning for Mastery; Wood, Bruner & Ross (1976), The role of tutoring in problem solving. Their original texts were not reviewed for this design.';
+  return `<p class="small">${intro}</p>`+[1,2,3,4,5].map(i=>grp(i,`<ol>${ABOUT_SOURCES.filter(s=>s[2]===i).map(li).join('')}</ol>${i===2?'<!--school-->':''}`)).join('')+grp(6,`<p class="small">${priv}</p>`); };
 /* Guides by role (Peter, 31.10./02.11.): child (English), parents, teachers, admin (DE/EN). Each starts
    with a quick guide; the full user documentation is in the vault ("Big Quest – Anwenderdokumentation").
    No separate info buttons elsewhere; the login screen has a short help because the app is not open yet. */
@@ -5170,7 +5178,7 @@ function aboutParts(lang){
   return {main:parts[0], sections};
 }
 // grown-ups also get the school website under "Sources" (Peter, 01.11.); the child-reachable page never links the school
-const aboutSectionsHTML = (lang, open, forAdults) => aboutParts(lang).sections.filter(s=>!(forAdults && (ADULT_GUIDE_TITLES.includes(s.title) || KID_GUIDE_TITLES.includes(s.title) || PRIVACY_TITLES.includes(s.title)))).map(s=>`<details class="about-sec"${s.title===open?' open':''}><summary>${s.title}</summary><div class="about-sec-body">${s.body}${forAdults && (s.title==='Quellen'||s.title==='Sources')?schoolSourcesHTML():''}</div></details>`).join('');
+const aboutSectionsHTML = (lang, open, forAdults) => aboutParts(lang).sections.filter(s=>!(forAdults && (ADULT_GUIDE_TITLES.includes(s.title) || KID_GUIDE_TITLES.includes(s.title) || PRIVACY_TITLES.includes(s.title)))).map(s=>`<details class="about-sec"${s.title===open?' open':''}><summary>${s.title}</summary><div class="about-sec-body">${forAdults?s.body.replace('<!--school-->',schoolSourcesHTML()):s.body}</div></details>`).join('');
 function renderAboutPage(open){
   if(kidView()){
     const g=aboutParts('en').sections.find(s=>s.title==='How to use Big Quest');

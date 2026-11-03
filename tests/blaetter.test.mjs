@@ -208,6 +208,8 @@ test('About: Hinweis, Leitgedanken, Lernlogik, Herkunft, Datenschutz und Quellen
   // Peter 30./31.10.: topics open in place - the sources are only visible when opened
   assert.equal(await page.locator('#aboutBody a[href^="https://"]:visible').count(), 0, 'overview without visible source list');
   await aboutAbschnitt(page, 'Quellen');
+  // F4: the sources sit in folded groups - open them all
+  for (const g of await page.locator('#aboutBody details.psrc > summary').all()) await g.click();
   assert.ok(await page.locator('#aboutBody a[href^="https://"]:visible').count() >= 8);
   await klick(page, '#tabEn');
   const en = await page.textContent('#aboutBody');

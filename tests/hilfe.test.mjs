@@ -159,6 +159,7 @@ test('parent guidance and new research sources are included; unconfirmed methods
   const ll=await aboutAbschnitt(page,'So lernt das Kind');
   assert.ok((await ll.textContent()).includes('begründeter Entwurf'));
   await aboutAbschnitt(page,'Quellen');
+  await page.locator('#aboutBody details.psrc[data-src="1"] > summary').click();   // F4: research group
   assert.ok(await page.locator('#aboutBody a[href="https://doi.org/10.3102/0034654314564881"]').isVisible());
   await page.locator('#aboutBack').click();
   // Peter 01.11.: how school shows a topic sits at the matching quest (practical help), the why in the concept
