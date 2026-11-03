@@ -80,9 +80,14 @@ export async function acceptEvent(item, zulassung) {
   if (!annObj(member)) return { ok: false, grund: 'autor-unbekannt' };
   if (!Array.isArray(member.devices) || !member.devices.includes(e.device)) return { ok: false, grund: 'geraet-fremd' };
   if (typeof item.sig !== 'string' || !item.sig || !annObj(member.pub) || !(await verifyBytes(member.pub, canonicalBytes(e, zulassung.area), item.sig))) return { ok: false, grund: 'unterschrift' };
-  const allowed = annOwn(ANN_RIGHTS, member.role) ? ANN_RIGHTS[member.role] : [];
-  if (!allowed.includes(e.type) || (annOwn(ANN_LIMITS, e.type) && !ANN_LIMITS[e.type](e, member.role))) return { ok: false, grund: 'rolle-darf-nicht' };
+  if (!roleMayWrite(member.role, e)) return { ok: false, grund: 'rolle-darf-nicht' };
   return { ok: true };
+}
+/* may this role write this (well-formed) event? Type and the extra conditions; the same rule the writer
+   (module schreiber) applies before it stores an event. Unknown roles may nothing. */
+export function roleMayWrite(role, e) {
+  const allowed = typeof role === 'string' && annOwn(ANN_RIGHTS, role) ? ANN_RIGHTS[role] : [];
+  return !!e && allowed.includes(e.type) && !(annOwn(ANN_LIMITS, e.type) && !ANN_LIMITS[e.type](e, role));
 }
 /* checks every item; nothing is dropped silently: each item is either accepted or rejected with a reason.
    Order is kept. -> { angenommen: [item], verworfen: [{ item, grund }] } */
