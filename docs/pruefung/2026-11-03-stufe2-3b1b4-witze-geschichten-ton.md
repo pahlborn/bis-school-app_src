@@ -36,4 +36,4 @@ Witz / Geschichte / Ton ohne Haken; Witz ohne `forget`; `derive`: Witz doppelt, 
 3. **Heute bleibt der Ton je Gerät** gespeichert (`bq2_muted`); erst das Lesen aus Ereignissen (3b-2) macht ihn zur Einstellung der Person.
 
 ## Volle Reihe
-Siehe PR.
+**480/480 grün** (333 s, eigener Arbeitsordner, nach dem Einmergen von P3b-2a #111; Konflikt in `annahme` gelöst: beide Rechte-Ergänzungen behalten).
