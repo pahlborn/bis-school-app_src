@@ -216,7 +216,7 @@ test('Uhr: Ereignis mehr als 24 h in der Zukunft verhaelt sich wie in effectiveT
 
 /* ---------- writing and accepting ---------- */
 test('Schnappschuss: nur ein Elternteil darf ihn schreiben (Modul annahme); ohne Ereignisse vor "jetzt" gibt es keinen', async () => {
-  const area = 'kid:p_k1', eltern = await newPersonKeys(), kind = await newPersonKeys();
+  const area = 'kind:lern:p_k1', eltern = await newPersonKeys(), kind = await newPersonKeys();
   const z = { area, members: { p_e1: { role: 'parent', pub: await publicKeysOf(eltern), devices: ['d_e1'] }, p_k1: { role: 'child', pub: await publicKeysOf(kind), devices: ['d_k1'] } } };
   const s = await snap(ALT.slice(0, 300));
   assert.deepEqual(await acceptEvent(await signEvent(s, area, eltern), z), { ok: true });
