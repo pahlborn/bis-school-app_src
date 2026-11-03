@@ -65,7 +65,7 @@ test('A1: the welcome names an existing chapter, the concept describes the focus
   await page.waitForFunction(() => document.querySelector('#parentClose')?.textContent.includes('Log out'));
   const welcomeEn = await page.evaluate(() => {
     const s = [...document.scripts].map((x) => x.textContent).join('\n');
-    const li = s.match(/<li>📖 The guide [^]*?<\/li>/);
+    const li = s.match(/<li>📖 Help is at the top[^]*?<\/li>/);
     return li ? [...li[0].matchAll(/<b>([^<]+)<\/b>/g)].map((m) => m[1].trim()) : null;
   });
   assert.ok(welcomeEn && welcomeEn.length, 'English welcome found');

@@ -154,6 +154,7 @@ button{font:inherit;color:inherit}
 .pside{display:flex;flex-direction:column;gap:12px}
 .pcard{background:var(--surface);border:2px solid var(--line);border-radius:16px;padding:12px 14px}
 .pcard h2{font-size:1.1rem;margin-bottom:6px}
+.pguide-h{font-size:1.05rem;margin:4px 0 6px}a.pgo{font-weight:700;white-space:nowrap}
 .pglance{margin:10px 0}.pglance p{margin:4px 0}.pglance .pgmore{text-align:right;margin-top:6px}
 .ph{font-weight:800;margin:10px 0 2px}
 .pdisc{font-size:.8rem;color:var(--muted);border-top:1px solid var(--line);margin-top:10px;padding-top:6px}
@@ -3581,11 +3582,8 @@ const langKey = () => accountsOn() && studentSession() && !adultUser ? 'kidLang'
 const PL = () => store.get(langKey(), langKey()==='kidLang'?'en':'de')==='en'?'en':'de';
 const PT={
   de:{home:'🏠 Übersicht',sheets:'📄 Übungsblätter',settings:'👧 Für das Kind',help:'💡 Helfen wie die Schule',
-    howHome:'<b>So lesen Sie diese Seite:</b> Links sehen Sie dieselben Fächer wie das Kind; jedes Kästchen ist eine Quest. Rechts steht die Einschätzung in Worten. Tippen Sie auf ein Fach, um zu sehen, was geübt wird, worauf die Einschätzung beruht und wie Sie helfen können.',
     
     howSheets:'<b>So geht’s:</b> Ihr Kind trägt seine Antworten selbst in der App ein – auf der Startseite unter „My sheets“. Hier sehen Sie, wie jede Aufgabe lief. „Mit Hilfe“ und „Noch nicht“ sind gut so: Die App bietet dann leichtere Schritte an und wiederholt die Aufgabe später. Ein Blatt, das nicht eingetragen wird, zählt einfach nicht.',
-    howSettings:'<b>Was kann ich hier tun?</b> Fokus-Themen als Liste, Spannung der Pisolala-Geschichten, eine freiwillige Kalender-Erinnerung, Profilangaben des Kindes und die App-Version. Nichts davon ist Pflicht.',
-    howHelp:'<b>Was kann ich hier tun?</b> Kurz nachlesen, wie die Schule ein Thema zeigt, und mit drei Fragen helfen statt vorzurechnen.',
     back:'← Alle Fächer',focus:'Im Fokus',fm:'🎯 Fokus',pvT:'Ausblick: Themen für später',pvTxt:'Diese Themen kommen meist später im Schuljahr. Ihr Kind sieht sie erst, wenn Sie sie hier freigeben – zum Beispiel, wenn sie in der Schule drankommen oder Ihr Kind neugierig ist.',pvBtn:'Für das Kind freigegeben',pvOn:'freigegeben',pvOff:'nicht freigegeben',fAuto:'Automatisch',fMan:'Manuell',school:'nächster Schritt laut Schule',need:'braucht Übung',gap:d=>'Lücke laut Schule ('+d+')',gapWait:'wartet',how:'💡 So helfen Sie',
     basis:'Worauf beruht das?',trend:'Tendenz',recent:'Aktualität',sure:'Wie sicher?',when:'Belastbar ab etwa 20 Aufgaben an 5 Tagen über zwei Wochen.',
     tasks:(n,d)=>`${n} Aufgaben an ${d} ${d===1?'Tag':'Tagen'}`,self:'selbst gelöst',hint:'mit Hilfe',ex:n=>`davon ${n} mit Beispiel`,seen:'Lösungsweg angesehen',due:n=>`${n} Wiederholung${n===1?'':'en'} offen`,
@@ -3598,11 +3596,8 @@ const PT={
     fewLine:'Zu wenige Aufgaben für eine Einschätzung – das sagt nichts Schlechtes.',
     disc:'Übungsstand der App, keine schulische Beurteilung. Das Kind sieht diese Einschätzung nicht.',child:'Ihr Kind',focusN:n=>`${n} im Fokus`,quests:n=>`${n} Quests`},
   en:{home:'🏠 Overview',sheets:'📄 Practice sheets',settings:'👧 For your child',help:'💡 Help like the school',
-    howHome:'<b>How to read this page:</b> on the left are the same subjects your child sees; each small square is a quest. On the right is a summary in plain words. Tap a subject to see what is practiced, what the summary is based on, and how you can help.',
     
     howSheets:'<b>How it works:</b> your child enters the answers in the app – on the start page under “My sheets”. Here you see how each task went. “With help” and “Not yet” are fine: the app then offers easier steps and brings the task back later. A sheet that isn’t entered simply doesn’t count.',
-    howSettings:'<b>What can I do here?</b> Focus topics as a list, how exciting Pisolala stories may be, an optional calendar reminder, the child\'s profile details and the app version. None of this is required.',
-    howHelp:'<b>What can I do here?</b> Read briefly how the school teaches a topic and help with three questions instead of calculating for the child.',
     back:'← All subjects',focus:'In focus',fm:'🎯 Focus',pvT:'Coming up: topics for later',pvTxt:'These topics usually come later in the school year. Your child only sees them once you turn them on here – for example when they come up at school or your child is curious.',pvBtn:'Visible to your child',pvOn:'turned on',pvOff:'turned off',fAuto:'Automatic',fMan:'Manual',school:'next step per school',need:'needs practice',gap:d=>'gap per school ('+d+')',gapWait:'waiting',how:'💡 How you can help',
     basis:'What is this based on?',trend:'Trend',recent:'How recent',sure:'How sure?',when:'Reliable from about 20 tasks on 5 days over two weeks.',
     tasks:(n,d)=>`${n} tasks on ${d} ${d===1?'day':'days'}`,self:'on own',hint:'with help',ex:n=>`${n} of them with an example`,seen:'solution viewed',due:n=>`${n} review${n===1?'':'s'} open`,
@@ -4302,7 +4297,7 @@ function syncViewUser(){
 function myKidsNote(){
   const de=PL()==='de', kids=myKids().filter(u=>!u.test);
   if(!kids.length) return `<p class="phow pnokid">👧 ${adultUser && (adultUser.role==='teacher' || adultUser.admin) ? (de?'Noch keine Freigabe: Den Lernstand eines Kindes sehen Sie, sobald seine Eltern Ihnen Einblick geben – auf dem Gerät, auf dem das Kind übt.':'No grant yet: you see a child’s progress once its parents give you access – on the device where the child practices.') : (de?'Ihnen ist noch kein Kind zugeordnet.':'No child is assigned to you yet.')}</p>`;
-  return `<div class="pcard pnokid"><h2>${de?'Meine Kinder':'My children'}</h2>${kids.map(u=>`<p>👧 <b>${esc(u.user)}</b> – ${de?'Daten auf dem Gerät des Kindes. Sie sehen sie dort; der Abgleich zwischen Geräten folgt mit Stufe 2.':'data on your child’s device. You can see them there; syncing between devices follows with stage 2.'}</p>`).join('')}</div>`;
+  return `<div class="pcard pnokid"><h2>${de?'Meine Kinder':'My children'}</h2>${kids.map(u=>`<p>👧 <b>${esc(u.user)}</b> – ${de?'Daten auf dem Gerät des Kindes. Sie sehen sie dort.':'data on your child’s device. You can see them there.'}</p>`).join('')}</div>`;
 }
 const isTestUser = user => !!(APP_ACCOUNTS && APP_ACCOUNTS.users.some(u=>u.user===user && u.test));
 function switchChild(user){
@@ -4526,8 +4521,8 @@ function renderWelcome(u){
   $('#loginBody').innerHTML=kid
     ? `<h2>Welcome to Big Quest! 🎉</h2><ul class="welcome"><li>🎯 <b>Practise Today</b> gives you 8 questions. Or pick a subject.</li><li>💡 <b>A mistake?</b> You get a tip and try again. “Show me how” gives you a tip any time.</li><li>⭐ Every solved task gives a star. Your <b>learning tree</b> grows on every practice day.</li><li>❓ <b>Help</b> is at the bottom of the start page. ⓘ explains things.</li><li>🔒 You stay logged in on this iPad. Tap <b>Log out</b> if someone else wants to use it.</li></ul><button class="btn primary" id="welcomeGo" type="button">Let’s go!</button>`
     : de
-    ? `<h2>Willkommen, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 <b>Daten nur auf diesem Gerät:</b> Den Lernstand des Kindes sehen Sie auf dem Gerät, auf dem es übt.</li><li>🔑 Ihr Passwort gilt nur auf diesem Gerät. Auf einem weiteren Gerät einmal mit dem Startcode anmelden.</li><li>🚪 Sie bleiben angemeldet, bis Sie <b>Abmelden</b> tippen. Auf dem Gerät des Kindes nach dem Nachsehen bitte abmelden.</li><li>📖 Die Anleitung finden Sie oben unter <b>?</b>, Sicherung und Freigaben unter <b>⚙️</b>. ⓘ erklärt einzelne Abschnitte.</li></ul><button class="btn primary" id="welcomeGo" type="button">Los geht’s</button>`
-    : `<h2>Welcome, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 <b>Data only on this device:</b> you see your child’s progress on the device where they practice.</li><li>🔑 Your password works only on this device. On another device, log in once with the start code.</li><li>🚪 You stay logged in until you tap <b>Log out</b>. On your child’s device, please log out when you are done.</li><li>📖 The guide is at the top under <b>?</b>, backup and grants under <b>⚙️</b>. ⓘ explains each section.</li></ul><button class="btn primary" id="welcomeGo" type="button">Let’s go</button>`;
+    ? `<h2>Willkommen, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 <b>Daten nur auf diesem Gerät:</b> Den Lernstand des Kindes sehen Sie auf dem Gerät, auf dem es übt.</li><li>🔑 Ihr Passwort gilt nur auf diesem Gerät. Auf einem weiteren Gerät einmal mit dem Startcode anmelden.</li><li>🚪 Sie bleiben angemeldet, bis Sie <b>Abmelden</b> tippen. Auf dem Gerät des Kindes nach dem Nachsehen bitte abmelden.</li><li>📖 Die Hilfe finden Sie oben unter <b>?</b>, Sicherung und Freigaben unter <b>⚙️</b>. ⓘ erklärt einzelne Abschnitte.</li></ul><button class="btn primary" id="welcomeGo" type="button">Los geht’s</button>`
+    : `<h2>Welcome, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 <b>Data only on this device:</b> you see your child’s progress on the device where they practice.</li><li>🔑 Your password works only on this device. On another device, log in once with the start code.</li><li>🚪 You stay logged in until you tap <b>Log out</b>. On your child’s device, please log out when you are done.</li><li>📖 Help is at the top under <b>?</b>, backup and grants under <b>⚙️</b>. ⓘ explains each section.</li></ul><button class="btn primary" id="welcomeGo" type="button">Let’s go</button>`;
   $('#welcomeGo').addEventListener('click',()=>loginDone(u,true));
   $('#welcomeGo').focus();
 }
@@ -4884,83 +4879,54 @@ const GUIDE_KID=`<div class="quick"><b>Quick guide</b><ol>
 <li><b>Your grown-ups</b> can see what you have worked on. There are no grades in Big Quest – only learning. Other grown-ups, like a teacher, can only look if your parents allow it.</li>
 <li><b>Log out</b> when someone else wants to use this iPad. Your brother or sister then taps their own name and types their own password.</li>
 </ol>`;
-const GUIDE_ADULT_DE=`<div class="quick"><b>Kurzanleitung für Eltern</b><ol>
-<li><b>Einmal einrichten:</b> Seite in Safari öffnen, Familienpasswort eingeben, Teilen → „Zum Home-Bildschirm“. Künftig nur über das Symbol öffnen.</li>
-<li><b>Anmelden:</b> „👪 Parent / Teacher“ → Benutzername und Startcode (oder Startlink/QR-Code öffnen) → starkes eigenes Passwort; am einfachsten den Vorschlag übernehmen und im Passwortspeicher sichern.</li>
-<li><b>Kind anmelden:</b> „🎒 Student“ mit seinem Startcode; zusammen ein Merkpasswort wählen und im Passwortspeicher sichern.</li>
-<li><b>Elternbereich:</b> Sie sehen nur Ihre eigenen Kinder – mehrere wählen Sie oben aus.</li>
-<li><b>Einmal im Monat sichern:</b> „💾 Sicherung → Jetzt sichern“, auf dem Gerät, auf dem Ihr Kind übt.</li>
-<li><b>Lehrkraft oder Admin</b> sehen Ihr Kind nur, wenn Sie es unter „🔐 Zugriff & Freigaben“ freigeben.</li>
-</ol></div>
-<p><b>Das Wichtigste vorab:</b> Die App hat keinen Server. Alles, was das Kind übt (Sterne, Lernstand, Wiederholungen, Leseaufnahmen, Übungsblätter), liegt <b>nur auf dem Gerät, auf dem es übt</b> – getrennt für jedes Kind. Deshalb übt das Kind am besten immer auf demselben Gerät, über das App-Symbol auf dem Home-Bildschirm. Den Lernstand sehen Erwachsene auf diesem Gerät. Ein Abgleich zwischen Geräten ist in Vorbereitung.</p>
-<ol class="steps">
-<li><b>Einrichten (einmalig):</b> Seite in Safari öffnen und das Familienpasswort eingeben („angemeldet bleiben“ angehakt lassen). Dann Teilen-Symbol → „Zum Home-Bildschirm“ → „Hinzufügen“ und künftig nur noch über das Symbol öffnen. Die Home-Bildschirm-App hat einen eigenen Speicher und fragt beim ersten Öffnen noch einmal nach dem Familienpasswort.</li>
-<li><b>Anmelden und Passwort:</b> „👪 Parent / Teacher“, Benutzername und Startcode. Kommt der Startcode als Link oder QR-Code vom Admin, genügt Öffnen bzw. Scannen – die Anmeldung ist dann ausgefüllt. Danach ein eigenes Passwort wählen: mindestens 12 Zeichen und nicht leicht zu erraten. Am einfachsten „Übernehmen“ beim Vorschlag aus drei Wörtern und einer Zahl. Der Passwortspeicher bietet an, es zu sichern; danach füllt Face ID oder Touch ID es aus. Ein älteres, kürzeres Passwort fragt die App einmal neu ab. Sie bleiben angemeldet, bis Sie oben „Abmelden“ tippen – auch wenn das iPad in den Ruhezustand geht oder die App geschlossen wird.</li>
-<li><b>Kind anmelden:</b> „🎒 Student“, Benutzername und Startcode des Kindes, dann mit Ihrem Kind ein Passwort wählen – der Vorschlag aus drei Wörtern und einer Zahl ist gut zu merken; im Passwortspeicher sichern. Das Kind bleibt angemeldet, bis jemand „Log out“ tippt. Nutzen Geschwister dasselbe Gerät, wählt sich jedes unter „Who's here?“ selbst aus und gibt sein eigenes Passwort ein.</li>
-<li><b>Meine Kinder:</b> Im Elternbereich sehen Sie nur Ihre eigenen Kinder – auch ohne dass sich das Kind angemeldet hat, sofern seine Daten auf diesem Gerät liegen. Ist ein anderes Kind angemeldet, sehen Sie von ihm nichts. Mit mehreren Kindern wählen Sie oben, wessen Stand Sie sehen. Liegen keine Daten Ihrer Kinder auf dem Gerät, steht dort ein Hinweis; den Stand sehen Sie dann auf dem Gerät Ihres Kindes. Auf dem Gerät des Kindes nach dem Nachsehen bitte abmelden; danach ist dort wieder das Kind angemeldet.</li>
-<li><b>Im Elternbereich:</b> oben die Übersicht wie auf der Kinderseite mit der Einschätzung in Worten (keine Schulbeurteilung). Fach antippen: bei jeder Quest Grundlage, Tipp und der Schalter „Im Fokus“. Den Fokus wählt die App selbst – was die Lehrkraft als nächste Schritte nennt und wo Übung hilft –, daraus nimmt „Practise Today“ seine Aufgaben; über „🎯 Fokus“ stellen Sie auf „Manuell“, um selbst zu wählen, und mit „Automatisch“ wieder zurück. Darunter zum Aufklappen: Einstufungen der Schule, Übungsblätter, Sicherung, Zugriff & Freigaben, „Für das Kind“ (Pisolala-Geschichten, Kalender-Erinnerung, Profilangaben), „Ihr Kind unterstützen“ (die wichtigsten Regeln), „So funktioniert Big Quest“ (das Konzept, auch wie die App einstuft) und diese Bedienungshilfe. Die Sprache wechseln Sie oben mit den Flaggen.</li>
-<li><b>Zugriff & Freigaben:</b> Eine Lehrkraft oder der Admin sieht den Lernstand Ihres Kindes nur mit Ihrer Freigabe unter „🔐 Zugriff & Freigaben“: Anmeldename der Person eintragen, Umfang wählen (Lernstand, auf Wunsch auch Schuldaten) und Dauer (1–90 Tage, voreingestellt 14). Vor dem Bestätigen lesen Sie, was die Person sehen kann. Sie kann nichts ändern und sieht weder Namen noch Geburtstag aus dem Profil. „Beenden“ wirkt sofort; nach Ablauf endet die Freigabe von selbst. Eine neue Freigabe für dieselbe Person ersetzt die alte. Das Protokoll zeigt, wann eine Freigabe erteilt, angesehen, beendet oder abgelaufen ist. Die Person sieht das Kind nur auf einem Gerät, auf dem seine Daten liegen.</li>
-<li><b>Sicherung:</b> Unter „💾 Sicherung“ speichern Sie den Lernstand Ihres Kindes als Datei (mit Freigaben und Aufnahmen) und können ihn auf jedem Gerät zurückspielen; eine veränderte Datei oder die Datei eines anderen Kindes nimmt die App nicht an. Nach dem Zurückspielen geht „Rückgängig“ einmal. Sichern Sie dort, wo Ihr Kind übt (auf seinem Gerät, in der App vom Home-Bildschirm, nicht in Safari) – am besten einmal im Monat. Die Übersicht zeigt, wann zuletzt gesichert wurde.</li>
-<li><b>Für das Kind:</b> Practise Today oder ein Fach; bei Fehlern Hinweis, zweiter Versuch, dann Lösungsweg; Lese-Studio mit Aufnahme (Teilen/Sichern zum Hochladen auf die Lernplattform der Klasse); Übungsblatt als PDF – die Antworten trägt das Kind danach selbst unter „My sheets“ ein, Sie sehen im Elternbereich, wie es lief; nach jeder Runde Witz, Rätsel oder Geschichte.</li>
-</ol>
-<p><b>Gut zu wissen:</b> Eigene Passwörter gelten derzeit nur auf dem Gerät, auf dem sie festgelegt wurden; auf einem weiteren Gerät einmal mit dem Startcode anmelden. Passwort vergessen? Der Startcode funktioniert weiter; ist er nicht zur Hand, gibt der Admin einen neuen (auch als Startlink oder QR-Code). Nach 5 Fehlversuchen 30 Sekunden warten. Neue Versionen lädt die App beim Start und beim Zurückkehren selbst. Familienpasswort, Startcodes und Startlinks bitte nicht weitergeben.</p>`;
-const GUIDE_ADULT_EN=`<div class="quick"><b>Quick guide for parents</b><ol>
-<li><b>Set up once:</b> open the page in Safari, enter the family password, Share → “Add to Home Screen”. From then on open it with the icon.</li>
-<li><b>Log in:</b> “👪 Parent / Teacher” → username and start code (or open the start link/QR code) → a strong personal password; easiest is to take the suggestion and save it in the password manager.</li>
-<li><b>Log in your child:</b> “🎒 Student” with their start code; choose a memorable password together and save it in the password manager.</li>
-<li><b>Grown-ups area:</b> you only see your own children – choose between several at the top.</li>
-<li><b>Back up once a month:</b> “💾 Backup → Back up now”, on the device where your child practices.</li>
-<li><b>A teacher or the admin</b> sees your child only if you allow it under “🔐 Access & grants”.</li>
-</ol></div>
-<p><b>Most important first:</b> the app has no server. Everything your child practices (stars, progress, reviews, reading recordings, practice sheets) stays <b>only on the device where they practice</b> – separately for each child. So your child should always use the same device, through the icon on the home screen. Grown-ups see the progress on that device. Syncing between devices is being prepared.</p>
-<ol class="steps">
-<li><b>Set up (once):</b> open the page in Safari and enter the family password (keep “stay signed in” checked). Then tap Share → “Add to Home Screen” → “Add”, and from then on open it with the icon. The home-screen app has its own storage and asks for the family password once more.</li>
-<li><b>Log in and password:</b> “👪 Parent / Teacher”, username and start code. If the admin sends the start code as a link or QR code, just open or scan it – the login is then filled in. Then choose a personal password: at least 12 characters and not easy to guess. Easiest is “Use it” on the suggestion of three words and a number. The password manager offers to save it; after that Face ID or Touch ID fills it in. An older, shorter password is replaced once at the next login. You stay logged in until you tap “Log out” at the top – even when the iPad goes to sleep or the app is closed.</li>
-<li><b>Log in your child:</b> “🎒 Student”, your child’s username and start code, then choose a password together – the suggestion of three words and a number is easy to remember; save it in the password manager. Your child stays logged in until someone taps “Log out”. If siblings share the device, each one picks themselves under “Who's here?” and types their own password.</li>
-<li><b>My children:</b> in the grown-ups area you only see your own children – even without your child logged in, as long as their data are on this device. If another child is logged in, you see nothing of them. With several children, choose at the top whose progress you see. If none of your children’s data are on the device, a note says so; you then see the progress on your child’s device. On your child’s device, please log out when you are done; your child is then logged in there again.</li>
-<li><b>In the grown-ups area:</b> at the top, an overview like your child’s start page with a summary in plain words (not a school assessment). Tap a subject: each quest shows what the summary is based on, a tip, and the “In focus” switch. The app picks the focus by itself – what the teacher names as next steps and where practice helps – and “Practise Today” takes its tasks from there; under “🎯 Focus” switch to “Manual” to choose yourself, and back with “Automatic”. Below, open as needed: school ratings, practice sheets, backup, access & grants, “For your child” (Pisolala stories, calendar reminder, profile details), “Supporting your child” (the key rules), “How Big Quest works” (the concept, including how the app judges) and this guide to using the app. Switch the language with the flags at the top.</li>
-<li><b>Access & grants:</b> a teacher or the admin sees your child’s progress only with your grant under “🔐 Access & grants”: enter the person’s login name, choose what they may see (progress, optionally school ratings) and for how long (1–90 days, 14 by default). Before you confirm, you read exactly what the person can see. They cannot change anything and never see the name or birthday from the profile. “End” takes effect at once; at the end date the grant ends by itself. A new grant for the same person replaces the old one. The log shows when a grant was given, viewed, ended or expired. The person sees your child only on a device that holds the child’s data.</li>
-<li><b>Backup:</b> under “💾 Backup” you save your child’s progress as a file (including grants and recordings) and can restore it on any device; the app refuses a changed file or another child’s file. After a restore, “Undo” works once. Back up where your child practices (on their device, in the app from the Home Screen, not in Safari) – ideally once a month. The overview shows when the last backup was made.</li>
-<li><b>For your child:</b> “Practise Today” or a subject; after a mistake a hint, a second try, then the worked solution; reading studio with recording (share/save to upload to the class learning platform); practice sheet as PDF – afterwards your child types in the answers under “My sheets”, and you see in the grown-ups area how it went; a joke, riddle or story after each round.</li>
-</ol>
-<p><b>Good to know:</b> for now, personal passwords work only on the device where they were set; on another device, log in once with the start code. Forgot your password? The start code keeps working; if it is not at hand, the admin gives you a new one (also as a start link or QR code). After 5 wrong tries, wait 30 seconds. The app loads new versions by itself when it starts and when you come back to it. Please keep the family password, start codes and start links private.</p>`;
-const GUIDE_TEACHER_DE=`<div class="quick"><b>Kurzanleitung für Lehrkräfte</b><ol>
-<li><b>Anmelden:</b> „👪 Parent / Teacher“ → Benutzername und Startcode vom Admin (oder Startlink/QR-Code) → starkes eigenes Passwort.</li>
-<li><b>Einblick nur mit Freigabe:</b> Nennen Sie den Eltern Ihren Anmeldenamen; sie geben Ihnen Einblick – befristet und im gewählten Umfang.</li>
-<li><b>Ansehen:</b> auf dem Gerät, auf dem das Kind übt. Sie sehen nur, nichts lässt sich ändern.</li>
-</ol></div>
-<ol class="steps">
-<li><b>Wofür:</b> Big Quest ist eine private Übungs-App der Familie. Der Einblick ist als Blick auf die Hausaufgaben gedacht, nicht für den dienstlichen Einsatz in der Schule.</li>
-<li><b>Was Sie sehen:</b> die Übersicht des Kindes mit der Einschätzung in Worten (keine Schulbeurteilung), je Quest Grundlage und „💡 So helfen Sie“. Schuldaten nur, wenn die Eltern sie ausdrücklich freigegeben haben. Den Namen aus dem Profil sehen Sie nicht, nur den Anmeldenamen.</li>
-<li><b>Was Sie nicht sehen oder tun können:</b> keine Einstellungen, kein Fokus, keine Übungsblätter, keine Sicherung, keine Freigaben; keine anderen Kinder, keine Klassenlisten, keine Suche.</li>
-<li><b>Dauer:</b> Die Freigabe läuft bis zu dem Datum, das die Eltern gewählt haben (höchstens 90 Tage), und kann jederzeit beendet werden. Danach erscheint „Noch keine Freigabe“.</li>
-<li><b>Protokoll:</b> Die Eltern sehen, wann Sie die Übersicht angesehen haben (einmal pro Tag vermerkt).</li>
-<li><b>Bitte:</b> keine Bildschirmfotos oder Notizen über das Kind weitergeben; Fragen direkt mit den Eltern klären.</li>
+/* ? Help (concept 7.3, F1): one version per role, short; settings are linked by route (⚙), not described. */
+const GO = (sec, label) => `<a class="pgo" href="#eltern/einstellungen/${sec}" data-pgoto="${sec}">⚙️ → „${label}“</a>`;
+const GO_EN = (sec, label) => `<a class="pgo" href="#eltern/einstellungen/${sec}" data-pgoto="${sec}">⚙️ → “${label}”</a>`;
+const GUIDE_ADULT_DE=`<h3 class="pguide-h">Hilfe für Eltern</h3><ol class="steps">
+<li><b>Einmal einrichten:</b> Seite in Safari öffnen, Familienpasswort eingeben. Dann Teilen → „Zum Home-Bildschirm“. Künftig nur über das Symbol öffnen.</li>
+<li><b>Anmelden:</b> „👪 Parent / Teacher“, Benutzername und Startcode – oder Startlink bzw. QR-Code öffnen. Dann ein eigenes Passwort wählen: am einfachsten den Vorschlag übernehmen und im Passwortspeicher sichern. Es gilt nur auf diesem Gerät.</li>
+<li><b>Kind anmelden:</b> „🎒 Student“ mit dem Startcode des Kindes. Zusammen ein Merkpasswort wählen und im Passwortspeicher sichern. Geschwister am selben Gerät wählen sich unter „Who's here?“ aus.</li>
+<li><b>Nachsehen:</b> Der Lernstand liegt nur auf dem Gerät, auf dem Ihr Kind übt. Mit mehreren Kindern wählen Sie oben aus. <b>Danach abmelden</b> – dann ist dort wieder Ihr Kind angemeldet.</li>
+<li><b>Sichern:</b> einmal im Monat, auf dem Gerät des Kindes: ${GO('sicherung','💾 Sicherung & Daten')}.</li>
+<li><b>Freigaben:</b> Eine Lehrkraft oder der Admin sieht Ihr Kind nur mit Ihrer Freigabe: ${GO('freigaben','🔐 Zugriff & Freigaben')}.</li>
+<li><b>Passwort vergessen:</b> Der Startcode gilt weiter; sonst gibt der Admin einen neuen. Nach 5 Fehlversuchen 30 Sekunden warten. Familienpasswort, Startcodes und Startlinks nicht weitergeben.</li>
 </ol>`;
-const GUIDE_TEACHER_EN=`<div class="quick"><b>Quick guide for teachers</b><ol>
-<li><b>Log in:</b> “👪 Parent / Teacher” → username and start code from the admin (or start link/QR code) → a strong personal password.</li>
-<li><b>Access only with a grant:</b> tell the parents your login name; they give you access – for a limited time and to the extent they choose.</li>
-<li><b>Look:</b> on the device where the child practices. You can only look; nothing can be changed.</li>
-</ol></div>
-<ol class="steps">
-<li><b>Purpose:</b> Big Quest is the family’s private practice app. Access is meant as a look at homework practice, not for official use at school.</li>
-<li><b>What you see:</b> the child’s overview with a summary in plain words (not a school assessment), for each quest what it is based on and “💡 How you can help”. School ratings only if the parents explicitly allowed them. You do not see the name from the profile, only the login name.</li>
-<li><b>What you cannot see or do:</b> no settings, no focus, no practice sheets, no backup, no grants; no other children, no class lists, no search.</li>
-<li><b>Duration:</b> the grant lasts until the date the parents chose (at most 90 days) and can be ended at any time. After that, “No grant yet” appears.</li>
-<li><b>Log:</b> the parents see when you looked at the overview (noted once a day).</li>
-<li><b>Please:</b> do not pass on screenshots or notes about the child; talk to the parents directly.</li>
+const GUIDE_ADULT_EN=`<h3 class="pguide-h">Help for parents</h3><ol class="steps">
+<li><b>Set up once:</b> open the page in Safari and enter the family password. Then Share → “Add to Home Screen”. From then on, open it with the icon.</li>
+<li><b>Log in:</b> “👪 Parent / Teacher”, username and start code – or open the start link or QR code. Then choose your own password: easiest is to take the suggestion and save it in the password manager. It works only on this device.</li>
+<li><b>Log in your child:</b> “🎒 Student” with your child’s start code. Choose a memorable password together and save it in the password manager. Siblings on the same device pick themselves under “Who's here?”.</li>
+<li><b>Take a look:</b> the progress is only on the device where your child practices. With several children, choose at the top. <b>Log out afterwards</b> – your child is then logged in there again.</li>
+<li><b>Back up:</b> once a month, on your child’s device: ${GO_EN('sicherung','💾 Backup & data')}.</li>
+<li><b>Grants:</b> a teacher or the admin sees your child only with your grant: ${GO_EN('freigaben','🔐 Access & grants')}.</li>
+<li><b>Forgot your password?</b> The start code keeps working; otherwise the admin gives you a new one. After 5 wrong tries, wait 30 seconds. Keep the family password, start codes and start links private.</li>
 </ol>`;
-const GUIDE_ADMIN_DE=`<h3>Für den Admin</h3><ol class="steps">
-<li><b>Konten:</b> Konten, Eltern-Kind-Beziehungen und Startcodes pflegt der Admin mit dem Konten-Werkzeug auf seinem Rechner. Neue Startcodes gibt er als Startlink oder QR-Code aus – nur persönlich übergeben.</li>
-<li><b>„🛠 Konten“:</b> zeigt nur Verwaltungsangaben (Anmeldename, Art, zuletzt auf diesem Gerät) – keine Inhalte, keine Namen aus Profilen.</li>
-<li><b>Lernstand eines Kindes:</b> nur mit Freigabe der Eltern, wie bei einer Lehrkraft (nur lesend). Als Elternteil sehen Sie Ihr Kind über Ihr Elternkonto.</li>
-<li><b>„🧪 Testkind“:</b> öffnet das Testkonto mit eigenen Daten; „↩ Zurück zum Elternbereich“ führt zurück, „Abmelden“ gibt das Gerät wieder dem echten Kind.</li>
+const GUIDE_TEACHER_DE=`<h3 class="pguide-h">Hilfe für Lehrkräfte</h3><ol class="steps">
+<li><b>Anmelden:</b> „👪 Parent / Teacher“, Benutzername und Startcode vom Admin – oder Startlink bzw. QR-Code. Dann ein eigenes Passwort wählen.</li>
+<li><b>Einblick nur mit Freigabe:</b> Nennen Sie den Eltern Ihren Anmeldenamen. Sie geben Einblick, befristet und im gewählten Umfang. Schuldaten sehen Sie nur, wenn die Eltern sie freigeben.</li>
+<li><b>Ansehen:</b> auf dem Gerät, auf dem das Kind übt. Sie können nur lesen, nichts ändern. Den Namen aus dem Profil sehen Sie nicht.</li>
+<li><b>Protokoll:</b> Die Eltern sehen, wann Sie die Übersicht angesehen haben.</li>
+<li><b>Wofür:</b> eine private Übungs-App der Familie, nicht für den dienstlichen Einsatz in der Schule. Bitte keine Bildschirmfotos weitergeben; Fragen direkt mit den Eltern klären.</li>
+<li><b>Passwort vergessen:</b> Der Startcode gilt weiter; sonst gibt der Admin einen neuen. Nach 5 Fehlversuchen 30 Sekunden warten.</li>
 </ol>`;
-const GUIDE_ADMIN_EN=`<h3>For the admin</h3><ol class="steps">
-<li><b>Accounts:</b> the admin maintains accounts, parent–child relationships and start codes with the account tool on their computer. New start codes go out as a start link or QR code – hand them over personally only.</li>
-<li><b>“🛠 Accounts”:</b> shows administrative details only (login name, kind, last on this device) – no contents, no names from profiles.</li>
-<li><b>A child’s progress:</b> only with a grant from the parents, like a teacher (read-only). As a parent you see your child through your parent account.</li>
-<li><b>“🧪 Test child”:</b> opens the test account with its own data; “↩ Back to grown-ups area” brings you back, “Log out” gives the device back to the real child.</li>
+const GUIDE_TEACHER_EN=`<h3 class="pguide-h">Help for teachers</h3><ol class="steps">
+<li><b>Log in:</b> “👪 Parent / Teacher”, username and start code from the admin – or the start link or QR code. Then choose your own password.</li>
+<li><b>Access only with a grant:</b> tell the parents your login name. They give you access, for a limited time and to the extent they choose. You see school ratings only if the parents allow it.</li>
+<li><b>Look:</b> on the device where the child practices. You can only look; nothing can be changed. You do not see the name from the profile.</li>
+<li><b>Log:</b> the parents see when you looked at the overview.</li>
+<li><b>Purpose:</b> the family’s private practice app, not for official use at school. Please do not pass on screenshots; talk to the parents directly.</li>
+<li><b>Forgot your password?</b> The start code keeps working; otherwise the admin gives you a new one. After 5 wrong tries, wait 30 seconds.</li>
+</ol>`;
+const GUIDE_ADMIN_DE=`<h3 class="pguide-h">Für den Admin</h3><ol class="steps">
+<li><b>Konten und Startcodes</b> pflegen Sie mit dem Konten-Werkzeug auf Ihrem Rechner. Neue Startcodes als Startlink oder QR-Code nur persönlich übergeben.</li>
+<li><b>Übersicht der Konten:</b> ${GO('konten','🛠 Konten')} – nur Verwaltungsangaben, keine Inhalte.</li>
+<li><b>Lernstand eines Kindes:</b> nur mit Freigabe der Eltern, wie bei einer Lehrkraft. Ihr eigenes Kind sehen Sie über Ihr Elternkonto.</li>
+<li><b>Testkinder:</b> oben in der Kinderauswahl unter „🧪 Testkinder“; „▶ Als Testkind spielen“ öffnet die Kinderseite mit Testdaten.</li>
+</ol>`;
+const GUIDE_ADMIN_EN=`<h3 class="pguide-h">For the admin</h3><ol class="steps">
+<li><b>Accounts and start codes</b> are maintained with the account tool on your computer. Hand over new start codes as a start link or QR code in person only.</li>
+<li><b>Account overview:</b> ${GO_EN('konten','🛠 Accounts')} – administrative details only, no contents.</li>
+<li><b>A child’s progress:</b> only with a grant from the parents, like a teacher. You see your own child through your parent account.</li>
+<li><b>Test children:</b> at the top in the child list under “🧪 Test children”; “▶ Play as test child” opens the child’s pages with test data.</li>
 </ol>`;
 /* the grown-ups guide that fits the person who is logged in */
 const guideAdultFor = de => {
@@ -4971,7 +4937,7 @@ const ABOUT_DE=()=>`
 <h2>Über diese Anwendung</h2>
 <p><b>Grade 3 – Big Quest</b> ist ein privat entwickeltes, spielerisches Übungsangebot für ein Kind der 3. Klasse an einer IB-Schule (Primary Years Programme). Die Anwendung begleitet die Inhalte des laufenden Schuljahres und lädt dazu ein, zwischendurch und an jedem Ort freiwillig zu üben – ergänzend zum Unterricht und zu den eigentlichen Hausaufgaben, niemals an ihrer Stelle.</p>
 <div class="note"><b>Wichtiger Hinweis.</b> Es handelt sich um eine Spaß- und Lernanwendung ohne pädagogische Herkunft und ohne fachliche Beratung. Sie wurde weder von der Schule noch vom International Baccalaureate beauftragt, geprüft oder unterstützt. Aufgaben und Programmierung sind mit Unterstützung eines KI-Assistenten entstanden und von den Eltern durchgesehen; Fehler sind dennoch möglich. Ein in der Anwendung ermittelter Übungsstand ist keine Bewertung und lässt keine Rückschlüsse auf schulische Beurteilungen zu. Die App weiß nicht, wer eine Aufgabe gelöst hat und mit welchen Hilfsmitteln. Was sie anzeigt, ist ein Hinweis; die Verantwortung für das Lernen und für Entscheidungen liegt bei den Eltern.</div>
-<h3>Anleitung für Erwachsene</h3>${GUIDE_ADULT_DE}
+<h3>Anleitung für Erwachsene</h3>${GUIDE_ADULT_DE.replace(/<h3 class="pguide-h">[^<]*<\/h3>/,'')}
 <h3>How to use Big Quest (für Kinder)</h3>${GUIDE_KID}
 <h3>Grundidee</h3>
 <p>Üben soll Freude bereiten, Neugier wecken und Selbstvertrauen stärken. Die Anwendung kennt deshalb weder Zeitvorgaben noch Ranglisten, Punktabzüge oder verfallende Belohnungen. Gewürdigt werden Ausdauer, Mut und Wachstum – nicht das Ergebnis einer einzelnen Runde.</p>
@@ -5024,7 +4990,7 @@ const ABOUT_EN=()=>`
 <h2>About this app</h2>
 <p><b>Grade 3 – Big Quest</b> is a privately developed, playful practice companion for a child in Grade 3 at an IB school (Primary Years Programme). It follows the topics of the current school year and invites voluntary practice anywhere and at any time – as a supplement to lessons and homework, never as a replacement.</p>
 <div class="note"><b>Please note.</b> This is a fun learning app without any pedagogical origin or professional advice. It has not been commissioned, reviewed or endorsed by the school or by the International Baccalaureate. Tasks and code were created with the help of an AI assistant and reviewed by the parents; errors remain possible. Any practice status kept by the app is not an assessment and permits no conclusions about school grades. The app does not know who solved a task or with what help. What it shows is a hint; responsibility for learning and for decisions lies with the parents.</div>
-<h3>Guide for grown-ups</h3>${GUIDE_ADULT_EN}
+<h3>Guide for grown-ups</h3>${GUIDE_ADULT_EN.replace(/<h3 class="pguide-h">[^<]*<\/h3>/,'')}
 <h3>How to use Big Quest</h3>${GUIDE_KID}
 <h3>Idea</h3>
 <p>Practice should be enjoyable, spark curiosity and build confidence. There are therefore no time targets, leaderboards, penalties or expiring rewards. Persistence, courage and growth are celebrated – not the result of a single round.</p>
