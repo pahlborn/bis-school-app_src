@@ -30,7 +30,7 @@ Grundlage sind Peters Entscheidungen vom 03.11.:
 | Bereich (Name) | Inhalt (Ereignistypen) | Schlüssel haben |
 |---|---|---|
 | `kind:lern:<Kind>` | `answer`, `round_done`, `badge`, `review`, `practice_day`, `rank_seen`, `sheet_created`, `sheet_result`, `sheet_discarded`, `profile_set` **nur `name`** | Kind, Eltern, Freigabe mit „Lernstand“ |
-| `kind:privat:<Kind>` | `profile_set` (`birthday`, `emoji`, `kidLang`), `setting_set`, `checklist_set`, `day_flag` | Kind, Eltern |
+| `kind:privat:<Kind>` | `profile_set` (`birthday`, `emoji`, `kidLang`), `setting_set`, `list_set`, `checklist_set`, `day_flag`, `advent_open` (die beiden neuen Typen aus 3b-1b-2) | Kind, Eltern |
 | `schule:<Kind>` | `school_import`, `gap_state`, `gap_active` | Kind (nur zum Rechnen, nie angezeigt), Eltern, Freigabe mit „Schuldaten“ |
 | `eltern:allg:<Kind>` | `grant_set`, `grant_revoked`, `member_*`, `device_*`, `key_rotated` | Eltern |
 | `freigabe:<Freigabe>` | `grant_opened` dieser Freigabe | Eltern; Empfänger, solange die Freigabe läuft |
@@ -90,7 +90,7 @@ Grundlage sind Peters Entscheidungen vom 03.11.:
    - Widerruf von g2 am selben Tag: `kind:lern` (v3), `schule` (v2) und `freigabe:g2` wechseln. Die Lehrkraft behält die alten Schuldaten (schon gesehen), bekommt aber keine neuen.
    - Das Kind liest alles (Versionen 1–3).
 5. **Typ und Bereich:**
-   - Jeder der 25 Typen hat genau einen Bereich (ausgeschriebene Tabelle). Kommt ein neuer Typ dazu, wird der Test rot, bis er eingetragen ist.
+   - Jeder der 27 Typen hat genau einen Bereich (ausgeschriebene Tabelle). Kommt ein neuer Typ dazu, wird der Test rot, bis er eingetragen ist.
    - 18 Fälle „richtig unterschrieben, falscher Bereich“ ergeben `bereich-falsch`, darunter Geburtstag in `kind:lern`, `grant_opened g2` im Protokoll g1, `setting_set` im Personen-Bereich und alte bzw. kaputte Bereichsnamen.
    - Ein Schnappschuss passt überall.
    - Über den Abgleich gilt: Das Kind legt den Geburtstag in `kind:lern` ab (Schlüssel hat es) → die Eltern verwerfen ihn mit `bereich-falsch`.

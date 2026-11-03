@@ -46,7 +46,7 @@ const EV_SPEC = {
   sheet_created: ['sheet:str day:day no:pos writing:enum(de|en) items:arr', ''],
   sheet_result: ['sheet:str index:int res:enum(ok|no|help) day:day qid:str', ''],
   sheet_discarded: ['sheet:str', ''],
-  setting_set: ['setting:enum(focusMode|focusManual|unlocked|storyCap) value:any', ''],
+  setting_set: ['setting:enum(focusMode|storyCap) value:any', ''],   // the lists focusManual and unlocked: list_set (task 3b-1b-2)
   checklist_set: ['studio:str index:int value:bool', 'size:pos'],   // size: number of items (the app stores the whole list, task 3b-1b)
   day_flag: ['flag:enum(greetDay|mysteryDone|bdayParty) day:day', ''],
   school_import: ['asOf:day data:obj', 'source:str'],
@@ -63,6 +63,10 @@ const EV_SPEC = {
   // gaps per school (index.html "gaps", task 3b-0): one standard per event; day = the app's day (index.html dayKey)
   gap_state: ['standard:str state:enum(closed|hold|open) by:enum(app|parents) schoolDay:day day:day', 'quest:str'],
   gap_active: ['standard:nstr', ''],
+  // lists the app stores whole, synced per entry (task 3b-1b-2): one entry on or off ("last wins" per list and entry)
+  list_set: ['list:enum(unlocked|focusManual) item:str on:bool', ''],
+  // Advent calendar: a door is opened (only opening, never closing; index.html openDoor, key advent<year>)
+  advent_open: ['year:pos door:pos', ''],
 };
 function evParse(text) {
   const out = {};
@@ -160,7 +164,7 @@ export function mergeLog(logs, now) {
 
 /* ---------- "last wins" fields ----------
    type -> payload fields that name the field. Everything else is a protocol event (not listed here). */
-const EV_LAST_WINS = { profile_set: ['field'], setting_set: ['setting'], day_flag: ['flag'], checklist_set: ['studio', 'index'], rank_seen: [], gap_state: ['standard'], gap_active: [] };
+const EV_LAST_WINS = { profile_set: ['field'], setting_set: ['setting'], day_flag: ['flag'], checklist_set: ['studio', 'index'], rank_seen: [], gap_state: ['standard'], gap_active: [], list_set: ['list', 'item'] };
 /* key of the field an event sets, e.g. "profile_set:name"; null for protocol events */
 export function fieldKey(e) {
   if (!evObj(e) || !evObj(e.payload) || !evOwn(EV_LAST_WINS, e.type)) return null;

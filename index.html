@@ -693,6 +693,16 @@ function eventHook(type, payload){
     eventSink.write(type, payload);
   }catch(e){ eventErrors.push(type+': '+String(e&&e.message||e)); }
 }
+/* Lists stored whole but synced per entry (task 3b-1b-2: unlocked, focusManual): the list_set payloads that turn the
+   old list into the new one - normally only what was removed or added; if the kept entries changed their order or a
+   new one is not at the end, all old ones off and all new ones on (so replaying them gives exactly the new list). */
+function listEvents(list, oldL, newL){
+  const o=Array.isArray(oldL)?oldL:[], n=Array.isArray(newL)?newL:[];
+  const keptOld=o.filter(x=>n.includes(x)), keptNew=n.filter(x=>o.includes(x));
+  const plain=keptOld.every((x,i)=>keptNew[i]===x) && n.every((x,i)=>o.includes(x) || i>=keptNew.length);
+  const off=plain?o.filter(x=>!n.includes(x)):o, on=plain?n.filter(x=>!o.includes(x)):n;
+  return off.map(item=>({list, item, on:false})).concat(on.map(item=>({list, item, on:true})));
+}
 /* ---------- move to IDs (S11 Stufe 1, P2, 02.11.) ----------
    Once per device, before anything else reads the store: every child's data are COPIED from the old
    keys (bq2_<key> for the first child, bq2_<user>__<key> for the others, bq2_pw_<user>) to the new ones
@@ -2428,9 +2438,17 @@ function classTopics(){
 const cleanFocus = l => uniq(l).filter(k=>WORLDS[k] && !k.startsWith('mix_') && k!=='today' && !isArchived(WORLDS[k]) && !isLocked(k));
 function migrateFocus(){
   const saved=store.get('focus',null), on=store.get('focusOn',null), off=store.get('focusOff',null);
-  if(Array.isArray(saved)){ store.set('focusMode','manual'); store.set('focusManual',cleanFocus(saved)); store.del('focus'); }
+  // (the events go out under whoever is acting; a child may not set the focus - then they are reported, task 3c converts old data)
+  if(Array.isArray(saved)){
+    store.set('focusMode','manual'); eventHook('setting_set',{setting:'focusMode', value:'manual'});
+    const old=store.get('focusManual',[]), nu=cleanFocus(saved); store.set('focusManual',nu); listEvents('focusManual',old,nu).forEach(p=>eventHook('list_set',p));
+    store.del('focus');
+  }
   if(Array.isArray(on) || Array.isArray(off)){
-    if((on||[]).length || (off||[]).length){ store.set('focusMode','manual'); store.set('focusManual',cleanFocus(focusAuto().concat(on||[])).filter(k=>!(off||[]).includes(k))); }
+    if((on||[]).length || (off||[]).length){
+      store.set('focusMode','manual'); eventHook('setting_set',{setting:'focusMode', value:'manual'});
+      const old=store.get('focusManual',[]), nu=cleanFocus(focusAuto().concat(on||[])).filter(k=>!(off||[]).includes(k)); store.set('focusManual',nu); listEvents('focusManual',old,nu).forEach(p=>eventHook('list_set',p));
+    }
     store.del('focusOn'); store.del('focusOff');
   }
 }
@@ -2445,12 +2463,20 @@ function focusTopics(){
   return focusMemo.val.slice();
 }
 function setFocusMode(mode){
-  if(mode==='manual'){ if(!focusManualMode()){ store.set('focusManual',focusTopics()); store.set('focusMode','manual'); } }
-  else { store.del('focusMode'); store.del('focusManual'); }
+  if(mode==='manual'){ if(!focusManualMode()){
+    const old=store.get('focusManual',[]), nu=focusTopics(); store.set('focusManual',nu); listEvents('focusManual',old,nu).forEach(p=>eventHook('list_set',p));
+    store.set('focusMode','manual'); eventHook('setting_set',{setting:'focusMode', value:'manual'});
+  } }
+  else {
+    const old=store.get('focusManual',[]);
+    store.del('focusMode'); eventHook('setting_set',{setting:'focusMode', value:null});
+    store.del('focusManual'); listEvents('focusManual',old,[]).forEach(p=>eventHook('list_set',p));
+  }
 }
 function toggleFocus(k){
   const list=focusTopics(); setFocusMode('manual');
-  store.set('focusManual', list.includes(k)?list.filter(x=>x!==k):list.concat([k]));
+  const old=store.get('focusManual',[]), nu=list.includes(k)?list.filter(x=>x!==k):list.concat([k]);
+  store.set('focusManual', nu); listEvents('focusManual',old,nu).forEach(p=>eventHook('list_set',p));
 }
 const todayISO=new Date().toISOString().slice(0,10);
 const isArchived = d => !!d && (d.archived===true || (!!d.until && todayISO>d.until));
@@ -3210,7 +3236,7 @@ function openDoor(n){
   const pool=THEME_MYSTERY.advent.concat(MYSTERY), m=pool[n%pool.length], opts=shuffle([m[1]].concat(m[2]));
   body.innerHTML=`<p><b>Door ${n}:</b> ${esc(m[0])}</p><div class="row">${opts.map(o=>`<button type="button" class="btn small" data-a="${esc(o)}">${esc(o)}</button>`).join('')}</div>`;
   body.querySelectorAll('button[data-a]').forEach(b=>b.addEventListener('click',()=>{
-    const ok=b.dataset.a===m[1]; opened.push(n); store.set(key,opened); beep(ok?'good':'bad');
+    const ok=b.dataset.a===m[1]; opened.push(n); store.set(key,opened); eventHook('advent_open',{year:+key.slice(6), door:n}); beep(ok?'good':'bad');
     renderAdvent(); $('#doorBody').innerHTML=`<p>${ok?'Yes!':'Good try! It is '+esc(m[1])+'.'}</p>`+treat();
   }));
 }
@@ -4268,7 +4294,7 @@ function renderSheets(){
   body.querySelectorAll('[data-psubj],[data-pmore]').forEach(b=>b.addEventListener('click',()=>{ state.psubj=b.dataset.psubj||b.dataset.pmore; renderSheets(); window.scrollTo(0,0); }));
   const back=$('#pBack'); if(back) back.addEventListener('click',()=>{ state.psubj=null; renderSheets(); window.scrollTo(0,0); });
   body.querySelectorAll('[data-pfocus]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; toggleFocus(b.dataset.pfocus); renderHome(); renderSheets(); }));
-  body.querySelectorAll('[data-punlock]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; const k=b.dataset.punlock, u=store.get('unlocked',[]); store.set('unlocked', u.includes(k)?u.filter(x=>x!==k):u.concat([k])); renderHome(); renderSheets(); }));
+  body.querySelectorAll('[data-punlock]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; const k=b.dataset.punlock, u=store.get('unlocked',[]), nu=u.includes(k)?u.filter(x=>x!==k):u.concat([k]); store.set('unlocked', nu); listEvents('unlocked',u,nu).forEach(p=>eventHook('list_set',p)); renderHome(); renderSheets(); }));
   body.querySelectorAll('[data-gapact]').forEach(b=>b.addEventListener('click',()=>{ if(!gapCanAct()) return; gapAct(b.dataset.gapact, b.dataset.gapstd); renderHome(); renderSheets(); }));
   body.querySelectorAll('[data-fmode]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; setFocusMode(b.dataset.fmode); renderHome(); renderSheets(); }));
   body.querySelectorAll('[data-psheetq]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess||isTeacher()) return; printSheet([b.dataset.psheetq]); renderSheets(); }));
