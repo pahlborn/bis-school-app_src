@@ -50,7 +50,7 @@ test('T6/T7 part 2: short, gaps explained honestly, exact thresholds folded away
     const kapitel = (await konzept.locator('.psec-body').textContent()).replace(/\s+/g, ' ');
     const quellen = (await sec(page, L.quellen).textContent()).replace(/\s+/g, ' ');
     // the folded "exact thresholds" keep today's content (concept 7.2) and are not counted: T7 measures what is shown
-    const genauText = (await konzept.locator('details.about-sub').textContent()).replace(/\s+/g, ' ');
+    const genauText = (await sec(page, L.ein).locator('details.about-sub').textContent()).replace(/\s+/g, ' ');
     const n = kapitel.length - quellen.length - genauText.length;
     assert.ok(n <= 7000, `${lang}: ${n} characters without sources and folded thresholds`);
     // helping the way school does: the why in at most 3 sentences
