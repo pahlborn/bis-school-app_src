@@ -1,5 +1,5 @@
 // Testbau (S12, D3): die App mit den Stufe-2-Modulen startet im echten Browser ohne Fehler, und das Modul
-// krypto und ereignisse arbeiten dort genauso wie in Node (Web Crypto, Datum und Zeitformate in Chromium; Safari folgt im Feldtest).
+// krypto, ereignisse, schnappschuss und bereiche arbeiten dort genauso wie in Node (Web Crypto, Datum und Zeitformate in Chromium; Safari folgt im Feldtest).
 //   node --test tests/testbau.test.mjs
 
 import { test, before, after } from 'node:test';
@@ -9,7 +9,7 @@ import { appServer, browserStarten, appOeffnen } from './app-hilfen.mjs';
 let browser, server;
 before(async () => {
   browser = await browserStarten();
-  server = await appServer({ bauart: 'test', anpassen: (h) => h.replace(/\}\)\(\);\s*<\/script>/, 'window.__bqk={sealEntry,openEntryText,entryAad,newAreaKey,newPersonKeys,publicKeysOf,lockPersonKeys,unlockPersonKeys,createKeyring,rotateKeyring,keysForHolder,keyFingerprint};window.__bqe={newEvent,checkEvent,effectiveTime,mergeLog,fieldKey,lastWins};window.__bqs={makeSnapshot,stateFrom,needsSnapshot,derive};})();</script>') });
+  server = await appServer({ bauart: 'test', anpassen: (h) => h.replace(/\}\)\(\);\s*<\/script>/, 'window.__bqk={sealEntry,openEntryText,entryAad,newAreaKey,newPersonKeys,publicKeysOf,lockPersonKeys,unlockPersonKeys,createKeyring,rotateKeyring,keysForHolder,keyFingerprint};window.__bqe={newEvent,checkEvent,effectiveTime,mergeLog,fieldKey,lastWins};window.__bqs={makeSnapshot,stateFrom,needsSnapshot,derive};window.__bqb={halter,schluesselVerteilen,schluesselLesen,passtZumBereich,lokalerSpeicher,signEvent,acceptEvent};})();</script>') });
 });
 after(async () => { await browser?.close(); server?.close(); });
 
@@ -75,6 +75,27 @@ test('Testbau: Schnappschuss (Pruefsumme mit Web Crypto) liefert im Browser dens
     return { count: s.payload.count, hash: /^[0-9a-f]{64}$/.test(s.payload.idsHash), fehlerFrei: E.checkEvent(s).length === 0, a: a.weg + (JSON.stringify(a.state) === soll), b: b.weg + (JSON.stringify(b.state) === soll), c: c.weg + (JSON.stringify(c.state) === JSON.stringify(S.derive([...alle, spaet], { now: jetzt }))), d: d.weg, schwelle: S.needsSnapshot(alle, null) };
   });
   assert.deepEqual(r, { count: 200, hash: true, fehlerFrei: true, a: 'schnappschusstrue', b: 'schnappschusstrue', c: 'volltrue', d: 'nachladen', schwelle: false });
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
+
+test('Testbau: Bereiche - Schluessel verteilen, nach Ablauf wechseln, falscher Bereich wird verworfen (P3b)', async () => {
+  const { ctx, page, fehler } = await appOeffnen(browser, server.url);
+  const r = await page.evaluate(async () => {
+    const K = window.__bqk, B = window.__bqb, E = window.__bqe, L = 'kind:lern:p_k1';
+    const keys = {}, M = {};
+    for (const [p, role] of [['p_k1', 'child'], ['p_e1', 'parent'], ['p_l1', 'teacher']]) { keys[p] = await K.newPersonKeys(); M[p] = { role, pub: await K.publicKeysOf(keys[p]), devices: ['d_' + p.slice(2)] }; }
+    const fr = [{ grant: 'g1', grantee: 'p_l1', scope: ['learning'], from: '2026-11-01', until: '2026-11-14' }];
+    const z = B.lokalerSpeicher().geraet('d_e1');
+    const verteilen = (heute) => B.schluesselVerteilen(z, L, { soll: B.halter(L, M, fr, heute), ich: 'p_e1', meineSchluessel: keys.p_e1, mitglieder: M });
+    const a = await verteilen('2026-11-03'), b = await verteilen('2026-11-15');
+    const lehrkraft = await B.schluesselLesen(z, L, { ich: 'p_l1', meineSchluessel: keys.p_l1, mitglieder: M });
+    const kind = await B.schluesselLesen(z, L, { ich: 'p_k1', meineSchluessel: keys.p_k1, mitglieder: M });
+    const geb = E.newEvent({ type: 'profile_set', author: 'p_k1', device: 'd_k1', at: '2026-11-03T10:00:00.000Z', payload: { field: 'birthday', value: '2017-05-14' } });
+    const falsch = await B.acceptEvent(await B.signEvent(geb, L, keys.p_k1), { area: L, members: M });
+    return { a: a.aktion, b: b.aktion + b.version + b.entfernt.join(), lehrkraft: [lehrkraft.aktuell, ...lehrkraft.keys.keys()].join(), kind: [kind.aktuell, ...kind.keys.keys()].join(), falsch: falsch.grund, name: B.passtZumBereich({ ...geb, payload: { field: 'name', value: 'K' } }, L) };
+  });
+  assert.deepEqual(r, { a: 'angelegt', b: 'gewechselt2p_l1', lehrkraft: '2,1', kind: '2,1,2', falsch: 'bereich-falsch', name: true });
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
