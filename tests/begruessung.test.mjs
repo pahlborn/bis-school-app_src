@@ -96,7 +96,8 @@ test('Begruessung: Name aus dem Profil (als Text), Stimmung nur Antwortzeile, ni
   assert.ok(await page.locator('#greetJoke .story i').isVisible());
   assert.equal(await page.textContent('#greetSkip'), 'Done ✓');
   await page.locator('#greetSkip').click();
-  const alles = await page.evaluate(() => JSON.stringify(Object.entries(localStorage)).toLowerCase());
+  // shown jokes and read stories hold content IDs (e.g. the joke "two-tired"), never a mood - leave them out of the word search
+  const alles = await page.evaluate(() => JSON.stringify(Object.entries(localStorage).filter(([k]) => !/(jokeSeen|storyRead)$/.test(k))).toLowerCase());
   for (const w of ['mood', 'great', 'tired', '"sad"', 'okay']) assert.ok(!alles.includes(w), 'stored: ' + w);
   const neu = (await page.evaluate(() => Object.keys(localStorage))).filter((k) => !vorher.includes(k));
   assert.ok(neu.every((k) => /name|greetDay|ev|attempts|jokeSeen/.test(k)), 'new keys: ' + neu.join(', '));   // jokeSeen: A3, shown jokes (no mood)
