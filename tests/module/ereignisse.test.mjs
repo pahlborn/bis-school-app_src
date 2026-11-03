@@ -48,7 +48,7 @@ const SAMPLE = {
   device_added: { device: 'd_b1', label: 'iPad' },
   device_removed: { device: 'd_b1' },
   key_rotated: { version: 2 },
-  snapshot: { upTo: '2026-11-02T16:00:00Z', count: 5000, state: { total: 120 } },
+  snapshot: { upTo: '2026-11-02T16:00:00Z', count: 5000, idsHash: 'ab'.repeat(32), state: { total: 120 } },
   gap_state: { standard: 'MA.3.NBT.2', state: 'closed', by: 'app', schoolDay: '2026-10-20', day: DAY, quest: 'round' },
   gap_active: { standard: 'MA.3.NBT.2' },
 };
@@ -111,6 +111,8 @@ test('US7.1: kaputte Faelle werden mit Grund abgelehnt', () => {
     ['Freigabe Umfang doppelt', ev('grant_set', { ...SAMPLE.grant_set, scope: ['learning', 'learning'] }), /^payload\.scope: invalid/], ['Freigabe an Nicht-Person', ev('grant_set', { ...SAMPLE.grant_set, grantee: 'frau' }), /^payload\.grantee: invalid/],
     ['Geraet ohne d_ in der Nutzlast', ev('device_added', { device: 'iPad' }), /^payload\.device: invalid/],
     ['Schnappschuss mit Ortszeit', ev('snapshot', { ...SAMPLE.snapshot, upTo: '2026-11-02T16:00:00+01:00' }), /^payload\.upTo: invalid/],
+    ['Schnappschuss-Pruefsumme gross geschrieben', ev('snapshot', { ...SAMPLE.snapshot, idsHash: 'AB'.repeat(32) }), /^payload\.idsHash: invalid/],
+    ['Schnappschuss-Pruefsumme zu kurz', ev('snapshot', { ...SAMPLE.snapshot, idsHash: 'ab'.repeat(31) }), /^payload\.idsHash: invalid/],
     ['optionales Feld falsch', ev('answer', { ...SAMPLE.answer, help: 'no' }), /^payload\.help: invalid/],
   ];
   for (const [wo, e, re] of F) mitGrund(e, re, wo);

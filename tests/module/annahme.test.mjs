@@ -52,7 +52,7 @@ function payloadFor(type, author, device) {
     device_added: { device },
     device_removed: { device: 'd_k1' },
     key_rotated: { version: 2 },
-    snapshot: { upTo: '2026-11-02T16:00:00Z', count: 5000, state: {} },
+    snapshot: { upTo: '2026-11-02T16:00:00Z', count: 5000, idsHash: '0'.repeat(64), state: {} },
     gap_state: { standard: 'MA.3.NBT.2', state: 'closed', by: 'app', schoolDay: '2026-10-20', day: DAY, quest: 'round' },
     gap_active: { standard: 'MA.3.NBT.2' },
   }[type];

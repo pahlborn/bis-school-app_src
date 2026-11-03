@@ -25,6 +25,7 @@ const evField = {
   day: evDayOk, str: evStr, nstr: (x) => x === null || evStr(x), bool: (x) => typeof x === 'boolean', any: (x) => x !== undefined,
   int: (x) => Number.isInteger(x) && x >= 0, pos: (x) => Number.isInteger(x) && x >= 1, lvl: (x) => x === 1 || x === 2 || x === 3,
   arr: Array.isArray, obj: evObj, utc: (x) => !Number.isNaN(evMs(x)),
+  sha: (x) => typeof x === 'string' && /^[0-9a-f]{64}$/.test(x),          // SHA-256 as 64 small hex characters
   pid: (x) => typeof x === 'string' && /^p_[0-9A-Za-z]{1,40}$/.test(x),
   did: (x) => typeof x === 'string' && /^d_[0-9A-Za-z]{1,40}$/.test(x),
   scope: (x) => Array.isArray(x) && x.length > 0 && new Set(x).size === x.length && x.every((s) => s === 'learning' || s === 'school'),
@@ -57,7 +58,8 @@ const EV_SPEC = {
   device_added: ['device:did', 'label:str'],
   device_removed: ['device:did', ''],
   key_rotated: ['version:pos', ''],
-  snapshot: ['upTo:utc count:int state:obj', ''],
+  // snapshot (task 5, module schnappschuss): idsHash = checksum of the events it contains, so a late event is noticed
+  snapshot: ['upTo:utc count:int idsHash:sha state:obj', ''],
   // gaps per school (index.html "gaps", task 3b-0): one standard per event; day = the app's day (index.html dayKey)
   gap_state: ['standard:str state:enum(closed|hold|open) by:enum(app|parents) schoolDay:day day:day', 'quest:str'],
   gap_active: ['standard:nstr', ''],
