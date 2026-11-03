@@ -673,7 +673,7 @@ del(k){ try{ localStorage.removeItem(storeKey(k)); }catch(e){} }
    eventHook(type, payload). Only the test build has the module "schreiber"; there the event goes to
    bq2_<child>__events (who acts: the child, or the grown-up while the grown-ups' area is open). The live build
    has no such module: eventHook does nothing there and the app keeps working exactly as before. */
-let eventSink=null; const eventErrors=[];
+let eventSink=null; const eventErrors=[], eventNoChild=[];
 function eventWho(){
   if(parentAccess){
     if(!accountsOn()) return {person:'p_eltern', role:'parent'};
@@ -685,6 +685,9 @@ function eventWho(){
 }
 function eventHook(type, payload){
   if(typeof evSchreiber!=='function') return;
+  // with accounts but no child's area (e.g. the start page behind the login stores bq2_rankSeen): no child's log to
+  // write to - noted, not written (task 3b-1b-3)
+  if(accountsOn() && !childNs()){ eventNoChild.push(type); return; }
   try{
     if(!eventSink){
       let d=store.get('evDevice',null); if(!d){ d=newDeviceId(); store.set('evDevice',d); }
@@ -2311,7 +2314,9 @@ function gapData(){
   // hold (D4, "keep practising"): the parents keep a gap open the app had closed - {standard:{at, schoolDay}}
   return {closed, active:g.active ? gapKey(g.active) : null, hold:g.hold||{}};
 }
-const gapSave = d => store.set('gaps',{closed:d.closed, active:d.active, hold:d.hold});
+/* evs: the events of this change (task 3b-1b-3, one per standard; types from 3b-0) - written only when the change is
+   stored, so a teacher looking through a grant (nothing stored) writes nothing either */
+const gapSave = (d, evs) => { store.set('gaps',{closed:d.closed, active:d.active, hold:d.hold}); (evs||[]).forEach(([t,p])=>eventHook(t,p)); };
 /* the quests whose main standard is s (only those that can be in the focus at all) */
 const gapQuests = s => cleanFocus(SUBJECTS.flatMap(questsIn)).filter(k=>mainStd(k)===s);
 /* the latest school rating of a standard: {st, day} */
@@ -2324,17 +2329,18 @@ const gapOrder = (a,b) => (GAP_WEAK.indexOf(a.st)-GAP_WEAK.indexOf(b.st)) || (a.
    viewer may change data) */
 function openGaps(){
   if(typeof schoolData!=='function' || !schoolData()) return [];
-  const data=gapData(), out=[]; let changed=false;
+  const data=gapData(), out=[], evs=[]; let changed=false;
   for(const s of uniq(SUBJECTS.flatMap(questsIn).map(mainStd).filter(Boolean))){
     const r=stdRating(s); if(!r || !GAP_WEAK.includes(r.st)) continue;
     const c=data.closed[s]; if(c && c.schoolDay>=r.day) continue;
     const quests=gapQuests(s); if(!quests.length) continue;
     const held=data.hold[s] && data.hold[s].schoolDay>=r.day;   // kept open by the parents: the app does not close it
     const done=!held && quests.find(k=>{ const a=assessQuest(k); return (a.level==='m'||a.level==='e') && a.sure==='confirmed'; });
-    if(done){ data.closed[s]={at:dayKey(), by:'app', schoolDay:r.day, quest:done}; changed=true; continue; }
+    if(done){ data.closed[s]={at:dayKey(), by:'app', schoolDay:r.day, quest:done}; changed=true;
+      evs.push(['gap_state', {standard:s, state:'closed', by:'app', schoolDay:r.day, quest:done, day:dayKey()}]); continue; }
     out.push({s, st:r.st, day:r.day, quests, held:!!held});
   }
-  if(changed && !gapReadOnly()) gapSave(data);
+  if(changed && !gapReadOnly()) gapSave(data, evs);
   return out.sort(gapOrder);
 }
 /* teachers and the admin look through a grant: they never change the child's data */
@@ -2356,10 +2362,13 @@ const gapCanAct = () => typeof parentAccess!=='undefined' && parentAccess && !ga
 function gapAct(action, s){
   if(!gapCanAct()) return;
   const d=gapData(), r=stdRating(s); if(!r) return;
-  if(action==='go'){ d.active=s; }
-  else if(action==='close'){ d.closed[s]={at:dayKey(), by:'parents', schoolDay:r.day}; delete d.hold[s]; if(d.active===s) d.active=null; }
-  else if(action==='hold'){ delete d.closed[s]; d.hold[s]={at:dayKey(), schoolDay:r.day}; d.active=s; }
-  gapSave(d);
+  // events after the table in docs/pruefung/2026-11-02-stufe2-3b0-gaps.md: "close" and "hold" carry their effect on the
+  // active gap themselves (no extra gap_active)
+  let ev;
+  if(action==='go'){ d.active=s; ev=['gap_active', {standard:s}]; }
+  else if(action==='close'){ d.closed[s]={at:dayKey(), by:'parents', schoolDay:r.day}; delete d.hold[s]; if(d.active===s) d.active=null; ev=['gap_state', {standard:s, state:'closed', by:'parents', schoolDay:r.day, day:dayKey()}]; }
+  else if(action==='hold'){ delete d.closed[s]; d.hold[s]={at:dayKey(), schoolDay:r.day}; d.active=s; ev=['gap_state', {standard:s, state:'hold', by:'parents', schoolDay:r.day, day:dayKey()}]; }
+  gapSave(d, ev?[ev]:[]);
 }
 /* progress towards "confirmed secure" in tasks (R10: never in days as a deadline): the quest of the gap that is furthest */
 function gapProgress(g){
