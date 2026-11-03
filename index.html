@@ -1098,7 +1098,7 @@ function mental(){
   const wrongs=fill3(right,[right+10,right-10,right+100,right-100,right+20,right-1]);
   return mc(prompt, fmt(right), wrongs.map(fmt), (plus?a+" + "+b:x+" − "+y)+" = "+right+". Add or take away the hundreds first, then the tens.", Object.assign({grid:true}, NUM));
 }
-function buildNumbers(){ return shuffle([clockRead(), clockPick(), ampm(), numberLine(), placeValue(), expandedZeroQ(), oddEven(), numberParts(), pick([mental,placeValue,clockRead])()]).slice(0,8); }
+function buildNumbers(){ return shuffle(shuffle([clockRead(), clockPick(), ampm(), numberLine(), placeValue(), expandedZeroQ(), oddEven(), numberParts(), pick([mental,placeValue,clockRead])()]).slice(0,7).concat([numbersBaseQ()])); }
 
 /* ======================= PAST · ROUNDING ROAD ======================= */
 const RND={label:'Rounding Road', world:'round'};
@@ -1227,7 +1227,7 @@ function sentenceType(){
 function affixQ(bank){ const r=bank.shift(); return mc(r[0], r[1], r[2], r[3], WRD); }
 function inferenceQ(){ const r=pick(INFER); return mc(r[1], r[2], r[3], r[4], Object.assign({visual:quote(r[0])}, WRD)); }
 /* Word Building: prefixes, suffixes, reading between the lines. The OREO questions moved to Opinion Writing. */
-function buildWords(){ const pre=shuffle(PREFIX), suf=shuffle(SUFFIX); return shuffle([affixQ(pre), affixQ(pre), affixQ(pre), affixQ(suf), affixQ(suf), affixQ(suf)].concat(takeFrom(INFER,2).map(r=>mc(r[1], r[2], r[3], r[4], Object.assign({visual:quote(r[0])}, WRD))))); }
+function buildWords(){ const pre=shuffle(PREFIX), suf=shuffle(SUFFIX); return shuffle([affixQ(pre), affixQ(pre), baseQ('words', WRD), affixQ(suf), affixQ(suf), affixQ(suf)].concat(takeFrom(INFER,2).map(r=>mc(r[1], r[2], r[3], r[4], Object.assign({visual:quote(r[0])}, WRD))))); }
 
 /* ======================= PAST · LIBRARY & RESEARCH ======================= */
 const LIB={label:'Library & Research', world:'library'};
@@ -1260,7 +1260,7 @@ function sourceQ(){
   const r=pick(SOURCES);
   return Object.assign({kind:'mc', prompt:"Which research source fits best?", visual:quote(r[0]), options:['Britannica','Kiddle','BrainPop'], answer:['Britannica','Kiddle','BrainPop'].indexOf(r[1]), grid3:true, explain:r[2]}, LIB);
 }
-function buildLibrary(){ return shuffle(fromBank(LIB_MC,LIB,6).concat([sourceQ(), sourceQ()])); }
+function buildLibrary(){ return shuffle(fromBank(LIB_MC,LIB,5).concat([sourceQ(), sourceQ(), baseQ('library', LIB)])); }
 
 /* ======================= PAST · SCHOOL TRIP ======================= */
 const TRIP={label:'Theme Park Trip', world:'trip'};
@@ -1427,8 +1427,8 @@ const RESP_MC=[
  ["Before you hand in a worksheet, what is the last thing to do?","Read it through once and check nothing is missing",["Hand it in as fast as possible","Only check the first question","Add a drawing"],"One last look finds missing answers and units."],
  ["Who is responsible for recording your group’s data correctly?","Everyone in the group, taking turns",["Only the fastest writer","Only the teacher","Nobody"],"Everyone checks the numbers and the units."]
 ];
-function buildUnits(){ return shuffle([unitPickQ(), unitPickQ(), unitPickQ(), convertQ(), convertQ(), rulerQ(), rulerQ(), massRecordQ()]); }
-function buildGraphs(){ return retag(shuffle([barReadQ(), barReadQ(), scaleStepQ(), lineGraphQ(), barMissingQ(), tableConclusionQ()].concat(fromBank(COMPLETE_MC,UNT,2))), GRA); }
+function buildUnits(){ return shuffle([unitPickQ(), unitPickQ(), unitsBaseQ(), convertQ(), convertQ(), rulerQ(), rulerQ(), massRecordQ()]); }
+function buildGraphs(){ return retag(shuffle([barReadQ(), graphsBaseQ(), scaleStepQ(), lineGraphQ(), barMissingQ(), tableConclusionQ()].concat(fromBank(COMPLETE_MC,UNT,2))), GRA); }
 function buildFinish(){ return fromBank(COMPLETE_MC.concat(RESP_MC), FIN, 8); }
 
 /* ======================= PRACTICE · SUPER SENTENCES ======================= */
@@ -1491,7 +1491,7 @@ function countCapsQ(){
   return typed("How many capital letters are missing in this sentence? Type the number.", count,
     "Correct: "+s+" That is "+count+" capital letter"+(count===1?"":"s")+": the first word"+(count>1?" plus every name, place, day or title.":"."), Object.assign({visual:quote(s.toLowerCase())}, SEN));
 }
-function buildSentences(){ return shuffle([capitalFixQ(), capitalFixQ(), capitalFixQ(), properNounQ(), properNounQ(), endMarkQ(), endMarkQ(), countCapsQ()]); }
+function buildSentences(){ return shuffle([capitalFixQ(), capitalFixQ(), baseQ('sentences', SEN), properNounQ(), properNounQ(), endMarkQ(), endMarkQ(), countCapsQ()]); }
 function buildExamples(){ return retag(shuffle([specificExampleQ(), specificExampleQ(), specificExampleQ(), specificExampleQ(), sequenceOrderQ()].concat(fromBank(HYPO,SEN,3))), EXA); }
 
 /* ======================= PRACTICE · EXPLAIN IT MATHS ======================= */
@@ -1555,7 +1555,7 @@ function reasonableQ(){
     "Estimate first: "+est+". The exact answer is "+fmt(a+b)+". "+(ok?"Leo’s answer is close to the estimate, so it is reasonable.":"Leo’s answer is far from the estimate, so something went wrong."), EXP);
 }
 function buildExplain(){ return shuffle([distanceExplainQ(), distanceExplainQ(), distanceExplainQ(), halfwayQ(), halfwayQ(), tenVsHundredQ(), tenVsHundredQ(), roundTenQ()]); }
-function buildCombos(){ return retag(shuffle([combosQ(), combosQ(), missingAddendQ(), missingAddendQ(), anotherWayQ(), anotherWayQ(), reasonableQ(), reasonableQ()]), COM); }
+function buildCombos(){ return retag(shuffle([combosQ(), combosQ(), missingAddendQ(), missingAddendQ(), anotherWayQ(), anotherWayQ(), reasonableQ(), combosBaseQ()]), COM); }
 
 /* ======================= STRENGTHS · FRICTION CHAMPION ======================= */
 const CHA={label:'Friction Champion', world:'champion'};
@@ -1741,7 +1741,7 @@ const ANL_MC=[
  ["Welches Verb ist <b>trennbar</b>?","anschalten",["schalten","bauen","schneiden"],"an + schalten. Im Satz trennt es sich: Man schaltet es an."],
  ["Wofür braucht man die Anleitung in der HWOO-Einheit?","Für ein selbst erfundenes Traum-Gerät",["Für ein Rezept von Oma","Für eine Mathe-Aufgabe","Für ein Lied"],"Du schreibst eine Anleitung für dein eigenes Traum-Gerät."]
 ];
-function buildAnleitung(){ const r=pick(ANL_ORDER); return shuffle([orderQ(r[0], r[1], null, r[2], Object.assign({hint:"Tippe die Schritte in der richtigen Reihenfolge an"}, ANL)), trennbarQ(), trennbarQ(), zusammenQ(), zusammenQ()].concat(fromBank(ANL_MC,ANL,3))); }
+function buildAnleitung(){ const r=pick(ANL_ORDER); return shuffle([orderQ(r[0], r[1], null, r[2], Object.assign({hint:"Tippe die Schritte in der richtigen Reihenfolge an"}, ANL)), trennbarQ(), trennbarQ(), zusammenQ(), zusammenQ(), baseQ('anleitung', ANL)].concat(fromBank(ANL_MC,ANL,2))); }
 
 /* ======================= NOW · SCHOOL LIFE NOW ======================= */
 const NOW_MC=[
@@ -1769,12 +1769,154 @@ const SCH_MC=NOW_MC.slice(7);
 function buildPoetry(){ return fromBank(POE_MC,POE,8); }
 function buildSchool(){ return fromBank(SCH_MC,SCH,8); }
 
+/* ======================= FOUNDATION TASKS (Auftrag 1, Peter 03.11.) =======================
+   10 of 19 quests with a main standard had no task at level 1 (foundation): a gap then started at year level, and
+   "requires support" could not get its two supported tasks. Foundation = ONE step with a picture or a model, in the
+   model the class uses (SCHOOL_WAY: whole and parts, number line; place value table) - no new methods. Every task has
+   its own tip ("Show me how"); there is no easier example below this level. One foundation task per round.
+   Text quests: module grundlage (GRUNDLAGE), turned into questions by baseQ. */
+function baseQ(k, tag){
+  const r=pick(GRUNDLAGE[k]);
+  return mc(r[0], r[1], r[2], r[3], Object.assign({}, tag, {level:1, tip:r[5]}, r[6]?{visual:quote(r[6])}:{}));
+}
+/* whole and parts as a bar model: the whole on top, the parts below (labels may be '?') */
+function partWholeSVG(whole, parts, wholeLabel, partLabels){
+  const W=600, px=30, w=W-2*px; let s='', x=px;
+  s+=`<rect x="${px}" y="14" width="${w}" height="48" rx="6" fill="var(--soft)" stroke="var(--ink)" stroke-width="2.5"/>`;
+  s+=`<text x="${W/2}" y="38" text-anchor="middle" dominant-baseline="central" font-size="22" font-weight="700" ${FD} fill="var(--ink)">${esc(String(wholeLabel))}</text>`;
+  parts.forEach((p,i)=>{ const pw=w*p/whole, lb=String(partLabels[i]), q=lb==='?';
+    s+=`<rect x="${x.toFixed(1)}" y="72" width="${pw.toFixed(1)}" height="48" rx="6" fill="${q?'var(--sun)':'var(--surface)'}" stroke="var(--ink)" stroke-width="2.5"/>`;
+    s+=`<text x="${(x+pw/2).toFixed(1)}" y="96" text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="700" ${FD} fill="${q?'#172033':'var(--ink)'}">${esc(lb)}</text>`;
+    x+=pw; });
+  return `<svg viewBox="0 0 ${W} 134" width="100%" role="img" aria-label="Whole and parts: ${esc(String(wholeLabel))} = ${partLabels.map(String).map(esc).join(' + ')}">${s}</svg>`;
+}
+const PV3=['Hundreds','Tens','Ones'];
+const digits3 = n => String(n).split('');
+function numbersBaseQ(){
+  const k=rnd(6), tag=Object.assign({level:1, grid:true}, NUM);
+  if(k===0){ // read a number from the place value table
+    const h=1+rnd(9), t=rnd(10), o=1+rnd(9), n=h*100+t*10+o;
+    return mc("The table shows a number. What number is it?", String(n), uniq([o*100+t*10+h, h*100+o*10+t, h*10+o, n+100].map(String)).filter(x=>x!==String(n)).slice(0,2),
+      h+" hundreds, "+t+" tens and "+o+" ones make "+n+".", Object.assign({visual:tableHTML(PV3,[digits3(n)]), tip:"Read the digits from left to right: hundreds, tens, ones. Say the number out loud."}, tag)); }
+  if(k===1){ // o'clock or half past
+    const h=1+rnd(12), m=pick([0,30]), right=timeWords(h,m);
+    const wrongs=uniq([timeWords(h,(m+30)%60), timeWords(h%12+1,m), timeWords((h+5)%12+1,m)]).filter(x=>x!==right).slice(0,2);
+    return mc("What time does the clock show?", right, wrongs, "The long hand points to the "+(m?6:12)+": "+(m?"half past":"o’clock")+". The short hand shows the hour: "+right+".",
+      Object.assign({visual:clockSVG(h,m,190), tip:"First look at the long hand: at the 12 it is o’clock, at the 6 it is half past. Then read the short hand."}, tag)); }
+  if(k===2){ // one jump on the number line
+    const j=pick([10,10,5,-10]), start=(j<0?30:10)+rnd(50), end=start+j;
+    return mc("Start at <b>"+start+"</b> and jump <b>"+(j<0?"− ":"+ ")+Math.abs(j)+"</b>. Where do you land?", String(end), fill3(end,[end+1,end-1,start-j,end+10,end-10]).slice(0,2).map(String),
+      start+" "+(j<0?"− ":"+ ")+Math.abs(j)+" = "+end+".", Object.assign({visual:numberLineSVG(start,[j]), tip:j%10===0?"A jump of 10 changes only the tens digit. The ones stay the same.":"Count on in ones from "+start+", five times."}, tag)); }
+  if(k===3){ // 10 more or 100 more, with the place value table
+    const n=110+rnd(780), p=pick([10,100]), more=rnd(2)===0, right=more?n+p:n-p;
+    return mc("What is <b>"+p+" "+(more?"more":"less")+"</b> than <b>"+n+"</b>?", String(right), fill3(right,[n+(more?1:-1), n+(more?-p:p), more?n+p*10:n-p*10, right+1].filter(x=>x>0)).slice(0,2).map(String),
+      n+" "+(more?"+":"−")+" "+p+" = "+right+". Only the "+(p===10?"tens":"hundreds")+" digit changes.",
+      Object.assign({visual:tableHTML(PV3,[digits3(n)]), tip:"Find the "+(p===10?"tens":"hundreds")+" digit in the table. Make it one "+(more?"bigger":"smaller")+"; the other digits stay the same."}, tag)); }
+  if(k===4){ // odd or even with pairs of dots
+    const n=3+rnd(14), dots=Array.from({length:Math.ceil(n/2)},(_,i)=>2*i+2<=n?'●●':'●').join('  ');
+    return two("Make pairs. Is <b>"+n+"</b> odd or even?", ['Odd','Even'], n%2?0:1, n%2?"One dot has no partner, so "+n+" is odd.":"Every dot has a partner, so "+n+" is even.",
+      Object.assign({visual:itemCard(dots), tip:"Look at the dots in pairs. Does every dot have a partner, or is one left over?"}, tag, {grid:false})); }
+  // compare two numbers that differ in the hundreds
+  const a=100*(1+rnd(8))+rnd(100); let b; do { b=100*(1+rnd(8))+rnd(100); } while(Math.floor(a/100)===Math.floor(b/100));
+  return two("Which number is <b>bigger</b>?", [String(a), String(b)], a>b?0:1, "Compare the hundreds first: "+Math.floor(Math.max(a,b)/100)+" hundreds are more than "+Math.floor(Math.min(a,b)/100)+".",
+    Object.assign({visual:tableHTML(PV3,[digits3(a),digits3(b)]), tip:"Look at the hundreds column first. More hundreds = the bigger number."}, tag));
+}
+function combosBaseQ(){
+  const k=rnd(5), tag=Object.assign({level:1, grid:true}, COM);
+  if(k===0){ // two parts that make the whole (hundreds)
+    const whole=100*(3+rnd(7)), a=100*(1+rnd(whole/100-1)), b=whole-a;
+    return mc("Which two numbers make <b>"+whole+"</b>?", a+" + "+b, [a+" + "+(b+100), (a+100)+" + "+(b+100)],
+      a+" + "+b+" = "+whole+". Both parts together make the whole.", Object.assign({visual:partWholeSVG(whole,[a,b],whole,['?','?']), tip:"Add the hundreds of each choice. Which pair makes exactly "+whole+"?"}, tag)); }
+  if(k===1){ // missing part in hundreds
+    const whole=100*(4+rnd(6)), a=100*(1+rnd(whole/100-1)), ans=whole-a;
+    return typed("<b>"+a+" + ? = "+whole+"</b>. Type the missing part.", ans, "From "+a+" to "+whole+" is "+(ans/100)+" hundred"+(ans>100?"s":"")+": "+ans+". Check: "+a+" + "+ans+" = "+whole+".",
+      Object.assign({visual:partWholeSVG(whole,[a,ans],whole,[a,'?']), tip:"Count on in hundreds from "+a+" to "+whole+". How many hundreds did you count?"}, tag)); }
+  if(k===2){ // add hundreds
+    const a=100*(1+rnd(5)), b=100*(1+rnd(4)), s=a+b;
+    const hu=x=>x/100+(x===100?" hundred":" hundreds");
+    return mc("<b>"+a+" + "+b+"</b> = ?", String(s), fill3(s,[s+100,s-100,s+10]).slice(0,2).map(String), hu(a)+" + "+hu(b)+" = "+hu(s)+" = "+s+".",
+      Object.assign({visual:partWholeSVG(s,[a,b],'?',[a,b]), tip:"Think in hundreds: "+a/100+" + "+b/100+". Then write the hundreds as a number."}, tag)); }
+  if(k===3){ // tens to 100
+    const a=10*(1+rnd(9)), ans=100-a;
+    return mc("Which number goes with <b>"+a+"</b> to make <b>100</b>?", String(ans), fill3(ans,[ans+10,ans-10,a]).filter(x=>x>0&&x!==ans).slice(0,2).map(String), a+" + "+ans+" = 100.",
+      Object.assign({visual:partWholeSVG(100,[a,ans],100,[a,'?']), tip:"Count on in tens from "+a+" to 100."}, tag)); }
+  // take away hundreds
+  const whole=100*(4+rnd(6)), a=100*(1+rnd(whole/100-2)), ans=whole-a;
+  return typed("<b>"+whole+" − "+a+"</b> = ? Type your answer.", ans, whole+" − "+a+" = "+ans+". Check: "+a+" + "+ans+" = "+whole+".",
+    Object.assign({visual:partWholeSVG(whole,[a,ans],whole,[a,'?']), tip:"The whole is "+whole+", one part is "+a+". Count on in hundreds from "+a+" to "+whole+"."}, tag));
+}
+function wordprobBaseQ(){
+  const k=rnd(4), n=pick(NAMES), t=pick(THINGS)[0], tag=Object.assign({level:1}, WPR);
+  if(k===0){ // join: how many now?
+    const a=10*(2+rnd(5)), b=10*(1+rnd(3));
+    return typed(n+" has <b>"+a+"</b> "+t+". "+n+" gets <b>"+b+"</b> more. How many "+t+" does "+n+" have now? Type your answer.", a+b, a+" + "+b+" = "+(a+b)+" "+t+".",
+      Object.assign({visual:partWholeSVG(a+b,[a,b],'?',[a,b]), tip:"Gets more means: put the parts together. The whole is missing."}, tag)); }
+  if(k===1){ // a part is missing
+    const whole=10*(4+rnd(6)), a=10*(1+rnd(whole/10-2)), ans=whole-a;
+    return typed("There are <b>"+whole+"</b> "+t+". <b>"+a+"</b> are on the table. The rest are in a box. How many are in the box? Type your answer.", ans, a+" + "+ans+" = "+whole+". So "+ans+" "+t+" are in the box.",
+      Object.assign({visual:partWholeSVG(whole,[a,ans],whole,[a,'?']), tip:"The whole is "+whole+". One part is "+a+". What is the other part?"}, tag)); }
+  if(k===2){ // which number is the whole?
+    const a=10*(1+rnd(4)), b=10*(1+rnd(4)), whole=a+b+10*(1+rnd(3));
+    return mc(n+" has <b>"+whole+"</b> "+t+": <b>"+a+"</b> are big and the rest are small. Which number is <b>all</b> the "+t+"?", String(whole), uniq([String(a), String(whole-a)]).filter(x=>x!==String(whole)),
+      whole+" is all the "+t+" together – the whole. "+a+" is only a part.", Object.assign({grid:true, tip:"The whole is the number of ALL of them. It is the biggest number in the story."}, tag)); }
+  // which calculation?
+  const a=10*(4+rnd(5)), b=10*(1+rnd(3));
+  return two(n+" has <b>"+a+"</b> "+t+" and gives <b>"+b+"</b> away. Which calculation finds how many are left?", [a+" − "+b, a+" + "+b], 0, "Gives away means take away: "+a+" − "+b+" = "+(a-b)+".",
+    Object.assign({visual:partWholeSVG(a,[b,a-b],a,[b,'?']), tip:"Does "+n+" get more or fewer? Fewer means take away."}, tag));
+}
+const UNIT_BASE={len:[["A pencil is about 15","cm"],["A door is about 2","m"],["A book is about 25","cm"],["A bus is about 12","m"],["A spoon is about 15","cm"],["A swimming pool is about 25","m"]],
+  mass:[["An apple weighs about 150","g"],["A bag of potatoes weighs about 5","kg"],["A pencil weighs about 5","g"],["A big dog weighs about 30","kg"],["A letter weighs about 20","g"],["A bike weighs about 12","kg"]]};
+function unitsBaseQ(){
+  const k=rnd(4), tag=Object.assign({level:1}, UNT);
+  if(k===0){ // read the metre stick at a big number
+    const mark=10*(1+rnd(9));
+    return mc("The arrow points at a big number. How far did the car roll?", mark+" cm", fill3(mark,[mark+10,mark-10,mark+5]).slice(0,2).map(x=>x+" cm"), "The arrow points at "+mark+". The stick shows centimetres: "+mark+" cm.",
+      Object.assign({visual:rulerSVG(mark), grid:true, tip:"Read the big number right under the arrow. Then write the unit: cm."}, tag)); }
+  if(k<3){ const len=k===1, r=pick(UNIT_BASE[len?'len':'mass']), opts=len?['cm','m']:['g','kg'];
+    return two(r[0]+" <b>___</b>. Which unit fits?", opts, opts.indexOf(r[1]), len?(r[1]==='cm'?"It is short – centimetres (cm) fit.":"It is long – metres (m) fit."):(r[1]==='g'?"It is light – grams (g) fit.":"It is heavy – kilograms (kg) fit."),
+      Object.assign({tip:len?"Short things you can hold: cm. Long or tall things: m.":"Light things you can hold in one hand: g. Heavy things: kg."}, tag)); }
+  const n=pick([1,5,10,20,50]), short=rnd(2)===0;
+  return two("Which is <b>"+(short?"shorter":"longer")+"</b>: <b>1 m</b> or <b>"+n+" cm</b>?", ['1 m', n+' cm'], short?1:0, "1 m = 100 cm. "+n+" cm is much less than 100 cm.",
+    Object.assign({visual:lengthBarsSVG([['1 m',100],[n+' cm',n]]), tip:"1 m is as long as 100 cm. Compare "+n+" with 100."}, tag));
+}
+/* two strips drawn to scale (in cm) - which one is longer? */
+function lengthBarsSVG(list){
+  const W=600, pl=90, w=W-pl-20; let s='';
+  list.forEach(([lb,v],i)=>{ const y=16+i*52;
+    s+=`<text x="${pl-12}" y="${y+18}" text-anchor="end" dominant-baseline="central" font-size="18" font-weight="700" ${FD} fill="var(--ink)">${esc(lb)}</text>`;
+    s+=`<rect x="${pl}" y="${y}" width="${Math.max(4,w*v/100).toFixed(1)}" height="36" rx="5" fill="var(--world)"/>`; });
+  return `<svg viewBox="0 0 ${W} ${16+list.length*52}" width="100%" role="img" aria-label="Two lengths drawn to scale">${s}</svg>`;
+}
+function tallySVG(n){
+  let s='', x=20;
+  for(let g=0; g<Math.ceil(n/5); g++){ const c=Math.min(5,n-5*g);
+    for(let i=0;i<Math.min(c,4);i++) s+=`<line x1="${x+i*16}" y1="18" x2="${x+i*16}" y2="78" stroke="var(--ink)" stroke-width="4" stroke-linecap="round"/>`;
+    if(c===5) s+=`<line x1="${x-8}" y1="70" x2="${x+56}" y2="26" stroke="var(--world)" stroke-width="4" stroke-linecap="round"/>`;
+    x+=96; }
+  return `<svg viewBox="0 0 ${Math.max(120,x)} 96" width="${Math.round(Math.min(100,Math.max(25,x/6)))}%" role="img" aria-label="Tally marks">${s}</svg>`;
+}
+function graphsBaseQ(){
+  const k=rnd(3), tag=Object.assign({level:1}, GRA);
+  if(k===2){ // count tally marks
+    const n=3+rnd(12);
+    return typed("Count the tally marks. How many are there? Type the number.", n, "Each bundle with a line across is 5. "+(n>=5?Math.floor(n/5)+" × 5 = "+5*Math.floor(n/5)+(n%5?", plus "+n%5+" = "+n:"")+".":n+" single marks."),
+      Object.assign({visual:tallySVG(n), tip:"Count each bundle of 5 first (5, 10, …), then count the single marks."}, tag)); }
+  // three bars, one of them 40: the scale goes to 40 in steps of 10, so every bar ends on a numbered line
+  const vals=shuffle([40].concat(shuffle([10,20,30]).slice(0,2))), d=takeFrom(SURF,3).map((l,i)=>({label:l,v:vals[i]}));
+  if(k===0){ const t=pick(d);
+    return mc("Read the graph. How far did the car roll on <b>"+t.label+"</b>?", t.v+" cm", fill3(t.v,[t.v+10,t.v-10,t.v+5].filter(x=>x>0)).slice(0,2).map(x=>x+" cm"), "The top of the "+t.label+" bar is on the line with "+t.v+": "+t.v+" cm.",
+      Object.assign({visual:barChartSVG(d), grid:true, tip:"Find the "+t.label+" bar. Go from its top straight across to the number on the side."}, tag)); }
+  const max=d.reduce((p,c)=>c.v>p.v?c:p);
+  return mc("Read the graph. Which surface has the <b>tallest</b> bar?", max.label, d.filter(x=>x!==max).map(x=>x.label), "The tallest bar is "+max.label+".",
+    Object.assign({visual:barChartSVG(d), grid:true, tip:"Look at the tops of the bars. Which one goes up the highest?"}, tag));
+}
+
 /* ======================= MERGED QUESTS ======================= */
 /* Quests that covered the same topic now share one card: half the questions from each. retag() gives every question the merged quest's label and colour. */
 const half = (build, n) => build().slice(0, n);
 function buildRoundingAll(){ return retag(shuffle(half(buildRounding,4).concat(half(buildExplain,4))), RND); }
-function buildWordProblems(){ return retag(shuffle(half(buildWordProb,4).concat(half(buildStickers,4))), WPR); }
-function buildForcesAll(){ return retag(shuffle(half(buildForces,5).concat(half(buildChampion,3))), FOR); }
+function buildWordProblems(){ return retag(shuffle(half(buildWordProb,4).concat(half(buildStickers,3), [wordprobBaseQ()])), WPR); }
+function buildForcesAll(){ return retag(shuffle(half(buildForces,4).concat(half(buildChampion,3), [baseQ('forces', FOR)])), FOR); }
 
 /* ======================= COMING UP · topics for later (Peter, 01.11.) =======================
    Maths topics that usually come later in Grade 3. They stay invisible to the child until a grown-up
