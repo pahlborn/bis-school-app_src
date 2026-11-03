@@ -19,7 +19,7 @@ import { mergeLog, lastWins, lastWinsOrder, effectiveTime } from './ereignisse.m
 
 /* the limits of today's app (index.html: slice(-200) in attempts, EVIDENCE_MAX, DUE_MAX, GAPS, slice(-8) in sheets,
    TREE_AT, RANKS); the browser test compares them with the app */
-export const DERIVE_LIMITS = { attempts: 200, evidence: 60, due: 40, sheets: 8 };
+export const DERIVE_LIMITS = { attempts: 200, evidence: 60, due: 40, sheets: 8, jokes: 200 };
 export const DERIVE_GAPS = [1, 3, 7];
 export const DERIVE_TREE_AT = [0, 1, 3, 6, 10, 15, 25];
 export const DERIVE_RANKS = ['Explorer', 'Investigator', 'Scientist', 'Professor', 'Legend'];
@@ -123,6 +123,15 @@ function abApply(st, ctx, e) {
       st[key] = list;
       break;
     }
+    case 'joke_seen': {                                                         // index.html jokeFor + witze.mjs jokeNext: drop "forget", the joke goes to the end, the last 200 stay
+      const forget = Array.isArray(p.forget) ? p.forget : [];
+      const list = (Array.isArray(st.jokeSeen) ? st.jokeSeen : []).filter((id) => id !== p.joke && !forget.includes(id));
+      st.jokeSeen = list.concat([p.joke]).slice(-DERIVE_LIMITS.jokes);
+      break;
+    }
+    case 'story_read':                                                          // geschichten.mjs storyMarkRead: moves to the end
+      st.storyRead = (Array.isArray(st.storyRead) ? st.storyRead : []).filter((id) => id !== p.story).concat([p.story]);
+      break;
     default: break;                                                             // "last wins" types and everything else: see derive
   }
 }
