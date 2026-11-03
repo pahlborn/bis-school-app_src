@@ -29,6 +29,12 @@ const evField = {
   pid: (x) => typeof x === 'string' && /^p_[0-9A-Za-z]{1,40}$/.test(x),
   did: (x) => typeof x === 'string' && /^d_[0-9A-Za-z]{1,40}$/.test(x),
   scope: (x) => Array.isArray(x) && x.length > 0 && new Set(x).size === x.length && x.every((s) => s === 'learning' || s === 'school'),
+  // public keys of a person (krypto.publicKeysOf): exactly ecdh and ecdsa, both base64 text
+  pub: (x) => evObj(x) && Object.keys(x).length === 2 && ['ecdh', 'ecdsa'].every((k) => typeof x[k] === 'string' && /^[A-Za-z0-9+/]+=*$/.test(x[k])),
+  // list of different person IDs (may be empty)
+  pids: (x) => Array.isArray(x) && new Set(x).size === x.length && x.every((p) => typeof p === 'string' && /^p_[0-9A-Za-z]{1,40}$/.test(p)),
+  // bundles per device at a key change (speicher.list merker.stand): device ID -> count
+  stand: (x) => evObj(x) && Object.entries(x).every(([d, n]) => /^d_[0-9A-Za-z]{1,40}$/.test(d) && Number.isInteger(n) && n >= 0),
 };
 
 /* ---------- the types and their payloads ----------
@@ -53,11 +59,12 @@ const EV_SPEC = {
   grant_set: ['grant:str grantee:pid scope:scope from:day until:day', 'text:str'],
   grant_revoked: ['grant:str grantee:pid', ''],
   grant_opened: ['grant:str grantee:pid', 'scope:scope'],
-  member_added: ['person:pid', 'role:str'],
+  // admission of an area (task P3b-2): each area carries its own members, devices and key changes
+  member_added: ['person:pid role:enum(child|parent|teacher|admin) pub:pub', ''],
   member_removed: ['person:pid', ''],
   device_added: ['device:did', 'label:str'],
   device_removed: ['device:did', ''],
-  key_rotated: ['version:pos', ''],
+  key_rotated: ['version:pos entfernt:pids stand:stand', ''],
   // snapshot (task 5, module schnappschuss): idsHash = checksum of the events it contains, so a late event is noticed
   snapshot: ['upTo:utc count:int idsHash:sha state:obj', ''],
   // gaps per school (index.html "gaps", task 3b-0): one standard per event; day = the app's day (index.html dayKey)
