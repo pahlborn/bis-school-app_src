@@ -228,7 +228,7 @@ test('roleMayWrite (fuer den Schreiber, 3b-1): dieselbe Regel wie beim Annehmen,
 
 /* ---------- 6 reasons ---------- */
 test('Gruende: feste Reihenfolge format -> autor-unbekannt -> geraet-fremd -> unterschrift -> bereich-falsch -> rolle-darf-nicht', async () => {
-  assert.deepEqual(ANNAHME_GRUENDE, ['format', 'autor-unbekannt', 'geraet-fremd', 'unterschrift', 'bereich-falsch', 'rolle-darf-nicht']);
+  assert.deepEqual(ANNAHME_GRUENDE, ['format', 'autor-unbekannt', 'nicht-mitglied', 'geraet-fremd', 'geraet-nicht-angemeldet', 'unterschrift', 'bereich-falsch', 'rolle-darf-nicht']);
   const t = await signed('teacher', 'answer');
   const tPriv = await signed('teacher', 'setting_set', { area: AREA });
   assert.equal(await reason(tPriv, Z), 'bereich-falsch', 'teacher + wrong area: area first');

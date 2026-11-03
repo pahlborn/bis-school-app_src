@@ -8,10 +8,10 @@ import fs from 'node:fs';
 import { ZULASSUNG_TYPEN, zulassungAus, aktiveMitglieder, bereichHolen } from '../../src/module/zulassung.mjs';
 import { newPersonKeys, publicKeysOf, createKeyring, signBytes } from '../../src/module/krypto.mjs';
 import { newEvent, checkEvent } from '../../src/module/ereignisse.mjs';
-import { signEvent, acceptEvent } from '../../src/module/annahme.mjs';
+import { signEvent, acceptEvent, ANNAHME_GRUENDE } from '../../src/module/annahme.mjs';
 import { halter, schluesselLesen, schluesselVerteilen } from '../../src/module/bereiche.mjs';
 import { lokalerSpeicher } from '../../src/module/speicher.mjs';
-import { abgleichStand, vormerken, senden, holen } from '../../src/module/abgleich.mjs';
+import { abgleichStand, vormerken, senden, holen, ABGLEICH_GRUENDE } from '../../src/module/abgleich.mjs';
 
 const L = 'kind:lern:p_k1', T0 = Date.UTC(2026, 10, 3, 8, 0, 0), JETZT = Date.UTC(2026, 10, 3, 12, 0, 0);
 const ROLLE = { p_e1: 'parent', p_e2: 'parent', p_k1: 'child', p_l1: 'teacher', p_x1: 'parent' };
@@ -230,4 +230,91 @@ test('Reinheit: kein Netz, kein Speicher, keine Uhr, kein Zufall; Importe nur au
   }
   const liste = JSON.parse(fs.readFileSync(new URL('../../src/module/module.json', import.meta.url), 'utf8')).module.map((x) => x.name);
   assert.ok(liste.indexOf('zulassung') > liste.indexOf('abgleich'), 'nach abgleich');
+});
+
+/* ---------- 2b: zu diesem Zeitpunkt ---------- */
+const blatt = (min) => ({ sheet: 's' + String(min).replace('.', '-'), day: '2026-11-03', no: 1, writing: 'en', items: [] });
+const antwort = (q) => ({ day: '2026-11-03', skill: 'round', level: 2, attempt: 1, ok: true, qid: q });
+
+test('2b Zeitpunkt: Mitglied und Geraet zaehlen nur in ihrem Zeitraum; die Grenze gehoert zum neuen Zustand; Uhrenregel', async () => {
+  // p_x1 wird 12 Stunden nach "jetzt" aufgenommen (Uhr des Geraets etwas voraus, unter 24 h: zaehlt so)
+  const z = await aus([...(await grundstock()), await ev('p_e1', 'member_removed', { person: 'p_e2' }, 10), await ev('p_e1', 'device_removed', { device: 'd_k9' }, 13),
+    await dazu('p_e1', 'p_x1', 960), await geraet('p_x1', 961)]);
+  assert.equal(z.now, JETZT);
+  const grund = async (x) => { const r = await acceptEvent(x, z); return r.ok ? 'ok' : r.grund; };
+  const fall = [
+    ['p_e2', 'sheet_created', blatt(1), 1, {}, 'nicht-mitglied', 'vor der Aufnahme'],
+    ['p_e2', 'sheet_created', blatt(2), 2, {}, 'geraet-nicht-angemeldet', 'genau bei der Aufnahme, Geraet erst ab 4'],
+    ['p_e2', 'sheet_created', blatt(4), 4, {}, 'ok', 'genau bei der Geraeteanmeldung'],
+    ['p_e2', 'sheet_created', blatt(9.5), 9.5, {}, 'ok', 'kurz vor dem Entfernen'],
+    ['p_e2', 'sheet_created', blatt(10), 10, {}, 'nicht-mitglied', 'genau beim Entfernen'],
+    ['p_e2', 'sheet_created', blatt(11), 11, {}, 'nicht-mitglied', 'nach dem Entfernen'],
+    ['p_e2', 'sheet_created', blatt(3 * 24 * 60), 3 * 24 * 60, {}, 'nicht-mitglied', 'mehr als 24 h voraus zaehlt als jetzt'],
+    ['p_k1', 'answer', antwort('a'), 5.5, { device: 'd_k9' }, 'geraet-nicht-angemeldet', 'zweites iPad vor seiner Anmeldung'],
+    ['p_k1', 'answer', antwort('b'), 7, { device: 'd_k9' }, 'ok', 'zweites iPad angemeldet'],
+    ['p_k1', 'answer', antwort('c'), 13, { device: 'd_k9' }, 'geraet-nicht-angemeldet', 'zweites iPad entfernt'],
+    ['p_k1', 'answer', antwort('d'), 13, { device: 'd_k1' }, 'ok', 'erstes iPad bleibt'],
+    ['p_k1', 'answer', antwort('e'), 7, { device: 'd_k5' }, 'geraet-fremd', 'nie angemeldet'],
+    ['p_e1', 'sheet_created', blatt(0.5), 0.5, {}, 'geraet-nicht-angemeldet', 'auch der Anker braucht sein Geraet'],
+    ['p_x1', 'sheet_created', blatt(970), 970, {}, 'ok', 'unter 24 h voraus: so wie geschrieben'],
+    ['p_x1', 'sheet_created', blatt(4320), 4320, {}, 'nicht-mitglied', 'mehr als 24 h voraus zaehlt als jetzt - da war er noch nicht dabei'],
+  ];
+  for (const [pid, type, payload, min, opts, soll, was] of fall) assert.equal(await grund(await ev(pid, type, payload, min, opts)), soll, was);
+  // eine Zulassung mit Zeitraeumen ohne "now" ist ein Programmfehler
+  await assert.rejects(acceptEvent(await ev('p_e1', 'sheet_created', blatt(5), 5), { area: L, members: z.members }), /now/);
+  assert.deepEqual(ANNAHME_GRUENDE, ['format', 'autor-unbekannt', 'nicht-mitglied', 'geraet-fremd', 'geraet-nicht-angemeldet', 'unterschrift', 'bereich-falsch', 'rolle-darf-nicht']);
+  assert.ok(ABGLEICH_GRUENDE.includes('nach-entfernung'));
+});
+
+test('2b Neuer Schluessel: jeder Zeitraum prueft mit seinem eigenen Schluessel und seiner eigenen Rolle', async () => {
+  const z = await aus([...(await grundstock()), await ev('p_e1', 'member_removed', { person: 'p_e2' }, 10),
+    await ev('p_e1', 'member_added', { person: 'p_e2', role: 'parent', pub: neuE2pub }, 12), await ev('p_e2', 'device_added', { device: 'd_e2' }, 15, { keys: neuE2 }),
+    await ev('p_e1', 'member_added', { person: 'p_k1', role: 'parent', pub: PUB.p_k1 }, 20)]);
+  const grund = async (x) => { const r = await acceptEvent(x, z); return r.ok ? 'ok' : r.grund; };
+  assert.equal(await grund(await ev('p_e2', 'sheet_created', blatt(5), 5)), 'ok', 'alter Schluessel im alten Zeitraum');
+  assert.equal(await grund(await ev('p_e2', 'sheet_created', blatt(16), 16)), 'unterschrift', 'alter Schluessel im neuen Zeitraum');
+  assert.equal(await grund(await ev('p_e2', 'sheet_created', blatt(5.5), 5.5, { keys: neuE2 })), 'unterschrift', 'neuer Schluessel im alten Zeitraum');
+  assert.equal(await grund(await ev('p_e2', 'sheet_created', blatt(16.5), 16.5, { keys: neuE2 })), 'ok', 'neuer Schluessel im neuen Zeitraum');
+  assert.equal(await grund(await ev('p_e2', 'sheet_created', blatt(11), 11, { keys: neuE2 })), 'nicht-mitglied', 'dazwischen');
+  assert.equal(await grund(await ev('p_e2', 'sheet_created', blatt(13), 13, { keys: neuE2 })), 'geraet-nicht-angemeldet', 'wieder dabei, Geraet noch nicht neu angemeldet');
+  // Rolle je Zeitraum: als Kind schreibt p_k1 Antworten, nach dem Wechsel der Rolle nicht mehr
+  assert.equal(await grund(await ev('p_k1', 'answer', antwort('x'), 19)), 'ok');
+  assert.equal(await grund(await ev('p_k1', 'answer', antwort('y'), 21)), 'rolle-darf-nicht');
+});
+
+test('2b Ex-Halter (E6): rueckdatierte Buendel mit alter Version nach dem Wechsel -> nach-entfernung; nach erneuter Aufnahme zaehlt Neues', async () => {
+  const F1 = 'freigabe:g1', s = lokalerSpeicher({ now: () => JETZT }), m = M();
+  const zug = { p_e1: s.geraet('d_e1'), p_l1: s.geraet('d_l1') };
+  const g1 = (until) => [{ grant: 'g1', grantee: 'p_l1', scope: ['learning'], from: '2026-11-01', until }];
+  const stL = abgleichStand(F1, 'd_l1'), stE = abgleichStand(F1, 'd_e1');
+  const sendeAls = async (pid, st, items, sch) => { for (const x of items) vormerken(st, x, { now: JETZT }); await senden(st, { zugang: zug[pid], schluessel: sch }); };
+  const schVon = (pid) => schluesselLesen(zug[pid], F1, { ich: pid, meineSchluessel: KEYS[pid], mitglieder: m });
+  const verteile = async (heute, fr, min, extra = []) => {
+    const r = await schluesselVerteilen(zug.p_e1, F1, { soll: halter(F1, m, fr, heute), ich: 'p_e1', meineSchluessel: KEYS.p_e1, mitglieder: m });
+    const items = [...extra];
+    for (const [i, e] of r.ereignisse.entries()) items.push(await ev('p_e1', e.type, e.payload, min + i, { area: F1 }));
+    await sendeAls('p_e1', stE, items, await schVon('p_e1'));
+    return r;
+  };
+  const offen = (min) => ev('p_l1', 'grant_opened', { grant: 'g1', grantee: 'p_l1' }, min, { area: F1 });
+  await verteile('2026-11-03', g1('2026-11-10'), 20, [await ev('p_e1', 'device_added', { device: 'd_e1' }, 1, { area: F1 })]);
+  const echt = await offen(31);
+  await sendeAls('p_l1', stL, [await ev('p_l1', 'device_added', { device: 'd_l1' }, 30, { area: F1 }), echt], await schVon('p_l1'));     // d_l1/1
+  const altSch = await schVon('p_l1');
+  const r = await verteile('2026-11-11', g1('2026-11-10'), 100);                                       // Ablauf -> Wechsel
+  assert.deepEqual(r.ereignisse[1].payload, { version: 2, entfernt: ['p_l1'], stand: { d_e1: 1, d_l1: 1 } });
+  // die Ex-Lehrkraft legt mit ihrer alten Version Eintraege ab, die angeblich vor dem Ende liegen
+  const rueck = await offen(35), spaetEcht = await offen(40);
+  await sendeAls('p_l1', stL, [rueck, spaetEcht], altSch);                                            // d_l1/2, Version 1
+  assert.equal((await zug.p_l1.get(F1, 'd_l1/2')).kv, 1);
+  // Verlaengerung: sie gehoert wieder dazu, bekommt Version 2 und meldet ihr Geraet neu an
+  assert.equal((await verteile('2026-11-20', g1('2026-11-30'), 200)).aktion, 'ergaenzt');
+  const neu = await offen(210);
+  await sendeAls('p_l1', stL, [await ev('p_l1', 'device_added', { device: 'd_l1' }, 205, { area: F1 }), neu], await schVon('p_l1'));   // d_l1/3, Version 2
+  // ein zweiter Elternteil liest den Bereich frisch
+  const st = abgleichStand(F1, 'd_e2');
+  const h = await bereichHolen(st, { zugang: s.geraet('d_e2'), ich: 'p_e2', meineSchluessel: KEYS.p_e2, anker: ANKER, now: JETZT });
+  const ids = st.log.map((x) => x.event.id);
+  assert.ok(ids.includes(echt.event.id) && ids.includes(neu.event.id), 'echt vor dem Ende und nach der Verlaengerung: angenommen');
+  assert.deepEqual(h.verworfen.map((v) => [v.kennung, v.id, v.grund]).sort(), [['d_l1/2', rueck.event.id, 'nach-entfernung'], ['d_l1/2', spaetEcht.event.id, 'nach-entfernung']].sort());
 });
