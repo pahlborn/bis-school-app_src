@@ -10,6 +10,7 @@
     { "name": "ereignisse", "bau": "test", "browserTests": ["testbau"] },
     { "name": "ableitung", "bau": "test", "browserTests": ["ableitung-vergleich"] },
     { "name": "annahme", "bau": "test", "browserTests": ["testbau"] },
+    { "name": "schreiber", "bau": "test", "browserTests": ["ableitung-vergleich", "testbau"] },
     { "name": "speicher", "bau": "test", "browserTests": ["testbau"] },
     { "name": "abgleich", "bau": "test", "browserTests": ["testbau"] }
   ]

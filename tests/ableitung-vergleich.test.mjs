@@ -1,9 +1,10 @@
 // Vergleich mit der echten App (S12 P2, Aufgabe 3a; US7.2): ein Verlauf mit echten Klicks - Runden mit richtigen und
 // falschen Antworten, Tipps, Beispiel, Loesung, einer abgebrochenen Quest, zwei Uebungsblaettern (eines traegt das Kind
 // selbst ein, unterbrochen und fertig - A9; eines verwirft ein Erwachsener) und Wiederholungen an mehreren Tagen. Die App schreibt dabei ihren Stand wie immer in den Speicher.
-// Ein Mitschreiber im Testbau (Haken im Seitenkontext) faengt jede Aenderung der Speicherstellen ab und macht daraus
-// Ereignisse - genau das, was die App in Aufgabe 3b schreiben soll. Danach muss derive(Ereignisse) denselben Stand
-// liefern, den die App gespeichert hat: attempts, ev, due, total, best_*, badges, tried, treeStage, rankSeen, sheets, sheetNo.
+// Seit Aufgabe 3b-1a schreibt der Testbau selbst an jeder Schreibstelle ein Ereignis (Modul schreiber, eventHook in
+// index.html) nach bq2_events. Danach muss derive(Ereignisse) denselben Stand liefern, den die App gespeichert hat:
+// attempts, ev, due, total, best_*, badges, tried, treeStage, rankSeen, sheets, sheetNo. (Bis 3b-0 erzeugte hier ein
+// Mitschreiber im Test die Ereignisse aus den Speicheraenderungen.)
 //   node --test tests/ableitung-vergleich.test.mjs
 
 import { test, before, after } from 'node:test';
@@ -12,52 +13,13 @@ import { appServer, browserStarten, appOeffnen, zustand, klick, sichtbar, zurSta
 import { derive, DERIVE_LIMITS, DERIVE_GAPS, DERIVE_TREE_AT, DERIVE_RANKS } from '../src/module/ableitung.mjs';
 import { checkEvent } from '../src/module/ereignisse.mjs';
 
-/* ---------- der Mitschreiber: laeuft in der Seite, im Bereich der App ---------- */
+/* ---------- Zugang zum Bereich der App (nur lesen) ---------- */
 function haken() {
   window.__bqa = {
     derive, checkEvent,
     konst: () => ({ EVIDENCE_MAX, DUE_MAX, GAPS, TREE_AT, RANKS: RANKS.map((r) => r[1]) }),
+    probleme: () => ({ abgelehnt: eventSink ? eventSink.problems : null, fehler: eventErrors }),
   };
-  const E = (window.__ereignisse = []); let letzte = 0;
-  const senden = (type, payload) => { letzte = Math.max(Date.now(), letzte + 1); E.push(newEvent({ type, author: 'p_k1', device: 'd_a1', at: new Date(letzte).toISOString(), payload })); };
-  const r0 = store.get('rankSeen', null);                                            // the first start (before this hook) already wrote the title
-  if (r0) senden('rank_seen', { rank: r0 });
-  const orig = store.set;
-  store.set = function (k, v) {
-    let vor; try { vor = store.get(k, undefined); } catch (e) { /* egal */ }
-    orig.call(store, k, v);
-    try { schreiben(k, vor, v); } catch (e) { (window.__fehler = window.__fehler || []).push(k + ': ' + ((e && e.stack) || e)); }
-  };
-  function schreiben(k, vor, v) {
-    const heute = dayKey();
-    if (k === 'attempts') {
-      const alt = vor || [];
-      if (v.length === alt.length + 1) { const zeile = v[v.length - 1]; if (!zeile.sheet) senden('answer', zeile); }   // Blattzeilen kommen als sheet_result
-      else if (v.length > alt.length + 1) throw new Error('attempts: mehr als eine Zeile auf einmal');
-    } else if (k === 'total') {
-      senden('round_done', { day: heute, skill: state.world, stars: v - (vor || 0), count: state.round.length });
-    } else if (k === 'badges') {
-      for (const b of Object.keys(v)) for (let i = (vor && vor[b]) || 0; i < v[b]; i++) senden('badge', b === 'inquirer' ? { day: heute, badge: b, skill: state.world } : { day: heute, badge: b });
-    } else if (k === 'rankSeen') {
-      senden('rank_seen', { rank: v });
-    } else if (k === 'due') {
-      const alt = vor || [], neu = new Map(v.map((d) => [d.id, d])), vorher = new Map(alt.map((d) => [d.id, d]));
-      for (const d of v) {
-        const o = vorher.get(d.id);
-        if (!o || (d.box === 0 && (o.box !== 0 || o.at !== d.at))) senden('review', { day: heute, qid: d.id, box: 0, dueAt: d.at, question: d.q });   // rememberWrong
-        else if (o.box !== d.box) senden('review', { day: heute, qid: d.id, box: d.box, dueAt: d.at });                                                // advanceDue
-      }
-      for (const o of alt) if (!neu.has(o.id)) senden('review', { day: heute, qid: o.id, box: DERIVE_GAPS.length });                                      // done or taken back
-    } else if (k === 'sheets') {
-      const alt = vor || [], vorher = new Map(alt.map((s) => [s.id, s]));
-      for (const s of v) {
-        const o = vorher.get(s.id);
-        if (!o) senden('sheet_created', { sheet: s.id, day: s.day, no: s.no, writing: s.writing, items: s.items.map((i) => ({ q: i.q, res: i.res })) });
-        else s.items.forEach((it, i) => { if (it.res && it.res !== (o.items[i] && o.items[i].res)) senden('sheet_result', { sheet: s.id, index: i, res: it.res, day: heute, qid: it.q.dueId || qId(it.q) }); });
-      }
-      for (const o of alt) if (!v.some((s) => s.id === o.id)) senden('sheet_discarded', { sheet: o.id });
-    }
-  }
 }
 
 let browser, server;
@@ -156,9 +118,17 @@ test('derive(Ereignisse) liefert denselben Stand, den die App nach einem Verlauf
 
   /* was die App gespeichert hat */
   const app = await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('bq2_')).map((k) => [k.slice(4), JSON.parse(localStorage.getItem(k))])));
-  const ereignisse = await page.evaluate(() => window.__ereignisse), jetzt = Date.parse('2026-11-20T00:00:00Z');
-  assert.deepEqual(await page.evaluate(() => window.__fehler || []), [], 'der Mitschreiber lief ohne Fehler');
+  const ereignisse = app.events, jetzt = Date.parse('2026-11-20T00:00:00Z');
+  assert.ok(Array.isArray(ereignisse) && ereignisse.length > 50, 'die App hat Ereignisse geschrieben: ' + (ereignisse && ereignisse.length));
+  assert.deepEqual(await page.evaluate(() => window.__bqa.probleme()), { abgelehnt: [], fehler: [] }, 'nichts abgelehnt, kein Fehler im Schreiber');
   assert.deepEqual(fehler, []);
+  assert.match(app.evDevice, /^d_[0-9A-Z]{20}$/, 'eine Geraete-Kennung');
+  assert.ok(ereignisse.every((e) => e.device === app.evDevice), 'alle vom selben Geraet');
+  const wer = {}; for (const e of ereignisse) wer[e.author] = (wer[e.author] || 0) + 1;
+  assert.deepEqual(Object.keys(wer).sort(), ['p_eltern', 'p_kind'], 'Kind und (beim Verwerfen) Eltern: ' + JSON.stringify(wer));
+  assert.deepEqual(ereignisse.filter((e) => e.author === 'p_eltern').map((e) => e.type), ['sheet_discarded'], 'die Eltern haben nur das Blatt verworfen');
+  assert.deepEqual([ereignisse[0].type, ereignisse[0].payload], ['rank_seen', { rank: DERIVE_RANKS[0] }], 'erster Start: der erste Titel wird still gemerkt - auch als Ereignis');
+  for (let i = 1; i < ereignisse.length; i++) assert.ok(Date.parse(ereignisse[i].at) > Date.parse(ereignisse[i - 1].at), 'Zeiten steigen: ' + i);
 
   /* die Ereignisse sind gueltig und der Verlauf hat alles beruehrt */
   assert.deepEqual(await page.evaluate((e) => e.flatMap((x) => window.__bqa.checkEvent(x)), ereignisse), [], 'alle Ereignisse sind gueltig');
@@ -198,4 +168,21 @@ test('derive(Ereignisse) liefert denselben Stand, den die App nach einem Verlauf
   assert.deepEqual(k.TREE_AT, DERIVE_TREE_AT);
   assert.deepEqual(k.RANKS, DERIVE_RANKS);
   await ctx.close();
+});
+
+test('Live-Bau (3b-1): dieselben Klicks schreiben keine Ereignisse und keine Geraete-Kennung; Stand wie gewohnt', async () => {
+  const live = await appServer();
+  try {
+    const { ctx, page, fehler } = await appOeffnen(browser, live.url, { zeit: '2026-11-02T09:00:00' });
+    await page.evaluate(() => { window.print = () => {}; });
+    await quest(page, 'round');
+    await runde(page, ['richtig', 'falsch', 'tipp+richtig', 'tipp+loesung', 'richtig', 'richtig', 'falsch+richtig', 'richtig']);
+    await zurStart(page);
+    await klick(page, '#sheetBtn'); await page.locator('#sheetClose').click(); await zurStart(page);
+    const keys = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('bq2_')).sort());
+    assert.ok(keys.includes('bq2_attempts') && keys.includes('bq2_sheets') && keys.includes('bq2_due'), 'the app stored as usual: ' + keys);
+    assert.deepEqual(keys.filter((k) => /events|evDevice/.test(k)), [], 'no events in the live build');
+    assert.deepEqual(fehler, []);
+    await ctx.close();
+  } finally { live.close(); }
 });

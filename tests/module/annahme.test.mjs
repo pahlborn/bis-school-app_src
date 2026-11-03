@@ -4,7 +4,7 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { canonicalBytes, signEvent, acceptEvent, acceptAll, ANNAHME_GRUENDE, ANNAHME_RECHTE } from '../../src/module/annahme.mjs';
+import { canonicalBytes, signEvent, acceptEvent, acceptAll, roleMayWrite, ANNAHME_GRUENDE, ANNAHME_RECHTE } from '../../src/module/annahme.mjs';
 import { newPersonKeys, publicKeysOf, signBytes, bytesToB64, b64ToBytes } from '../../src/module/krypto.mjs';
 import { newEvent, EVENT_TYPES } from '../../src/module/ereignisse.mjs';
 
@@ -202,6 +202,19 @@ test('3b-0 Luecken: Kind nur "automatisch geschlossen" (closed, by app); Eltern 
   assert.equal(await reason({ event: { ...gut.event, payload: { ...gut.event.payload, state: 'zu' } }, sig: gut.sig }), 'format', 'a wrong state is a format error first');
 });
 
+test('roleMayWrite (fuer den Schreiber, 3b-1): dieselbe Regel wie beim Annehmen, ohne Unterschrift', async () => {
+  for (const type of EVENT_TYPES) for (const role of ROLES) {
+    const [pid, did] = WHO[role], e = mk(type, pid, did);
+    assert.equal(roleMayWrite(role, e), darf(role, type), `${role} ${type}`);
+    assert.equal(roleMayWrite(role, e), (await reason(await signEvent(e, AREA, KEYS[pid]))) === 'ok', `${role} ${type}: same as acceptEvent`);
+  }
+  const st = (state, by) => mk('gap_state', 'p_k1', 'd_k1', { standard: 'X', state, by, schoolDay: DAY, day: DAY });
+  assert.equal(roleMayWrite('child', st('closed', 'app')), true);
+  assert.equal(roleMayWrite('child', st('hold', 'parents')), false, 'the extra conditions count, too');
+  for (const role of ['guest', 'toString', '__proto__', undefined, null, 7]) assert.equal(roleMayWrite(role, mk('answer', 'p_k1', 'd_k1')), false, String(role));
+  assert.equal(roleMayWrite('child', null), false);
+});
+
 /* ---------- 6 reasons ---------- */
 test('Gruende: feste Reihenfolge format -> autor-unbekannt -> geraet-fremd -> unterschrift -> rolle-darf-nicht', async () => {
   assert.deepEqual(ANNAHME_GRUENDE, ['format', 'autor-unbekannt', 'geraet-fremd', 'unterschrift', 'rolle-darf-nicht']);
@@ -260,6 +273,6 @@ test('Modul ist rein: kein Zufall, keine Uhr, kein Speicher, kein Netz; Hilfsnam
   const src = fs.readFileSync(new URL('../../src/module/annahme.mjs', import.meta.url), 'utf8');
   for (const bad of ['Math.random', 'Date.now', 'new Date(', 'localStorage', 'fetch(', 'document.', 'window.']) assert.equal(src.includes(bad), false, bad);
   const top = [...src.matchAll(/^(?:export\s+)?(?:async\s+)?(?:function\s+([A-Za-z_$][\w$]*)|(?:const|let)\s+([A-Za-z_$][\w$]*))/gm)].map((m) => m[1] || m[2]);
-  const exported = ['ANNAHME_GRUENDE', 'ANNAHME_RECHTE', 'canonicalBytes', 'signEvent', 'acceptEvent', 'acceptAll'];
+  const exported = ['ANNAHME_GRUENDE', 'ANNAHME_RECHTE', 'canonicalBytes', 'signEvent', 'acceptEvent', 'acceptAll', 'roleMayWrite'];
   for (const name of top) assert.ok(exported.includes(name) || /^(ann|ANN_)/.test(name), 'shared scope: ' + name);
 });
