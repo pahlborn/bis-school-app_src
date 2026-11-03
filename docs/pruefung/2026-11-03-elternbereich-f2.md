@@ -4,7 +4,7 @@ Paket F2 aus `docs/konzept/elternbereich-auftraege.md` (Konzept 7.0, 7.2 Punkte 
 
 ## Vorlage zur Freigabe (DE)
 
-Stand: Entwurf, noch nicht eingebaut. Englisch folgt nach der Freigabe.
+Von Peter am 03.11. freigegeben („frei“) und unverändert eingebaut.
 
 ### Vorher → Nachher
 
@@ -72,7 +72,23 @@ Unsicheres übt die App in kleineren Schritten, Sicheres ergänzt sie durch Hera
 Diese Hilfe-Leiter ist ein begründeter Entwurf, kein nachgewiesenes Optimum für Ihr Kind.
 
 ## Umgesetzt
-(folgt nach der Freigabe)
+- **DE** wie oben. **EN** sinngleich, in amerikanischem Englisch, mit den Abschnitten „Core idea“, „Structure“ und „How your child learns“. Die englische Seite hatte bisher keinen Abschnitt „Aufbau“; „How it works“ war dort die Lernlogik.
+- Die Abschnitte „Leitgedanken“, „Lernlogik“ und „Exkurs“ entfallen (DE). Ebenso „Guiding principles“, „How it works“ und „Side note“ (EN).
+- **Befund B2** behoben (Fokus richtig beschrieben, mit Lücken); **B3** war schon mit A1 behoben und bleibt es.
+- **Vorgezogen aus F3:** In „Wie die App einstuft“ fällt der Punkt „Wiederholung“ weg (DE/EN). Er steht jetzt in „So lernt das Kind“; sonst stünde der Kernsatz zweimal da (T6).
+- **Kinderseite:** Ein angemeldetes Kind sieht weiter nur seine Anleitung (`kidView`), daran ändert F2 nichts. Ohne Konten zeigt die Info-Seite dieselben neuen Abschnitte; Hinweis und Datenschutz bleiben dort sichtbar.
 
 ## Prüfung
-(folgt nach der Freigabe)
+- Neu: `tests/elternbereich-f2.test.mjs` (**T6**), je Sprache:
+  - Die Abschnitte 1–3 stehen in dieser Reihenfolge.
+  - „nach 1, 3 und 7 Tagen“ / „after 1, 3 and 7 days“ und „keinen zweiten Weg“ stehen genau einmal im Elternbereich.
+  - Die alten Sätze aus B2/B3 und die Exkurs- und Lernlogik-Texte kommen nicht mehr vor.
+  - Fokus mit Lücken in „Grundidee“ und „Aufbau“; „Manuell“ ist erwähnt.
+  - Jede Regel der Hilfe-Leiter steht einmal.
+  - Die drei Abschnitte haben zusammen höchstens 3 600 Zeichen.
+- Angepasst: `about` (Abschnittsliste, Test zur falschen Antwort, Wiederholung nicht mehr in „Wie die App einstuft“), `hilfe` und `blaetter` (Abschnittsname), `elternbereich-a1` (neuer Fokus-Satz).
+- Gegenprobe: F2-Test mit der App von `main` rot.
+- `npm test`: 400 bestanden.
+
+## Gefunden
+- Nichts Neues.
