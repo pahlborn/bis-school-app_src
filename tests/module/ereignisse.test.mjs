@@ -24,7 +24,7 @@ const rand0 = bytesOf(seeded(20261102));
 const ev = (type, payload, { at = iso(NOW - HOUR), author = 'p_k1', device = 'd_a1', rand = rand0 } = {}) => newEvent({ type, author, device, payload, at }, { rand });
 const answer = (device, i, ms, rand) => ev('answer', { day: iso(ms).slice(0, 10), skill: 'round', level: 2, attempt: 1, ok: i % 3 !== 0, qid: 'q' + i }, { at: iso(ms), device, rand });
 const name = (value, ms, device, rand = rand0) => ev('profile_set', { field: 'name', value }, { at: iso(ms), device, rand });
-const KONZEPT_TYPEN = ['answer', 'round_done', 'badge', 'review', 'practice_day', 'profile_set', 'rank_seen', 'sheet_created', 'sheet_result', 'sheet_discarded', 'setting_set', 'checklist_set', 'day_flag', 'school_import', 'grant_set', 'grant_revoked', 'grant_opened', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated', 'snapshot', 'gap_state', 'gap_active'];
+const KONZEPT_TYPEN = ['answer', 'round_done', 'badge', 'review', 'practice_day', 'profile_set', 'rank_seen', 'sheet_created', 'sheet_result', 'sheet_discarded', 'setting_set', 'checklist_set', 'day_flag', 'school_import', 'grant_set', 'grant_revoked', 'grant_opened', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated', 'snapshot', 'gap_state', 'gap_active', 'list_set', 'advent_open'];
 const SAMPLE = {
   answer: { day: DAY, skill: 'round', family: null, level: 2, attempt: 1, ok: true, response: '3', qid: 'q|v|o|a', help: false, example: false },
   round_done: { day: DAY, skill: 'round', stars: 7, count: 8 },
@@ -51,15 +51,17 @@ const SAMPLE = {
   snapshot: { upTo: '2026-11-02T16:00:00Z', count: 5000, idsHash: 'ab'.repeat(32), state: { total: 120 } },
   gap_state: { standard: 'MA.3.NBT.2', state: 'closed', by: 'app', schoolDay: '2026-10-20', day: DAY, quest: 'round' },
   gap_active: { standard: 'MA.3.NBT.2' },
+  list_set: { list: 'unlocked', item: 'fractions', on: true },
+  advent_open: { year: 2026, door: 3 },
 };
 const gut = ev('answer', SAMPLE.answer);
 const mitGrund = (e, re, wo = '') => { const f = checkEvent(e); assert.ok(f.some((x) => re.test(x)), `${wo}: expected ${re}, got ${JSON.stringify(f)}`); };
 
 /* ---------- US7.1: format ---------- */
-test('US7.1: 25 Typen wie im Konzept 9.1 (23 + 2 fuer Luecken, Aufgabe 3b-0); je Typ ein gueltiges Ereignis', () => {
+test('US7.1: 27 Typen wie im Konzept 9.1 (23 + 2 fuer Luecken, Aufgabe 3b-0, + 2 fuer Listen und Advent, 3b-1b-2); je Typ ein gueltiges Ereignis', () => {
   assert.equal(EVENT_VERSION, 1);
   assert.deepEqual(EVENT_TYPES, KONZEPT_TYPEN);
-  assert.equal(EVENT_TYPES.length, 25);
+  assert.equal(EVENT_TYPES.length, 27);
   assert.deepEqual(Object.keys(SAMPLE), EVENT_TYPES);
   for (const type of EVENT_TYPES) {
     const e = ev(type, SAMPLE[type]);
@@ -107,6 +109,7 @@ test('US7.1: kaputte Faelle werden mit Grund abgelehnt', () => {
     ['Profilfeld unbekannt', ev('profile_set', { field: 'color', value: 'red' }), /^payload\.field: invalid/],
     ['Blatt-Ergebnis unbekannt', ev('sheet_result', { ...SAMPLE.sheet_result, res: 'maybe' }), /^payload\.res: invalid/],
     ['Einstellung unbekannt', ev('setting_set', { setting: 'theme', value: 'dark' }), /^payload\.setting: invalid/],
+    ['Liste als Einstellung (3b-1b-2: list_set)', ev('setting_set', { setting: 'unlocked', value: ['x'] }), /^payload\.setting: invalid/], ['Fokusliste als Einstellung', ev('setting_set', { setting: 'focusManual', value: [] }), /^payload\.setting: invalid/],
     ['Freigabe ohne Umfang', ev('grant_set', { ...SAMPLE.grant_set, scope: [] }), /^payload\.scope: invalid/], ['Freigabe Umfang unbekannt', ev('grant_set', { ...SAMPLE.grant_set, scope: ['all'] }), /^payload\.scope: invalid/],
     ['Freigabe Umfang doppelt', ev('grant_set', { ...SAMPLE.grant_set, scope: ['learning', 'learning'] }), /^payload\.scope: invalid/], ['Freigabe an Nicht-Person', ev('grant_set', { ...SAMPLE.grant_set, grantee: 'frau' }), /^payload\.grantee: invalid/],
     ['Geraet ohne d_ in der Nutzlast', ev('device_added', { device: 'iPad' }), /^payload\.device: invalid/],
@@ -311,7 +314,8 @@ test('US7.4 Feldschluessel: je "Letzte gilt"-Feld ein Schluessel; Protokoll-Erei
   assert.equal(fieldKey(ev('gap_state', SAMPLE.gap_state)), 'gap_state:MA.3.NBT.2', 'gaps: one key per standard');
   assert.notEqual(fieldKey(ev('gap_state', { ...SAMPLE.gap_state, standard: 'MA.3.MD.1' })), fieldKey(ev('gap_state', SAMPLE.gap_state)));
   assert.equal(fieldKey(ev('gap_active', { standard: null })), 'gap_active', 'the active gap: one key');
-  for (const t of EVENT_TYPES.filter((x) => !['profile_set', 'setting_set', 'day_flag', 'checklist_set', 'rank_seen', 'gap_state', 'gap_active'].includes(x))) assert.equal(fieldKey(ev(t, SAMPLE[t])), null, t);
+  assert.equal(fieldKey(ev('list_set', SAMPLE.list_set)), 'list_set:unlocked:fractions', 'lists: one key per list and entry (3b-1b-2)');
+  for (const t of EVENT_TYPES.filter((x) => !['profile_set', 'setting_set', 'day_flag', 'checklist_set', 'rank_seen', 'gap_state', 'gap_active', 'list_set'].includes(x))) assert.equal(fieldKey(ev(t, SAMPLE[t])), null, t);
   for (const x of [null, undefined, 5, {}, { type: 'profile_set' }, { type: 'profile_set', payload: {} }, { type: 'toString', payload: {} }, { type: 'constructor', payload: { field: 'name' } }]) assert.equal(fieldKey(x), null);
 });
 

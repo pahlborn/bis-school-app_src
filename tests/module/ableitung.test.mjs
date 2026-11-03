@@ -275,8 +275,8 @@ test('"Letzte gilt": Profil, Einstellungen, Tageshinweise und Haken der Checklis
   v.add('profile_set', { field: 'birthday', value: '2017-05-12' }); v.add('profile_set', { field: 'emoji', value: '🦊' });
   v.add('profile_set', { field: 'kidLang', value: 'de' });
   v.add('setting_set', { setting: 'focusMode', value: 'manual' });
-  v.add('setting_set', { setting: 'focusManual', value: ['round', 'units'] });
-  v.add('setting_set', { setting: 'unlocked', value: ['x'] }); v.add('setting_set', { setting: 'storyCap', value: 3 });
+  v.add('list_set', { list: 'focusManual', item: 'round', on: true }); v.add('list_set', { list: 'focusManual', item: 'units', on: true });
+  v.add('list_set', { list: 'unlocked', item: 'x', on: true }); v.add('setting_set', { setting: 'storyCap', value: 3 });
   v.add('day_flag', { flag: 'greetDay', day: D1 }); v.add('day_flag', { flag: 'greetDay', day: D2 });
   v.add('day_flag', { flag: 'mysteryDone', day: D1 }); v.add('day_flag', { flag: 'bdayParty', day: D3 });
   v.add('checklist_set', { studio: 'grow', index: 2, value: true });
@@ -324,9 +324,11 @@ function bigStory(seed, n = 260) {
     else if (r < 0.89 && sheetIds.length) v.add('sheet_result', { sheet: pick(sheetIds), index: Math.floor(next() * 3), res: pick(['ok', 'help', 'no']), day: d, qid });
     else if (r < 0.9 && sheetIds.length) v.add('sheet_discarded', { sheet: pick(sheetIds) });
     else if (r < 0.94) v.add('profile_set', { field: pick(['name', 'emoji', 'birthday']), value: next() < 0.2 ? null : pick(['a', 'b', 'c']) }, { device: pick(['d_a1', 'd_b1']) });
-    else if (r < 0.97) v.add('setting_set', { setting: pick(['focusMode', 'storyCap', 'unlocked']), value: pick(['x', 3, ['a']]) });
+    else if (r < 0.97) v.add('setting_set', { setting: pick(['focusMode', 'storyCap']), value: pick(['x', 3, ['a']]) });
     else if (r < 0.98) v.add('day_flag', { flag: pick(['greetDay', 'mysteryDone', 'bdayParty']), day: d });
-    else v.add('checklist_set', { studio: pick(['grow', 'read']), index: Math.floor(next() * 5), value: next() < 0.5 });
+    else if (r < 0.985) v.add('checklist_set', { studio: pick(['grow', 'read']), index: Math.floor(next() * 5), value: next() < 0.5 });
+    else if (r < 0.995) v.add('list_set', { list: pick(['unlocked', 'focusManual']), item: pick(skills), on: next() < 0.6 });   // 3b-1b-2
+    else v.add('advent_open', { year: 2026, door: 1 + Math.floor(next() * 24) });
   }
   return v.list;
 }
@@ -599,4 +601,25 @@ test('3b-1b Checkliste: size fuellt die Liste mit false auf, wie die App sie spe
   assert.deepEqual(run(spaet, { base: { upTo: v.list[0].at, state: basis } }), run(v.list), 'base + later events');
   const kaputt = newEvent({ type: 'checklist_set', author: 'p_k1', device: 'd_a1', at: iso(T0), payload: { studio: 'grow', index: 0, value: true, size: 0 } }, { rand: bytesOf(seeded(72)) });
   assert.equal(run([kaputt]).chk_grow, undefined, 'size 0 is not a valid event');
+});
+
+/* ---------- lists per entry and Advent (task 3b-1b-2) ---------- */
+test('3b-1b-2 Listen: an = hinten anfuegen, aus = entfernen (wie index.html); Fokus-Liste nur bei focusMode manual; Advent je Jahr', () => {
+  const v = story(81), L = (list, item, on) => v.add('list_set', { list, item, on });
+  L('unlocked', 'fractions', true); L('unlocked', 'times', true); L('unlocked', 'fractions', false); L('unlocked', 'fractions', true);
+  assert.deepEqual(run(v.list).unlocked, ['times', 'fractions']);
+  L('unlocked', 'times', false); L('unlocked', 'fractions', false);
+  assert.deepEqual(run(v.list).unlocked, [], 'all off: the empty list stays (the app stores [])');
+  assert.equal('focusManual' in run(v.list), false, 'no focus list without manual mode');
+  v.add('setting_set', { setting: 'focusMode', value: 'manual' });
+  assert.deepEqual(run(v.list).focusManual, [], 'manual, nothing chosen');
+  L('focusManual', 'round', true); L('focusManual', 'units', true);
+  assert.deepEqual(run(shuffledCopy(v.list, 82)).focusManual, ['round', 'units']);
+  v.add('setting_set', { setting: 'focusMode', value: null });
+  let s = run(v.list);
+  assert.equal('focusMode' in s, false); assert.equal('focusManual' in s, false, 'automatic: both keys are gone');
+  for (const d of [3, 1, 3]) v.add('advent_open', { year: 2026, door: d });
+  v.add('advent_open', { year: 2027, door: 1 });
+  s = run(shuffledCopy(v.list, 83));
+  assert.deepEqual([s.advent2026, s.advent2027], [[3, 1], [1]], 'each door once, in the order opened, per year');
 });

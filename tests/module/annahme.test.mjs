@@ -55,6 +55,8 @@ function payloadFor(type, author, device) {
     snapshot: { upTo: '2026-11-02T16:00:00Z', count: 5000, idsHash: '0'.repeat(64), state: {} },
     gap_state: { standard: 'MA.3.NBT.2', state: 'closed', by: 'app', schoolDay: '2026-10-20', day: DAY, quest: 'round' },
     gap_active: { standard: 'MA.3.NBT.2' },
+    list_set: { list: 'unlocked', item: 'fractions', on: true },
+    advent_open: { year: 2026, door: 3 },
   }[type];
 }
 let n = 0;
@@ -72,7 +74,7 @@ const ERWARTET = {
   badge: 'c', review: 'c', sheet_result: 'c',
   profile_set: 'cp', sheet_created: 'cp', device_added: 'cp', gap_state: 'cp',
   sheet_discarded: 'p', setting_set: 'p', school_import: 'p', grant_set: 'p', grant_revoked: 'p',
-  member_added: 'p', member_removed: 'p', device_removed: 'p', key_rotated: 'p', snapshot: 'p', gap_active: 'p',
+  member_added: 'p', member_removed: 'p', device_removed: 'p', key_rotated: 'p', snapshot: 'p', gap_active: 'p', list_set: 'p', advent_open: 'cp',
   grant_opened: 'ta',
 };
 const darf = (role, type) => ERWARTET[type].includes(role[0]);
@@ -81,7 +83,7 @@ const darf = (role, type) => ERWARTET[type].includes(role[0]);
 test('Annehmen: gueltig unterschriebene Ereignisse je Rolle und erlaubtem Typ zaehlen', async () => {
   let k = 0;
   for (const role of ROLES) for (const type of EVENT_TYPES) if (darf(role, type)) { assert.equal(await reason(await signed(role, type)), 'ok', `${role} ${type}`); k++; }
-  assert.equal(k, 9 + 4 * 2 + 11 + 2, 'every allowed pair was tried once');
+  assert.equal(k, 9 + 5 * 2 + 12 + 2, 'every allowed pair was tried once');
   const p2 = await signEvent(mk('setting_set', 'p_e2', 'd_e3'), AREA, KEYS.p_e2);
   assert.deepEqual(await acceptEvent(p2, Z), { ok: true }, 'second parent from his second device');
 });
@@ -165,9 +167,9 @@ test('canonicalBytes: feste Bytefolge, unabhaengig von der Schluesselreihenfolge
 });
 
 /* ---------- 5 matrix ---------- */
-test('Matrix: alle 25 Typen x 4 Rollen gegen die hier ausgeschriebene Tabelle', async () => {
+test('Matrix: alle 27 Typen x 4 Rollen gegen die hier ausgeschriebene Tabelle', async () => {
   assert.deepEqual(Object.keys(ERWARTET).sort(), EVENT_TYPES.slice().sort(), 'the table covers every type');
-  assert.equal(EVENT_TYPES.length, 25);
+  assert.equal(EVENT_TYPES.length, 27);
   const falsch = [];
   for (const type of EVENT_TYPES) for (const role of ROLES) {
     const got = await reason(await signed(role, type)), want = darf(role, type) ? 'ok' : 'rolle-darf-nicht';
