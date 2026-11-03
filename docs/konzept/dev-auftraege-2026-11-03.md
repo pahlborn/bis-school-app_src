@@ -1,6 +1,6 @@
 # Aufträge an den Dev-Agenten (03.11.2026)
 
-Drei Aufgaben, die nach der Reihe „Elternbereich“ (A1–F6, alle gemerged bis #99) offen sind. Jede ist für sich umsetzbar. Reihenfolge nach Nutzen: **1 → 2 → 3**. Auftrag 3 braucht vorher eine Entscheidung von Peter.
+Drei Aufgaben, die nach der Reihe „Elternbereich“ (A1–F6, alle gemerged bis #99) offen sind. Jede ist für sich umsetzbar. Reihenfolge nach Nutzen: **1 → 2 → 3**. Auftrag 2 ist von Peter entschieden (03.11.); Auftrag 3 braucht vorher noch eine Entscheidung von Peter.
 
 Für alle gilt wie bisher: Konzept `docs/konzept/elternbereich.md` (R10 „Zeit ist relativ“: Fortschritt in Aufgaben, keine Zeitwörter; R11 Verantwortung bei den Eltern), Prüfbericht unter `docs/pruefung/`, eigener Test, `npm test` grün, Gegenprobe gegen `main`.
 
@@ -64,28 +64,47 @@ Geschlossen wird die Lücke aber erst bei **„bestätigt sicher“** (`assessQu
 
 **Folge:** Der Balken ist voll, und trotzdem steht „noch nicht ganz sicher – weiter üben“. Eltern sehen nicht, was fehlt. Bei einem Kind, das viel, aber oft falsch übt, bleibt das beliebig lange so.
 
-### Zielkonflikt, bitte mit Peter klären
-Bedingung 3 ist eine **Zeitbedingung** (Kalendertage). R10 verbietet Zeitwörter und Fristen. Zwei Möglichkeiten:
-- **a)** Bedingung 3 in Übungstagen ausdrücken, etwa „an mindestens 2 Übungstagen in verschiedenen Wochen“. Das ändert die Schwelle für „bestätigt“ und damit auch die Einschätzung in der Fachansicht.
-- **b)** Bedingung 3 bleibt und wird ohne Zeitwort angezeigt: „Noch einmal an einem späteren Übungstag“.
+### Entscheidung Peter (03.11.): Bedingung 3 entfällt
+Die 14 Kalendertage werden **gestrichen**. Begründung:
+- Die Bedingung misst Zeit, nicht Lernen. Eine einzelne Aufgabe vor zwei Wochen plus 19 heute erfüllt sie schon.
+- Sie widerspricht R10 („Zeit ist relativ“) und lässt sich ohne Zeitwort nicht anzeigen.
+- Der Abstand, auf den es didaktisch ankommt (Behalten statt Leistung im Moment, Soderstrom & Bjork 2015; Abstand beim Wiederholen, IES Practice Guide 2007), prüft schon Bedingung 4: richtig an mindestens 3 verschiedenen Übungstagen.
 
-Vorschlag: **b)**, weil es die Einschätzung nicht verändert.
+**Neu gilt „bestätigt“ bei:** mindestens 20 ersten Versuchen, an mindestens 5 Übungstagen, und Stand „Sicher“ oder „Darüber hinaus“ wie heute (Bedingung 4). Bedingungen 1, 2 und 4 bleiben unverändert.
+
+**Das betrifft nicht nur Lücken:** „bestätigt“ oder „vorläufig“ steht auch in der Einschätzung der Fachansicht (`assessQuest().sure`, „Worauf beruht das?“). Beide Stellen ändern sich bewusst mit.
 
 ### Anforderungen
-- Der Balken ist **nie voll, solange eine Bedingung fehlt**. Zum Beispiel: Balken = kleinster Anteil der Bedingungen 1, 2 und 4; Bedingung 3 erst sichtbar, wenn 1, 2 und 4 erfüllt sind.
-- Der Text nennt immer genau das, was als Nächstes fehlt, in Aufgaben oder Übungstagen, zum Beispiel:
+- **`assessQuest`:** `sure` ohne `span >= 14`. Die Variable `span` entfällt, wenn sie sonst nicht gebraucht wird.
+- **Balken (`gapProgress` / `gapProgressHTML`):** nie voll, solange eine der Bedingungen 1, 2 und 4 fehlt. Zum Beispiel: Balken = kleinster Anteil der drei Bedingungen.
+- **Text:** nennt immer genau das, was als Nächstes fehlt, in Aufgaben oder Übungstagen, zum Beispiel:
   - „noch etwa 8 Aufgaben“
   - „noch 3 Aufgaben auf Klassenniveau richtig“
   - „noch an 2 Übungstagen“
-  - „noch einmal an einem späteren Übungstag“
-- Keine Zeitwörter (T17): kein „Tage bis“, „Wochen“, „fällig“, „bis zum“.
-- Die Stelle in „Auf einen Blick“ (E3) und in der Fachansicht nutzt dieselbe Funktion. Beide ändern sich mit.
-- DE und EN (amerikanisches Englisch).
+  - „noch an einem weiteren Übungstag richtig“ (für „richtig an mindestens 3 Übungstagen“)
+- **Keine Zeitwörter** (T17): kein „Tage bis“, „Wochen“, „fällig“, „bis zum“.
+- **Gleiche Funktion an beiden Stellen:** „Auf einen Blick“ (E3) und die Fachansicht nutzen dieselbe Funktion. Beide ändern sich mit.
+- **Sprachen:** DE und EN (amerikanisches Englisch).
+- **Texte mit „zwei Wochen“ / „14 Tage“ anpassen** (DE und EN), damit sie zur neuen Regel passen:
+
+  | Stelle in `index.html` | heute |
+  |---|---|
+  | `PT.de.when` / `PT.en.when` („Worauf beruht das?“) | „Belastbar ab etwa 20 Aufgaben an 5 Tagen über zwei Wochen.“ |
+  | ⓘ `overview` (HELP / HELP_EN) | „Bestätigt: nach etwa 20 Aufgaben an 5 Tagen über zwei Wochen.“ |
+  | „So funktioniert Big Quest“ → Wie die App einstuft, Kurzfassung | „„bestätigt“ ab etwa 20 Aufgaben an 5 Tagen über zwei Wochen“ |
+  | dort „Genaue Schwellen“ → Einschätzung im Elternbereich | „„Bestätigt“ ab 20 ersten Versuchen an 5 Tagen über mindestens 14 Tage“ |
+  | Konzept `docs/konzept/elternbereich.md` 6.3 | „20 erste Versuche an 5 Tagen über mindestens 14 Tage“ |
+
+  **Nicht** gemeint ist „in den letzten 14 Tagen an N Tagen geübt“ (`sumIntro`). Das ist eine Rückschau, keine Schwelle.
 
 ### Abnahme
-- Test mit erfundenen Daten für jeden der vier Fälle: Es fehlt nur Bedingung 1, 2, 3 bzw. 4. Jeweils Balken unter 100 % und der passende Text.
-- Test: Alle Bedingungen erfüllt, dann ist die Lücke geschlossen („Lücke geschlossen ✓“). Das ist heute schon so und muss so bleiben.
-- `tests/elternbereich-d4.test.mjs` und `tests/elternbereich-e3.test.mjs` grün, wo nötig mit angepasstem Text.
+- **Neue Regel:** Test mit erfundenen Daten – 20 Aufgaben an 5 Übungstagen **innerhalb von 6 Kalendertagen**, Klassenniveau 80 % richtig an 3 Tagen, ergibt „bestätigt“ und schließt die Lücke („Lücke geschlossen ✓“).
+- **Balken:** Test für jeden der drei Fälle, in denen nur Bedingung 1, 2 bzw. 4 fehlt. Jeweils Balken unter 100 % und der passende Text.
+- **Bestehende Tests** grün, wo nötig mit angepasstem Text oder angepassten Daten:
+  - `elternbereich-d4`, `elternbereich-e3`, `elternbereich-e1` („Worauf beruht das?“)
+  - `about` (Schwellen-Text)
+  - alle Tests, die mit wenigen Kalendertagen ausdrücklich „vorläufig“ erwarten
+- **Gegenprobe:** mit `span >= 14` wieder drin ist der neue Test rot.
 
 ---
 
