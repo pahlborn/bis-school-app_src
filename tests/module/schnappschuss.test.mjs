@@ -102,8 +102,9 @@ test('Verspaetet: Ereignis mit frueherem Zeitpunkt nach dem Schnappschuss -> "vo
     assert.deepEqual(await stateFrom(alle, s, { now: NOW }), { state: soll, weg: 'voll' }, wo + ': device with all events');
     assert.deepEqual(await stateFrom([...NEU, L], s, { now: NOW }), { state: null, weg: 'nachladen' }, wo + ': new device');
     // the parent writes a new snapshot that contains the late event; old and new devices use it again
-    const s2 = await snap(alle);
-    assert.equal(s2.payload.count, alle.length);
+    const s2 = await snap([...alle, s], NOW + DAY_MS);                       // the old snapshot is in the log, too
+    assert.equal(s2.payload.count, alle.length, 'an old snapshot is not counted');
+    assert.equal(s2.payload.upTo, FAM[FAM.length - 1].at, 'and does not move upTo');
     assert.notEqual(s2.payload.idsHash, s.payload.idsHash);
     const spaeter = familie(77, 200, Date.parse(FAM[FAM.length - 1].at) + 60000);
     const soll2 = run([...alle, ...spaeter]);
@@ -207,6 +208,10 @@ test('Uhr: Ereignis mehr als 24 h in der Zukunft verhaelt sich wie in effectiveT
   assert.ok(Date.parse(s.payload.upTo) > zurueck + EVENT_FUTURE_MS);
   assert.deepEqual(await stateFrom(FAM, s, { now: zurueck }), { state: run(FAM, zurueck), weg: 'voll' });
   assert.deepEqual(await stateFrom(NEU, s, { now: zurueck }), { state: null, weg: 'nachladen' });
+  // the same events as in the snapshot (count and checksum fit), but this clock puts the last two days in another order
+  const gleich = await stateFrom(ALT, s, { now: zurueck });
+  assert.deepEqual(gleich, { state: run(ALT, zurueck), weg: 'voll' });
+  assert.notDeepEqual(gleich.state.attempts, s.payload.state.attempts, '(the order really differs)');
 });
 
 /* ---------- writing and accepting ---------- */
