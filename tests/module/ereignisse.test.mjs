@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {
   EVENT_VERSION, EVENT_FUTURE_MS, EVENT_TYPES, PAYLOAD_FIELDS, PAYLOAD_OPTIONAL,
-  newEvent, checkEvent, effectiveTime, mergeLog, fieldKey, lastWins,
+  newEvent, checkEvent, effectiveTime, mergeLog, fieldKey, lastWins, lastWinsOrder,
 } from '../../src/module/ereignisse.mjs';
 
 /* ---------- helpers: fixed random numbers, so every run is the same ---------- */
@@ -24,7 +24,7 @@ const rand0 = bytesOf(seeded(20261102));
 const ev = (type, payload, { at = iso(NOW - HOUR), author = 'p_k1', device = 'd_a1', rand = rand0 } = {}) => newEvent({ type, author, device, payload, at }, { rand });
 const answer = (device, i, ms, rand) => ev('answer', { day: iso(ms).slice(0, 10), skill: 'round', level: 2, attempt: 1, ok: i % 3 !== 0, qid: 'q' + i }, { at: iso(ms), device, rand });
 const name = (value, ms, device, rand = rand0) => ev('profile_set', { field: 'name', value }, { at: iso(ms), device, rand });
-const KONZEPT_TYPEN = ['answer', 'round_done', 'badge', 'review', 'practice_day', 'profile_set', 'rank_seen', 'sheet_created', 'sheet_result', 'sheet_discarded', 'setting_set', 'checklist_set', 'day_flag', 'school_import', 'grant_set', 'grant_revoked', 'grant_opened', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated', 'snapshot'];
+const KONZEPT_TYPEN = ['answer', 'round_done', 'badge', 'review', 'practice_day', 'profile_set', 'rank_seen', 'sheet_created', 'sheet_result', 'sheet_discarded', 'setting_set', 'checklist_set', 'day_flag', 'school_import', 'grant_set', 'grant_revoked', 'grant_opened', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated', 'snapshot', 'gap_state', 'gap_active'];
 const SAMPLE = {
   answer: { day: DAY, skill: 'round', family: null, level: 2, attempt: 1, ok: true, response: '3', qid: 'q|v|o|a', help: false, example: false },
   round_done: { day: DAY, skill: 'round', stars: 7, count: 8 },
@@ -49,15 +49,17 @@ const SAMPLE = {
   device_removed: { device: 'd_b1' },
   key_rotated: { version: 2 },
   snapshot: { upTo: '2026-11-02T16:00:00Z', count: 5000, state: { total: 120 } },
+  gap_state: { standard: 'MA.3.NBT.2', state: 'closed', by: 'app', schoolDay: '2026-10-20', day: DAY, quest: 'round' },
+  gap_active: { standard: 'MA.3.NBT.2' },
 };
 const gut = ev('answer', SAMPLE.answer);
 const mitGrund = (e, re, wo = '') => { const f = checkEvent(e); assert.ok(f.some((x) => re.test(x)), `${wo}: expected ${re}, got ${JSON.stringify(f)}`); };
 
 /* ---------- US7.1: format ---------- */
-test('US7.1: 23 Typen wie im Konzept 9.1; je Typ ein gueltiges Ereignis', () => {
+test('US7.1: 25 Typen wie im Konzept 9.1 (23 + 2 fuer Luecken, Aufgabe 3b-0); je Typ ein gueltiges Ereignis', () => {
   assert.equal(EVENT_VERSION, 1);
   assert.deepEqual(EVENT_TYPES, KONZEPT_TYPEN);
-  assert.equal(EVENT_TYPES.length, 23);
+  assert.equal(EVENT_TYPES.length, 25);
   assert.deepEqual(Object.keys(SAMPLE), EVENT_TYPES);
   for (const type of EVENT_TYPES) {
     const e = ev(type, SAMPLE[type]);
@@ -304,7 +306,10 @@ test('US7.4 Feldschluessel: je "Letzte gilt"-Feld ein Schluessel; Protokoll-Erei
   assert.equal(fieldKey(ev('checklist_set', { studio: 'grow', index: 0, value: true })), 'checklist_set:grow:0', 'one key per tick');
   assert.notEqual(fieldKey(ev('checklist_set', { studio: 'grow', index: 1, value: true })), fieldKey(ev('checklist_set', { studio: 'grow', index: 0, value: true })));
   assert.equal(fieldKey(ev('rank_seen', { rank: 'Scientist' })), 'rank_seen');
-  for (const t of EVENT_TYPES.filter((x) => !['profile_set', 'setting_set', 'day_flag', 'checklist_set', 'rank_seen'].includes(x))) assert.equal(fieldKey(ev(t, SAMPLE[t])), null, t);
+  assert.equal(fieldKey(ev('gap_state', SAMPLE.gap_state)), 'gap_state:MA.3.NBT.2', 'gaps: one key per standard');
+  assert.notEqual(fieldKey(ev('gap_state', { ...SAMPLE.gap_state, standard: 'MA.3.MD.1' })), fieldKey(ev('gap_state', SAMPLE.gap_state)));
+  assert.equal(fieldKey(ev('gap_active', { standard: null })), 'gap_active', 'the active gap: one key');
+  for (const t of EVENT_TYPES.filter((x) => !['profile_set', 'setting_set', 'day_flag', 'checklist_set', 'rank_seen', 'gap_state', 'gap_active'].includes(x))) assert.equal(fieldKey(ev(t, SAMPLE[t])), null, t);
   for (const x of [null, undefined, 5, {}, { type: 'profile_set' }, { type: 'profile_set', payload: {} }, { type: 'toString', payload: {} }, { type: 'constructor', payload: { field: 'name' } }]) assert.equal(fieldKey(x), null);
 });
 
@@ -369,6 +374,86 @@ test('Restrisiko: Werte von einer 3 Tage vorgestellten Uhr gewinnen bis zu 3 Tag
   assert.equal(wer([falsch, echt1, echt2], T + 2 * DAY_MS + HOUR), 'Falsch (Uhr +3 Tage)', 'still 23 hours ahead: counts with its own time, beats the real value of 2 days');
   assert.equal(wer([falsch, echt1, echt2, echt3], T + 3 * DAY_MS + HOUR), 'Echt nach 3 Tagen', 'only a real value after the wrong time wins again');
   // the improvement for later: remember "first seen" per event and measure against that
+});
+
+/* ---------- gaps (task 3b-0): gap_state per standard, gap_active ---------- */
+const gap = (standard, state, by, { ms = NOW - HOUR, device = 'd_a1', schoolDay = '2026-10-20', rand = rand0, ...rest } = {}) =>
+  ev('gap_state', { standard, state, by, schoolDay, day: iso(ms).slice(0, 10), ...rest }, { at: iso(ms), device, rand });
+const aktiv = (standard, { ms = NOW - HOUR, device = 'd_e1', rand = rand0 } = {}) => ev('gap_active', { standard }, { at: iso(ms), device, rand });
+
+test('3b-0 Format: gap_state und gap_active gueltig; unbekannter Zustand, fehlender Standard usw. abgelehnt', () => {
+  for (const [state, by] of [['closed', 'app'], ['closed', 'parents'], ['hold', 'parents'], ['open', 'parents']]) assert.deepEqual(checkEvent(gap('X', state, by)), [], state + ' ' + by);
+  assert.deepEqual(checkEvent(gap('X', 'closed', 'app', { quest: 'round' })), [], 'with quest');
+  assert.deepEqual(checkEvent(aktiv('X')), []);
+  assert.deepEqual(checkEvent(aktiv(null)), [], 'no active gap (null) is a value');
+  assert.deepEqual(PAYLOAD_FIELDS.gap_state, ['standard', 'state', 'by', 'schoolDay', 'day']);
+  assert.deepEqual(PAYLOAD_OPTIONAL.gap_state, ['quest']);
+  assert.deepEqual(PAYLOAD_FIELDS.gap_active, ['standard']);
+  const g = gap('X', 'closed', 'app'), a = aktiv('X');
+  for (const [wo, e, re] of [
+    ['unbekannter Zustand', { ...g, payload: { ...g.payload, state: 'done' } }, /^payload\.state: invalid$/],
+    ['Zustand gross', { ...g, payload: { ...g.payload, state: 'Closed' } }, /^payload\.state: invalid$/],
+    ['fehlender Standard', { ...g, payload: { ...g.payload, standard: undefined } }, /^payload\.standard: missing$/],
+    ['leerer Standard', { ...g, payload: { ...g.payload, standard: '' } }, /^payload\.standard: invalid$/],
+    ['Standard null', { ...g, payload: { ...g.payload, standard: null } }, /^payload\.standard: invalid$/],
+    ['by unbekannt', { ...g, payload: { ...g.payload, by: 'teacher' } }, /^payload\.by: invalid$/],
+    ['by fehlt', { ...g, payload: { ...g.payload, by: undefined } }, /^payload\.by: missing$/],
+    ['schoolDay kein Tag', { ...g, payload: { ...g.payload, schoolDay: '2026-13-01' } }, /^payload\.schoolDay: invalid$/],
+    ['day fehlt', { ...g, payload: { ...g.payload, day: undefined } }, /^payload\.day: missing$/],
+    ['quest leer', { ...g, payload: { ...g.payload, quest: '' } }, /^payload\.quest: invalid$/],
+    ['Zusatzfeld', { ...g, payload: { ...g.payload, active: 'X' } }, /^payload\.active: unknown field$/],
+    ['gap_active ohne Standard', { ...a, payload: {} }, /^payload\.standard: missing$/],
+    ['gap_active leer', { ...a, payload: { standard: '' } }, /^payload\.standard: invalid$/],
+    ['gap_active Liste', { ...a, payload: { standard: ['X'] } }, /^payload\.standard: invalid$/],
+  ]) mitGrund(e, re, wo);
+});
+
+test('3b-0 Zusammenfuehren: Kindergeraet schliesst X, Eltern-Handy waehlt Y und haelt Z -> alle drei Aenderungen da, in jeder Reihenfolge', () => {
+  const r = bytesOf(seeded(47)), next = seeded(48), t0 = NOW - 3 * HOUR;
+  const kind = [gap('X', 'closed', 'app', { ms: t0 + 60000, device: 'd_k1', quest: 'round', rand: r })];
+  const eltern = [aktiv('Y', { ms: t0, rand: r }), gap('Z', 'hold', 'parents', { ms: t0 + 120000, device: 'd_e1', rand: r })];
+  const w = lastWins(mergeLog([kind, eltern], NOW).events, NOW);
+  assert.deepEqual(Object.keys(w), ['gap_active', 'gap_state:X', 'gap_state:Z'], 'three fields, none overwrites another');
+  assert.equal(w['gap_state:X'].payload.state, 'closed');
+  assert.equal(w['gap_state:Z'].payload.state, 'hold');
+  assert.equal(w.gap_active.payload.standard, 'Y');
+  for (let i = 0; i < 50; i++) {
+    const mix = shuffled([...kind, ...eltern, ...kind], next);
+    assert.deepEqual(lastWins(mergeLog([mix.slice(0, 2), mix.slice(2)], NOW).events, NOW), w, 'run ' + i);
+  }
+  assert.deepEqual(lastWins(mergeLog([eltern, kind], NOW).events, NOW), w, 'the other direction');
+});
+
+test('3b-0 gleicher Standard auf zwei Geraeten: die juengste Aenderung gilt; Gleichstand wie lastWins (groessere Geraete-Kennung, dann id)', () => {
+  const r = bytesOf(seeded(53)), t0 = NOW - 2 * HOUR;
+  const zu = gap('X', 'closed', 'app', { ms: t0, device: 'd_k1', rand: r }), halten = gap('X', 'hold', 'parents', { ms: t0 + 1000, device: 'd_e1', rand: r });
+  for (const l of [[zu, halten], [halten, zu]]) assert.equal(lastWins(l, NOW)['gap_state:X'], halten, 'the youngest wins');
+  const zuGleich = gap('X', 'closed', 'app', { ms: t0 + 1000, device: 'd_k1', rand: r });
+  for (const l of [[zuGleich, halten], [halten, zuGleich]]) assert.equal(lastWins(l, NOW)['gap_state:X'], zuGleich, 'same time: d_k1 > d_e1');
+  const a1 = aktiv('A', { ms: t0, device: 'd_e1', rand: r }), a2 = aktiv('B', { ms: t0, device: 'd_e1', rand: r }), gross = a1.id > a2.id ? a1 : a2;
+  for (const l of [[a1, a2], [a2, a1]]) assert.equal(lastWins(l, NOW).gap_active, gross, 'same time, same device: the larger id');
+});
+
+test('3b-0 lastWinsOrder: Zeit, dann Geraete-Kennung, dann id; nur gueltige "Letzte gilt"-Ereignisse, jede id einmal; das letzte je Feld ist der lastWins-Gewinner', () => {
+  const next = seeded(59), r = bytesOf(next), t0 = NOW - 9 * HOUR, E = [];
+  for (let i = 0; i < 300; i++) {
+    const ms = t0 + Math.floor(next() * 20) * 1000, device = ['d_a1', 'd_b1', 'd_k1'][Math.floor(next() * 3)], s = ['X', 'Y', 'Z'][Math.floor(next() * 3)];
+    const k = next();
+    E.push(k < 0.5 ? gap(s, ['closed', 'hold', 'open'][i % 3], i % 2 ? 'app' : 'parents', { ms, device, rand: r }) : k < 0.7 ? aktiv(next() < 0.2 ? null : s, { ms, device, rand: r }) : k < 0.9 ? name('n' + i, ms, device, r) : answer(device, i, ms, r));
+  }
+  E.push(E[0], E[5], { ...E[1], v: 2 });
+  const o = lastWinsOrder(E, NOW);
+  assert.equal(new Set(o.map((e) => e.id)).size, o.length, 'each id once');
+  assert.ok(o.every((e) => fieldKey(e) && checkEvent(e).length === 0), 'only valid "last wins" events');
+  assert.equal(o.length, new Set(E.filter((e) => fieldKey(e) && !checkEvent(e).length).map((e) => e.id)).size);
+  for (let i = 1; i < o.length; i++) {
+    const a = o[i - 1], b = o[i], ta = Date.parse(a.at), tb = Date.parse(b.at);
+    assert.ok(ta < tb || (ta === tb && (a.device < b.device || (a.device === b.device && a.id < b.id))), 'order at ' + i);
+  }
+  const last = {}; for (const e of o) last[fieldKey(e)] = e;
+  assert.deepEqual(lastWins(E, NOW), Object.fromEntries(Object.keys(last).sort().map((k) => [k, last[k]])));
+  for (let i = 0; i < 20; i++) assert.deepEqual(lastWinsOrder(shuffled(E, next), NOW), o, 'run ' + i);
+  assert.deepEqual(lastWinsOrder(undefined, NOW), []);
 });
 
 /* ---------- size and source ---------- */

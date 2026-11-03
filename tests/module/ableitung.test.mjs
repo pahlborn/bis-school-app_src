@@ -6,6 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import vm from 'node:vm';
 import { newEvent } from '../../src/module/ereignisse.mjs';
 import { derive, DERIVE_LIMITS, DERIVE_GAPS, DERIVE_TREE_AT, DERIVE_RANKS } from '../../src/module/ableitung.mjs';
 
@@ -390,6 +391,193 @@ test('Ungueltiges und Boeses: ungueltige Ereignisse zaehlen nicht, Namen aus Ere
   assert.deepEqual(s.badges, { constructor: 1, toString: 1 });
   assert.equal(s.total, 3);
   assert.equal({}.polluted, undefined);
+});
+
+/* ---------- gaps (task 3b-0) ---------- */
+const SD1 = '2026-10-20', SD2 = '2026-11-01';
+const gs = (v, standard, state, by, { schoolDay = SD1, day = D1, quest, device = 'd_e1', gap = 1 } = {}) =>
+  v.add('gap_state', { standard, state, by, schoolDay, day, ...(quest === undefined ? {} : { quest }) }, { device, gap });
+const ga = (v, standard, { device = 'd_e1', gap = 1 } = {}) => v.add('gap_active', { standard }, { device, gap });
+
+test('3b-0 gaps: jedes Ereignis tut, was index.html heute tut (von Hand gerechnet); ohne Luecken-Ereignis kein Schluessel', () => {
+  assert.equal('gaps' in run([]), false);
+  const v = story(61);
+  gs(v, 'X', 'closed', 'app', { quest: 'q1', device: 'd_k1' });                         // openGaps: closed by the app (kid device)
+  assert.deepEqual(run(v.list).gaps, { closed: { X: { at: D1, by: 'app', schoolDay: SD1, quest: 'q1' } }, active: null, hold: {} });
+  ga(v, 'Y');                                                                            // gapAct 'go'
+  gs(v, 'Z', 'closed', 'parents', { day: D2 });                                          // gapAct 'close'
+  assert.deepEqual(run(v.list).gaps, { closed: { X: { at: D1, by: 'app', schoolDay: SD1, quest: 'q1' }, Z: { at: D2, by: 'parents', schoolDay: SD1 } }, active: 'Y', hold: {} });
+  gs(v, 'X', 'hold', 'parents', { day: D2 });                                            // gapAct 'hold': closed goes, hold comes, X becomes active
+  assert.deepEqual(run(v.list).gaps, { closed: { Z: { at: D2, by: 'parents', schoolDay: SD1 } }, active: 'X', hold: { X: { at: D2, schoolDay: SD1 } } });
+  gs(v, 'X', 'closed', 'parents', { day: D3 });                                          // close the active one: hold goes, active goes
+  assert.deepEqual(run(v.list).gaps, { closed: { Z: { at: D2, by: 'parents', schoolDay: SD1 }, X: { at: D3, by: 'parents', schoolDay: SD1 } }, active: null, hold: {} });
+  gs(v, 'Z', 'open', 'parents', { day: D3 });                                            // open: nothing left for Z
+  ga(v, 'W'); ga(v, null);                                                               // the latest choice counts, also "none"
+  assert.deepEqual(run(v.list).gaps, { closed: { X: { at: D3, by: 'parents', schoolDay: SD1 } }, active: null, hold: {} });
+});
+
+test('3b-0 gaps: eine aeltere "Weiter ueben"-Markierung bleibt beim automatischen Schliessen stehen (wie index.html); "closed" mit neuerer Einstufung', () => {
+  const v = story(62);
+  gs(v, 'X', 'hold', 'parents', { schoolDay: SD1, day: D1 });
+  gs(v, 'X', 'closed', 'app', { schoolDay: SD2, day: D3, quest: 'q2', device: 'd_k1' });          // newer weak rating, then confirmed in the app
+  assert.deepEqual(run(v.list).gaps, { closed: { X: { at: D3, by: 'app', schoolDay: SD2, quest: 'q2' } }, active: 'X', hold: { X: { at: D1, schoolDay: SD1 } } });
+});
+
+test('3b-0 Zusammenfuehren (Test 3): Kindergeraet schliesst X, ein Eltern-Handy waehlt Y, das andere haelt Z -> alles da, in jeder Reihenfolge', () => {
+  const v = story(63), next = seeded(64);
+  gs(v, 'Z', 'hold', 'parents', { device: 'd_e1' });                                    // phone 1 (hold also makes Z active)
+  gs(v, 'X', 'closed', 'app', { device: 'd_k1', quest: 'q1' });                         // the child's iPad, not synced yet
+  ga(v, 'Y', { device: 'd_e2' });                                                        // phone 2, a little later
+  const soll = { closed: { X: { at: D1, by: 'app', schoolDay: SD1, quest: 'q1' } }, active: 'Y', hold: { Z: { at: D1, schoolDay: SD1 } } };
+  for (let i = 0; i < 60; i++) {
+    const mix = shuffled([...v.list, ...v.list.filter(() => next() < 0.3)], next);
+    assert.deepEqual(run(mix).gaps, soll, 'run ' + i);
+  }
+});
+
+test('3b-0 Zusammenfuehren: Schliessen auf Handy 1 nimmt die Wahl von Handy 2 nicht weg (kein eigenes "active = null"-Ereignis)', () => {
+  const v = story(65);
+  ga(v, 'X', { device: 'd_e1' });                                                        // both phones know: X is active
+  ga(v, 'Y', { device: 'd_e2' });                                                        // phone 2 chooses Y
+  gs(v, 'X', 'closed', 'parents', { device: 'd_e1' });                                  // phone 1 (still sees X active) closes X
+  assert.deepEqual(run(v.list).gaps, { closed: { X: { at: D1, by: 'parents', schoolDay: SD1 } }, active: 'Y', hold: {} });
+  const w = story(66);
+  ga(w, 'X'); gs(w, 'X', 'closed', 'parents');                                          // on one phone: closing the active one clears it
+  assert.equal(run(w.list).gaps.active, null);
+});
+
+test('3b-0 Zusammenfuehren: ein spaeteres automatisches Schliessen vom Kindergeraet hebt "Weiter ueben" fuer dieselbe Einstufung nicht auf', () => {
+  const v = story(67);
+  gs(v, 'X', 'closed', 'app', { device: 'd_e1', quest: 'q1' });                         // closed (both devices know)
+  gs(v, 'X', 'hold', 'parents', { device: 'd_e1', day: D2 });                           // parents: keep practising
+  gs(v, 'X', 'closed', 'app', { device: 'd_k1', quest: 'q1', day: D2 });                // the iPad had not got the hold yet
+  const soll = { closed: {}, active: 'X', hold: { X: { at: D2, schoolDay: SD1 } } };
+  assert.deepEqual(run(v.list).gaps, soll);
+  assert.deepEqual(run(v.list.slice().reverse()).gaps, soll);
+  gs(v, 'X', 'closed', 'app', { device: 'd_k1', quest: 'q2', schoolDay: SD2, day: D3 });  // a NEWER weak rating, confirmed again: closes
+  assert.deepEqual(run(v.list).gaps.closed, { X: { at: D3, by: 'app', schoolDay: SD2, quest: 'q2' } });
+  gs(v, 'X', 'closed', 'parents', { day: D3 });                                         // the parents' own close is never blocked (and clears the active X)
+  assert.deepEqual(run(v.list).gaps, { closed: { X: { at: D3, by: 'parents', schoolDay: SD1 } }, active: null, hold: {} });
+});
+
+test('3b-0 gleicher Standard auf zwei Geraeten (Test 4): die juengste Aenderung gilt; Gleichstand -> groessere Geraete-Kennung', () => {
+  const v = story(68);
+  gs(v, 'X', 'closed', 'parents', { device: 'd_e1' });
+  gs(v, 'X', 'open', 'parents', { device: 'd_e2', gap: 0 });                            // same minute: d_e2 > d_e1
+  assert.deepEqual(run(v.list).gaps.closed, {});
+  assert.deepEqual(run(v.list.slice().reverse()).gaps.closed, {});
+  gs(v, 'X', 'closed', 'parents', { device: 'd_e1', day: D2 });                         // later: counts
+  assert.deepEqual(run(v.list).gaps.closed, { X: { at: D2, by: 'parents', schoolDay: SD1 } });
+  // same time: the device decides before the event id (like lastWins), also when the ids say the opposite
+  const fest = (device, state, byte) => newEvent({ type: 'gap_state', author: 'p_e1', device, at: iso(T0), payload: { standard: 'X', state, by: 'parents', schoolDay: SD1, day: D1 } }, { rand: (n) => new Uint8Array(n).fill(byte) });
+  for (const [kleineId, grosseId] of [[fest('d_e2', 'open', 0x00), fest('d_e1', 'closed', 0xff)], [fest('d_e2', 'open', 0xff), fest('d_e1', 'closed', 0x00)]]) {
+    assert.deepEqual(run([kleineId, grosseId]).gaps.closed, {}, 'd_e2 > d_e1 decides, whatever the ids');
+  }
+});
+
+/* a gap story over several devices for the base and order tests */
+function gapStory(seed, n = 120) {
+  const next = seeded(seed), v = story(seed), pick = (a) => a[Math.floor(next() * a.length)];
+  for (let i = 0; i < n; i++) {
+    const s = pick(['X', 'Y', 'Z', 'W']), opts = { device: pick(['d_k1', 'd_e1', 'd_e2']), schoolDay: pick([SD1, SD2]), day: dayOf(Math.floor(i / 10)), gap: pick([0, 1, 1, 2]) };
+    const r = next();
+    if (r < 0.35) gs(v, s, 'closed', 'app', { ...opts, quest: 'q' + Math.floor(next() * 4) });
+    else if (r < 0.5) gs(v, s, 'closed', 'parents', opts);
+    else if (r < 0.7) gs(v, s, 'hold', 'parents', opts);
+    else if (r < 0.8) gs(v, s, 'open', 'parents', opts);
+    else ga(v, next() < 0.2 ? null : s, opts);
+  }
+  return v.list;
+}
+
+test('3b-0 gaps: Reihenfolge, Doppeltes und Basisstand (Stand frueh + spaetere Ereignisse = alles zusammen)', () => {
+  const list = gapStory(71), alle = run(list), next = seeded(72);
+  assert.ok(Object.keys(alle.gaps.closed).length && Object.keys(alle.gaps.hold).length, 'the story reaches closed and hold');
+  for (let i = 0; i < 40; i++) assert.deepEqual(run(shuffled([...list, ...list.slice(0, 30)], next)), alle, 'mix ' + i);
+  const sortiert = list.slice().sort((x, y) => (Date.parse(x.at) - Date.parse(y.at)) || (x.id < y.id ? -1 : 1));
+  for (let lauf = 0; lauf < 40; lauf++) {
+    const upTo = sortiert[Math.floor(next() * sortiert.length)].at;
+    const basis = JSON.parse(JSON.stringify(run(sortiert.filter((e) => Date.parse(e.at) <= Date.parse(upTo)))));
+    assert.deepEqual(run(sortiert.filter((e) => Date.parse(e.at) > Date.parse(upTo)), { base: { upTo, state: basis } }), alle, 'cut at ' + upTo);
+  }
+  // a base from today's app (D1 form without hold) is carried on
+  const alt = { gaps: { closed: { X: { at: D1, by: 'app', schoolDay: SD1, quest: 'q1' } }, active: 'Y' } }, v = story(73);
+  gs(v, 'Z', 'hold', 'parents', { day: D2 });
+  assert.deepEqual(run(v.list, { base: { upTo: iso(T0 - 1000), state: alt } }).gaps, { closed: { X: { at: D1, by: 'app', schoolDay: SD1, quest: 'q1' } }, active: 'Z', hold: { Z: { at: D2, schoolDay: SD1 } } });
+  assert.deepEqual(run([], { base: { upTo: iso(T0), state: alt } }).gaps, alt.gaps, 'no new gap event: the base stays as it is');
+});
+
+test('3b-0 gaps: Namen aus Ereignissen sind keine Objekt-Eigenschaften; ungueltige Ereignisse zaehlen nicht', () => {
+  const v = story(74);
+  gs(v, '__proto__', 'closed', 'parents'); gs(v, '__proto__', 'hold', 'parents');
+  gs(v, 'constructor', 'hold', 'parents'); gs(v, 'toString', 'closed', 'app');
+  const kaputt = { ...gs(v, 'X', 'closed', 'app'), v: 2 }; v.list.pop(); v.list.push(kaputt);
+  const s = run(v.list);
+  assert.deepEqual(Object.keys(s.gaps.closed), ['toString']);
+  assert.deepEqual(Object.keys(s.gaps.hold), ['constructor']);
+  assert.equal(Object.getPrototypeOf(s.gaps.closed), Object.prototype);
+  assert.equal(Object.getPrototypeOf(s.gaps.hold), Object.prototype);
+  assert.equal({}.at, undefined);
+});
+
+/* ---------- gaps: the real code of index.html (Test 5) ----------
+   The gap functions of index.html (GAP_WEAK ... gapAct) run unchanged in a sandbox with a small fake app around them
+   (school ratings, quests, "confirmed", one store). A random story clicks "look" (openGaps), "work on it now",
+   "mark as closed", "keep practicing"; each step writes the event 3b-1 will write. At the end derive(events).gaps
+   must equal what index.html stored. */
+function appGaps() {
+  const html = fs.readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+  const a = html.indexOf("const GAP_WEAK=['RS','C'];"), b = html.indexOf('/* progress towards "confirmed secure"');
+  assert.ok(a > 0 && b > a, 'the gap code of index.html was found (markers GAP_WEAK ... "progress towards")');
+  const ctx = vm.createContext({ T: { mem: {}, ratings: {}, confirmed: new Set(), day: D1 } });
+  vm.runInContext(`
+    const STANDARDS = { q1:['X','Y'], q2:['X'], q3:['Y'], q4:['Z'], q5:['Z','X'], q6:['W'] };
+    const SUBJECTS = ['math','english'], questsIn = k => k === 'math' ? ['q1','q2','q3','q4'] : ['q5','q6'];
+    const uniq = a => a.filter((v,i)=>a.indexOf(v)===i), cleanFocus = a => a;
+    const store = { get: (k, d) => (k in T.mem ? JSON.parse(T.mem[k]) : d), set: (k, v) => { T.mem[k] = JSON.stringify(v); } };
+    const dayKey = () => T.day, schoolData = () => ({}), schoolRatings = () => T.ratings;
+    const assessQuest = k => T.confirmed.has(k) ? { level:'m', sure:'confirmed', n:20, days:5 } : { level:'c', sure:'provisional', n:3, days:1 };
+    const classTopics = () => [], focusNeed = () => [], accountsOn = () => false, adultUser = null;
+    var parentAccess = true;
+    ${html.slice(a, b)}
+    globalThis.api = { openGaps, gapAct, gapData, stdRating };`, ctx);
+  return ctx;
+}
+
+test('3b-0 gaps (Test 5): derive ergibt genau das gaps-Objekt, das der echte Code aus index.html speichert (300 zufaellige Ablaeufe)', () => {
+  const zahl = { appZu: 0, elternZu: 0, halten: 0, wahl: 0, alteMarke: 0, gespeichert: 0 };
+  for (let lauf = 0; lauf < 300; lauf++) {
+    const ctx = appGaps(), T = ctx.T, api = ctx.api, next = seeded(1000 + lauf), v = story(2000 + lauf), pick = (x) => x[Math.floor(next() * x.length)];
+    let tag = 0;
+    const rate = { X: 0, Y: 0, Z: 0, W: 0 };
+    for (let i = 0; i < 40; i++) {
+      const r = next(), s = pick(['X', 'Y', 'Z', 'W']);
+      if (r < 0.2) { rate[s]++; T.ratings[s] = [{ r: pick(['RS', 'C', 'C', 'N', 'M']), day: dayOf(rate[s] * 3 - 40) }]; }   // the school rates (again, later)
+      else if (r < 0.35) { const k = pick(['q1', 'q2', 'q3', 'q4', 'q5', 'q6']); if (T.confirmed.has(k)) T.confirmed.delete(k); else T.confirmed.add(k); }
+      else if (r < 0.4) { tag++; T.day = dayOf(tag); }
+      else if (r < 0.65) {                                                               // somebody looks: the app may close gaps
+        const vor = JSON.stringify(api.gapData().closed);
+        api.openGaps();
+        const nach = api.gapData().closed, alt = JSON.parse(vor);
+        for (const [std, c] of Object.entries(nach)) if (JSON.stringify(alt[std]) !== JSON.stringify(c)) {
+          assert.equal(c.by, 'app');
+          zahl.appZu++; if (api.gapData().hold[std]) zahl.alteMarke++;
+          gs(v, std, 'closed', 'app', { schoolDay: c.schoolDay, day: c.at, quest: c.quest, device: pick(['d_k1', 'd_e1']) });
+        }
+      } else {                                                                           // the parents press a button
+        const action = pick(['go', 'close', 'hold']), rt = api.stdRating(s);
+        api.gapAct(action, s);
+        if (!rt) continue;                                                               // without a school rating gapAct does nothing
+        if (action === 'go') { ga(v, s); zahl.wahl++; }
+        else { gs(v, s, action === 'close' ? 'closed' : 'hold', 'parents', { schoolDay: rt.day, day: T.day }); zahl[action === 'close' ? 'elternZu' : 'halten']++; }
+      }
+    }
+    const app = 'gaps' in T.mem ? JSON.parse(T.mem.gaps) : undefined;
+    if (app) zahl.gespeichert++;
+    assert.deepEqual(run(v.list).gaps, app, 'run ' + lauf);
+  }
+  console.log('  3b-0 Test 5:', JSON.stringify(zahl));
+  for (const [k, n] of Object.entries(zahl)) assert.ok(n >= 20, `the story reaches "${k}" often enough (${n})`);
 });
 
 test('Nur uebergebene Uhr, kein Zufall, kein Speicher, kein Netz im Modul', () => {
