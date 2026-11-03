@@ -1,6 +1,8 @@
 // Modul bereiche ohne Browser (S12 P3b, US10.4; Konzept 6, 7.1, 8; Erfolgskriterien E5, E6, E10 in der Simulation).
 // Jede Zelle der Lese-Matrix mit echten Schluesseln: Schluessel verteilen (Modul bereiche), schreiben und lesen ueber
 // den simulierten Speicher (Module speicher, abgleich), pruefen mit annahme.
+// Seit P3b-2a liest jede Person mit der Zulassung, die sie selbst aus dem Bereich bildet (Modul zulassung,
+// bereichHolen) - vorgegeben ist nur der Gruender-Elternteil (Anker).
 //   node --test tests/module/bereiche.test.mjs
 
 import { test, before } from 'node:test';
@@ -13,6 +15,11 @@ import { newPersonKeys, publicKeysOf, newAreaKey, wrapKeyFor, signBytes, openEnt
 import { newEvent, EVENT_TYPES } from '../../src/module/ereignisse.mjs';
 import { signEvent, acceptEvent, ANNAHME_RECHTE } from '../../src/module/annahme.mjs';
 import { derive } from '../../src/module/ableitung.mjs';
+import { bereichHolen } from '../../src/module/zulassung.mjs';
+
+const VERWALTUNG = ['member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated'];
+const inhalt = (events) => events.filter((e) => !VERWALTUNG.includes(e.type));     // ohne die Zulassung des Bereichs
+const kurz = (r) => ({ aktion: r.aktion, version: r.version, neu: r.neu, entfernt: r.entfernt });
 
 /* ---------- die Personen ----------
    Familie von Kathie (p_k1): Geschwister p_k2, Eltern p_e1 und p_e2 (p_e3 kommt spaeter dazu).
@@ -53,31 +60,45 @@ const NUTZ = {
 };
 const signiert = (area, pid, type, payload, keys = KEYS[pid]) => signEvent(newEvent({ type, author: pid, device: DEV(pid), at: at(), payload }), area, keys);
 
-/* schreibt ueber den Abgleich: Schluessel aus dem Speicher holen, vormerken, senden */
+/* schreibt ueber den Abgleich: Schluessel aus dem Speicher holen, vormerken, senden. Beim ersten Schreiben einer Person
+   in einen Bereich meldet sich ihr Geraet dort an (device_added, P3b-2a). Liefert nur die gewuenschten Eintraege. */
 async function schreiben(f, area, pid, liste, mitglieder = M) {
   const z = f.s.geraet(DEV(pid)), k = area + '|' + pid;
   if (!f.st.has(k)) f.st.set(k, abgleichStand(area, DEV(pid)));
   const st = f.st.get(k), sch = await schluesselLesen(z, area, { ich: pid, meineSchluessel: KEYS[pid], mitglieder });
-  const items = [];
-  for (const [type, payload] of liste) { const x = await signiert(area, pid, type, payload); vormerken(st, x, { now: JETZT }); items.push(x); }
+  const alle = [], items = [];
+  if (!f.angemeldet.has(k)) alle.push(await signiert(area, pid, 'device_added', { device: DEV(pid) }));
+  for (const [type, payload] of liste) { const x = await signiert(area, pid, type, payload); alle.push(x); items.push(x); }
+  for (const x of alle) vormerken(st, x, { now: JETZT });
   await senden(st, { zugang: z, schluessel: sch });
-  for (const x of items) f.ids.set(area, [...(f.ids.get(area) || []), x.event.id]);
+  f.angemeldet.add(k);
+  for (const x of alle) f.ids.set(area, [...(f.ids.get(area) || []), x.event.id]);
   return items;
 }
-/* liest einen Bereich mit einem frischen Geraetestand -> { sch, h, events } */
-async function lesen(f, area, pid, mitglieder = M) {
-  const z = f.s.geraet(DEV(pid));
-  const sch = await schluesselLesen(z, area, { ich: pid, meineSchluessel: KEYS[pid], mitglieder });
-  const st = abgleichStand(area, DEV(pid));
-  const h = await holen(st, { zugang: z, schluessel: sch, zulassung: { area, members: mitglieder }, now: JETZT });
-  return { sch, h, events: st.log.map((x) => x.event) };
+/* der Gruender-Elternteil: Familie p_k1 -> p_e1, fremde Familie -> p_e7, Personen-Bereich -> die Person */
+const ankerFuer = (area) => { const p = area.startsWith('person:') ? area.slice(7) : area.endsWith('p_k7') ? 'p_e7' : 'p_e1'; return { person: p, role: ROLLE[p], pub: PUB[p] }; };
+/* liest einen Bereich mit einem frischen Geraetestand -> { sch, h, events, zulassung }
+   Standard: Zulassung aus dem Bereich selbst (nur Anker vorgegeben); vorgabe: die alte, von aussen gegebene Zulassung */
+async function lesen(f, area, pid, { vorgabe } = {}) {
+  const z = f.s.geraet(DEV(pid)), st = abgleichStand(area, DEV(pid));
+  if (vorgabe) {
+    const sch = await schluesselLesen(z, area, { ich: pid, meineSchluessel: KEYS[pid], mitglieder: vorgabe });
+    const h = await holen(st, { zugang: z, schluessel: sch, zulassung: { area, members: vorgabe }, now: JETZT });
+    return { sch, h, events: st.log.map((x) => x.event) };
+  }
+  const r = await bereichHolen(st, { zugang: z, ich: pid, meineSchluessel: KEYS[pid], anker: ankerFuer(area), now: JETZT });
+  return { sch: r.schluessel, h: { verworfen: r.verworfen, wartend: r.wartend }, events: st.log.map((x) => x.event), zulassung: r.zulassung };
 }
-const verteilen = (f, area, { heute = HEUTE, freigaben = FREIGABEN, ich = 'p_e1', mitglieder = M } = {}) =>
-  schluesselVerteilen(f.s.geraet(DEV(ich)), area, { soll: halter(area, mitglieder, freigaben, heute), ich, meineSchluessel: KEYS[ich], mitglieder });
+/* verteilt die Schluessel und schreibt die Zulassungs-Ereignisse, die schluesselVerteilen dafuer liefert */
+async function verteilen(f, area, { heute = HEUTE, freigaben = FREIGABEN, ich = 'p_e1', mitglieder = M } = {}) {
+  const r = await schluesselVerteilen(f.s.geraet(DEV(ich)), area, { soll: halter(area, mitglieder, freigaben, heute), ich, meineSchluessel: KEYS[ich], mitglieder });
+  if (r.ereignisse.length) await schreiben(f, area, ich, r.ereignisse.map((e) => [e.type, e.payload]), mitglieder);
+  return r;
+}
 
 /* die Familie mit Schluesseln und Daten in jedem Bereich; dazu die fremde Familie im selben Speicher */
 async function familie() {
-  const f = { s: lokalerSpeicher({ now: () => JETZT }), st: new Map(), ids: new Map() };
+  const f = { s: lokalerSpeicher({ now: () => JETZT }), st: new Map(), ids: new Map(), angemeldet: new Set() };
   for (const area of [L, PR, S, EA, F1, F2, F3, PE1]) assert.equal((await verteilen(f, area)).aktion, 'angelegt', area);
   await schreiben(f, L, 'p_k1', [['answer', NUTZ.answer()], ['answer', NUTZ.answer()], ['profile_set', NUTZ.name('Kathie')]]);
   await schreiben(f, L, 'p_e1', [['sheet_created', NUTZ.sheet()]]);
@@ -85,7 +106,7 @@ async function familie() {
   await schreiben(f, PR, 'p_e1', [['setting_set', { setting: 'storyCap', value: 2 }]]);
   await schreiben(f, S, 'p_e1', [['school_import', NUTZ.schule()]]);
   await schreiben(f, S, 'p_k1', [['gap_state', NUTZ.luecke()]]);
-  await schreiben(f, EA, 'p_e2', [['grant_set', { grant: 'g1', grantee: 'p_l1', scope: ['learning'], from: '2026-11-01', until: '2026-11-14' }], ['member_added', { person: 'p_e2', role: 'parent' }]]);
+  await schreiben(f, EA, 'p_e2', [['grant_set', { grant: 'g1', grantee: 'p_l1', scope: ['learning'], from: '2026-11-01', until: '2026-11-14' }]]);
   await schreiben(f, F1, 'p_l1', [['grant_opened', { grant: 'g1', grantee: 'p_l1' }]]);
   await schreiben(f, F2, 'p_l2', [['grant_opened', { grant: 'g2', grantee: 'p_l2' }]]);
   await schreiben(f, PE1, 'p_e1', [['snapshot', NUTZ.snap()]]);
@@ -96,7 +117,7 @@ async function familie() {
 }
 const gleich = (a, b) => a.length === b.length && [...a].sort().join() === [...b].sort().join();
 async function zelle(f, pid, area) {
-  const r = await lesen(f, area, pid, ROLLE[pid] && FM[pid] ? FM : M);
+  const r = await lesen(f, area, pid);
   if (r.sch.keys.size === 0 && r.events.length === 0) return '--';
   return gleich(r.events.map((e) => e.id), f.ids.get(area)) && r.h.verworfen.length === 0 && r.h.wartend.length === 0 ? 'ja' : '??';
 }
@@ -121,6 +142,11 @@ test('Lese-Matrix: jede Zelle mit echten Schluesseln - erlaubt -> entschluesselt
   const ist = {};
   for (const pid of Object.keys(ERWARTET)) { ist[pid] = []; for (const area of BEREICHE) ist[pid].push(await zelle(f, pid, area)); }
   assert.deepEqual(ist, ERWARTET);
+  // P3b-2a: die selbst gebildete Zulassung ergibt dasselbe wie die von aussen vorgegebene
+  for (const pid of ['p_k1', 'p_e2', 'p_l1', 'p_l2']) for (const area of [L, S, F1, F2]) {
+    const selbst = await lesen(f, area, pid), vorgabe = await lesen(f, area, pid, { vorgabe: M });
+    assert.deepEqual(selbst.events.map((e) => e.id), vorgabe.events.map((e) => e.id), pid + ' ' + area);
+  }
   // umgekehrt: unsere Familie liest nichts von der fremden
   for (const pid of ['p_e1', 'p_e2', 'p_k1', 'p_l2']) for (const area of FREMD) assert.equal((await lesen(f, area, pid)).sch.keys.size, 0, pid + ' ' + area);
   assert.equal(await zelle(f, 'p_e7', FREMD[0]), 'ja', 'die fremde Familie liest ihre eigenen Daten');
@@ -144,7 +170,7 @@ test('Profil: Lehrkraft mit Freigabe liest Antworten und den Namen, aber keinen 
   const f = await familie();
   for (const pid of ['p_l1', 'p_l2', 'p_a2']) {
     const r = await lesen(f, L, pid);
-    assert.deepEqual(r.events.map((e) => e.type).sort(), ['answer', 'answer', 'profile_set', 'sheet_created'], pid);
+    assert.deepEqual(inhalt(r.events).map((e) => e.type).sort(), ['answer', 'answer', 'profile_set', 'sheet_created'], pid);
     const st = derive(r.events, { now: JETZT });
     assert.equal(st.name, 'Kathie', pid + ' sieht, mit welchem Kind sie arbeitet');
     assert.equal(st.attempts.length, 2);
@@ -153,17 +179,18 @@ test('Profil: Lehrkraft mit Freigabe liest Antworten und den Namen, aber keinen 
     let klartext = '';
     for (const area of [L, PR, S, EA, F1, F2, F3, PE1]) klartext += JSON.stringify((await lesen(f, area, pid)).events);
     assert.ok(klartext.includes('Kathie'));
-    for (const w of ['2017-05-14', 'birthday', '"fox"', 'emoji', 'storyCap', 'greetDay', 'member_added', 'grant_set']) assert.equal(klartext.includes(w), false, pid + ': ' + w);
+    assert.ok(klartext.includes('member_added'), 'die Zulassung des Bereichs (Kennungen, oeffentliche Schluessel) liest sie mit');
+    for (const w of ['2017-05-14', 'birthday', '"fox"', 'emoji', 'storyCap', 'greetDay', 'grant_set']) assert.equal(klartext.includes(w), false, pid + ': ' + w);
   }
   const r2 = await lesen(f, PR, 'p_e2');
-  assert.deepEqual(r2.events.map((e) => e.payload.field || e.payload.setting || e.payload.flag).sort(), ['birthday', 'emoji', 'greetDay', 'storyCap'], 'Eltern lesen das ganze Profil');
+  assert.deepEqual(inhalt(r2.events).map((e) => e.payload.field || e.payload.setting || e.payload.flag).sort(), ['birthday', 'emoji', 'greetDay', 'storyCap'], 'Eltern lesen das ganze Profil');
 });
 
 /* ---------- 3 Kind und Schule ---------- */
 test('Kind und Schule: das Konto des Kindes rechnet mit Schuldaten, schreibt nur das automatische Schliessen, keine Elternsachen', async () => {
   const f = await familie();
   const kind = await lesen(f, S, 'p_k1');
-  assert.deepEqual(kind.events.map((e) => e.type).sort(), ['gap_state', 'school_import'], 'Schuldaten im Konto des Kindes (zum Rechnen)');
+  assert.deepEqual(inhalt(kind.events).map((e) => e.type).sort(), ['gap_state', 'school_import'], 'Schuldaten im Konto des Kindes (zum Rechnen)');
   // das Kind schreibt in "schule": das automatische Schliessen wird angenommen, alles andere verworfen
   const [zu] = await schreiben(f, S, 'p_k1', [['gap_state', NUTZ.luecke('closed', 'app')]]);
   const [halten, schule] = await schreiben(f, S, 'p_k1', [['gap_state', NUTZ.luecke('hold', 'parents')], ['school_import', NUTZ.schule()]]);
@@ -184,34 +211,33 @@ test('Kind und Schule: das Konto des Kindes rechnet mit Schuldaten, schreibt nur
 test('E6: Freigabe endet (Ablauf, Widerruf) -> Schluesselwechsel; Ex-Lehrkraft liest alte Eintraege, keine neuen', async () => {
   const f = await familie();
   const nach = '2026-11-15';                                            // g1 lief bis 14.11.
-  const r = {};
-  for (const a of [L, PR, S, EA, F1, F2, F3, PE1]) r[a] = await verteilen(f, a, { heute: nach });
+  const alt = f.ids.get(L).slice(), r = {};
+  for (const a of [L, PR, S, EA, F1, F2, F3, PE1]) r[a] = kurz(await verteilen(f, a, { heute: nach }));
   assert.deepEqual(r[L], { aktion: 'gewechselt', version: 2, neu: [], entfernt: ['p_l1'] });
   assert.deepEqual(r[F1], { aktion: 'gewechselt', version: 2, neu: [], entfernt: ['p_l1'] });
   for (const a of [PR, S, EA, F2, F3, PE1]) assert.deepEqual(r[a], { aktion: 'unveraendert', version: 1, neu: [], entfernt: [] }, a);
   for (const a of [L, F1]) assert.equal((await verteilen(f, a, { heute: nach })).aktion, 'unveraendert', 'ein zweites Mal aendert nichts');
 
-  const alt = f.ids.get(L).slice();
   const [neu] = await schreiben(f, L, 'p_k1', [['answer', NUTZ.answer()]]);
   const ex = await lesen(f, L, 'p_l1');
   assert.deepEqual([ex.sch.aktuell, [...ex.sch.keys.keys()]], [2, [1]]);
   assert.ok(gleich(ex.events.map((e) => e.id), alt), 'alte Eintraege bleiben lesbar');
   assert.equal(ex.events.some((e) => e.id === neu.event.id), false, 'den neuen nicht');
-  assert.equal(ex.h.wartend.length, 1, 'das neue Buendel bleibt fuer sie verschlossen');
+  assert.ok(ex.h.wartend.some((k) => k.startsWith('d_k1/')), 'das neue Buendel bleibt fuer sie verschlossen');
   assert.equal(derive(ex.events, { now: JETZT }).attempts.length, 2);
   await assert.rejects(schreiben(f, F1, 'p_l1', [['grant_opened', { grant: 'g1', grantee: 'p_l1' }]]), /aktueller Schluessel fehlt/, 'sie protokolliert nichts mehr');
   for (const pid of ['p_l2', 'p_a2', 'p_k1', 'p_e2']) assert.ok((await lesen(f, L, pid)).events.some((e) => e.id === neu.event.id), pid + ' liest den neuen Eintrag');
 
   // Widerruf von g2 am selben Tag: Lernstand und Schuldaten wechseln
   const ohneG2 = FREIGABEN.map((g) => (g.grant === 'g2' ? { ...g, widerrufen: true } : g));
-  assert.deepEqual(await verteilen(f, L, { heute: nach, freigaben: ohneG2 }), { aktion: 'gewechselt', version: 3, neu: [], entfernt: ['p_l2'] });
-  assert.deepEqual(await verteilen(f, S, { heute: nach, freigaben: ohneG2 }), { aktion: 'gewechselt', version: 2, neu: [], entfernt: ['p_l2'] });
-  assert.deepEqual(await verteilen(f, F2, { heute: nach, freigaben: ohneG2 }), { aktion: 'gewechselt', version: 2, neu: [], entfernt: ['p_l2'] });
+  assert.deepEqual(kurz(await verteilen(f, L, { heute: nach, freigaben: ohneG2 })), { aktion: 'gewechselt', version: 3, neu: [], entfernt: ['p_l2'] });
+  assert.deepEqual(kurz(await verteilen(f, S, { heute: nach, freigaben: ohneG2 })), { aktion: 'gewechselt', version: 2, neu: [], entfernt: ['p_l2'] });
+  assert.deepEqual(kurz(await verteilen(f, F2, { heute: nach, freigaben: ohneG2 })), { aktion: 'gewechselt', version: 2, neu: [], entfernt: ['p_l2'] });
   const [imp] = await schreiben(f, S, 'p_e1', [['school_import', NUTZ.schule()]]);
   const [neu2] = await schreiben(f, L, 'p_k1', [['answer', NUTZ.answer()]]);
   const l2s = await lesen(f, S, 'p_l2'), l2l = await lesen(f, L, 'p_l2');
   assert.equal(l2s.events.some((e) => e.id === imp.event.id), false, 'keine neuen Schuldaten');
-  assert.equal(l2s.events.length, 2, 'die alten Schuldaten bleiben gesehen');
+  assert.equal(inhalt(l2s.events).length, 2, 'die alten Schuldaten bleiben gesehen');
   assert.ok(l2l.events.some((e) => e.id === neu.event.id) && !l2l.events.some((e) => e.id === neu2.event.id));
   const kind = await lesen(f, L, 'p_k1');
   assert.deepEqual([kind.sch.aktuell, [...kind.sch.keys.keys()].sort()], [3, [1, 2, 3]], 'das Kind liest alles');
@@ -226,8 +252,8 @@ test('Typ und Bereich: jeder Typ hat genau einen Bereich; Ereignis im falschen B
     'kind:lern': ['answer', 'round_done', 'badge', 'review', 'practice_day', 'rank_seen', 'sheet_created', 'sheet_result', 'sheet_discarded', 'profile_set:name'],
     'kind:privat': ['profile_set:birthday', 'profile_set:emoji', 'profile_set:kidLang', 'profile_set:muted', 'setting_set', 'list_set', 'checklist_set', 'day_flag', 'advent_open', 'joke_seen', 'story_read'],
     schule: ['school_import', 'gap_state', 'gap_active'],
-    'eltern:allg': ['grant_set', 'grant_revoked', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated'],
-    freigabe: ['grant_opened'], person: [], '*': ['snapshot'],
+    'eltern:allg': ['grant_set', 'grant_revoked'],
+    freigabe: ['grant_opened'], person: [], '*': ['snapshot', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated'],
   };
   const ist = {};
   for (const [t, b] of Object.entries(BEREICH_JE_TYP)) for (const [name, art] of typeof b === 'string' ? [[t, b]] : Object.entries(b).map(([fd, a]) => [t + ':' + fd, a])) (ist[art] = ist[art] || []).push(name);
@@ -315,7 +341,7 @@ test('bereicheFuer und halter: Rolle, Umfang, Datum, Widerruf, Geschwister, frem
   for (const [a, m, fr, h] of [['kid:p_k1', M, [], HEUTE], [L, null, [], HEUTE], [L, M, null, HEUTE], [L, M, [], '3.11.2026']]) assert.throws(() => halter(a, m, fr, h), /bereiche/);
 });
 
-test('Schreibrechte passen zu den Schluesseln: jede Rolle hat fuer jeden erlaubten Typ den Schluessel des Bereichs (eine Ausnahme)', () => {
+test('Schreibrechte passen zu den Schluesseln: jede Rolle hat fuer jeden erlaubten Typ den Schluessel des Bereichs (seit P3b-2a ohne Ausnahme)', () => {
   const ohne = [];
   for (const [rolle, typen] of Object.entries(ANNAHME_RECHTE)) {
     const arten = bereicheFuer(rolle, ['learning', 'school']).concat(['*']);
@@ -324,8 +350,8 @@ test('Schreibrechte passen zu den Schluesseln: jede Rolle hat fuer jeden erlaubt
       if (!noetig.some((a) => arten.includes(a))) ohne.push(rolle + ' ' + t);
     }
   }
-  // offen fuer P3b-2: das Kindergeraet meldet sich in eltern:allg an, hat dort aber keinen Schluessel
-  assert.deepEqual(ohne, ['child device_added']);
+  // P3b-2a: das Kindergeraet meldet sich in seinen eigenen Bereichen an (device_added passt in jeden Bereich)
+  assert.deepEqual(ohne, []);
 });
 
 /* ---------- 6 Speicher sieht nichts (E5) ---------- */
@@ -354,14 +380,14 @@ test('Untergeschobene Schluessel: wer nur in den Speicher schreiben kann, bringt
   await x.putKey(L, 'p_x3', await roh('p_x3', 'p_x3', await w2('p_k1'), stranger));          // Verteiler unbekannt
   const k = await schluesselLesen(x, L, { ich: 'p_k1', meineSchluessel: KEYS.p_k1, mitglieder: M });
   assert.deepEqual([k.aktuell, [...k.keys.keys()], k.ungueltig.sort()], [1, [1], ['p_x3', 'p_x4', 'p_x5', 'p_x6', 'p_x7', 'p_x8', 'p_x9']]);
-  assert.deepEqual(await verteilen(f, L), { aktion: 'unveraendert', version: 1, neu: [], entfernt: [] }, 'die Eltern lassen sich nicht beirren');
+  assert.deepEqual(kurz(await verteilen(f, L)), { aktion: 'unveraendert', version: 1, neu: [], entfernt: [] }, 'die Eltern lassen sich nicht beirren');
   const [a] = await schreiben(f, L, 'p_k1', [['answer', NUTZ.answer()]]);
   assert.equal((await x.get(L, 'd_k1/2')).kv, 1, 'das Kind schreibt weiter mit Version 1');
   assert.ok((await lesen(f, L, 'p_e2')).events.some((e) => e.id === a.event.id));
   // ein Eintrag wird ueberschrieben (Speicher kann loeschen): das Kind liest nichts mehr, bis die Eltern neu verteilen
   await x.putKey(L, 'p_k1', await roh('p_k1', 'p_e1', await w2('p_k1'), stranger));
   assert.equal((await lesen(f, L, 'p_k1')).sch.keys.size, 0);
-  assert.deepEqual(await verteilen(f, L), { aktion: 'ergaenzt', version: 1, neu: ['p_k1'], entfernt: [] });
+  assert.deepEqual(kurz(await verteilen(f, L)), { aktion: 'ergaenzt', version: 1, neu: ['p_k1'], entfernt: [] });
   assert.ok(gleich((await lesen(f, L, 'p_k1')).events.map((e) => e.id), f.ids.get(L)), 'wieder alles lesbar');
 });
 
@@ -371,13 +397,13 @@ test('Neuer Halter bekommt die ganze Geschichte: dritter Elternteil, erneute Fre
   for (const a of [L, F1]) assert.equal((await verteilen(f, a, { heute: '2026-11-15', ich: 'p_e2' })).aktion, 'gewechselt');
   const [neu] = await schreiben(f, L, 'p_k1', [['answer', NUTZ.answer()]]);
   const M3 = { ...M, p_e3: mitglied('p_e3') };
-  assert.deepEqual(await verteilen(f, L, { heute: '2026-11-15', mitglieder: M3 }), { aktion: 'ergaenzt', version: 2, neu: ['p_e3'], entfernt: [] });
-  const e3 = await lesen(f, L, 'p_e3', M3);
+  assert.deepEqual(kurz(await verteilen(f, L, { heute: '2026-11-15', mitglieder: M3 })), { aktion: 'ergaenzt', version: 2, neu: ['p_e3'], entfernt: [] });
+  const e3 = await lesen(f, L, 'p_e3');
   assert.deepEqual([...e3.sch.keys.keys()].sort(), [1, 2]);
   assert.ok(gleich(e3.events.map((e) => e.id), f.ids.get(L)), 'alles von Anfang an');
   // p_l1 bekommt spaeter wieder eine Freigabe
   const wieder = [...FREIGABEN, { grant: 'g4', grantee: 'p_l1', scope: ['learning'], from: '2026-11-20', until: '2026-11-30' }];
-  assert.deepEqual(await verteilen(f, L, { heute: '2026-11-20', freigaben: wieder, mitglieder: M3 }), { aktion: 'ergaenzt', version: 2, neu: ['p_l1'], entfernt: [] });
+  assert.deepEqual(kurz(await verteilen(f, L, { heute: '2026-11-20', freigaben: wieder, mitglieder: M3 })), { aktion: 'ergaenzt', version: 2, neu: ['p_l1'], entfernt: [] });
   assert.ok((await lesen(f, L, 'p_l1')).events.some((e) => e.id === neu.event.id));
   // wer selbst nicht den aktuellen Schluessel hat, kann nicht verteilen
   const M4 = { ...M, p_e3: mitglied('p_e3') };
