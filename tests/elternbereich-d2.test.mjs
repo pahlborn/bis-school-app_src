@@ -13,7 +13,7 @@ const C = { mia: 'ABCD-EFGH', papa: 'PAPA-2345' };
 const tag = (d) => new Date(Date.now() + d * 864e5).toISOString().slice(0, 10);
 const txt = (de, en) => ({ de, en });
 // the teacher's next step: forces (current topic). Gaps: M-N2 (Data Detective, has a few foundation tasks) is active
-// (older), M-N4 (Number Combinations + Word Problems, no foundation tasks at all) waits; for the second case the
+// (older), M-N4 (Number Combinations + Word Problems, foundation tasks since Auftrag 1, 03.11.) waits; for the second case the
 // parents choose M-N4 as the active gap (field "active").
 const SCHULE = { version: 1, kinder: { mia: { asOf: tag(-1), tasks: [
   { day: tag(-40), area: 'math', title: 'Check A', std: { 'M-N2': 'C' }, quests: ['detective'], focusNext: [], good: txt('a', 'a'), next: txt('', '') },
@@ -59,9 +59,10 @@ test('T14 share: Practise Today at most 2 of 8 from the active gap, foundation f
   await page.waitForSelector('#home:not([hidden])');
   // active gap with foundation tasks (Data Detective)
   pruefen(await runden(page, ['detective']), ['detective'], true);
-  // active gap without any foundation tasks (Number Combinations + Word Problems, chosen by the parents)
+  // active gap chosen by the parents (Number Combinations + Word Problems): since Auftrag 1 (03.11.) with foundation
+  // tasks, so the first gap task is a foundation task here too
   await page.evaluate((id) => localStorage.setItem('bq2_' + id + '__gaps', JSON.stringify({ closed: {}, active: 'M-N4' })), ID('mia'));
-  pruefen(await runden(page, ['combos', 'wordprob']), ['combos', 'wordprob'], false);
+  pruefen(await runden(page, ['combos', 'wordprob']), ['combos', 'wordprob'], true);
   // a sheet on one topic and manual focus: no gap lane
   const r = await page.evaluate(() => {
     const G = window.__g;
