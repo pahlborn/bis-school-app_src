@@ -4,7 +4,7 @@ Paket F3 aus `docs/konzept/elternbereich-auftraege.md` (Konzept 6, 7.0, 7.2 Punk
 
 ## Vorlage zur Freigabe (DE)
 
-Stand: Entwurf, noch nicht eingebaut. Englisch folgt nach der Freigabe.
+Von Peter am 03.11. freigegeben („frei“) und eingebaut, mit einer Abweichung (siehe „Umgesetzt“).
 
 ### Vorher → Nachher
 
@@ -70,7 +70,26 @@ Die App wählt sie selbst: die nächsten Schritte der Lehrkraft, Quests, bei den
 Von der Lernplattform übernommen, Stand 12.10. Schwache Einstufungen übt die App als Lücke, bis sie geschlossen ist.
 
 ## Umgesetzt
-(folgt nach der Freigabe)
+- **DE** wie oben, **EN** sinngleich: „Helping the way school does“, „How the app judges“ mit „Closing gaps“ und zugeklappt „Exact thresholds“. Die Abschnitte heißen jetzt kurz „Wie die App einstuft“ / „How the app judges“; die Verweise im ⓘ „Fokus: Automatisch oder Manuell“ passen weiter.
+- **Abweichung vom freigegebenen Wortlaut:** In „Lücken schließen“ stehen statt „Requires support“, „Consolidating“ und „Meeting“ die Elternbegriffe der App: „Braucht Unterstützung“, „Wird sicherer“ und „Sicher“ (EN: „needs support“, „getting there“, „secure“). Grund: Ohne Konten erreicht auch das Kind diese Seite, und für solche Seiten gilt „keine Schulbegriffe“ (Test in `about`). Im Elternbereich nennt das ⓘ „Lücken laut Schule“ weiter die Schulbegriffe.
+- **„Lücken schließen“** steht sichtbar unter einer Zwischenüberschrift, nur **„Genaue Schwellen“** ist zugeklappt (`details.about-sub`).
+- **ⓘ „Fokus-Themen“** nennt die aktive Lücke; „8 Fragen“ heißt jetzt „8 Aufgaben“ (Begriff nach 7.9).
+- **„Aus der Schule“:** Einleitung mit „Schwache Einstufungen übt die App als Lücke, bis sie geschlossen ist.“ (EN: „The app practices weak ratings as a gap until it is closed.“)
+- **Herkunft der Aufgaben:** unverändert.
 
 ## Prüfung
-(folgt nach der Freigabe)
+- Neu: `tests/elternbereich-f3.test.mjs`, je Sprache:
+  - **T6:** „keinen zweiten Weg“ / „don’t add a second method“ steht genau einmal.
+  - **T7:** Das Kapitel hat ohne Quellen höchstens 7 000 Zeichen. Gemessen: 6 502 (DE). Der zugeklappte Teil „Genaue Schwellen“ (3 328 Zeichen) zählt nicht mit, weil er laut Konzept den heutigen Inhalt behält; mit ihm wären es 9 830.
+  - „Helfen wie die Schule“ hat höchstens 3 Sätze und nennt beide Quellen.
+  - Die Kurzfassung hat 5 Zeilen.
+  - „Lücken schließen“ enthält den ehrlichen Satz und die drei Knöpfe.
+  - „Genaue Schwellen“ ist zugeklappt.
+  - Es stehen keine Schulbegriffe darin.
+  - Fokus-ⓘ und „Aus der Schule“ nennen die Lücke.
+- Angepasst: `about` (kürzere Abschnittsnamen).
+- Gegenprobe: F3-Test mit der App von `main` rot.
+- `npm test`: 401 bestanden.
+
+## Gefunden
+- T7 im Konzept zählt „So funktioniert“ als Ganzes. Mit dem zugeklappten Schwellen-Teil ist der Richtwert nicht zu halten, ohne die genauen Zahlen zu streichen. Ich habe ihn auf den sichtbaren Text bezogen (siehe Prüfung).

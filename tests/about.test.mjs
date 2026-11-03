@@ -11,8 +11,8 @@ before(async () => { server = await appServer(); browser = await browserStarten(
 after(async () => { await browser?.close(); server?.close(); });
 
 const MENUE = {
-  '#tabDe': ['Anleitung für Erwachsene', 'How to use Big Quest (für Kinder)', 'Grundidee', 'Aufbau', 'So lernt das Kind', 'Helfen wie die Schule', 'Wie die App einstuft – Titel, Lernbaum, Abzeichen und Stand', 'Herkunft der Aufgaben', 'Datenschutz', 'Quellen'],
-  '#tabEn': ['Guide for grown-ups', 'How to use Big Quest', 'Core idea', 'Structure', 'How your child learns', 'Helping the way school does', 'How the app judges – titles, learning tree, badges and level', 'Origin of the tasks', 'Privacy', 'Sources']
+  '#tabDe': ['Anleitung für Erwachsene', 'How to use Big Quest (für Kinder)', 'Grundidee', 'Aufbau', 'So lernt das Kind', 'Helfen wie die Schule', 'Wie die App einstuft', 'Herkunft der Aufgaben', 'Datenschutz', 'Quellen'],
+  '#tabEn': ['Guide for grown-ups', 'How to use Big Quest', 'Core idea', 'Structure', 'How your child learns', 'Helping the way school does', 'How the app judges', 'Origin of the tasks', 'Privacy', 'Sources']
 };
 const titel = (page) => page.$$eval('#aboutBody details.about-sec > summary', (s) => s.map((x) => x.textContent.trim()));
 
