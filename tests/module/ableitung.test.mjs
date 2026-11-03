@@ -585,3 +585,18 @@ test('Nur uebergebene Uhr, kein Zufall, kein Speicher, kein Netz im Modul', () =
   assert.doesNotMatch(src, /Math\.random|Date\.now|new Date\(\s*\)/);
   assert.doesNotMatch(src, /\b(localStorage|sessionStorage|indexedDB|fetch|document|window|crypto)\b/);
 });
+
+/* ---------- checklist size (task 3b-1b) ---------- */
+test('3b-1b Checkliste: size fuellt die Liste mit false auf, wie die App sie speichert; ohne size wie bisher', () => {
+  const v = story(71);
+  v.add('checklist_set', { studio: 'grow', index: 2, value: true, size: 5 });
+  assert.deepEqual(run(v.list).chk_grow, [false, false, true, false, false]);
+  v.add('checklist_set', { studio: 'grow', index: 2, value: false, size: 5 });
+  assert.deepEqual(run(v.list).chk_grow, [false, false, false, false, false], 'cleared: still the whole list');
+  v.add('checklist_set', { studio: 'read', index: 1, value: true });
+  assert.deepEqual(run(v.list).chk_read, [false, true], 'without size: up to the highest tick');
+  const basis = run(v.list.slice(0, 1)), spaet = v.list.slice(1);
+  assert.deepEqual(run(spaet, { base: { upTo: v.list[0].at, state: basis } }), run(v.list), 'base + later events');
+  const kaputt = newEvent({ type: 'checklist_set', author: 'p_k1', device: 'd_a1', at: iso(T0), payload: { studio: 'grow', index: 0, value: true, size: 0 } }, { rand: bytesOf(seeded(72)) });
+  assert.equal(run([kaputt]).chk_grow, undefined, 'size 0 is not a valid event');
+});

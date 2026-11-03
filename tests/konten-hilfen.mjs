@@ -16,9 +16,9 @@ export async function konto(user, role, code, extra = {}) {
 }
 
 /** Testserver mit eingesetzten Konten (altes Format wird mit ausV1 ins Kontenmodell v2 umgestellt). */
-export async function kontenServer(konten, { anpassen, schule } = {}) {
+export async function kontenServer(konten, { anpassen, schule, bauart = 'live' } = {}) {
   const k2 = ausV1(konten);
-  let app = schuleEinsetzen(kontenEinsetzen(await appLesen(), k2), schule || null, k2).toString('utf8');
+  let app = schuleEinsetzen(kontenEinsetzen(await appLesen(null, { bauart }), k2), schule || null, k2).toString('utf8');
   if (anpassen) app = anpassen(app);
   const server = http.createServer((q, r) => {
     // /leer: an empty page of the same origin, to prepare storage before the app runs (S11 P2 tests)
