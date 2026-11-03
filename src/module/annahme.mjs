@@ -27,10 +27,12 @@ export const ANNAHME_GRUENDE = ['format', 'autor-unbekannt', 'geraet-fremd', 'un
    gaps (task 3b-0, index.html openGaps/gapAct): parents choose, close, keep open; the child's device only does
             what the app does there today: close a gap automatically (state "closed", by "app"). The parents'
             devices close automatically, too, so parents may write by "app" as well.
+   lists (task 3b-1b-2): unlocked quests and the manual focus are set by parents (list_set); an Advent door is opened
+            by the child - or by a parent while the grown-ups' area is open (advent_open)
    teacher, admin: only the protocol entry "opened" for their own grant (5.2); they never write into child data */
 const ANN_RIGHTS = {
-  child: ['answer', 'round_done', 'badge', 'review', 'practice_day', 'profile_set', 'rank_seen', 'sheet_created', 'sheet_result', 'checklist_set', 'day_flag', 'device_added', 'gap_state'],
-  parent: ['profile_set', 'sheet_created', 'sheet_discarded', 'setting_set', 'school_import', 'grant_set', 'grant_revoked', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated', 'snapshot', 'gap_state', 'gap_active'],
+  child: ['answer', 'round_done', 'badge', 'review', 'practice_day', 'profile_set', 'rank_seen', 'sheet_created', 'sheet_result', 'checklist_set', 'day_flag', 'device_added', 'gap_state', 'advent_open'],
+  parent: ['profile_set', 'sheet_created', 'sheet_discarded', 'setting_set', 'school_import', 'grant_set', 'grant_revoked', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated', 'snapshot', 'gap_state', 'gap_active', 'list_set', 'advent_open'],
   teacher: ['grant_opened'],
   admin: ['grant_opened'],
 };
