@@ -1,6 +1,6 @@
 # Aufträge an den Dev-Agenten (03.11.2026)
 
-Drei Aufgaben, die nach der Reihe „Elternbereich“ (A1–F6, alle gemerged bis #99) offen sind. Jede ist für sich umsetzbar. Reihenfolge nach Nutzen: **1 → 2 → 3**. Auftrag 2 ist von Peter entschieden (03.11.); Auftrag 3 braucht vorher noch eine Entscheidung von Peter.
+Drei Aufgaben, die nach der Reihe „Elternbereich“ (A1–F6, alle gemerged bis #99) offen sind. Jede ist für sich umsetzbar. Offen sind **Auftrag 1 und 2** (Reihenfolge 1 → 2); Auftrag 2 ist von Peter entschieden (03.11.). **Auftrag 3 ist zurückgestellt, frühestens nach Stufe 5a** (Peter, 03.11.).
 
 Für alle gilt wie bisher: Konzept `docs/konzept/elternbereich.md` (R10 „Zeit ist relativ“: Fortschritt in Aufgaben, keine Zeitwörter; R11 Verantwortung bei den Eltern), Prüfbericht unter `docs/pruefung/`, eigener Test, `npm test` grün, Gegenprobe gegen `main`.
 
@@ -109,6 +109,8 @@ Die 14 Kalendertage werden **gestrichen**. Begründung:
 ---
 
 ## Auftrag 3 · Automatisch veröffentlichen nach dem Merge
+
+> **Zurückgestellt, frühestens nach Stufe 5a (Peter, 03.11.).** Bis dahin veröffentlicht der lokale Chat auf Peters Rechner, nur mit Peters Freigabe, nach `docs/veroeffentlichen.md` (#103). Dort steht in Abschnitt 4 auch, welche Schutzmaßnahmen vor einer Cloud-Veröffentlichung nötig sind. Der folgende Text bleibt als Entwurf stehen und ist **kein offener Auftrag**.
 
 ### Entscheidung vorher (Peter)
 Heute veröffentlicht nur Peter: `node werkzeug/verschluesseln.mjs` auf seinem Windows-Rechner. Der Schlüssel liegt mit DPAPI geschützt in `%LOCALAPPDATA%\bis-school-app\schluessel.json`. Danach überträgt er `dist/` ins Repo `bis-school-app`.
