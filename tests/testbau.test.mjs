@@ -9,7 +9,7 @@ import { appServer, browserStarten, appOeffnen } from './app-hilfen.mjs';
 let browser, server;
 before(async () => {
   browser = await browserStarten();
-  server = await appServer({ bauart: 'test', anpassen: (h) => h.replace(/\}\)\(\);\s*<\/script>/, 'window.__bqk={sealEntry,openEntryText,entryAad,newAreaKey,newPersonKeys,publicKeysOf,lockPersonKeys,unlockPersonKeys,createKeyring,rotateKeyring,keysForHolder,keyFingerprint};window.__bqe={newEvent,checkEvent,effectiveTime,mergeLog,fieldKey,lastWins};})();</script>') });
+  server = await appServer({ bauart: 'test', anpassen: (h) => h.replace(/\}\)\(\);\s*<\/script>/, 'window.__bqk={sealEntry,openEntryText,entryAad,newAreaKey,newPersonKeys,publicKeysOf,lockPersonKeys,unlockPersonKeys,createKeyring,rotateKeyring,keysForHolder,keyFingerprint};window.__bqe={newEvent,checkEvent,effectiveTime,mergeLog,fieldKey,lastWins};window.__bqs={makeSnapshot,stateFrom,needsSnapshot,derive};})();</script>') });
 });
 after(async () => { await browser?.close(); server?.close(); });
 
@@ -56,6 +56,25 @@ test('Testbau: Ereignisse (Format, Zusammenfuehren, "Letzte gilt", Uhrenregel) l
     };
   });
   assert.deepEqual(r, { gesamt: 100, ids: 100, gleich: true, nochmal: 100, fehler: 0, konflikte: 0, gewinner: 'Berta', voraus3: true, voraus23: true, zeitzone: true, februar30: true });
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
+
+test('Testbau: Schnappschuss (Pruefsumme mit Web Crypto) liefert im Browser denselben Stand wie alle Ereignisse', async () => {
+  const { ctx, page, fehler } = await appOeffnen(browser, server.url);
+  const r = await page.evaluate(async () => {
+    const E = window.__bqe, S = window.__bqs, jetzt = Date.UTC(2026, 10, 3, 12, 0, 0);
+    const at = (min) => new Date(Date.UTC(2026, 10, 2, 8, 0, 0) + min * 60000).toISOString();
+    const mk = (i) => E.newEvent({ type: 'answer', author: 'p_k1', device: 'd_k1', at: at(i), payload: { day: '2026-11-02', skill: 'round', level: 2, attempt: 1, ok: i % 3 !== 0, qid: 'q' + i } });
+    const alle = Array.from({ length: 300 }, (_, i) => mk(i)), alt = alle.slice(0, 200), neu = alle.slice(200);
+    const s = await S.makeSnapshot(alt, { now: jetzt, author: 'p_e1', device: 'd_e1' });
+    const soll = JSON.stringify(S.derive(alle, { now: jetzt }));
+    const a = await S.stateFrom(alle, s, { now: jetzt }), b = await S.stateFrom(neu, s, { now: jetzt });
+    const spaet = E.newEvent({ type: 'answer', author: 'p_k1', device: 'd_k2', at: at(50.5), payload: { day: '2026-11-02', skill: 'round', level: 1, attempt: 1, ok: true, qid: 'spaet' } });
+    const c = await S.stateFrom([...alle, spaet], s, { now: jetzt }), d = await S.stateFrom([...neu, spaet], s, { now: jetzt });
+    return { count: s.payload.count, hash: /^[0-9a-f]{64}$/.test(s.payload.idsHash), fehlerFrei: E.checkEvent(s).length === 0, a: a.weg + (JSON.stringify(a.state) === soll), b: b.weg + (JSON.stringify(b.state) === soll), c: c.weg + (JSON.stringify(c.state) === JSON.stringify(S.derive([...alle, spaet], { now: jetzt }))), d: d.weg, schwelle: S.needsSnapshot(alle, null) };
+  });
+  assert.deepEqual(r, { count: 200, hash: true, fehlerFrei: true, a: 'schnappschusstrue', b: 'schnappschusstrue', c: 'volltrue', d: 'nachladen', schwelle: false });
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
