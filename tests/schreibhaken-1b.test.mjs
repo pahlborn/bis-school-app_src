@@ -9,9 +9,9 @@ import { appServer, browserStarten, appOeffnen, zustand, klick, zurStart, eltern
 import { konto, kontenServer, oeffnen, anmelden, passwortSetzen } from './konten-hilfen.mjs';
 import { derive } from '../src/module/ableitung.mjs';
 
-const WERTE = ['name', 'birthday', 'emoji', 'kidLang', 'storyCap', 'greetDay', 'mysteryDone', 'bdayParty', 'unlocked', 'focusMode', 'focusManual'];
+const WERTE = ['name', 'birthday', 'emoji', 'kidLang', 'storyCap', 'greetDay', 'mysteryDone', 'bdayParty', 'unlocked', 'focusMode', 'focusManual', 'gaps'];
 const betroffen = (k) => WERTE.includes(k) || k.startsWith('chk_') || /^advent\d{4}$/.test(k);
-function haken() { window.__bqh = { listEvents, probleme: () => ({ abgelehnt: eventSink ? eventSink.problems : null, fehler: eventErrors }) }; }
+function haken() { window.__bqh = { listEvents, ohneKind: () => eventNoChild.slice(), probleme: () => ({ abgelehnt: eventSink ? eventSink.problems : null, fehler: eventErrors }) }; }
 const mitHaken = (h) => h.replace(/\}\)\(\);\s*<\/script>/, () => `(${haken.toString()})();})();</script>`);
 
 /* the stored values of one child namespace ('' = without accounts) and derive of its events */
@@ -188,4 +188,75 @@ test('3b-1b-2 listEvents: aus jeder alten Liste wird durch die Ereignisse genau 
   assert.equal(r.umsortiert, 4, 'new order: all off, all on');
   assert.deepEqual(fehler, []);
   await ctx.close();
+});
+
+/* ---------- 3b-1b-3: gaps (school data invented, as in elternbereich-d4) ---------- */
+const tagIn = (d) => new Date(Date.now() + d * 864e5).toISOString().slice(0, 10);
+const txt = (de, en) => ({ de, en });
+const SCHULE = { version: 1, kinder: { mia: { asOf: tagIn(-1), tasks: [
+  { day: tagIn(-40), area: 'math', title: 'Check A', std: { 'M-N2': 'C' }, quests: ['detective'], focusNext: [], good: txt('a', 'a'), next: txt('', '') },
+  { day: tagIn(-20), area: 'math', title: 'Check B', std: { 'M-N1': 'RS' }, quests: ['numbers'], focusNext: [], good: txt('b', 'b'), next: txt('', '') },
+  { day: tagIn(-5), area: 'science', title: 'Forces', std: { 'S-F1': 'M' }, quests: ['forces'], focusNext: ['forces'], good: txt('c', 'c'), next: txt('Begruenden.', 'Explain.') },
+] } } };
+const uebung = (skill, n, tage) => { const a = Array.from({ length: n }, (_, i) => ({ day: tagIn(-tage[i % tage.length]), skill, level: 2, attempt: 1, ok: true, help: false })); return { attempts: a, ev: { [skill]: a.map((x) => [x.day, x.level, 1]) } }; };
+
+test('3b-1b-3 Luecken: Eltern waehlen, schliessen, halten; die App schliesst (Eltern- und Kindergeraet) -> derive = gespeicherte gaps', async () => {
+  const C = { mia: 'ABCD-EFGH', papa: 'PAPA-2345' };
+  const ks = await kontenServer({ users: [await konto('mia', 'student', C.mia), await konto('papa', 'parent', C.papa, { kinder: ['mia'] })] }, { bauart: 'test', anpassen: mitHaken, schule: SCHULE });
+  try {
+    const mia = ks.konten.users.find((u) => u.user === 'mia').id, papa = ks.konten.users.find((u) => u.user === 'papa').id;
+    const setze = (page, d) => page.evaluate(([id, daten]) => { for (const [k, v] of Object.entries(daten)) localStorage.setItem('bq2_' + id + '__' + k, JSON.stringify(v)); }, [mia, d]);
+    async function mathe(page) {
+      if (await page.$('#pBack')) await page.locator('#pBack').click();
+      await page.locator('.phdr [data-plang="en"]').click(); await page.locator('.phdr [data-plang="de"]').click();   // render again
+      await page.locator('[data-psubj="maths"]').click(); await page.waitForSelector('#pSchool');
+    }
+    const { ctx, page, fehler } = await oeffnen(browser, ks);
+    await anmelden(page, 'student', 'mia', C.mia); await passwortSetzen(page, 'Tiger-Lamp-River-4271');
+    await page.waitForSelector('#home:not([hidden])');
+    await setze(page, uebung('numbers', 12, [1, 2, 3, 4]));
+    await page.locator('#adultBtn').click();
+    await anmelden(page, 'adult', 'papa', C.papa); await passwortSetzen(page, 'Moon-Glass-Paper-8812');
+    await page.waitForSelector('#parentClose');
+    await mathe(page);
+    await page.locator('[data-gapact="go"][data-gapstd="M-N2"]').click();
+    await page.waitForSelector('[data-gapact="go"][data-gapstd="M-N1"]');
+    let r = await vergleich(page, mia);
+    assert.equal(r.app.gaps.active, 'M-N2');
+    // the start page behind the login stores bq2_rankSeen outside any child's area: no event, noted (not refused)
+    assert.deepEqual([...new Set(await page.evaluate(() => window.__bqh.ohneKind()))], ['rank_seen']);
+    await page.locator('[data-gapact="close"][data-gapstd="M-N2"]').click();
+    await page.waitForFunction(() => /von Ihnen geschlossen/.test(document.querySelector('#pSchool .pgaps')?.innerText || ''));
+    r = await vergleich(page, mia);
+    assert.equal(r.app.gaps.closed['M-N2'].by, 'parents');
+    await setze(page, uebung('numbers', 24, [1, 3, 5, 8, 12, 16]));                  // confirmed secure: the app closes M-N1
+    await mathe(page);
+    r = await vergleich(page, mia);
+    assert.equal(r.app.gaps.closed['M-N1'].by, 'app');
+    await page.locator('[data-gapact="hold"][data-gapstd="M-N1"]').click();
+    await page.waitForFunction(() => /von Ihnen offen gehalten/.test(document.querySelector('#pSchool .pgaps')?.innerText || ''));
+    await mathe(page);                                                                // held: the app does not close it again
+    r = await vergleich(page, mia);
+    assert.ok(r.app.gaps.hold['M-N1'] && !r.app.gaps.closed['M-N1']);
+    await page.locator('[data-gapact="close"][data-gapstd="M-N1"]').click();
+    await page.waitForFunction(() => /Stellenwert[^\n]*von Ihnen geschlossen/.test(document.querySelector('#pSchool .pgaps')?.innerText || ''));
+    r = await vergleich(page, mia);
+    const art = (e) => e.type + ':' + (e.payload.state || '') + ':' + (e.payload.by || '');
+    assert.deepEqual(r.events.filter((e) => e.type.startsWith('gap')).map(art), ['gap_active::', 'gap_state:closed:parents', 'gap_state:closed:app', 'gap_state:hold:parents', 'gap_state:closed:parents']);
+    assert.ok(r.events.filter((e) => e.type.startsWith('gap')).every((e) => e.author === papa), 'all by the parent (also the automatic close on his device)');
+    assert.deepEqual(fehler, []);
+    await ctx.close();
+
+    // the child's device closes a gap by itself (as the child): accepted, derive = stored
+    const k = await oeffnen(browser, ks);
+    await anmelden(k.page, 'student', 'mia', C.mia); await passwortSetzen(k.page, 'Tiger-Lamp-River-4271');
+    await k.page.waitForSelector('#home:not([hidden])');
+    await setze(k.page, uebung('numbers', 24, [1, 3, 5, 8, 12, 16]));
+    await k.page.reload(); await k.page.waitForSelector('#home:not([hidden])');
+    r = await vergleich(k.page, mia);
+    assert.equal(r.app.gaps.closed['M-N1'].by, 'app');
+    assert.deepEqual(r.events.filter((e) => e.type.startsWith('gap')).map((e) => [e.type, e.payload.state, e.payload.by, e.author]), [['gap_state', 'closed', 'app', mia]]);
+    assert.deepEqual(k.fehler, []);
+    await k.ctx.close();
+  } finally { ks.close(); }
 });
