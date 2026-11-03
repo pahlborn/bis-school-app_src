@@ -142,6 +142,17 @@ function abApplyWinner(st, e) {
   }
 }
 
+/* the app stores a checklist as a list as long as the studio has items (index.html openStudio: chk_<studio>);
+   an event carries that number as "size" (task 3b-1b). The list is filled up with false to the largest size. */
+function abChecklistSize(st, list) {
+  for (const e of list) {
+    if (e.type !== 'checklist_set' || !e.payload.size) continue;
+    const key = 'chk_' + e.payload.studio;
+    if (!Array.isArray(st[key])) continue;                                      // (every checklist event also sets a value: the list exists)
+    while (st[key].length < e.payload.size) st[key].push(false);
+  }
+}
+
 /* gaps per school (concept "Elternbereich" 6; task 3b-0): today's key "gaps" =
      { closed: { <standard>: { at, by: 'app'|'parents', schoolDay, quest? } }, active: <standard>|null, hold: { <standard>: { at, schoolDay } } }
    One event per standard ("last wins" per standard, key gap_state:<standard>) and gap_active. The events are replayed
@@ -201,6 +212,7 @@ export function derive(events, { now, base } = {}) {
   }
   for (const e of list) abApply(st, ctx, e);
   for (const e of Object.values(lastWins(list, now))) abApplyWinner(st, e);
+  abChecklistSize(st, list);
   abGaps(st, list, now);
   st.treeStage = Math.max(st.treeStage || 0, abStage(ctx.days.size));         // the tree only grows (index.html keeps the highest stage)
   st._days = [...ctx.days].sort();

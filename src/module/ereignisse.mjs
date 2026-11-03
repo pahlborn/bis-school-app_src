@@ -47,7 +47,7 @@ const EV_SPEC = {
   sheet_result: ['sheet:str index:int res:enum(ok|no|help) day:day qid:str', ''],
   sheet_discarded: ['sheet:str', ''],
   setting_set: ['setting:enum(focusMode|focusManual|unlocked|storyCap) value:any', ''],
-  checklist_set: ['studio:str index:int value:bool', ''],
+  checklist_set: ['studio:str index:int value:bool', 'size:pos'],   // size: number of items (the app stores the whole list, task 3b-1b)
   day_flag: ['flag:enum(greetDay|mysteryDone|bdayParty) day:day', ''],
   school_import: ['asOf:day data:obj', 'source:str'],
   grant_set: ['grant:str grantee:pid scope:scope from:day until:day', 'text:str'],

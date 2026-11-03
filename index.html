@@ -3185,7 +3185,7 @@ function renderFun(){
   if(bd!==null && bd<=2){
     note.hidden=false;
     note.textContent=bd===0?`🎂 Happy birthday${store.get('name','')?', '+store.get('name',''):''}! Believe. Inspire. Succeed.`:`🎂 Your birthday is coming in ${bd} day${bd>1?'s':''}!`;
-    if(bd===0 && store.get('bdayParty','')!==dayKey()){ store.set('bdayParty',dayKey()); setTimeout(confetti,300); }
+    if(bd===0 && store.get('bdayParty','')!==dayKey()){ store.set('bdayParty',dayKey()); eventHook('day_flag',{flag:'bdayParty', day:dayKey()}); setTimeout(confetti,300); }
   }
   const days=practiceDays(), st=treeStage(days);
   if(st>store.get('treeStage',0)){ store.set('treeStage',st); if(note.hidden){ note.hidden=false; note.textContent='🌱 '+NOTES.tree[0]; } }
@@ -3244,11 +3244,17 @@ function saveProfile(){
   if((d&&!m)||(!d&&m)){ $('#pfMessage').textContent='Please choose a day and a month – or neither.'; return; }
   if(d && new Date(2024,+m-1,+d).getMonth()!==+m-1){ $('#pfMessage').textContent='That day does not exist in '+MONTHS[+m-1]+'. Please choose another day.'; return; }
   const name=$('#pfName').value.trim().slice(0,20);
-  if(name!==playerName()) store.set('name',name);
+  if(name!==playerName()){ store.set('name',name); eventHook('profile_set',{field:'name', value:name}); }
   const bd=d?m+'-'+d:null;
-  if(bd!==store.get('birthday',null)){ if(bd) store.set('birthday',bd); else store.del('birthday'); }
+  if(bd!==store.get('birthday',null)){
+    if(bd){ store.set('birthday',bd); eventHook('profile_set',{field:'birthday', value:bd}); }
+    else { store.del('birthday'); eventHook('profile_set',{field:'birthday', value:null}); }
+  }
   const pick=$('#pfEmojis button[aria-pressed="true"]'), emoji=pick?pick.textContent:'';
-  if(emoji!==store.get('emoji','')){ if(emoji) store.set('emoji',emoji); else store.del('emoji'); }
+  if(emoji!==store.get('emoji','')){
+    if(emoji){ store.set('emoji',emoji); eventHook('profile_set',{field:'emoji', value:emoji}); }
+    else { store.del('emoji'); eventHook('profile_set',{field:'emoji', value:null}); }
+  }
   closeProfile(); renderHome();
   const s=$('#savedNote'); s.hidden=false;
   if(savedTimer) clearTimeout(savedTimer); savedTimer=setTimeout(hideSaved,4000);
@@ -3319,7 +3325,9 @@ function profileAdminHTML(){
 function bindProfileAdmin(){
   const b=$('#profileDelete'); if(!b) return;
   b.addEventListener('click',()=>{ if(!parentAccess) return; if(!confirm(PL()==='de'?'Name, Geburtstag und Emoji auf diesem Gerät löschen? Lerndaten bleiben.':'Delete name, birthday and emoji on this device? Learning data stays.')) return;
-    ['name','birthday','emoji'].forEach(k=>store.del(k)); renderHome(); renderSheets(); });
+    ['name','birthday','emoji'].forEach(k=>store.del(k));
+    eventHook('profile_set',{field:'name', value:null}); eventHook('profile_set',{field:'birthday', value:null}); eventHook('profile_set',{field:'emoji', value:null});
+    renderHome(); renderSheets(); });
 }
 
 /* challenge offer (Practise Today, last question) */
@@ -3366,7 +3374,7 @@ function showTreat(kind, roundKey){
     const opts=shuffle([m[1]].concat(m[2]));
     body.innerHTML=`<div class="story">${esc(m[0])}</div>`+(done?`<p>You solved today’s Mystery Question: <b>${esc(m[1])}</b>. A new one comes tomorrow!</p>`:`<div class="row">${opts.map(o=>`<button type="button" class="btn small" data-m="${esc(o)}">${esc(o)}</button>`).join('')}</div>`);
     body.querySelectorAll('[data-m]').forEach(b=>b.addEventListener('click',()=>{
-      const ok=b.dataset.m===m[1]; store.set('mysteryDone',dayKey()); beep(ok?'good':'bad');
+      const ok=b.dataset.m===m[1]; store.set('mysteryDone',dayKey()); eventHook('day_flag',{flag:'mysteryDone', day:dayKey()}); beep(ok?'good':'bad');
       body.innerHTML+=`<p>${ok?'Yes! Brilliant thinking.':'Good try! The answer is <b>'+esc(m[1])+'</b>.'} A new Mystery Question comes tomorrow.</p>`;
       body.querySelectorAll('[data-m]').forEach(x=>x.disabled=true);
     }));
@@ -3604,7 +3612,7 @@ function discardSheet(sheetId){
 const EXCITE_DE={1:'🌙 gemütlich', 2:'⭐ ein bisschen spannend', 3:'⚡ abenteuerlich'};
 const storyCapHTML = () => { const de=PL()==='de', X=de?EXCITE_DE:EXCITE;
   return `<h2>${de?'Pisolala-Geschichten':'Pisolala stories'}</h2><p><label for="storyCap"><b>${de?'Geschichten dürfen höchstens so spannend sein:':'Stories may be at most:'}</b></label> <select id="storyCap">`+[1,2,3].map(l=>'<option value="'+l+'"'+(store.get('storyCap',2)===l?' selected':'')+'>'+X[l]+'</option>').join('')+`</select></p><p class="small">${de?'Das Kind wählt selbst, wie spannend eine Geschichte sein soll – bis zu dieser Grenze. Jede Stufe bleibt freundlich: kein Grusel, niemand wird verletzt, alles geht gut aus.':'Your child picks how exciting a story is, up to this limit. Every level stays kind: nothing scary, nobody gets hurt, everything ends well.'}</p>`; };
-function bindStoryCap(){ const sc=$('#storyCap'); if(sc) sc.addEventListener('change',()=>{if(parentAccess) store.set('storyCap',+sc.value);}); }
+function bindStoryCap(){ const sc=$('#storyCap'); if(sc) sc.addEventListener('change',()=>{if(parentAccess){ store.set('storyCap',+sc.value); eventHook('setting_set',{setting:'storyCap', value:+sc.value}); }}); }
 /* ======================= GROWN-UPS VIEW v2 (Peter, 31.10.) =======================
    Same structure as the child's start page (subjects → quests) plus a summary in words: where the
    child is doing well, where support helps, what grown-ups can do. Careful judgements: a stand is
@@ -4566,7 +4574,7 @@ function renderWelcome(u){
 function loginDone(u, welcomed){
   $('#loginBody').innerHTML='';
   const seen=store.get('lastSeen',{}); seen[u.id]=new Date().toISOString(); store.set('lastSeen',seen);
-  if(u.role==='student'){ pendingRoute=null; store.set('session',sessionOf(u)); const here=store.get('kidsHere',[]); if(!here.includes(u.id)) store.set('kidsHere',here.concat([u.id])); adultUser=null; if(welcomed) store.set('greetDay',dayKey()); renderHome(); show('home'); }
+  if(u.role==='student'){ pendingRoute=null; store.set('session',sessionOf(u)); const here=store.get('kidsHere',[]); if(!here.includes(u.id)) store.set('kidsHere',here.concat([u.id])); adultUser=null; if(welcomed){ store.set('greetDay',dayKey()); eventHook('day_flag',{flag:'greetDay', day:dayKey()}); } renderHome(); show('home'); }
   else { store.set('adultSession',sessionOf(u)); adultUser={user:u.user, role:u.role, admin:!!u.admin}; parentAccess=true; state.psubj=null; state.popen=state.popen||[]; const r=takePendingRoute(); openAbout('sheets'); scrollToRouteSec(r); }
 }
 /* Test account bar (for grown-ups, in their language): clearly marked, separate data, jump ahead one
@@ -5206,9 +5214,9 @@ function aboutChrome(){
   ['tabDe','tabEn'].forEach(id=>{ const on=PL()===(id==='tabDe'?'de':'en'); $('#'+id).classList.toggle('on',on); $('#'+id).setAttribute('aria-pressed',on); });
   ['tabInfo','tabSheets'].forEach(id=>$('#'+id).classList.toggle('primary', {tabInfo:'info',tabSheets:'sheets'}[id]===state.aboutTab));
 }
-function setLang(l){ store.set(langKey(),l); if(state.screen==='about') openAbout(state.aboutTab==='sheets'?'sheets':'info'); }
+function setLang(l){ store.set(langKey(),l); if(langKey()==='kidLang') eventHook('profile_set',{field:'kidLang', value:l}); if(state.screen==='about') openAbout(state.aboutTab==='sheets'?'sheets':'info'); }
 function openAbout(tab, open){
-  if(tab==='de'||tab==='en'){ store.set(langKey(),tab); tab='info'; }
+  if(tab==='de'||tab==='en'){ store.set(langKey(),tab); if(langKey()==='kidLang') eventHook('profile_set',{field:'kidLang', value:tab}); tab='info'; }
   // A logged-in grown-up may read the info pages without being logged out (Peter, 31.10.).
   if(tab!=='sheets' && !(accountsOn() && adultUser)) parentLock();
   state.aboutTab=tab||'info'; state.aboutSub=null;
@@ -5246,13 +5254,14 @@ function openStudio(k){
   html+=`<div class="row"><button class="btn small ghost" id="chkReset" type="button">Clear checklist</button></div>`;
   body.innerHTML=html;
   body.querySelectorAll('.chk').forEach(b=>b.addEventListener('click',()=>{
-    const i=+b.dataset.i; checks[i]=!checks[i]; store.set('chk_'+k,checks);
+    const i=+b.dataset.i; checks[i]=!checks[i]; store.set('chk_'+k,checks); eventHook('checklist_set',{studio:k, index:i, value:checks[i], size:checks.length});
     b.classList.toggle('on',checks[i]); b.setAttribute('aria-pressed',checks[i]?'true':'false');
     const n=checks.filter(Boolean).length; $('#chkCount').textContent=n; $('#chkBar').style.width=Math.round(n/d.checks.length*100)+'%';
     if(checks[i]) beep('good');
     if(n===d.checks.length){ beep('win'); confetti(); }
   }));
-  $('#chkReset').addEventListener('click',()=>{ for(let i=0;i<checks.length;i++) checks[i]=false; store.set('chk_'+k,checks); openStudio(k); });
+  $('#chkReset').addEventListener('click',()=>{ if(!checks.some(Boolean)) eventHook('checklist_set',{studio:k, index:0, value:false, size:checks.length});   // nothing ticked: the app still stores the empty list
+    for(let i=0;i<checks.length;i++){ if(checks[i]) eventHook('checklist_set',{studio:k, index:i, value:false, size:checks.length}); checks[i]=false; } store.set('chk_'+k,checks); openStudio(k); });
   if(d.timer){
     timerElapsed=0; stopTimer();
     const clock=$('#tClock'), startBtn=$('#tStart');
@@ -5395,10 +5404,10 @@ function renderGreetOffers(cozy){
   $('#greetOffers').innerHTML=order.map(k=>`<button type="button" class="btn${cozy&&(k==='joke'||k==='tree')?' cozy':''}" data-offer="${k}">${GREET_OFFERS.find(o=>o[0]===k)[1]}</button>`).join('');
   $('#greetOffers').querySelectorAll('[data-offer]').forEach(b=>b.addEventListener('click',()=>greetGo(b.dataset.offer)));
 }
-function closeGreet(){ store.set('greetDay',dayKey()); const d=$('#greetDlg'); if(d.close) d.close(); else d.removeAttribute('open'); }
+function closeGreet(){ store.set('greetDay',dayKey()); eventHook('day_flag',{flag:'greetDay', day:dayKey()}); const d=$('#greetDlg'); if(d.close) d.close(); else d.removeAttribute('open'); }
 function greetGo(k){
   if(k==='joke'){
-    store.set('greetDay',dayKey());
+    store.set('greetDay',dayKey()); eventHook('day_flag',{flag:'greetDay', day:dayKey()});
     const j=jokeFor('greet-'+dayKey(), 'en');
     $('#greetJoke').innerHTML=jokeHTML(j, 'greetJokeAnswer');
     $('#greetJokeAnswer').addEventListener('click',()=>{ $('#greetJokeAnswer').outerHTML=jokeAnswerHTML(j); });
@@ -5412,7 +5421,7 @@ function greetGo(k){
   else if(k==='sheet') $('#sheetBtn').click();
 }
 $('#greetSkip').addEventListener('click',closeGreet);
-$('#greetDlg').addEventListener('cancel',()=>store.set('greetDay',dayKey()));   // Escape works like Skip
+$('#greetDlg').addEventListener('cancel',()=>{ store.set('greetDay',dayKey()); eventHook('day_flag',{flag:'greetDay', day:dayKey()}); });   // Escape works like Skip
 
 $('#nextBtn').addEventListener('click',next);
 // two buttons side by side (Peter, 01.11.: "Show me how" must not disappear)
