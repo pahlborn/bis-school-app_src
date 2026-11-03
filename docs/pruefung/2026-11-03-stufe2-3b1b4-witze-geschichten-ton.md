@@ -36,4 +36,4 @@ Witz / Geschichte / Ton ohne Haken; Witz ohne `forget`; `derive`: Witz doppelt, 
 3. **Heute bleibt der Ton je Gerät** gespeichert (`bq2_muted`); erst das Lesen aus Ereignissen (3b-2) macht ihn zur Einstellung der Person.
 
 ## Volle Reihe
-**480/480 grün** (333 s, eigener Arbeitsordner, nach dem Einmergen von P3b-2a #111; Konflikt in `annahme` gelöst: beide Rechte-Ergänzungen behalten). Nach Dev-Auftrag 1 (#112): **491/491 grün** (349 s).
+**480/480 grün** (333 s, eigener Arbeitsordner, nach dem Einmergen von P3b-2a #111; Konflikt in `annahme` gelöst: beide Rechte-Ergänzungen behalten). Nach Dev-Auftrag 1 (#112): **491/491 grün** (349 s). Nach P3b-2b (#114): **494/494 grün** (312 s).
