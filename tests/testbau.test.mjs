@@ -9,7 +9,7 @@ import { appServer, browserStarten, appOeffnen } from './app-hilfen.mjs';
 let browser, server;
 before(async () => {
   browser = await browserStarten();
-  server = await appServer({ bauart: 'test', anpassen: (h) => h.replace(/\}\)\(\);\s*<\/script>/, 'window.__bqk={sealEntry,openEntryText,entryAad,newAreaKey,newPersonKeys,publicKeysOf,lockPersonKeys,unlockPersonKeys,createKeyring,rotateKeyring,keysForHolder,keyFingerprint};window.__bqe={newEvent,checkEvent,effectiveTime,mergeLog,fieldKey,lastWins};window.__bqs={makeSnapshot,stateFrom,needsSnapshot,derive};window.__bqb={halter,schluesselVerteilen,schluesselLesen,passtZumBereich,lokalerSpeicher,signEvent,acceptEvent};})();</script>') });
+  server = await appServer({ bauart: 'test', anpassen: (h) => h.replace(/\}\)\(\);\s*<\/script>/, 'window.__bqk={sealEntry,openEntryText,entryAad,newAreaKey,newPersonKeys,publicKeysOf,lockPersonKeys,unlockPersonKeys,createKeyring,rotateKeyring,keysForHolder,keyFingerprint};window.__bqe={newEvent,checkEvent,effectiveTime,mergeLog,fieldKey,lastWins};window.__bqs={makeSnapshot,stateFrom,needsSnapshot,derive};window.__bqb={halter,schluesselVerteilen,schluesselLesen,passtZumBereich,lokalerSpeicher,signEvent,acceptEvent,zulassungAus};})();</script>') });
 });
 after(async () => { await browser?.close(); server?.close(); });
 
@@ -96,6 +96,23 @@ test('Testbau: Bereiche - Schluessel verteilen, nach Ablauf wechseln, falscher B
     return { a: a.aktion, b: b.aktion + b.version + b.entfernt.join(), lehrkraft: [lehrkraft.aktuell, ...lehrkraft.keys.keys()].join(), kind: [kind.aktuell, ...kind.keys.keys()].join(), falsch: falsch.grund, name: B.passtZumBereich({ ...geb, payload: { field: 'name', value: 'K' } }, L) };
   });
   assert.deepEqual(r, { a: 'angelegt', b: 'gewechselt2p_l1', lehrkraft: '2,1', kind: '2,1,2', falsch: 'bereich-falsch', name: true });
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
+
+test('Testbau: Zulassung aus den Ereignissen des Bereichs (P3b-2a)', async () => {
+  const { ctx, page, fehler } = await appOeffnen(browser, server.url);
+  const r = await page.evaluate(async () => {
+    const K = window.__bqk, B = window.__bqb, E = window.__bqe, L = 'kind:lern:p_k1', keys = {}, pub = {};
+    for (const p of ['p_e1', 'p_k1', 'p_x1']) { keys[p] = await K.newPersonKeys(); pub[p] = await K.publicKeysOf(keys[p]); }
+    const at = (m) => new Date(Date.UTC(2026, 10, 3, 8, m, 0)).toISOString();
+    const ev = (p, type, payload, m) => B.signEvent(E.newEvent({ type, author: p, device: 'd_' + p.slice(2), at: at(m), payload }), L, keys[p]);
+    const liste = [await ev('p_e1', 'device_added', { device: 'd_e1' }, 1), await ev('p_e1', 'member_added', { person: 'p_k1', role: 'child', pub: pub.p_k1 }, 2),
+      await ev('p_k1', 'device_added', { device: 'd_k1' }, 3), await ev('p_x1', 'member_added', { person: 'p_x1', role: 'parent', pub: pub.p_x1 }, 4)];
+    const z = await B.zulassungAus(liste, { area: L, anker: { person: 'p_e1', role: 'parent', pub: pub.p_e1 }, now: Date.UTC(2026, 10, 3, 12, 0, 0) });
+    return { mitglieder: Object.keys(z.members).join(), kind: z.members.p_k1.devices.join(), verworfen: z.verworfen.map((v) => v.grund).join() };
+  });
+  assert.deepEqual(r, { mitglieder: 'p_e1,p_k1', kind: 'd_k1', verworfen: 'autor-unbekannt' });
   assert.deepEqual(fehler, []);
   await ctx.close();
 });

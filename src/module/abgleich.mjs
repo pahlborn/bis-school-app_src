@@ -15,7 +15,8 @@
 //   bundle (content for put): { v: 1, kv: key version, eintraege: [{ id, iv, ct }] }; each entry is one { event, sig }
 //     sealed with sealEntry, additional data entryAad(area, kv, id), id = the event id.
 //   keys (input):      schluessel = { aktuell: version, keys: Map version -> area key } (krypto.keysForHolder)
-//   admission (input): zulassung as in annahme ({ area, members })
+//   admission (input): zulassung as in annahme ({ area, members }), or a function (log + candidates) -> zulassung
+//                      (module zulassung builds it from the area's own events, task P3b-2)
 //
 // Names: every helper starts with "abg"/"ABG_" because all modules and index.html share one scope in the app.
 
@@ -176,7 +177,10 @@ export async function holen(stand, { zugang, schluessel, zulassung, now } = {}) 
       kandidaten.set(item, { kennung, id });
     }
   }
-  const pruefung = await acceptAll([...kandidaten.keys()], zulassung);
+  // the admission may also be a function (module zulassung, task P3b-2): it gets the log and the decrypted, well-formed
+  // candidates and builds the admission from the area's own events - members added in this very fetch count, too
+  const z = typeof zulassung === 'function' ? await zulassung([...stand.log, ...[...kandidaten.keys()].filter((x) => abgEintragOk(x))]) : zulassung;
+  const pruefung = await acceptAll([...kandidaten.keys()], z);
   for (const v of pruefung.verworfen) verworfen.push({ ...kandidaten.get(v.item), grund: v.grund });
   const angenommen = pruefung.angenommen.filter((x) => abgEintragOk(x)).map((x) => ({ event: x.event, sig: x.sig }));
 
