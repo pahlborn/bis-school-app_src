@@ -11,8 +11,8 @@ before(async () => { server = await appServer(); browser = await browserStarten(
 after(async () => { await browser?.close(); server?.close(); });
 
 const MENUE = {
-  '#tabDe': ['Anleitung für Erwachsene', 'How to use Big Quest (für Kinder)', 'Grundidee', 'Leitgedanken', 'Aufbau', 'Lernlogik', 'Exkurs: Was passiert bei einer falschen Antwort?', 'Helfen wie die Schule', 'Wie die App einstuft – Titel, Lernbaum, Abzeichen und Stand', 'Herkunft der Aufgaben', 'Datenschutz', 'Quellen'],
-  '#tabEn': ['Guide for grown-ups', 'How to use Big Quest', 'Idea', 'Guiding principles', 'How it works', 'Side note: what happens after a wrong answer?', 'Helping the way school does', 'How the app judges – titles, learning tree, badges and level', 'Origin of the tasks', 'Privacy', 'Sources']
+  '#tabDe': ['Anleitung für Erwachsene', 'How to use Big Quest (für Kinder)', 'Grundidee', 'Aufbau', 'So lernt das Kind', 'Helfen wie die Schule', 'Wie die App einstuft – Titel, Lernbaum, Abzeichen und Stand', 'Herkunft der Aufgaben', 'Datenschutz', 'Quellen'],
+  '#tabEn': ['Guide for grown-ups', 'How to use Big Quest', 'Core idea', 'Structure', 'How your child learns', 'Helping the way school does', 'How the app judges – titles, learning tree, badges and level', 'Origin of the tasks', 'Privacy', 'Sources']
 };
 const titel = (page) => page.$$eval('#aboutBody details.about-sec > summary', (s) => s.map((x) => x.textContent.trim()));
 
@@ -52,18 +52,18 @@ test('the info pages have one clear title, not several "About the app"', async (
   await ctx.close();
 });
 
-test('side note explains the steps after a wrong answer, German and English', async () => {
+test('"How your child learns" explains the steps after a wrong answer, German and English (F2)', async () => {
   const { ctx, page } = await appOeffnen(browser, server.url);
   await page.locator('#aboutBtn').click();
   await page.locator('#tabDe').click();
-  const d = await aboutAbschnitt(page, 'Exkurs');
+  const d = await aboutAbschnitt(page, 'So lernt das Kind');
   const de = await d.textContent();
-  for (const t of ['Erster Fehler', 'Zweiter Versuch richtig', 'Zweiter Versuch falsch', 'Brücke', 'Wiederholung', 'nach drei und nach sieben Tagen', 'Zeig mir, wie']) assert.ok(de.includes(t), t);
+  for (const t of ['Hinweis', 'Zweiter Versuch richtig', 'Zweiter Versuch falsch', 'Brücke', 'Wiederholung', 'nach 1, 3 und 7 Tagen', 'Zeig mir, wie']) assert.ok(de.includes(t), t);
   assert.equal(await d.locator('ol.steps li').count(), 4);
   await page.locator('#tabEn').click();
-  const e = await aboutAbschnitt(page, 'Side note');
+  const e = await aboutAbschnitt(page, 'How your child learns');
   const en = await e.textContent();
-  for (const t of ['First mistake', 'Second try right', 'Second try wrong', 'bridge', 'Review', 'Show me how']) assert.ok(en.includes(t), t);
+  for (const t of ['Hint', 'Second try right', 'Second try wrong', 'Bridge', 'Review', 'after 1, 3 and 7 days', 'Show me how']) assert.ok(en.includes(t), t);
   await ctx.close();
 });
 
@@ -85,7 +85,8 @@ test('the concept explains how titles, tree, badges and levels are worked out (P
   await page.locator('#tabDe').click();
   const d = await aboutAbschnitt(page, 'Wie die App einstuft');
   const t = await d.textContent();
-  for (const w of ['Explorer ab 0', 'Investigator ab 25', 'Scientist ab 60', 'Professor ab 120', 'Legend ab 250', '1, 3, 6, 10, 15 und 25 Tagen', 'Silber ab 5-mal', 'mindestens 80 %', '8 ersten Versuchen an mindestens 3 Tagen', '15 Prozentpunkte', '1, 3 und 7 Tagen']) assert.ok(t.includes(w), w);
+  for (const w of ['Explorer ab 0', 'Investigator ab 25', 'Scientist ab 60', 'Professor ab 120', 'Legend ab 250', '1, 3, 6, 10, 15 und 25 Tagen', 'Silber ab 5-mal', 'mindestens 80 %', '8 ersten Versuchen an mindestens 3 Tagen', '15 Prozentpunkte']) assert.ok(t.includes(w), w);
+  assert.ok(!t.includes('1, 3 und 7 Tagen'), 'the review rule is in "So lernt das Kind" only (F2)');
   assert.ok(!/Requires support|Consolidating|Meeting expectations|Extending/.test(t), 'no school terms on a child-reachable page');
   await ctx.close();
 });

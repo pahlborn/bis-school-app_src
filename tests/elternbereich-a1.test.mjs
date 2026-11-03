@@ -57,7 +57,8 @@ test('A1: the welcome names an existing chapter, the concept describes the focus
   await konzept.evaluate((d) => d.querySelectorAll('details').forEach((x) => { x.open = true; }));
   const deText = await konzept.innerText();
   assert.ok(!deText.includes('die Eltern legen fest, welche Themen'), 'old focus sentence gone');
-  assert.match(deText, /Den Fokus wählt die App aus den nächsten Schritten der Lehrkraft und der eigenen Übung; Eltern können auf Manuell umstellen\./);
+  // F2: the wording of the focus sentence changed; still chosen by the app, manual possible
+  assert.match(deText, /Die App wählt ihn selbst – aus den nächsten Schritten der Lehrkraft, den Lücken und den Quests, bei denen Übung hilft\. In der Fachansicht können Eltern auf „Manuell“ umstellen/);
   assert.ok(!deText.includes('Einzelheiten stehen im Elternbereich'), 'no pointer to the page the reader is on (DE)');
 
   // English: the welcome's chapter name exists as a chapter there too, and no "Details are in the parent area"
