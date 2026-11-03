@@ -40,7 +40,7 @@ test('Leere Liste: die Werte eines neuen Kindes; "now" ist Pflicht', () => {
   assert.deepEqual(run(null), NEU);
   assert.throws(() => derive([]), /"now" is missing/);
   assert.throws(() => derive([], { now: NOW, base: { upTo: 'gestern', state: NEU } }), /base\.upTo/);
-  assert.deepEqual(DERIVE_LIMITS, { attempts: 200, evidence: 60, due: 40, sheets: 8 });
+  assert.deepEqual(DERIVE_LIMITS, { attempts: 200, evidence: 60, due: 40, sheets: 8, jokes: 200 });
   assert.deepEqual(DERIVE_GAPS, [1, 3, 7]);
   assert.deepEqual(DERIVE_TREE_AT, [0, 1, 3, 6, 10, 15, 25]);
   assert.deepEqual(DERIVE_RANKS, ['Explorer', 'Investigator', 'Scientist', 'Professor', 'Legend']);
@@ -629,4 +629,33 @@ test('3b-1b-2 Listen: an = hinten anfuegen, aus = entfernen (wie index.html); Fo
   v.add('advent_open', { year: 2027, door: 1 });
   s = run(shuffledCopy(v.list, 83));
   assert.deepEqual([s.advent2026, s.advent2027], [[3, 1], [1]], 'each door once, in the order opened, per year');
+});
+
+/* ---------- jokes, stories, sound (task 3b-1b-4) ---------- */
+test('3b-1b-4 Witze und Geschichten: mit den echten Modulen witze/geschichten (2 000 Schritte, Neustart der Runden, Mottozeiten) ergibt derive genau jokeSeen/storyRead; Ton letzte gilt', async () => {
+  const { jokeNext } = await import('../../src/module/witze.mjs');
+  const { storyMarkRead } = await import('../../src/module/geschichten.mjs');
+  const next = seeded(91), v = story(91), pick = (a) => a[Math.floor(next() * a.length)];
+  let jokeSeen = [], storyRead = [], neustart = 0;
+  for (let i = 0; i < 2000; i++) {
+    if (next() < 0.7) {                                    // index.html jokeFor
+      const had = jokeSeen, r = jokeNext(pick(['en', 'en', 'de']), pick([null, null, 'halloween', 'advent', 'christmas']), had, (n) => Math.floor(next() * n));
+      const forget = had.filter((id) => !r.seen.includes(id));
+      jokeSeen = r.seen.slice(-200);
+      if (r.joke) { if (forget.length) neustart++; v.add('joke_seen', forget.length ? { joke: r.joke.id, forget } : { joke: r.joke.id }); }
+    } else {                                               // index.html story button
+      const id = 'story-' + Math.floor(next() * 12);
+      storyRead = storyMarkRead(storyRead, id);
+      v.add('story_read', { story: id });
+    }
+  }
+  const s = run(shuffledCopy(v.list, 92));
+  assert.ok(neustart >= 5, 'the jokes started again several times: ' + neustart);
+  assert.deepEqual(s.jokeSeen, jokeSeen);
+  assert.deepEqual(s.storyRead, storyRead);
+  // base + later events (a snapshot in between) gives the same
+  const sortiert = v.list.slice().sort((a, b) => (a.at < b.at ? -1 : 1)), k = 1234;
+  assert.deepEqual(run(sortiert.slice(k), { base: { upTo: sortiert[k - 1].at, state: JSON.parse(JSON.stringify(run(sortiert.slice(0, k)))) } }), run(v.list));
+  v.add('profile_set', { field: 'muted', value: true }); v.add('profile_set', { field: 'muted', value: false });
+  assert.equal(run(v.list).muted, false, 'sound: the last switch counts');
 });

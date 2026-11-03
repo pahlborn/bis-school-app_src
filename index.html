@@ -3355,8 +3355,8 @@ function mysteryOfDay(d=new Date()){
 let jokeShown=null, treatRounds=0;
 function jokeFor(key, lang){
   if(jokeShown && jokeShown.key===key) return jokeShown.joke;
-  const r=jokeNext(lang, themeNow(), store.get('jokeSeen',[]), rnd);
-  store.set('jokeSeen', r.seen.slice(-200)); jokeShown={key, joke:r.joke};
+  const had=store.get('jokeSeen',[]), r=jokeNext(lang, themeNow(), had, rnd), forget=had.filter(id=>!r.seen.includes(id));
+  store.set('jokeSeen', r.seen.slice(-200)); if(r.joke) eventHook('joke_seen', forget.length?{joke:r.joke.id, forget}:{joke:r.joke.id}); jokeShown={key, joke:r.joke};
   return r.joke;
 }
 /* A4: English jokes carry flag and country above the question; a short explanation comes with the answer. */
@@ -3584,7 +3584,7 @@ function showTreat(kind, roundKey){
     body.innerHTML=`<p lang="${lang}"><b>${esc(s.title[lang])}</b></p><div class="row">${Object.keys(s[lang]).map(Number).filter(l=>l<=cap).map(l=>`<button type="button" class="btn small" data-story="${s.id}" data-l="${l}">${EXCITE[l]}</button>`).join('')}</div><div id="storyText"></div>`;
     body.querySelectorAll('[data-story]').forEach(b=>b.addEventListener('click',()=>{
       $('#storyText').innerHTML=`<div class="story" lang="${lang}">${esc(s[lang][b.dataset.l])}</div>`;
-      store.set('storyRead', storyMarkRead(store.get('storyRead',[]), s.id));
+      store.set('storyRead', storyMarkRead(store.get('storyRead',[]), s.id)); eventHook('story_read', {story:s.id});
     }));
   }
 }
@@ -5573,7 +5573,8 @@ $('#rankClose').addEventListener('click',()=>{ const d=$('#rankDlg'); if(d.close
 $('#pfClose').addEventListener('click',closeProfile);
 $('#profileForm').addEventListener('submit',e=>{ e.preventDefault(); saveProfile(); });
 document.addEventListener('pointerdown',e=>{ if(savedTimer && !e.target.closest('#profileDlg')) hideSaved(); });
-$('#soundBtn').addEventListener('click',()=>{ muted=!muted; store.set('muted',muted); $('#soundBtn').textContent='Sound: '+(muted?'off':'on'); if(!muted) beep('good'); });
+$('#soundBtn').addEventListener('click',()=>{ muted=!muted; store.set('muted',muted); if((eventWho()||{}).role==='child') eventHook('profile_set',{field:'muted', value:muted});   // the child's own switch (3b-1b-4); a grown-up's: 3b-1c
+  $('#soundBtn').textContent='Sound: '+(muted?'off':'on'); if(!muted) beep('good'); });
 $('#quitBtn').addEventListener('click',goBack);
 $('#studioBack').addEventListener('click',goBack);
 $('#subjectBack').addEventListener('click',()=>{ state.back='home'; goBack(); });

@@ -9,9 +9,9 @@ import { appServer, browserStarten, appOeffnen, zustand, klick, zurStart, eltern
 import { konto, kontenServer, oeffnen, anmelden, passwortSetzen } from './konten-hilfen.mjs';
 import { derive } from '../src/module/ableitung.mjs';
 
-const WERTE = ['name', 'birthday', 'emoji', 'kidLang', 'storyCap', 'greetDay', 'mysteryDone', 'bdayParty', 'unlocked', 'focusMode', 'focusManual', 'gaps'];
+const WERTE = ['name', 'birthday', 'emoji', 'kidLang', 'storyCap', 'greetDay', 'mysteryDone', 'bdayParty', 'unlocked', 'focusMode', 'focusManual', 'gaps', 'jokeSeen', 'storyRead', 'muted'];
 const betroffen = (k) => WERTE.includes(k) || k.startsWith('chk_') || /^advent\d{4}$/.test(k);
-function haken() { window.__bqh = { listEvents, ohneKind: () => eventNoChild.slice(), probleme: () => ({ abgelehnt: eventSink ? eventSink.problems : null, fehler: eventErrors }) }; }
+function haken() { window.__bqh = { listEvents, eventHook, jokesFor, themeNow, ohneKind: () => eventNoChild.slice(), probleme: () => ({ abgelehnt: eventSink ? eventSink.problems : null, fehler: eventErrors }) }; }
 const mitHaken = (h) => h.replace(/\}\)\(\);\s*<\/script>/, () => `(${haken.toString()})();})();</script>`);
 
 /* the stored values of one child namespace ('' = without accounts) and derive of its events */
@@ -259,4 +259,32 @@ test('3b-1b-3 Luecken: Eltern waehlen, schliessen, halten; die App schliesst (El
     assert.deepEqual(k.fehler, []);
     await k.ctx.close();
   } finally { ks.close(); }
+});
+
+test('3b-1b-4 Witze, Geschichten, Ton: drei Runden mit Witz und Geschichte, Ton aus und an -> derive = gespeicherter Stand', async () => {
+  const { ctx, page, fehler } = await appOeffnen(browser, server.url, { zeit: '2026-11-10T09:00:00' });
+  // earlier: every English joke of this moment was shown (stored AND written through the app's hook) - so the first
+  // joke now starts the round again and the event has to say what the app forgets
+  const vorher = await page.evaluate(() => { const ids = window.__bqh.jokesFor('en', window.__bqh.themeNow()).map((j) => j.id); localStorage.setItem('bq2_jokeSeen', JSON.stringify(ids)); ids.forEach((id) => window.__bqh.eventHook('joke_seen', { joke: id })); return ids.length; });
+  assert.ok(vorher > 5, 'jokes of this moment: ' + vorher);
+  for (let runde = 0; runde < 3; runde++) {
+    await karteOeffnen(page, (await alleKarten(page)).find((k) => k.item === 'round'));
+    const n = (await zustand(page)).round.length;
+    for (let i = 0; i < n; i++) { const z = await zustand(page); await frageBeantworten(page, z.round[z.idx]); await klick(page, '#nextBtn'); }
+    await klick(page, '#treat [data-treat="joke"]');
+    await klick(page, '#treat [data-treat="joke"]');                                 // the same joke again: no second event
+    await klick(page, '#treat [data-treat="story"]');
+    await klick(page, '#treatBody [data-story][data-l="1"]');
+    await zurStart(page);
+  }
+  await page.locator('#soundBtn').click(); await page.locator('#soundBtn').click(); await page.locator('#soundBtn').click();
+  const r = await vergleich(page);
+  assert.equal(r.app.jokeSeen.length, 3, 'one joke per round');
+  assert.equal(r.app.storyRead.length, 3, 'one story per round');
+  assert.equal(r.app.muted, true);
+  const a = arten(r.events);
+  assert.deepEqual([a.joke_seen - vorher, a.story_read, a['profile_set:muted']], [3, 3, 3]);
+  assert.ok(r.events.some((e) => e.type === 'joke_seen' && e.payload.forget && e.payload.forget.length === vorher - 1), 'the restart was written with forget (all of the moment except the new joke)');
+  assert.deepEqual(fehler, []);
+  await ctx.close();
 });
