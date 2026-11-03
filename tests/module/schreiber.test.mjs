@@ -137,7 +137,8 @@ test('Was der Schreiber speichert, liest derive wie die App (Antworten, Runde, A
 const ABGELEITET = { ev: 'aus answer und sheet_result', total: 'Summe aus round_done', best_: 'Maximum aus round_done', tried: 'aus dem Abzeichen inquirer', treeStage: 'aus den Uebungstagen', sheetNo: 'aus sheet_created' };
 const OFFEN = {
   // 3b-1b-1 (Profil, Sprache des Kindes, storyCap, Tageshinweise, Checkliste) ist angeschlossen
-  '3b-1b': ['gaps', 'focusMode', 'focusManual', 'unlocked', 'advent'],
+  // 3b-1b-2 (Listen je Eintrag: unlocked, focusMode/focusManual, Advent) ist angeschlossen
+  '3b-1b': ['gaps'],
   '3b-1c': ['grants', 'grantlog', 'parentLang'],
 };
 /* Schluessel, die nicht als Text dastehen: Ausdruck -> [Schluessel, Pruefung der Stelle] */

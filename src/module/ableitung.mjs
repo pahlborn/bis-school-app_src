@@ -117,6 +117,12 @@ function abApply(st, ctx, e) {
       break;
     }
     case 'sheet_discarded': st.sheets = st.sheets.filter((s) => s.id !== p.sheet); break;
+    case 'advent_open': {                                                       // index.html openDoor: the door is added once
+      const key = 'advent' + p.year, list = Array.isArray(st[key]) ? st[key] : [];
+      if (!list.includes(p.door)) list.push(p.door);
+      st[key] = list;
+      break;
+    }
     default: break;                                                             // "last wins" types and everything else: see derive
   }
 }
@@ -151,6 +157,21 @@ function abChecklistSize(st, list) {
     if (!Array.isArray(st[key])) continue;                                      // (every checklist event also sets a value: the list exists)
     while (st[key].length < e.payload.size) st[key].push(false);
   }
+}
+
+/* lists the app stores whole but that are synced per entry (task 3b-1b-2): unlocked, focusManual.
+   The list_set events are replayed in "last wins" order (the same on every device): on = add at the end if missing,
+   off = remove. That is what index.html does (concat / filter); the app writes only the entries that changed.
+   Focus: index.html keeps focusManual exactly while focusMode is "manual" (setFocusMode stores and deletes both),
+   so the list exists then (empty if nothing is chosen) and is gone otherwise. */
+function abLists(st, list, now) {
+  for (const e of lastWinsOrder(list, now)) {
+    if (e.type !== 'list_set') continue;
+    const p = e.payload, cur = Array.isArray(st[p.list]) ? st[p.list] : [];
+    st[p.list] = p.on ? (cur.includes(p.item) ? cur : cur.concat([p.item])) : cur.filter((x) => x !== p.item);
+  }
+  if (st.focusMode === 'manual') { if (!Array.isArray(st.focusManual)) st.focusManual = []; }
+  else delete st.focusManual;
 }
 
 /* gaps per school (concept "Elternbereich" 6; task 3b-0): today's key "gaps" =
@@ -213,6 +234,7 @@ export function derive(events, { now, base } = {}) {
   for (const e of list) abApply(st, ctx, e);
   for (const e of Object.values(lastWins(list, now))) abApplyWinner(st, e);
   abChecklistSize(st, list);
+  abLists(st, list, now);
   abGaps(st, list, now);
   st.treeStage = Math.max(st.treeStage || 0, abStage(ctx.days.size));         // the tree only grows (index.html keeps the highest stage)
   st._days = [...ctx.days].sort();

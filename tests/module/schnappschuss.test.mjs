@@ -47,7 +47,7 @@ function familie(seed, n, start = T0) {
     else if (r < 0.82 && sheetIds.length) add('sheet_result', { sheet: pick(sheetIds.slice(-10)), index: Math.floor(next() * 3), res: pick(['ok', 'help', 'no']), day: d, qid });
     else if (r < 0.83 && sheetIds.length) add('sheet_discarded', { sheet: pick(sheetIds.slice(-10)) }, { ...PARENT });
     else if (r < 0.87) add('profile_set', { field: pick(['name', 'emoji', 'birthday']), value: next() < 0.2 ? null : pick(['a', 'b', 'c']) });
-    else if (r < 0.90) add('setting_set', { setting: pick(['focusMode', 'storyCap', 'unlocked']), value: pick(['x', 3, ['a']]) }, { ...PARENT });
+    else if (r < 0.90) add('setting_set', { setting: pick(['focusMode', 'storyCap']), value: pick(['x', 3, ['a']]) }, { ...PARENT });
     else if (r < 0.92) add('day_flag', { flag: pick(['greetDay', 'mysteryDone', 'bdayParty']), day: d });
     else if (r < 0.94) add('checklist_set', { studio: pick(['grow', 'read']), index: Math.floor(next() * 5), value: next() < 0.5 });
     else if (r < 0.98) { const by = pick(['app', 'parents']); add('gap_state', { standard: pick(['S1', 'S2', 'S3']), state: by === 'app' ? 'closed' : pick(['closed', 'hold', 'open']), by, schoolDay: pick(['2026-08-20', '2026-10-01', '2026-12-01']), day: d }, by === 'parents' ? { ...PARENT } : {}); }

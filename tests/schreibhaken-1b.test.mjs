@@ -9,9 +9,9 @@ import { appServer, browserStarten, appOeffnen, zustand, klick, zurStart, eltern
 import { konto, kontenServer, oeffnen, anmelden, passwortSetzen } from './konten-hilfen.mjs';
 import { derive } from '../src/module/ableitung.mjs';
 
-const WERTE = ['name', 'birthday', 'emoji', 'kidLang', 'storyCap', 'greetDay', 'mysteryDone', 'bdayParty'];
-const betroffen = (k) => WERTE.includes(k) || k.startsWith('chk_');
-function haken() { window.__bqh = { probleme: () => ({ abgelehnt: eventSink ? eventSink.problems : null, fehler: eventErrors }) }; }
+const WERTE = ['name', 'birthday', 'emoji', 'kidLang', 'storyCap', 'greetDay', 'mysteryDone', 'bdayParty', 'unlocked', 'focusMode', 'focusManual'];
+const betroffen = (k) => WERTE.includes(k) || k.startsWith('chk_') || /^advent\d{4}$/.test(k);
+function haken() { window.__bqh = { listEvents, probleme: () => ({ abgelehnt: eventSink ? eventSink.problems : null, fehler: eventErrors }) }; }
 const mitHaken = (h) => h.replace(/\}\)\(\);\s*<\/script>/, () => `(${haken.toString()})();})();</script>`);
 
 /* the stored values of one child namespace ('' = without accounts) and derive of its events */
@@ -127,4 +127,65 @@ test('mit Konten: Begruessung am naechsten Tag und Sprache der Kinder-Anleitung 
     assert.deepEqual(fehler, []);
     await ctx.close();
   } finally { ks.close(); }
+});
+
+test('3b-1b-2 Listen: Advent-Tuerchen (Kind), Freischalten und Fokus je Quest, Fokus automatisch/manuell (Eltern) -> derive = gespeicherter Stand', async () => {
+  const { ctx, page, fehler } = await appOeffnen(browser, server.url, { zeit: '2026-12-05T09:00:00' });
+  // Advent: two doors, one opened twice (the second time only shows the treat)
+  for (const d of [3, 1, 3]) {
+    await page.locator(`#advent .door[data-door="${d}"]`).click();
+    if (await page.locator('#doorBody button[data-a]').count()) await page.locator('#doorBody button[data-a]').first().click();
+  }
+  let r = await vergleich(page);
+  assert.deepEqual(r.app.advent2026, [3, 1]);
+  // grown-ups: unlock a preview quest, switch its focus on and off, automatic, manual, lock it again
+  await elternOeffnen(page);
+  await page.locator('[data-psubj="maths"]').click();
+  await page.locator('.ppreview [data-punlock="fractions"]').click();
+  const zweite = (await page.locator('.ppreview [data-punlock]').evaluateAll((b) => b.map((x) => x.dataset.punlock))).find((k) => k !== 'fractions');
+  await page.locator(`.ppreview [data-punlock="${zweite}"]`).click();
+  r = await vergleich(page);
+  assert.ok(r.app.unlocked.includes('fractions'));
+  await page.locator('[data-pfocus="fractions"]').click();                       // automatic -> manual with the automatic list +- fractions
+  r = await vergleich(page);
+  assert.equal(r.app.focusMode, 'manual'); assert.ok(Array.isArray(r.app.focusManual));
+  await page.locator('[data-pfocus="fractions"]').click();
+  r = await vergleich(page);
+  await page.locator('[data-fmode="auto"]').click();
+  r = await vergleich(page);
+  assert.equal('focusMode' in r.app, false); assert.equal('focusManual' in r.app, false);
+  await page.locator('[data-fmode="manual"]').click();
+  await page.locator('.ppreview [data-punlock="fractions"]').click();              // lock again
+  r = await vergleich(page);
+  assert.equal(r.app.unlocked.includes('fractions'), false);
+  assert.equal(r.app.focusMode, 'manual');
+  const wer = (t) => [...new Set(r.events.filter((e) => e.type === t).map((e) => e.author))];
+  assert.deepEqual(wer('advent_open'), ['p_kind']);
+  assert.deepEqual(wer('list_set'), ['p_eltern']);
+  assert.ok(r.events.filter((e) => e.type === 'list_set').length >= 4, 'list events were written');
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
+
+test('3b-1b-2 listEvents: aus jeder alten Liste wird durch die Ereignisse genau die neue (500 Zufallsfaelle, auch umsortiert); sonst nur die Aenderungen', async () => {
+  const { ctx, page, fehler } = await appOeffnen(browser, server.url);
+  const r = await page.evaluate(() => {
+    let a = 7; const next = () => { a = (a * 1103515245 + 12345) % 2147483648; return a / 2147483648; };
+    const pool = ['a', 'b', 'c', 'd', 'e', 'f'], pickList = () => pool.filter(() => next() < 0.5).sort(() => next() - 0.5);
+    const replay = (old, evs) => evs.reduce((l, p) => (p.on ? (l.includes(p.item) ? l : l.concat([p.item])) : l.filter((x) => x !== p.item)), old.slice());
+    const falsch = [];
+    for (let i = 0; i < 500; i++) {
+      const o = pickList(), n = pickList(), evs = window.__bqh.listEvents('unlocked', o, n);
+      if (JSON.stringify(replay(o, evs)) !== JSON.stringify(n) || evs.some((p) => p.list !== 'unlocked')) falsch.push([o, n]);
+    }
+    const L = window.__bqh.listEvents;
+    return { falsch, anhaengen: L('unlocked', ['a', 'b'], ['a', 'b', 'c']), entfernen: L('unlocked', ['a', 'b', 'c'], ['a', 'c']), gleich: L('unlocked', ['a'], ['a']), umsortiert: L('unlocked', ['a', 'b'], ['b', 'a']).length };
+  });
+  assert.deepEqual(r.falsch, []);
+  assert.deepEqual(r.anhaengen, [{ list: 'unlocked', item: 'c', on: true }], 'only the new entry');
+  assert.deepEqual(r.entfernen, [{ list: 'unlocked', item: 'b', on: false }], 'only the removed entry');
+  assert.deepEqual(r.gleich, [], 'unchanged: nothing');
+  assert.equal(r.umsortiert, 4, 'new order: all off, all on');
+  assert.deepEqual(fehler, []);
+  await ctx.close();
 });
