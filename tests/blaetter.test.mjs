@@ -155,7 +155,7 @@ test('A10: Elternseite zeigt nur den Stand – keine Eingabeknoepfe; leeres Blat
   const d2 = page.locator(`details.psheet[data-sheetid="${b2.id}"]`);
   assert.ok(await d2.evaluate((d) => d.open), 'sheet opened');
   assert.equal(await page.locator('#aboutBody button[data-res]').count(), 0, 'no entering by grown-ups');
-  assert.match(await page.textContent('#aboutBody'), /Ihr Kind trägt seine Antworten selbst in der App ein/);
+  assert.match(await page.textContent('#aboutBody'), /Ihr Kind trägt die Antworten selbst ein: Startseite → „My sheets“/);
   assert.match(await d2.locator('summary').textContent(), /Blatt 2 · .*noch nicht angefangen/);
   const d1 = page.locator(`details.psheet[data-sheetid="${b1.id}"]`);
   assert.match(await d1.locator('summary').textContent(), /Blatt 1 · .*3 von 6 erledigt/);
@@ -168,7 +168,7 @@ test('A10: Elternseite zeigt nur den Stand – keine Eingabeknoepfe; leeres Blat
   assert.deepEqual((await lies(page, 'sheets')).map((s) => s.id), [b1.id]);
   await page.locator('.phdr [data-plang="en"]').click();
   assert.match(await page.textContent(`details.psheet[data-sheetid="${b1.id}"] > summary`), /Sheet 1 · .*3 of 6 done/);
-  assert.match(await page.textContent('#aboutBody'), /your child enters the answers in the app – on the start page under “My sheets”/);
+  assert.match(await page.textContent('#aboutBody'), /Your child enters the answers: start page → “My sheets”/);
   assert.deepEqual(fehler, []);
   await ctx.close();
 });

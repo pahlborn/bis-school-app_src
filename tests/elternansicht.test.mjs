@@ -39,7 +39,8 @@ test('overview: same subjects as the child, summary in words, colours explained,
   await elternOeffnen(page);
   assert.deepEqual(await page.$$eval('#aboutBody .psubject .pname', (n) => n.map((x) => x.textContent)), kinderFaecher);
   const s = await page.textContent('#pSummary');
-  assert.match(s, /Das gelingt schon gut/); assert.match(s, /Rounding Road: 25 von 25 Aufgaben selbst gelöst \(bestätigt\)/);
+  // F6: on the overview "what works" is in "At a glance" only, not again in the summary
+  assert.doesNotMatch(s, /Das gelingt schon gut/); assert.match(await page.locator('#pGlance').innerText(), /⭐ Das gelingt:[^\n]*Rounding Road/);
   assert.match(s, /Hier hilft Unterstützung/); assert.match(s, /Units & Measuring:.*wiegen/);
   assert.match(s, /Noch nicht einschätzbar/); assert.match(s, /Bar Graphs/);
   assert.match(s, /Länger nicht geübt/); assert.match(s, /Number Combinations/);
