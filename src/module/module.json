@@ -9,6 +9,7 @@
     { "name": "krypto", "bau": "test", "browserTests": ["testbau"] },
     { "name": "ereignisse", "bau": "test", "browserTests": ["testbau"] },
     { "name": "ableitung", "bau": "test", "browserTests": ["ableitung-vergleich"] },
-    { "name": "annahme", "bau": "test", "browserTests": ["testbau"] }
+    { "name": "annahme", "bau": "test", "browserTests": ["testbau"] },
+    { "name": "speicher", "bau": "test", "browserTests": ["testbau"] }
   ]
 }
