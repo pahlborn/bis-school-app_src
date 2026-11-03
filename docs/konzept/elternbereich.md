@@ -269,7 +269,7 @@ Ein **Standard** ist eine **Lücke**, wenn seine letzte Schul-Einstufung „Requ
 
 ### 6.3 Ende
 Eine Lücke ist **geschlossen**, wenn eines davon eintritt:
-1. Die App schätzt **eine** der Quests der Lücke als „Sicher“ oder „Darüber hinaus“ **und „bestätigt“** ein (heutige Schwellen in `assessQuest()`: 20 erste Versuche an 5 Tagen über mindestens 14 Tage; Klassenniveau mindestens 6 Antworten, 80 %, an 3 Tagen). Vorläufig reicht nicht.
+1. Die App schätzt **eine** der Quests der Lücke als „Sicher“ oder „Darüber hinaus“ **und „bestätigt“** ein (heutige Schwellen in `assessQuest()`: 20 erste Versuche an mindestens 5 Übungstagen; Klassenniveau mindestens 6 Antworten, 80 %, richtig an 3 Übungstagen). Vorläufig reicht nicht. *(Peter, 03.11., Auftrag 2: die frühere Bedingung „über mindestens 14 Kalendertage“ entfällt – sie misst Zeit, nicht Lernen; den Abstand prüft schon „richtig an 3 Übungstagen“.)*
 2. Eine neuere Schul-Einstufung dieses Standards ist mindestens „Meeting“ (`M`/`E`).
 3. Eltern markieren sie als geschlossen (6.6).
 
@@ -297,7 +297,7 @@ Begründung (in Runden, R10): Bei 2 Lücken-Aufgaben pro Runde braucht eine akti
 - Die Einschätzung im Elternbereich beruht weiter nur auf eigener Übung.
 
 ### 6.6 Für Eltern
-- Etikett „Lücke laut Schule (Datum)“, Fortschritt als Balken und „noch etwa N Aufgaben“ (nie Tage).
+- Etikett „Lücke laut Schule (Datum)“, Fortschritt als Balken und „noch etwa N Aufgaben“ (nie Tage als Frist). Seit Auftrag 2 (03.11.) zeigt der Balken alle drei Bedingungen aus 6.3 (erste Versuche, Übungstage, „Sicher“ auf Klassenniveau) und ist erst voll, wenn alle erfüllt sind; der Text nennt, was als Nächstes fehlt („noch etwa 8 Aufgaben“, „noch 3 Aufgaben auf Klassenniveau richtig“, „noch an 2 Übungstagen“, „noch an einem weiteren Übungstag richtig“).
 - Nach dem Schließen „Lücke geschlossen ✓ (Datum)“, bleibt im Block „Aus der Schule“ beim Standard.
 - Knöpfe (nur Eltern): „Weiter üben“ (hält eine von der App geschlossene Lücke aktiv, bis Eltern sie schließen), „Als geschlossen markieren“, „Jetzt angehen“. Mit Vermerk „von Ihnen …“ und Datum.
 - Ehrlicher Satz im Konzept-Kapitel: „Bestätigt sicher heißt: sicher bei den Antworten in der App. Wer geantwortet hat und mit welchen Hilfsmitteln, weiß die App nicht; ob die Aufgaben den Standard so abdecken, wie die Schule ihn prüft, ist je Thema verschieden.“

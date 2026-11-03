@@ -2021,14 +2021,21 @@ function recordAnswer(q, ok){
 }
 /* Thresholds are starting values (not from the school) and can be tuned. */
 const KEY={minAnswers:6, minDays:2, meetsAcc:.8, meetsDays:3, meetsN:6, extAcc:.7, extDays:2, extN:4};
+/* "confirmed" in the grown-ups' summary (assessQuest): first tries and practice days */
+const CONF={n:20, days:5};
+const evAcc = a => a.length?a.reduce((s,x)=>s+x[2],0)/a.length:null, evDays = a => new Set(a.map(x=>x[0])).size;
+/* "secure" (M): among the last 20 year-level answers at least meetsN, meetsAcc right, right on meetsDays days
+   (also used by the gap progress, so bar and rule cannot drift apart) */
+const yearLevelEv = skill => (((store.get('ev',{})[skill])||[]).filter(x=>x[1]===2)).slice(-20);
+const meetsOf = l2 => l2.length>=KEY.meetsN && evAcc(l2)>=KEY.meetsAcc && evDays(l2.filter(x=>x[2]))>=KEY.meetsDays;
 function standOf(skill){
   const e=(store.get('ev',{})[skill])||[];
   const days=new Set(e.map(x=>x[0])).size;
   // too little own practice: start from the school's latest rating of this quest's main standard (Peter, 01.11.)
   if(e.length<KEY.minAnswers || days<KEY.minDays){ const sch=schoolStandFor(skill); return sch?sch.st:'NA'; }
-  const at=l=>e.filter(x=>x[1]===l), acc=a=>a.length?a.reduce((s,x)=>s+x[2],0)/a.length:null, dayCount=a=>new Set(a.map(x=>x[0])).size;
+  const at=l=>e.filter(x=>x[1]===l), acc=evAcc, dayCount=evDays;
   const l1=at(1), l2=at(2).slice(-20), l3=at(3).slice(-12);
-  const meets=l2.length>=KEY.meetsN && acc(l2)>=KEY.meetsAcc && dayCount(l2.filter(x=>x[2]))>=KEY.meetsDays;
+  const meets=meetsOf(l2);
   if(meets && l3.length>=KEY.extN && acc(l3)>=KEY.extAcc && dayCount(l3.filter(x=>x[2]))>=KEY.extDays) return 'E';
   if(meets) return 'M';
   const a1=acc(l1), a2=acc(l2);
@@ -2371,17 +2378,33 @@ function gapAct(action, s){
   gapSave(d, ev?[ev]:[]);
 }
 /* progress towards "confirmed secure" in tasks (R10: never in days as a deadline): the quest of the gap that is furthest */
+/* Auftrag 2 (Peter 03.11.): the bar shows all three conditions of "confirmed secure" - (1) CONF.n first tries,
+   (2) on CONF.days practice days, (4) "secure" on year level (meetsOf) - and is full only when all are met
+   (bar = smallest share). The text names what is missing next, in tasks or practice days. */
+function questProgress(k){
+  const a=assessQuest(k), l2=yearLevelEv(k);
+  const left=Math.max(0,CONF.n-a.n), moreDays=Math.max(0,CONF.days-a.days);
+  // (4) right year-level answers still needed for "at least meetsN, at least meetsAcc right" (the window slides)
+  let right=0; const w=l2.slice(), ok=x=>x.length>=KEY.meetsN && evAcc(x)>=KEY.meetsAcc;
+  while(!ok(w) && right<20){ w.push([dayKey(),2,1]); if(w.length>20) w.shift(); right++; }
+  const rightDays=Math.max(0,KEY.meetsDays-evDays(l2.filter(x=>x[2]))), meets=meetsOf(l2);
+  const share4=meets?1:Math.min(1-right/20, (KEY.meetsDays-rightDays)/KEY.meetsDays);
+  const frac=Math.min(Math.min(a.n,CONF.n)/CONF.n, Math.min(a.days,CONF.days)/CONF.days, share4);
+  return {k, n:a.n, frac, left, right:meets?0:right, moreDays, rightDays:meets?0:rightDays};
+}
 function gapProgress(g){
-  let best=null; for(const k of g.quests){ const a=assessQuest(k); if(!best || a.n>best.n) best=a; }
-  const n=best?best.n:0, left=Math.max(0,20-n), days=best?best.days:0;
-  return {frac:Math.min(n,20)/20, left, moreDays:left===0?Math.max(0,5-days):0};
+  let best=null;
+  for(const k of g.quests){ const p=questProgress(k); if(!best || p.frac>best.frac || (p.frac===best.frac && p.n>best.n)) best=p; }
+  return best || {frac:0, left:CONF.n, right:0, moreDays:CONF.days, rightDays:0};
 }
 function gapProgressHTML(g){
   const de=PL()==='de', p=gapProgress(g);
   const txt=p.left>0 ? (de?`noch etwa ${p.left} Aufgaben`:`about ${p.left} more tasks`)
-    : p.moreDays>0 ? (de?`noch an ${p.moreDays} weiteren Übungstagen`:`on ${p.moreDays} more practice days`)
-    : (de?'noch nicht ganz sicher – weiter üben':'not quite secure yet – keep practicing');
-  return `<span class="pgapbar" role="img" aria-label="${txt}"><i style="width:${Math.round(p.frac*100)}%"></i></span> <span class="small">${txt}</span>`;
+    : p.right>0 ? (de?`noch ${p.right} ${p.right===1?'Aufgabe':'Aufgaben'} auf Klassenniveau richtig`:`${p.right} more grade-level ${p.right===1?'task':'tasks'} right`)
+    : p.moreDays>0 ? (de?`noch an ${p.moreDays===1?'einem':p.moreDays} ${p.moreDays===1?'Übungstag':'Übungstagen'}`:`on ${p.moreDays===1?'one':p.moreDays} more practice ${p.moreDays===1?'day':'days'}`)
+    : p.rightDays>0 ? (de?`noch an ${p.rightDays===1?'einem weiteren Übungstag':p.rightDays+' weiteren Übungstagen'} richtig`:`right on ${p.rightDays===1?'one more practice day':p.rightDays+' more practice days'}`)
+    : (de?'bestätigt sicher':'confirmed secure');
+  return `<span class="pgapbar" role="img" aria-label="${txt}"><i style="width:${Math.floor(p.frac*100+1e-9)}%"></i></span> <span class="small">${txt}</span>`;
 }
 /* the gaps of a subject (by the subject of their standard) for the block "From school": open (active / waiting),
    kept open, closed - with the parents' buttons */
@@ -3652,7 +3675,7 @@ function bindStoryCap(){ const sc=$('#storyCap'); if(sc) sc.addEventListener('ch
    Same structure as the child's start page (subjects → quests) plus a summary in words: where the
    child is doing well, where support helps, what grown-ups can do. Careful judgements: a stand is
    shown only with enough evidence (≥8 first tries on ≥3 days), always with its basis, how sure it is
-   (little evidence / provisional / confirmed: ≥20 first tries, ≥5 days over ≥14 days), a trend only
+   (little evidence / provisional / confirmed: ≥20 first tries on ≥5 practice days), a trend only
    when two comparable periods exist, and how recent it is (breaks are not a drop in ability).
    DE/EN for the whole grown-ups branch. Sources: see "Einstufung – vorsichtig und nachvollziehbar". */
 /* Language of the info pages and the grown-ups area (flags). A logged-in child has an own choice
@@ -3664,7 +3687,7 @@ const PT={
     
     howSheets:'Ihr Kind trägt die Antworten selbst ein: Startseite → „My sheets“. Hier sehen Sie, wie jede Aufgabe lief.',
     back:'← Alle Fächer',focus:'Im Fokus',fm:'🎯 Fokus',pvT:'Ausblick: Themen für später',pvTxt:'Diese Themen kommen meist später im Schuljahr. Ihr Kind sieht sie erst, wenn Sie sie hier freigeben. Zum Beispiel, wenn sie in der Schule drankommen oder Ihr Kind neugierig ist.',pvBtn:'Für das Kind freigegeben',pvOn:'freigegeben',pvOff:'nicht freigegeben',fAuto:'Automatisch',fMan:'Manuell',school:'nächster Schritt laut Schule',need:'braucht Übung',gap:d=>'Lücke laut Schule ('+d+')',gapWait:'wartet',how:'💡 So helfen Sie',
-    basis:'Worauf beruht das?',trend:'Tendenz',recent:'Aktualität',sure:'Wie sicher?',when:'Belastbar ab etwa 20 Aufgaben an 5 Tagen über zwei Wochen.',
+    basis:'Worauf beruht das?',trend:'Tendenz',recent:'Aktualität',sure:'Wie sicher?',when:'Belastbar ab etwa 20 Aufgaben an 5 Übungstagen.',
     tasks:(n,d)=>`${n} Aufgaben an ${d} ${d===1?'Tag':'Tagen'}`,self:'selbst gelöst',hint:'mit Hilfe',ex:n=>`davon ${n} mit Beispiel`,seen:'Lösungsweg angesehen',due:n=>`${n} Wiederholung${n===1?'':'en'} offen`,
     none:'noch nicht geübt',ago:n=>n===0?'heute geübt':n===1?'gestern geübt':`vor ${n} Tagen geübt`,old:'Ältere Belege – bei Gelegenheit neu prüfen',
     tr:{up:'↗ steigend',flat:'→ gleichbleibend',down:'↘ fallend',none:'noch keine verlässliche Tendenz'},
@@ -3678,7 +3701,7 @@ const PT={
     
     howSheets:'Your child enters the answers: start page → “My sheets”. Here you see how each task went.',
     back:'← All subjects',focus:'In focus',fm:'🎯 Focus',pvT:'Coming up: topics for later',pvTxt:'These topics usually come later in the school year. Your child only sees them once you turn them on here. For example, when they come up at school or your child is curious.',pvBtn:'Visible to your child',pvOn:'turned on',pvOff:'turned off',fAuto:'Automatic',fMan:'Manual',school:'next step per school',need:'needs practice',gap:d=>'gap per school ('+d+')',gapWait:'waiting',how:'💡 How you can help',
-    basis:'What is this based on?',trend:'Trend',recent:'How recent',sure:'How sure?',when:'Reliable from about 20 tasks on 5 days over two weeks.',
+    basis:'What is this based on?',trend:'Trend',recent:'How recent',sure:'How sure?',when:'Reliable from about 20 tasks on 5 practice days.',
     tasks:(n,d)=>`${n} tasks on ${d} ${d===1?'day':'days'}`,self:'on own',hint:'with help',ex:n=>`${n} of them with an example`,seen:'solution viewed',due:n=>`${n} review${n===1?'':'s'} open`,
     none:'not practiced yet',ago:n=>n===0?'practiced today':n===1?'practiced yesterday':`practiced ${n} days ago`,old:'Older evidence – check again when convenient',
     tr:{up:'↗ rising',flat:'→ steady',down:'↘ falling',none:'no reliable trend yet'},
@@ -3812,10 +3835,12 @@ function assessQuest(k){
   // with help: right on a second try, or right on the first try after a tip or an example
   const helped=log.filter(a=>a.ok && (a.attempt>=2 || (a.attempt===1 && a.help))), hint=helped.length, ex=helped.filter(a=>a.example).length, seen=log.filter(a=>a.solutionShown).length;
   const days=[...new Set(first.map(a=>a.day))].sort(), last=days[days.length-1]||null;
-  const span=days.length?daysBetween(days[0],last):0, age=last?daysBetween(last,dayKey()):null;
+  const age=last?daysBetween(last,dayKey()):null;
   const enough=n>=8 && days.length>=3, st=enough?standOf(k):'NA';
   const level=st==='NA'?'na':{RS:'rs',C:'c',M:'m',E:'e'}[st];
-  const sure=!enough?'few':(n>=20 && days.length>=5 && span>=14?'confirmed':'provisional');
+  // confirmed: CONF.n first tries on CONF.days practice days - no calendar span (Peter 03.11., R10: time is relative;
+  // spacing is checked by "secure": right on at least 3 different days)
+  const sure=!enough?'few':(n>=CONF.n && days.length>=CONF.days?'confirmed':'provisional');
   let trend='none';
   if(n>=16){ const h=Math.floor(n/2), A=first.slice(0,h), B=first.slice(h), r=x=>x.filter(isSelf).length/x.length, d=x=>new Set(x.map(a=>a.day)).size;
     if(d(A)>=3 && d(B)>=3){ const diff=r(B)-r(A); trend=diff>0.15?'up':diff<-0.15?'down':'flat'; } }
@@ -4484,7 +4509,7 @@ const HELP={
   record:{kid:true,title:'Recording yourself',text:'<p>Tap “● Aufnahme starten”, read aloud, tap “■ Stopp”. Then listen to yourself!</p><p>The last three recordings stay on this iPad. To hand one in, tap “Teilen / Sichern” together with a grown-up.</p>'},
   sheet:{kid:true,title:'Practice sheet',text:'<p>A sheet with 6 tasks and a writing task, plus an answer page for grown-ups.</p><p>Share it as a PDF (by mail, message or into Files) or print it. When you are done on paper, tap your sheet under “My sheets” and type in your answers.</p>'},
   gaps:{title:'Lücken laut Schule',text:'<p>Hat die Schule einen Standard mit „Requires support“ oder „Consolidating“ eingestuft, übt die App ihn als <b>Lücke</b>. Immer eine zur Zeit, höchstens 2 von 8 Aufgaben pro Runde. Lücken, die ohnehin aktuelles Thema sind, werden übersprungen.</p><p>Geschlossen ist eine Lücke, wenn eine ihrer Quests in der App <b>bestätigt sicher</b> ist. Das heißt: sicher bei den Antworten in der App. Wer geantwortet hat und mit welchen Hilfsmitteln, weiß die App nicht; ob die Aufgaben den Standard so abdecken, wie die Schule ihn prüft, ist je Thema verschieden.</p><p>Sie entscheiden: <b>Jetzt angehen</b>, <b>Als geschlossen markieren</b> oder – nach dem Schließen durch die App – <b>Weiter üben</b>.</p>'},
-  overview:{title:'Wie entsteht die Einschätzung?',text:'<p>Gezählt wird nur der <b>erste Versuch</b> jeder Aufgabe: selbst gelöst, mit Hinweis oder Lösungsweg angesehen. Eine Einschätzung gibt es erst ab <b>8 Aufgaben an 3 Tagen</b> – vorher „Noch nicht einschätzbar“, das sagt nichts Schlechtes.</p><ul><li><b>Vorläufig:</b> eine erste Einschätzung.</li><li><b>Bestätigt:</b> nach etwa 20 Aufgaben an 5 Tagen über zwei Wochen.</li><li><b>Tendenz:</b> nur, wenn zwei Zeiträume genug Aufgaben haben.</li><li><b>Ältere Belege:</b> nach mehr als 3 Wochen Pause – Ferien sind kein Leistungsabfall.</li></ul><p>Das ist <b>keine schulische Bewertung</b> und wird dem Kind nie gezeigt.</p><p>Die App weiß nicht, wer eine Aufgabe gelöst hat und mit welchen Hilfsmitteln. Die Einschätzung ist ein Hinweis; die Verantwortung liegt bei den Eltern.</p>'},
+  overview:{title:'Wie entsteht die Einschätzung?',text:'<p>Gezählt wird nur der <b>erste Versuch</b> jeder Aufgabe: selbst gelöst, mit Hinweis oder Lösungsweg angesehen. Eine Einschätzung gibt es erst ab <b>8 Aufgaben an 3 Tagen</b> – vorher „Noch nicht einschätzbar“, das sagt nichts Schlechtes.</p><ul><li><b>Vorläufig:</b> eine erste Einschätzung.</li><li><b>Bestätigt:</b> nach etwa 20 Aufgaben an 5 Übungstagen.</li><li><b>Tendenz:</b> nur, wenn zwei Zeiträume genug Aufgaben haben.</li><li><b>Ältere Belege:</b> nach mehr als 3 Wochen Pause – Ferien sind kein Leistungsabfall.</li></ul><p>Das ist <b>keine schulische Bewertung</b> und wird dem Kind nie gezeigt.</p><p>Die App weiß nicht, wer eine Aufgabe gelöst hat und mit welchen Hilfsmitteln. Die Einschätzung ist ein Hinweis; die Verantwortung liegt bei den Eltern.</p>'},
   focusmode:{title:'Fokus: Automatisch oder Manuell',text:'<p><b>Automatisch:</b> Die App wählt selbst und passt sich von selbst an:</p><ul><li>die nächsten Schritte, die die Lehrkraft nennt,</li><li>was laut Einschätzung Unterstützung braucht,</li><li>die aktive Lücke laut Schule.</li></ul><p>Tippen Sie bei einer Quest auf „Im Fokus“, wechselt die Wahl auf „Manuell“.</p><p><b>Manuell:</b> Sie legen selbst fest, woraus „Practise Today“ und das Übungsblatt Aufgaben nehmen – zum Beispiel vor einem Test. Mit „Automatisch“ übernimmt wieder die App.</p><p>Alle Quests bleiben für das Kind spielbar; der Fokus bestimmt nur, was „Practise Today“ und das Übungsblatt bevorzugen. Mehr dazu in „📖 So funktioniert Big Quest → Wie die App einstuft“.</p>'},
   focus:{title:'Fokus-Themen',text:'<p>Aus diesen Themen stellt „Practise Today“ die 8 Aufgaben zusammen; auch die Übungsblätter nutzen sie. Auf der Startseite tragen sie das Zeichen „Focus“.</p><p>Die App wählt sie selbst: die nächsten Schritte der Lehrkraft, Quests, bei denen Übung hilft, und die aktive Lücke. Unter „🎯 Fokus“ können Sie auf „Manuell“ umstellen und selbst wählen.</p>'},
   school:{title:'Einstufungen der Schule',text:'<p>Die Einstufungen stammen aus den bewerteten Aufgaben auf der Lernplattform der Schule. Am Anfang richtet die App die Schwierigkeit der Aufgaben danach aus. Ab 6 Antworten an 2 Tagen zählt die eigene Übung.</p><p>Die Einschätzung im Elternbereich beruht nur auf der Übung in der App. Neue Bewertungen der Schule werden bei Gelegenheit übernommen.</p>'},
@@ -4499,7 +4524,7 @@ const HELP={
 /* Grown-ups help in English: meaning-based, American English (Peter, 31.10.). */
 const HELP_EN={
   gaps:{title:'Gaps per school',text:'<p>When the school rated a standard “requires support” or “consolidating”, the app practices it as a <b>gap</b>. One at a time, at most 2 of 8 tasks per round. Gaps that are a current topic anyway are skipped.</p><p>A gap is closed when one of its quests is <b>confirmed secure</b> in the app. That means: secure in the answers in the app. The app does not know who answered or with what help; whether the tasks cover the standard the way the school tests it differs from topic to topic.</p><p>You decide: <b>Work on it now</b>, <b>Mark as closed</b> or – after the app closed it – <b>Keep practicing</b>.</p>'},
-  overview:{title:'How is the summary made?',text:'<p>Only the <b>first try</b> at each task counts: solved on their own, with a hint, or after viewing the solution. A judgment appears only after <b>8 tasks on 3 days</b>. Until then it says “not yet possible to judge” – that says nothing bad.</p><ul><li><b>Provisional:</b> a first judgment.</li><li><b>Confirmed:</b> after about 20 tasks on 5 days over two weeks.</li><li><b>Trend:</b> only when two periods have enough tasks.</li><li><b>Older evidence:</b> after a break of more than 3 weeks – vacations are not a drop in ability.</li></ul><p>This is <b>not a school assessment</b> and is never shown to your child.</p><p>The app does not know who solved a task or with what help. The summary is a hint; responsibility lies with the parents.</p>'},
+  overview:{title:'How is the summary made?',text:'<p>Only the <b>first try</b> at each task counts: solved on their own, with a hint, or after viewing the solution. A judgment appears only after <b>8 tasks on 3 days</b>. Until then it says “not yet possible to judge” – that says nothing bad.</p><ul><li><b>Provisional:</b> a first judgment.</li><li><b>Confirmed:</b> after about 20 tasks on 5 practice days.</li><li><b>Trend:</b> only when two periods have enough tasks.</li><li><b>Older evidence:</b> after a break of more than 3 weeks – vacations are not a drop in ability.</li></ul><p>This is <b>not a school assessment</b> and is never shown to your child.</p><p>The app does not know who solved a task or with what help. The summary is a hint; responsibility lies with the parents.</p>'},
   focusmode:{title:'Focus: automatic or manual',text:'<p><b>Automatic:</b> the app chooses by itself and adapts by itself:</p><ul><li>the next steps the teacher names,</li><li>what needs support according to the summary,</li><li>the active gap per school.</li></ul><p>Tapping “In focus” at a quest switches to “Manual”.</p><p><b>Manual:</b> you decide where “Practise Today” and the practice sheet take their tasks from – for example before a test. Choose “Automatic” to let the app take over again.</p><p>All quests stay playable for your child; the focus only decides what “Practise Today” and the practice sheet prefer. More in “📖 How Big Quest works → How the app judges”.</p>'},
   focus:{title:'Focus topics',text:'<p>“Practise Today” builds its 8 tasks from these topics; practice sheets use them too. On the start page they carry the “Focus” sign.</p><p>The app picks them by itself: the teacher’s next steps, quests where practice helps, and the active gap. Under “🎯 Focus” you can switch to “Manual” and choose yourself.</p>'},
   school:{title:'School ratings',text:'<p>The ratings come from the evaluated assignments on the school’s learning platform. At first, the app sets the difficulty of the tasks by them. From 6 answers on 2 days, your child’s own practice counts.</p><p>The summary in the grown-ups area is based only on practice in the app. New school evaluations are added from time to time.</p>'},
@@ -5084,7 +5109,7 @@ const ABOUT_DE=()=>`
 <li><b>Titel, Lernbaum und Abzeichen</b> würdigen Ausdauer und Verhalten, nie Ergebnisse. Nichts davon geht verloren.</li>
 <li><b>Interner Stand:</b> Für die Aufgabenwahl führt die App je Quest einen Stand nach dem Bewertungsschlüssel der Schule. Das Kind sieht ihn nie.</li>
 <li><b>Startwert:</b> Am Anfang zählt die letzte Einstufung der Schule, ab 6 Antworten an 2 Tagen die eigene Übung.</li>
-<li><b>Einschätzung im Elternbereich:</b> ab 8 Aufgaben an 3 Tagen, „bestätigt“ ab etwa 20 Aufgaben an 5 Tagen über zwei Wochen.</li>
+<li><b>Einschätzung im Elternbereich:</b> ab 8 Aufgaben an 3 Tagen, „bestätigt“ ab etwa 20 Aufgaben an 5 Übungstagen.</li>
 <li><b>Fokus:</b> die nächsten Schritte der Lehrkraft, die Quests, bei denen Übung hilft, und die aktive Lücke.</li>
 </ul>
 <p>Alle Schwellen sind begründete Annahmen der Eltern, keine Vorgaben der Schule.</p>
@@ -5105,7 +5130,7 @@ const ABOUT_DE=()=>`
 <li><b>Abzeichen:</b> zählen Verhalten, nicht Ergebnisse – Risk-taker (eine Challenge angenommen), Thinker (eine Herausforderungsaufgabe gelöst), Open-minded (eine Kombinationsaufgabe auf Herausforderungsniveau gelöst), Reflective (ein „Glow“ gewählt), Balanced (eine Idee ohne Bildschirm umgesetzt), Inquirer (ein Thema zum ersten Mal ausprobiert), Principled (ein Übungsblatt bis zum Ende bearbeitet), Knowledgeable (eins für je 10 Übungstage). Silber ab 5-mal, Gold ab 15-mal.</li>
 <li><b>Interner Stand je Quest</b> (nur zur Aufgabenwahl, das Kind sieht ihn nie): Grundlage sind die letzten 60 ersten Versuche dieser Quest, je mit Tag, Stufe (1 Grundlage, 2 Klassenniveau, 3 Herausforderung) und richtig/falsch. Mit Tipp, Beispiel oder Brücke gelöste Aufgaben zählen auf Stufe 1. Noch nicht einschätzbar: weniger als 6 Antworten oder weniger als 2 Tage. Sicher: unter den letzten 20 Antworten auf Klassenniveau mindestens 6, davon mindestens 80 % richtig, richtig an mindestens 3 Tagen. Darüber hinaus: zusätzlich unter den letzten 12 Herausforderungs-Antworten mindestens 4, davon mindestens 70 % richtig, an mindestens 2 Tagen. Wird sicherer: Klassenniveau mindestens 50 % richtig (ohne Klassenniveau: Grundlage mindestens 80 %). Sonst: braucht Unterstützung. Danach richtet sich die nächste Runde: bei „braucht Unterstützung“ keine Herausforderungen und mindestens zwei Grundlage-Aufgaben, bei „wird sicherer“ höchstens eine Herausforderung, bei „sicher“ zwei bis drei, darüber hinaus drei bis vier.</li>
 <li><b>Startwert aus der Schule:</b> Solange es für eine Quest noch zu wenig eigene Übung gibt (weniger als 6 Antworten oder weniger als 2 Tage), nimmt die App für die Aufgabenwahl die letzte Einstufung der Schule im Hauptstandard dieser Quest. Die Einschätzung im Elternbereich beruht dagegen nur auf eigener Übung.</li>
-<li><b>Einschätzung im Elternbereich:</b> derselbe Stand, aber erst ab 8 ersten Versuchen an mindestens 3 Tagen; vorher „Noch nicht einschätzbar“. „Bestätigt“ ab 20 ersten Versuchen an 5 Tagen über mindestens 14 Tage, sonst „vorläufig“. Eine Tendenz steht erst ab 16 ersten Versuchen, wenn beide Hälften an mindestens 3 Tagen geübt wurden: steigend oder fallend, wenn sich der Anteil „selbst gelöst“ um mehr als 15 Prozentpunkte ändert. Liegt die letzte Übung mehr als 21 Tage zurück, steht „ältere Belege“ – Ferien sind kein Leistungsabfall.</li>
+<li><b>Einschätzung im Elternbereich:</b> derselbe Stand, aber erst ab 8 ersten Versuchen an mindestens 3 Tagen; vorher „Noch nicht einschätzbar“. „Bestätigt“ ab 20 ersten Versuchen an mindestens 5 Übungstagen, sonst „vorläufig“. Eine Tendenz steht erst ab 16 ersten Versuchen, wenn beide Hälften an mindestens 3 Tagen geübt wurden: steigend oder fallend, wenn sich der Anteil „selbst gelöst“ um mehr als 15 Prozentpunkte ändert. Liegt die letzte Übung mehr als 21 Tage zurück, steht „ältere Belege“ – Ferien sind kein Leistungsabfall.</li>
 <li><b>Fokus:</b> automatisch die Themen, die die Lehrkraft in den Bewertungen der letzten 8 Wochen als nächste Schritte nennt (gibt es keine so neuen, alle bisherigen; ohne Bewertungen die Unterrichtsthemen), plus jede Quest mit „braucht Unterstützung“ oder „wird sicherer“ und die Quests der aktiven Lücke; Erwachsene können unter „🎯 Fokus“ auf „Manuell“ umstellen und selbst wählen.</li>
 </ul>
 </details>
@@ -5176,7 +5201,7 @@ const ABOUT_EN=()=>`
 <li><b>Titles, learning tree and badges</b> recognize persistence and behavior, never results. None of them is ever lost.</li>
 <li><b>Internal level:</b> to choose tasks, the app keeps a level per quest based on the school’s assessment key. Your child never sees it.</li>
 <li><b>Starting point:</b> at first, the school’s latest rating counts; from 6 answers on 2 days, your child’s own practice.</li>
-<li><b>Summary in the grown-ups area:</b> from 8 tasks on 3 days, “confirmed” from about 20 tasks on 5 days over two weeks.</li>
+<li><b>Summary in the grown-ups area:</b> from 8 tasks on 3 days, “confirmed” from about 20 tasks on 5 practice days.</li>
 <li><b>Focus:</b> the teacher’s next steps, the quests where practice helps, and the active gap.</li>
 </ul>
 <p>All thresholds are reasoned assumptions by the parents, not requirements of the school.</p>
@@ -5197,7 +5222,7 @@ const ABOUT_EN=()=>`
 <li><b>Badges:</b> count behavior, not results – Risk-taker (took a challenge), Thinker (solved a challenge-level task), Open-minded (solved a challenge-level combination task), Reflective (chose a “Glow”), Balanced (did an idea without a screen), Inquirer (tried a topic for the first time), Principled (finished a practice sheet to the end), Knowledgeable (one for every 10 practice days). Silver from 5 times, gold from 15 times.</li>
 <li><b>Internal level per quest</b> (only for choosing tasks, never shown to the child): based on the last 60 first tries of this quest, each with day, level (1 support, 2 grade level, 3 challenge) and right/wrong. Tasks solved with a tip, an example or a bridge count at level 1. Not yet possible to judge: fewer than 6 answers or fewer than 2 days. Secure: among the last 20 grade-level answers at least 6, at least 80 % right, right on at least 3 days. Going beyond: in addition, among the last 12 challenge answers at least 4, at least 70 % right, on at least 2 days. Getting there: grade level at least 50 % right (without grade-level answers: support level at least 80 %). Otherwise: needs support. The next round follows from this: with “needs support” no challenges and at least two support tasks, with “getting there” at most one challenge, with “secure” two to three, going beyond three to four.</li>
 <li><b>Starting point from school:</b> while there is too little own practice for a quest (fewer than 6 answers or fewer than 2 days), the app uses the school’s latest rating of the quest’s main standard to choose tasks. The summary in the grown-ups area, on the other hand, is based only on own practice.</li>
-<li><b>Summary in the grown-ups area:</b> the same level, but only from 8 first tries on at least 3 days; before that “Not yet possible to judge”. “Confirmed” from 20 first tries on 5 days over at least 14 days, otherwise “provisional”. A trend is shown only from 16 first tries, when both halves were practiced on at least 3 days: rising or falling when the share solved on their own changes by more than 15 percentage points. If the last practice was more than 21 days ago, it says “older evidence” – vacations are not a drop in ability.</li>
+<li><b>Summary in the grown-ups area:</b> the same level, but only from 8 first tries on at least 3 days; before that “Not yet possible to judge”. “Confirmed” from 20 first tries on at least 5 practice days, otherwise “provisional”. A trend is shown only from 16 first tries, when both halves were practiced on at least 3 days: rising or falling when the share solved on their own changes by more than 15 percentage points. If the last practice was more than 21 days ago, it says “older evidence” – vacations are not a drop in ability.</li>
 <li><b>Focus:</b> automatically the topics the teacher names as next steps in the evaluations of the last 8 weeks (if there are none that recent, all earlier ones; without evaluations, the class topics), plus every quest with “needs support” or “getting there” and the quests of the active gap; grown-ups can switch to “Manual” under “🎯 Focus” and choose themselves.</li>
 </ul>
 </details>
