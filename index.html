@@ -221,7 +221,7 @@ button{font:inherit;color:inherit}
 .phdr-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .phdr-who{font-family:var(--display);font-weight:700}
 .phdr-kids{display:inline-flex;flex-wrap:wrap;gap:6px}
-.phdr-kid{font-size:.85rem;font-weight:700;background:var(--soft);border-radius:999px;padding:2px 10px}
+.phdr-kid{font-size:.85rem;font-weight:700;background:var(--soft);border-radius:999px;padding:2px 10px;max-width:100%;overflow-wrap:anywhere}
 .phdr-icon{min-width:44px;font-size:1.05rem}
 .pset-end{margin-top:18px}
 .phdr-act{display:flex;align-items:center;gap:6px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
@@ -847,8 +847,21 @@ function migrateCleanup(){
   if(m.audio==='ok') for(const n of m.oldAudio||[]){ try{ indexedDB.deleteDatabase(n); }catch(e){} }
   m.cleaned=true; try{ localStorage.setItem('bq2_migr', JSON.stringify(m)); }catch(e){}
 }
+/* Old keys without any function (04.11., "Was bleibt auf dem Geraet", group D): the old focus form (focus, focusOn,
+   focusOff - before "Automatic/Manual") in every child's area and, with accounts, the old parent PIN. Deleted at every
+   start; nothing is taken over. Without accounts (unbuilt app, tests) the PIN still guards the grown-ups area. */
+function dropOldKeys(){
+  const old=['focus','focusOn','focusOff'], accounts=!!(APP_ACCOUNTS && APP_ACCOUNTS.users && APP_ACCOUNTS.users.length), keys=[];
+  try{ for(let i=0;i<localStorage.length;i++) keys.push(localStorage.key(i)); }catch(e){ return; }
+  for(const k of keys){
+    if(!k || !k.startsWith('bq2_')) continue;
+    const rest=k.slice(4), name=rest.includes('__') ? rest.slice(rest.lastIndexOf('__')+2) : rest;
+    if(old.includes(name) || (accounts && rest==='parentPin')) try{ localStorage.removeItem(k); }catch(e){}
+  }
+}
 migrateToIds();
 migrateCleanup();
+dropOldKeys();
 
 /* ---------- sound ---------- */
 /* sound on/off: read each time - in the test build it follows the person acting (3b-2a); live: this device */
@@ -2506,8 +2519,7 @@ const FOCUS=['wordprob','round','combos','units','graphs','sentences','examples'
 /* Focus mode (Peter, 01.11.): "Automatic" (default) = what is taught in class now plus the quests where
    the grown-ups' summary suggests support ("Needs support" / "Getting there", only with enough evidence)
    - it adapts by itself. "Manual" = grown-ups decide exactly which quests are in focus (focusManual),
-   e.g. before a test. Tapping a switch in automatic mode starts manual mode from the current choice.
-   Choices of earlier versions (a list, or focusOn/focusOff) are taken over once as a manual choice. */
+   e.g. before a test. Tapping a switch in automatic mode starts manual mode from the current choice. */
 /* the quests where the parents' assessment suggests support ("needs support" / "getting there") */
 const focusNeed = () => SUBJECTS.flatMap(questsIn).map(assessQuest).filter(a=>a.level==='rs'||a.level==='c').map(a=>a.k);
 function focusAuto(){
@@ -2681,26 +2693,9 @@ function classTopics(){
   return list.length?list:FOCUS;
 }
 const cleanFocus = l => uniq(l).filter(k=>WORLDS[k] && !k.startsWith('mix_') && k!=='today' && !isArchived(WORLDS[k]) && !isLocked(k));
-function migrateFocus(){
-  const saved=store.get('focus',null), on=store.get('focusOn',null), off=store.get('focusOff',null);
-  // (the events go out under whoever is acting; a child may not set the focus - then they are reported, task 3c converts old data)
-  if(Array.isArray(saved)){
-    store.set('focusMode','manual'); eventHook('setting_set',{setting:'focusMode', value:'manual'});
-    const old=store.get('focusManual',[]), nu=cleanFocus(saved); store.set('focusManual',nu); listEvents('focusManual',old,nu).forEach(p=>eventHook('list_set',p));
-    store.del('focus');
-  }
-  if(Array.isArray(on) || Array.isArray(off)){
-    if((on||[]).length || (off||[]).length){
-      store.set('focusMode','manual'); eventHook('setting_set',{setting:'focusMode', value:'manual'});
-      const old=store.get('focusManual',[]), nu=cleanFocus(focusAuto().concat(on||[])).filter(k=>!(off||[]).includes(k)); store.set('focusManual',nu); listEvents('focusManual',old,nu).forEach(p=>eventHook('list_set',p));
-    }
-    store.del('focusOn'); store.del('focusOff');
-  }
-}
 const focusManualMode = () => store.get('focusMode','auto')==='manual';
 let focusMemo={key:null,val:[]};
 function focusTopics(){
-  migrateFocus();
   const raw=k=>{ try{ return localStorage.getItem(storeKey(k))||''; }catch(e){ return ''; } };
   // computed once per change of the data (the start page asks for it many times)
   const key=[storeKey('x'),raw('attempts').length,raw('ev').length,raw('focusMode'),raw('focusManual'),raw('unlocked'),raw('gaps'),dayKey(),evVersion()].join('|');   // test build: the values come from the log (3b-2a)
@@ -4070,7 +4065,7 @@ function subjectLevel(list){
 }
 const pChip = (lv,sure) => `<span class="pst ${lv}">${PSTAND[PL()][lv]}${SCHOOLTERM[lv]?` <i>(${SCHOOLTERM[lv]})</i>`:''}</span>${sure&&lv!=='na'?` <span class="psure">${PT[PL()].sw[sure]}</span>`:''}`;
 function summaryHTML(list, scope){
-  const T=PT[PL()], nm=(viewerGrant() ? viewedKid() : playerName())||T.child;
+  const T=PT[PL()], nm=(playerName() || (viewerGrant() ? viewedKid() : ''))||T.child;   // with a grant: the name too (Peter, 03.11.)
   const recentDays=new Set(store.get('attempts',[]).filter(a=>a.day && daysBetween(a.day,dayKey())<14).map(a=>a.day)).size;
   const good=list.filter(a=>a.level==='m'||a.level==='e').sort((x,y)=>y.n-x.n).slice(0,3);
   const need=list.filter(a=>a.level==='rs'||a.level==='c').sort((x,y)=>(x.level==='rs'?0:1)-(y.level==='rs'?0:1)||y.n-x.n).slice(0,2);
@@ -4110,7 +4105,7 @@ function glanceBase(){
   return glanceVisit.base[id];
 }
 function glanceHTML(){
-  const de=PL()==='de', T=PT[PL()], teacher=isTeacher(), nm=(viewerGrant() ? viewedKid() : playerName()||viewedKid())||T.child;
+  const de=PL()==='de', T=PT[PL()], teacher=isTeacher(), nm=(playerName()||viewedKid())||T.child;
   openGaps();   // closes gaps the app has confirmed, before counting
   const base=glanceBase(), now=glanceNow(), rows=[];
   const std=s=>esc((de?STANDARD_TEXT:STANDARD_TEXT_EN)[s]||s);
@@ -4272,7 +4267,7 @@ function grantsHTML(){
   const evText={erteilt:de?'erteilt':'granted', 'geöffnet':de?'angesehen':'viewed', widerrufen:de?'beendet':'ended', abgelaufen:de?'abgelaufen':'expired'};
   const protokoll=log.length?`<details class="pgrantlog"><summary>${de?'Protokoll':'Log'} (${log.length})</summary><ul>${log.slice().reverse().slice(0,30).map(e=>`<li>${fmtDay(e.at.slice(0,10))} · ${esc(name(e.grantee))} · ${esc(evText[e.ev]||e.ev)}${e.scope?` · ${sc(e.scope)}`:''}</li>`).join('')}</ul></details>`:'';
   return `<h2>${de?'Zugriff & Freigaben':'Access & grants'}</h2>
-    <p class="phow">${de?'Eine Lehrkraft oder der Admin sieht den Lernstand Ihres Kindes nur, wenn Sie es hier freigeben – befristet, nur lesend, jederzeit beendbar.':'A teacher or the admin sees your child’s progress only if you allow it here – for a limited time, read-only, and you can end it any time.'}</p>
+    <p class="phow">${de?'Eine Lehrkraft oder der Admin sieht den Lernstand und den Namen Ihres Kindes nur, wenn Sie es hier freigeben – befristet, nur lesend, jederzeit beendbar.':'A teacher or the admin sees your child’s progress and name only if you allow it here – for a limited time, read-only, and you can end it any time.'}</p>
     ${list}${protokoll}
     <form id="pGrantForm" class="login-form">
       <div class="field"><label for="pGrantWho">${de?'Anmeldename der Person':'Login name of the person'}</label><input id="pGrantWho" autocomplete="off" autocapitalize="off" spellcheck="false" required></div>
@@ -4285,8 +4280,8 @@ function grantsHTML(){
 }
 function grantConsentText(who, days, scope){
   const de=PL()==='de', sc=scope.map(x=>x==='school'?(de?'Schuldaten':'school ratings'):(de?'Lernstand':'learning progress')).join(de?' und ':' and ');
-  return de?`Sie geben ${who} für ${days} Tage Einblick in: ${sc}. ${who} kann nichts ändern. Sie können das jederzeit beenden. Was ${who} bis dahin gesehen hat, kann man nicht ungesehen machen.`
-           :`You give ${who} access for ${days} days to: ${sc}. ${who} cannot change anything. You can end this at any time. What ${who} has seen until then cannot be unseen.`;
+  return de?`Sie geben ${who} für ${days} Tage Einblick in: ${sc}. ${who} sieht dabei den Namen Ihres Kindes, aber nicht Geburtstag, Emoji und Einstellungen. ${who} kann nichts ändern. Sie können das jederzeit beenden. Was ${who} bis dahin gesehen hat, kann man nicht ungesehen machen.`
+           :`You give ${who} access for ${days} days to: ${sc}. ${who} will see your child’s name, but not the birthday, emoji or settings. ${who} cannot change anything. You can end this at any time. What ${who} has seen until then cannot be unseen.`;
 }
 function bindGrants(body){
   const f=$('#pGrantForm'); if(!f) return;
@@ -4327,7 +4322,7 @@ function accountsAdminHTML(){
    restored after the move to IDs (S11 P2). Which keys belong to a child is fixed in
    werkzeug/speicherstellen.json (checked by tests/stufe1-p1.test.mjs). Never in a backup: passwords,
    sessions, device keys. Recordings are included (the file stays with the family). */
-const BACKUP_KEYS={exact:['grants','grantlog','attempts','ev','due','total','badges','tried','treeStage','rankSeen','name','birthday','emoji','bdayParty','sheets','sheetNo','focusMode','focusManual','unlocked','gaps','storyCap','focus','focusOn','focusOff','greetDay','mysteryDone','kidLang'], prefix:['best_','chk_','advent']};
+const BACKUP_KEYS={exact:['grants','grantlog','attempts','ev','due','total','badges','tried','treeStage','rankSeen','name','birthday','emoji','bdayParty','sheets','sheetNo','focusMode','focusManual','unlocked','gaps','storyCap','greetDay','mysteryDone','kidLang'], prefix:['best_','chk_','advent']};
 const isBackupKey = k => BACKUP_KEYS.exact.includes(k) || BACKUP_KEYS.prefix.some(p=>k.startsWith(p));
 function childStoreKeys(){
   const pre=storeKey('x').slice(0,-1), plain=pre==='bq2_', out=[];
@@ -4662,6 +4657,15 @@ function playTest(){
   parentLock(); renderHome(); show('home'); window.scrollTo(0,0);
 }
 function backFromTest(){ if(!adultResume()) renderHome(); }
+/* Peter, 03.11.: a teacher or the admin with a grant must see whom they work with - the child's name (display name),
+   but no birthday, emoji or settings. Parents keep the login name in the header (they know their child). */
+function grantKidName(user){
+  if(!accountsOn() || !adultUser) return '';
+  const acc=APP_ACCOUNTS.users.find(u=>u.user===user && u.role==='student'); if(!acc || acc.test) return '';
+  const me=APP_ACCOUNTS.users.find(u=>u.user===adultUser.user)||{}; if(isParentOf(me, acc) || !myGrantFor(acc)) return '';
+  return String(kidRead(acc,'name','') || (user===viewedKid() ? playerName() : '') || '').trim();
+}
+const kidChipLabel = user => { const n=grantKidName(user); return n && n!==user ? `${n} (${user})` : user; };
 /* Header of the grown-ups area: only what the user needs (Peter, 31.10.: no processing notes here;
    how log-out works belongs to the guide). */
 function parentHeaderHTML(){
@@ -4674,10 +4678,10 @@ function parentHeaderHTML(){
   // whose data: the child chosen here or the one logged in on this device; a choice when several children use this device
   const kid=viewedKid(), kids=kidChoices();
   // concept 5.1 (B5): a list from two children on; test children (admin account only) in a group of their own
-  const opt=u=>`<option value="${esc(u)}"${u===kid?' selected':''}>${isTestUser(u)?'🧪':'👧'} ${esc(u)}</option>`, real=kids.filter(u=>!isTestUser(u)), tests=kids.filter(isTestUser);
+  const opt=u=>`<option value="${esc(u)}"${u===kid?' selected':''}>${isTestUser(u)?'🧪':'👧'} ${esc(kidChipLabel(u))}</option>`, real=kids.filter(u=>!isTestUser(u)), tests=kids.filter(isTestUser);
   const kidChip=!accountsOn()?'':kids.length>1
     ? `<select class="phdr-kidsel" id="pKidSel" aria-label="${de?'Kind':'Child'}">${real.map(opt).join('')}${tests.length?`<optgroup label="🧪 ${de?'Testkinder':'Test children'}">${tests.map(opt).join('')}</optgroup>`:''}</select>`
-    : `<span class="phdr-kid" id="pKid">${kid?(isTestUser(kid)?'🧪 ':'👧 ')+esc(kid):(de?'👧 keine Daten Ihrer Kinder auf diesem Gerät':'👧 none of your children’s data on this device')}</span>`;
+    : `<span class="phdr-kid" id="pKid">${kid?(isTestUser(kid)?'🧪 ':'👧 ')+esc(kidChipLabel(kid)):(de?'👧 keine Daten Ihrer Kinder auf diesem Gerät':'👧 none of your children’s data on this device')}</span>`;
   // Concept "Elternbereich" 5.1 (B1): child, flags, ? help, ⚙ settings, log out. The version is in ⚙ "About the app",
   // test children are chosen in the child list (B5).
   const onSet=state.pview==='settings', onHelp=state.pview==='help';
@@ -5237,7 +5241,7 @@ const GUIDE_ADULT_DE=`<h3 class="pguide-h">Hilfe für Eltern</h3><ol class="step
 <li><b>Kind anmelden:</b> „🎒 Student“ mit dem Startcode des Kindes. Zusammen ein Merkpasswort wählen und im Passwortspeicher sichern. Geschwister am selben Gerät wählen sich unter „Who's here?“ aus.</li>
 <li><b>Nachsehen:</b> Der Lernstand liegt nur auf dem Gerät, auf dem Ihr Kind übt. Mit mehreren Kindern wählen Sie oben aus. <b>Danach abmelden</b> – dann ist dort wieder Ihr Kind angemeldet.</li>
 <li><b>Sichern:</b> einmal im Monat, auf dem Gerät des Kindes: ${GO('sicherung','💾 Sicherung & Daten')}.</li>
-<li><b>Freigaben:</b> Eine Lehrkraft oder der Admin sieht Ihr Kind nur mit Ihrer Freigabe: ${GO('freigaben','🔐 Zugriff & Freigaben')}.</li>
+<li><b>Freigaben:</b> Eine Lehrkraft oder der Admin sieht Ihr Kind nur mit Ihrer Freigabe – dann mit Namen, aber ohne Geburtstag, Emoji und Einstellungen: ${GO('freigaben','🔐 Zugriff & Freigaben')}.</li>
 <li><b>Passwort vergessen:</b> Der Startcode gilt weiter; sonst gibt der Admin einen neuen. Nach 5 Fehlversuchen 30 Sekunden warten. Familienpasswort, Startcodes und Startlinks nicht weitergeben.</li>
 </ol>`;
 const GUIDE_ADULT_EN=`<h3 class="pguide-h">Help for parents</h3><ol class="steps">
@@ -5246,13 +5250,13 @@ const GUIDE_ADULT_EN=`<h3 class="pguide-h">Help for parents</h3><ol class="steps
 <li><b>Log in your child:</b> “🎒 Student” with your child’s start code. Choose a memorable password together and save it in the password manager. Siblings on the same device pick themselves under “Who's here?”.</li>
 <li><b>Take a look:</b> the progress is only on the device where your child practices. With several children, choose at the top. <b>Log out afterwards</b> – your child is then logged in there again.</li>
 <li><b>Back up:</b> once a month, on your child’s device: ${GO_EN('sicherung','💾 Backup & data')}.</li>
-<li><b>Grants:</b> a teacher or the admin sees your child only with your grant: ${GO_EN('freigaben','🔐 Access & grants')}.</li>
+<li><b>Grants:</b> a teacher or the admin sees your child only with your grant – then with the name, but without birthday, emoji and settings: ${GO_EN('freigaben','🔐 Access & grants')}.</li>
 <li><b>Forgot your password?</b> The start code keeps working; otherwise the admin gives you a new one. After 5 wrong tries, wait 30 seconds. Keep the family password, start codes and start links private.</li>
 </ol>`;
 const GUIDE_TEACHER_DE=`<h3 class="pguide-h">Hilfe für Lehrkräfte</h3><ol class="steps">
 <li><b>Anmelden:</b> „👪 Parent / Teacher“, Benutzername und Startcode vom Admin – oder Startlink bzw. QR-Code. Dann ein eigenes Passwort wählen.</li>
 <li><b>Einblick nur mit Freigabe:</b> Nennen Sie den Eltern Ihren Anmeldenamen. Sie geben Einblick, befristet und im gewählten Umfang. Schuldaten sehen Sie nur, wenn die Eltern sie freigeben.</li>
-<li><b>Ansehen:</b> auf dem Gerät, auf dem das Kind übt. Sie können nur lesen, nichts ändern. Den Namen aus dem Profil sehen Sie nicht.</li>
+<li><b>Ansehen:</b> auf dem Gerät, auf dem das Kind übt. Sie können nur lesen, nichts ändern. Oben steht der Name des Kindes, damit Sie wissen, mit wem Sie arbeiten. Geburtstag, Emoji und Einstellungen sehen Sie nicht.</li>
 <li><b>Protokoll:</b> Die Eltern sehen, wann Sie die Übersicht angesehen haben.</li>
 <li><b>Wofür:</b> eine private Übungs-App der Familie, nicht für den dienstlichen Einsatz in der Schule. Bitte keine Bildschirmfotos weitergeben; Fragen direkt mit den Eltern klären.</li>
 <li><b>Passwort vergessen:</b> Der Startcode gilt weiter; sonst gibt der Admin einen neuen. Nach 5 Fehlversuchen 30 Sekunden warten.</li>
@@ -5260,7 +5264,7 @@ const GUIDE_TEACHER_DE=`<h3 class="pguide-h">Hilfe für Lehrkräfte</h3><ol clas
 const GUIDE_TEACHER_EN=`<h3 class="pguide-h">Help for teachers</h3><ol class="steps">
 <li><b>Log in:</b> “👪 Parent / Teacher”, username and start code from the admin – or the start link or QR code. Then choose your own password.</li>
 <li><b>Access only with a grant:</b> tell the parents your login name. They give you access, for a limited time and to the extent they choose. You see school ratings only if the parents allow it.</li>
-<li><b>Look:</b> on the device where the child practices. You can only look; nothing can be changed. You do not see the name from the profile.</li>
+<li><b>Look:</b> on the device where the child practices. You can only look; nothing can be changed. The child’s name is shown at the top, so you know whom you are working with. You do not see the birthday, emoji or settings.</li>
 <li><b>Log:</b> the parents see when you looked at the overview.</li>
 <li><b>Purpose:</b> the family’s private practice app, not for official use at school. Please do not pass on screenshots; talk to the parents directly.</li>
 <li><b>Forgot your password?</b> The start code keeps working; otherwise the admin gives you a new one. After 5 wrong tries, wait 30 seconds.</li>
@@ -5268,13 +5272,13 @@ const GUIDE_TEACHER_EN=`<h3 class="pguide-h">Help for teachers</h3><ol class="st
 const GUIDE_ADMIN_DE=`<h3 class="pguide-h">Für den Admin</h3><ol class="steps">
 <li><b>Konten und Startcodes</b> pflegen Sie mit dem Konten-Werkzeug auf Ihrem Rechner. Neue Startcodes als Startlink oder QR-Code nur persönlich übergeben.</li>
 <li><b>Übersicht der Konten:</b> ${GO('konten','🛠 Konten')} – nur Verwaltungsangaben, keine Inhalte.</li>
-<li><b>Lernstand eines Kindes:</b> nur mit Freigabe der Eltern, wie bei einer Lehrkraft. Ihr eigenes Kind sehen Sie über Ihr Elternkonto.</li>
+<li><b>Lernstand eines Kindes:</b> nur mit Freigabe der Eltern, wie bei einer Lehrkraft – mit Namen, ohne Geburtstag, Emoji und Einstellungen. Ihr eigenes Kind sehen Sie über Ihr Elternkonto.</li>
 <li><b>Testkinder:</b> oben in der Kinderauswahl unter „🧪 Testkinder“; „▶ Als Testkind spielen“ öffnet die Kinderseite mit Testdaten.</li>
 </ol>`;
 const GUIDE_ADMIN_EN=`<h3 class="pguide-h">For the admin</h3><ol class="steps">
 <li><b>Accounts and start codes</b> are maintained with the account tool on your computer. Hand over new start codes as a start link or QR code in person only.</li>
 <li><b>Account overview:</b> ${GO_EN('konten','🛠 Accounts')} – administrative details only, no contents.</li>
-<li><b>A child’s progress:</b> only with a grant from the parents, like a teacher. You see your own child through your parent account.</li>
+<li><b>A child’s progress:</b> only with a grant from the parents, like a teacher – with the name, without birthday, emoji and settings. You see your own child through your parent account.</li>
 <li><b>Test children:</b> at the top in the child list under “🧪 Test children”; “▶ Play as test child” opens the child’s pages with test data.</li>
 </ol>`;
 /* the grown-ups guide that fits the person who is logged in */

@@ -33,7 +33,7 @@ async function geraet() {
   for (const k of ['lia', 'mia']) {
     await anmelden(page, 'student', k, C[k]); await passwortSetzen(page, PW[k]);
     await page.waitForSelector('#home:not([hidden])');
-    await page.evaluate(([id, n]) => { localStorage.setItem('bq2_' + id + '__name', JSON.stringify(n)); localStorage.setItem('bq2_' + id + '__attempts', JSON.stringify(Array.from({ length: 12 }, (_, i) => ({ day: new Date(Date.now() - (i % 4) * 864e5).toISOString().slice(0, 10), skill: 'round', level: 2, attempt: 1, ok: i % 3 > 0, help: false })))); }, [ID(k), k === 'mia' ? 'Mia Sonnenschein' : 'Lia']);
+    await page.evaluate(([id, n]) => { localStorage.setItem('bq2_' + id + '__name', JSON.stringify(n)); if (n !== 'Lia') { localStorage.setItem('bq2_' + id + '__birthday', JSON.stringify('05-17')); localStorage.setItem('bq2_' + id + '__emoji', JSON.stringify('🦉')); } localStorage.setItem('bq2_' + id + '__attempts', JSON.stringify(Array.from({ length: 12 }, (_, i) => ({ day: new Date(Date.now() - (i % 4) * 864e5).toISOString().slice(0, 10), skill: 'round', level: 2, attempt: 1, ok: i % 3 > 0, help: false })))); }, [ID(k), k === 'mia' ? 'Mia Sonnenschein' : 'Lia']);
     if (k === 'lia') await page.locator('#logoutBtn').click();
   }
   return g;
@@ -60,40 +60,50 @@ async function erwachsen(page, wer) {
 const setzeFreigabe = (page, g) => page.evaluate(([id, gs]) => localStorage.setItem('bq2_' + id + '__grants', JSON.stringify(gs)), [ID('mia'), g ? [g] : []]);
 const freigabe = (wer, scope, extra = {}) => ({ id: 'g-' + wer, grantee: ID(wer), scope, from: tag(), until: tag(13), by: ID('papa'), ...extra });
 
+// profile beyond the name: birthday (17.05.) and emoji (🦉) of mia
+const PROFIL = (t) => t.includes('17.05.') || t.includes('🦉');
 async function sicht(page) {
   const n = async (sel) => (await page.locator(sel).count()) > 0;
+  const uebersichtText = await page.textContent('#aboutBody');
   const r = {
     kind: (await page.textContent('.phdr')).includes('mia'),
     fremd: (await page.textContent('.phdr')).includes('lia'),
-    profil: (await page.textContent('#aboutBody')).includes('Sonnenschein'),
+    // Peter, 03.11.: with a grant the teacher/admin sees the name (display name) - in the header and in the overview
+    kopfname: (await page.textContent('.phdr')).includes('Mia Sonnenschein (mia)'),
+    name: uebersichtText.includes('Sonnenschein'),
+    profil: PROFIL(uebersichtText),
     uebersicht: await n('.psubject'), schule: await n('details.psec[data-psec="school"]'), einstellungen: false,
     sicherung: false, freigaben: false, konten: false, fokus: false, schulzeile: false
   };
-  if (r.uebersicht) { await page.locator('[data-psubj="maths"]').click(); r.fokus = await n('[data-pfocus]'); r.schulzeile = /🏫 Schule/.test(await page.textContent('#aboutBody')); await page.locator('#pBack').click(); }
+  if (r.uebersicht) { await page.locator('[data-psubj="maths"]').click(); const t = await page.textContent('#aboutBody'); r.fokus = await n('[data-pfocus]'); r.schulzeile = /🏫 Schule/.test(t); r.profil = r.profil || PROFIL(t); await page.locator('#pBack').click(); }
   // ⚙ settings (B1): the child's settings (with the profile), backup, grants, accounts
   await page.locator('#pSettings').click(); await page.waitForSelector('#pSetBack');
-  r.profil = r.profil || (await page.textContent('#aboutBody')).includes('Sonnenschein');
+  r.profil = r.profil || PROFIL(await page.textContent('#aboutBody'));
   r.einstellungen = await n('details.psec[data-psec="settings"]'); r.sicherung = await n('details.psec[data-psec="backup"]');
   r.freigaben = await n('details.psec[data-psec="grants"]'); r.konten = await n('details.psec[data-psec="accounts"]');
   await page.locator('#pSetBack').click(); await page.waitForSelector('#pSetBack', { state: 'detached' });
   return r;
 }
 // kind: mia is shown; fremd: lia (the other family's child) is shown
-const NICHTS = { kind: false, fremd: false, profil: false, uebersicht: false, schule: false, einstellungen: false, sicherung: false, freigaben: false, konten: false, fokus: false, schulzeile: false };
+const NICHTS = { kind: false, fremd: false, kopfname: false, name: false, profil: false, uebersicht: false, schule: false, einstellungen: false, sicherung: false, freigaben: false, konten: false, fokus: false, schulzeile: false };
+// parents see the name in the overview and the whole profile; the header keeps the login name for them
+const ELTERN = { ...NICHTS, kind: true, name: true, profil: true, uebersicht: true, schule: true, einstellungen: true, sicherung: true, freigaben: true, fokus: true, schulzeile: true };
+// with a grant: name in the header and the overview, but no birthday, emoji or settings (Peter, 03.11.)
+const MIT_FREIGABE = { ...NICHTS, kind: true, kopfname: true, name: true, uebersicht: true };
 
-test('Rechtematrix Stufe 1: jede Rolle sieht genau, was sie darf (K10, K1)', async () => {
+test('Rechtematrix Stufe 1: jede Rolle sieht genau, was sie darf (K10, K1); mit Freigabe den Namen, sonst nichts vom Profil', async () => {
   const { ctx, page, fehler } = await geraet();
   const faelle = [
-    ['papa (Elternteil)', 'papa', null, { ...NICHTS, kind: true, profil: true, uebersicht: true, schule: true, einstellungen: true, sicherung: true, freigaben: true, fokus: true, schulzeile: true }],
+    ['papa (Elternteil)', 'papa', null, ELTERN],
     ['fremd (Elternteil von lia): nichts von mia, nur sein eigenes Kind', 'fremd', null, { ...NICHTS, fremd: true, uebersicht: true, schule: true, einstellungen: true, sicherung: true, freigaben: true, fokus: true }],
     ['frau ohne Freigabe', 'frau', null, { ...NICHTS }],
-    ['frau mit Freigabe Lernstand', 'frau', freigabe('frau', ['learning']), { ...NICHTS, kind: true, uebersicht: true }],
-    ['frau mit Freigabe Lernstand + Schule', 'frau', freigabe('frau', ['learning', 'school']), { ...NICHTS, kind: true, uebersicht: true, schule: true, schulzeile: true }],
+    ['frau mit Freigabe Lernstand', 'frau', freigabe('frau', ['learning']), MIT_FREIGABE],
+    ['frau mit Freigabe Lernstand + Schule', 'frau', freigabe('frau', ['learning', 'school']), { ...MIT_FREIGABE, schule: true, schulzeile: true }],
     ['frau mit abgelaufener Freigabe', 'frau', freigabe('frau', ['learning', 'school'], { from: tag(-20), until: tag(-6) }), { ...NICHTS }],
     ['frau mit widerrufener Freigabe', 'frau', freigabe('frau', ['learning'], { revokedAt: new Date().toISOString() }), { ...NICHTS }],
     ['chef (Admin) ohne Freigabe', 'chef', null, { ...NICHTS, konten: true }],
-    ['chef (Admin) mit Freigabe Lernstand', 'chef', freigabe('chef', ['learning']), { ...NICHTS, kind: true, uebersicht: true, konten: true }],
-    ['papa mit Freigabe an frau (eigene Rechte unveraendert)', 'papa', freigabe('frau', ['learning']), { ...NICHTS, kind: true, profil: true, uebersicht: true, schule: true, einstellungen: true, sicherung: true, freigaben: true, fokus: true, schulzeile: true }]
+    ['chef (Admin) mit Freigabe Lernstand', 'chef', freigabe('chef', ['learning']), { ...MIT_FREIGABE, konten: true }],
+    ['papa mit Freigabe an frau (eigene Rechte unveraendert)', 'papa', freigabe('frau', ['learning']), ELTERN]
   ];
   for (const [name, wer, g, soll] of faelle) {
     await setzeFreigabe(page, g);
@@ -114,15 +124,40 @@ test('Freigabe mit echten Klicks: Einwilligungstext, nur Lehrkraft/Admin, Ersetz
     assert.match(await page.textContent('#pGrantMsg'), /keine Lehrkraft und keinen Admin/);
   }
   await page.locator('#pGrantWho').fill('frau'); await page.locator('#pGrantDays').fill('10');
-  assert.equal(await page.textContent('#pGrantConsent'), 'Sie geben frau für 10 Tage Einblick in: Lernstand. frau kann nichts ändern. Sie können das jederzeit beenden. Was frau bis dahin gesehen hat, kann man nicht ungesehen machen.');
+  assert.equal(await page.textContent('#pGrantConsent'), 'Sie geben frau für 10 Tage Einblick in: Lernstand. frau sieht dabei den Namen Ihres Kindes, aber nicht Geburtstag, Emoji und Einstellungen. frau kann nichts ändern. Sie können das jederzeit beenden. Was frau bis dahin gesehen hat, kann man nicht ungesehen machen.');
+  await page.locator('.phdr [data-plang="en"]').click();
+  await page.waitForFunction(() => /You give/.test(document.querySelector('#pGrantConsent')?.textContent || ''));
+  await page.locator('#pGrantWho').fill('frau'); await page.locator('#pGrantDays').fill('10');
+  assert.equal(await page.textContent('#pGrantConsent'), 'You give frau access for 10 days to: learning progress. frau will see your child’s name, but not the birthday, emoji or settings. frau cannot change anything. You can end this at any time. What frau has seen until then cannot be unseen.');
+  await page.locator('.phdr [data-plang="de"]').click();
+  await page.waitForFunction(() => /Sie geben/.test(document.querySelector('#pGrantConsent')?.textContent || ''));
+  await page.locator('#pGrantWho').fill('frau'); await page.locator('#pGrantDays').fill('10');
   await page.locator('#pGrantForm button[type="submit"]').click();
   await page.waitForSelector('[data-grantrevoke]');
   assert.match(await page.textContent('.pgrants'), /frau · Lernstand · läuft bis/);
-  // the teacher looks: read-only, without school ratings and profile; logged as viewed (once a day)
+  // the consent text as given is kept in the log and in the event
+  const erteilt = await page.evaluate((id) => JSON.parse(localStorage.getItem('bq2_' + id + '__grantlog') || '[]').find((e) => e.ev === 'erteilt'), ID('mia'));
+  assert.match(erteilt.text, /sieht dabei den Namen Ihres Kindes, aber nicht Geburtstag, Emoji und Einstellungen/);
+  // the teacher looks: read-only, without school ratings; the name, but no other profile details; logged as viewed (once a day)
   await erwachsen(page, 'frau');
-  assert.match(await page.textContent('#pKid'), /mia/);
+  assert.equal((await page.textContent('#pKid')).trim(), '👧 Mia Sonnenschein (mia)', 'Peter, 03.11.: she must see whom she works with');
   assert.equal(await page.locator('details.psec[data-psec="school"]').count(), 0);
-  assert.ok(!(await page.textContent('#aboutBody')).includes('Sonnenschein'), 'no display name for the teacher');
+  const ueb = await page.textContent('#aboutBody');
+  assert.match(ueb, /Auf einen Blick · Mia Sonnenschein/);
+  assert.ok(!PROFIL(ueb), 'no birthday, no emoji for the teacher');
+  // the header fits on a small screen
+  await page.setViewportSize({ width: 320, height: 640 });
+  assert.ok(await page.locator('#pKid').evaluate((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.right <= innerWidth + 1; }), 'name in view on 320 px');
+  await page.setViewportSize({ width: 1280, height: 720 });
+  // her guide says so (DE and EN)
+  await page.locator('#pHelp').click(); await page.waitForSelector('#pHelpBack');
+  assert.match(await page.locator('.phelp-view').innerText(), /Oben steht der Name des Kindes, damit Sie wissen, mit wem Sie arbeiten\. Geburtstag, Emoji und Einstellungen sehen Sie nicht\./);
+  await page.locator('.phdr [data-plang="en"]').click();
+  await page.waitForFunction(() => /Help for teachers/.test(document.querySelector('.phelp-view')?.innerText || ''));
+  assert.match(await page.locator('.phelp-view').innerText(), /The child’s name is shown at the top, so you know whom you are working with\. You do not see the birthday, emoji or settings\./);
+  await page.locator('.phdr [data-plang="de"]').click();
+  await page.waitForFunction(() => /Hilfe für Lehrkräfte/.test(document.querySelector('.phelp-view')?.innerText || ''));
+  await page.locator('#pHelpBack').click();
   await page.reload(); await page.waitForSelector('#parentClose');
   // a new grant with school ratings replaces the old one
   await erwachsen(page, 'papa');
@@ -164,6 +199,37 @@ test('Ablauf: nach dem Enddatum sieht die Lehrkraft nichts mehr, das Protokoll v
   const log = await page.evaluate((id) => JSON.parse(localStorage.getItem('bq2_' + id + '__grantlog') || '[]').map((e) => e.ev), ID('mia'));
   assert.ok(log.includes('abgelaufen'));
   await ctx.close();
+});
+
+test('Name mit Freigabe (Peter, 03.11.): Kinderliste der Lehrkraft mit Namen, Eltern unveraendert, Ende der Freigabe nimmt den Namen mit', async () => {
+  const { ctx, page, fehler } = await geraet();
+  // frau has grants for both children (two families): the list shows name and login name
+  await page.evaluate(([mia, lia, gm, gl]) => { localStorage.setItem('bq2_' + mia + '__grants', JSON.stringify([gm])); localStorage.setItem('bq2_' + lia + '__grants', JSON.stringify([gl])); },
+    [ID('mia'), ID('lia'), freigabe('frau', ['learning']), { ...freigabe('frau', ['learning']), id: 'g-frau-lia', by: ID('fremd') }]);
+  await erwachsen(page, 'frau');
+  const liste = await page.$$eval('#pKidSel option', (o) => o.map((x) => x.textContent.trim()));
+  assert.deepEqual(liste.sort(), ['👧 Lia (lia)', '👧 Mia Sonnenschein (mia)']);
+  // papa (parent): his header keeps the login name only
+  await erwachsen(page, 'papa');
+  assert.equal((await page.textContent('#pKid')).trim(), '👧 mia');
+  // the grant for mia ends: frau keeps only lia, with her name
+  await page.evaluate((mia) => { const g = JSON.parse(localStorage.getItem('bq2_' + mia + '__grants')); g[0].revokedAt = new Date().toISOString(); localStorage.setItem('bq2_' + mia + '__grants', JSON.stringify(g)); }, ID('mia'));
+  await erwachsen(page, 'frau');
+  assert.equal((await page.textContent('#pKid')).trim(), '👧 Lia (lia)');
+  assert.ok(!(await page.textContent('#aboutBody')).includes('Sonnenschein'), 'no name of mia after the end');
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
+
+test('Anleitungen und Freigabe-Hinweis nennen den Namen (Eltern, Lehrkraft, Admin; DE und EN)', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+  const teil = (name) => { const m = html.match(new RegExp('const ' + name + '=`([\\s\\S]*?)`;')); assert.ok(m, name); return m[1]; };
+  for (const g of ['GUIDE_ADULT_DE', 'GUIDE_TEACHER_DE', 'GUIDE_ADMIN_DE']) assert.match(teil(g), /Namen?\b[^<]*Geburtstag, Emoji und Einstellungen/, g);
+  for (const g of ['GUIDE_ADULT_EN', 'GUIDE_TEACHER_EN', 'GUIDE_ADMIN_EN']) assert.match(teil(g), /name[^<]*birthday, emoji (and|or) settings/, g);
+  for (const alt of ['Den Namen aus dem Profil sehen Sie nicht', 'You do not see the name from the profile']) assert.ok(!html.includes(alt), alt);
+  assert.match(html, /sieht den Lernstand und den Namen Ihres Kindes nur, wenn Sie es hier freigeben/);
+  assert.match(html, /sees your child’s progress and name only if you allow it here/);
 });
 
 test('Admin ohne Freigabe: nur Verwaltungsangaben, keine Inhalte und keine Anzeigenamen', async () => {

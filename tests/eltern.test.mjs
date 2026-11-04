@@ -112,10 +112,9 @@ test('parent-selected focus persists and controls Today, badges and paper worksh
 
 test('empty focus remains empty but allows mixed practice; "Automatic" restores it',async()=>{
   const {ctx,page}=await open();
-  await page.evaluate(()=>localStorage.setItem('bq2_focus','["units"]'));   // list of an earlier version
+  await page.evaluate(()=>{localStorage.setItem('bq2_focusMode','"manual"');localStorage.setItem('bq2_focusManual','["units"]');});   // manual, only units
   await elternOeffnen(page);
   await fokusSchalter(page,'units');
-  assert.equal(await data(page,'focus'),null,'old list taken over once');
   assert.equal(await data(page,'focusMode'),'manual');
   assert.deepEqual(await data(page,'focusManual'),[]);
   await klick(page,'#parentClose');
