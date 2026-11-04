@@ -8,7 +8,7 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { BEREICH_ARTEN, BEREICH_JE_TYP, bereichName, bereichZerlegen, bereichVonEreignis, passtZumBereich, bereicheFuer, halter, schluesselLesen, schluesselVerteilen } from '../../src/module/bereiche.mjs';
+import { BEREICH_ARTEN, BEREICH_JE_TYP, BEREICH_AUCH, bereichName, bereichZerlegen, bereichVonEreignis, passtZumBereich, bereicheFuer, halter, schluesselLesen, schluesselVerteilen } from '../../src/module/bereiche.mjs';
 import { lokalerSpeicher } from '../../src/module/speicher.mjs';
 import { abgleichStand, vormerken, senden, holen } from '../../src/module/abgleich.mjs';
 import { newPersonKeys, publicKeysOf, newAreaKey, wrapKeyFor, signBytes, openEntryText, entryAad } from '../../src/module/krypto.mjs';
@@ -286,6 +286,17 @@ test('Typ und Bereich: jeder Typ hat genau einen Bereich; Ereignis im falschen B
     assert.equal(await grund(area, pid, type, p), 'ok', `${type} in ${area}`);
   }
   for (const area of [L, PR, S, EA, F1, PE1]) assert.equal(await grund(area, 'p_e1', 'snapshot', NUTZ.snap()), 'ok', 'Schnappschuss in ' + area);
+  // Aufgabe "Lehrkraft sieht ihre Schueler": die Freigabe selbst liegt auch im Bereich DIESER Freigabe (dort liest der Empfaenger sie)
+  assert.deepEqual({ ...BEREICH_AUCH }, { grant_set: 'freigabe', grant_revoked: 'freigabe' });
+  assert.ok(Object.isFrozen(BEREICH_AUCH));
+  for (const [area, type, p] of [[F1, 'grant_set', FREIGABEN[0]], [F1, 'grant_revoked', { grant: 'g1', grantee: 'p_l1' }], [EA, 'grant_set', FREIGABEN[0]], [EA, 'grant_revoked', { grant: 'g1', grantee: 'p_l1' }]]) {
+    assert.equal(await grund(area, 'p_e1', type, p), 'ok', `${type} in ${area}`);
+  }
+  for (const [area, type, p] of [[F2, 'grant_revoked', { grant: 'g1', grantee: 'p_l1' }], [F1, 'grant_set', FREIGABEN[1]], [F1, 'backup_made', { day: HEUTE }], [L, 'grant_revoked', { grant: 'g1', grantee: 'p_l1' }], [PE1, 'grant_set', FREIGABEN[0]]]) {
+    assert.equal(await grund(area, 'p_e1', type, p), 'bereich-falsch', `${type} ${p.grant || ''} in ${area}`);
+  }
+  assert.equal(await grund(F1, 'p_l1', 'grant_set', FREIGABEN[0]), 'rolle-darf-nicht', 'die Lehrkraft erteilt sich nichts selbst');
+  assert.equal(await grund(F1, 'p_l1', 'grant_revoked', { grant: 'g1', grantee: 'p_l1' }), 'rolle-darf-nicht', 'und beendet nichts');
   assert.equal(await grund(L, 'p_l1', 'setting_set', { setting: 'storyCap', value: 9 }), 'bereich-falsch', 'erst der Bereich, dann die Rolle');
 
   // ueber den Abgleich: das Kind legt seinen Geburtstag in kind:lern ab (es hat den Schluessel) -> Eltern verwerfen ihn
