@@ -17,6 +17,7 @@ const HEUTE_DURCHGESPIELT = 60;   // Practise Today: mischt Fragen aus mehreren 
 const MIX_DURCHGESPIELT = 15;     // je Fach-Mix (die alte Mixed Quest hing bis 29.10. in etwa jeder 4. Runde)
 const ANDERE_DURCHGESPIELT = 5;
 const ZEITLIMIT = 5000;           // ms je Klick: eine Endlosschleife in der App wird rot statt zum Haenger
+const RUNDENLIMIT = 20000;       // ms je durchgespielter Runde (ein Zeitlimit je Runde statt je Klick: schneller)
 // die 10 Quests aus Auftrag 1: jede Runde hat eine Grundlage-Aufgabe (Stufe 1)
 const GRUNDLAGE_QUESTS = ['numbers', 'combos', 'wordprob', 'forces', 'units', 'graphs', 'sentences', 'words', 'anleitung', 'library'];
 
@@ -123,19 +124,18 @@ function durchspielen(S) {
 test('Practise Today und Fach-Mixe: viele Runden durchspielbar, ohne Haenger (Node, mit Zeitlimit)', (t) => {
   const S = app(t);
   for (let r = 0; r < HEUTE_DURCHGESPIELT; r++) {
-    S.klick('#todayBtn', ZEITLIMIT);
-    durchspielen(S);
+    S.lauf(() => { S.klick('#todayBtn'); durchspielen(S); }, RUNDENLIMIT);
   }
   const mixe = S.alleKarten().filter((k) => k.item.startsWith('mix_'));
   assert.ok(mixe.length >= 4, `nur ${mixe.length} Fach-Mixe`);
-  for (const m of mixe) for (let r = 0; r < MIX_DURCHGESPIELT; r++) { S.karteOeffnen(m, ZEITLIMIT); durchspielen(S); }
+  for (const m of mixe) for (let r = 0; r < MIX_DURCHGESPIELT; r++) S.lauf(() => { S.karteOeffnen(m); durchspielen(S); }, RUNDENLIMIT);
 });
 
 test('jede Quest: Runden mit richtigen Antworten ergeben 8 von 8 (Node)', (t) => {
   const S = app(t);
   const karten = S.alleKarten().filter((k) => !k.studio);
   assert.ok(karten.length >= 20, 'Karten: ' + karten.length);
-  for (const k of karten) for (let r = 0; r < ANDERE_DURCHGESPIELT; r++) { S.karteOeffnen(k, ZEITLIMIT); durchspielen(S); }
+  for (const k of karten) for (let r = 0; r < ANDERE_DURCHGESPIELT; r++) S.lauf(() => { S.karteOeffnen(k); durchspielen(S); }, RUNDENLIMIT);
 });
 
 /* ---------- "Show me an example" (bisher beispiele.test.mjs, echte Klicks) ---------- */
@@ -147,8 +147,8 @@ function beispieleDurchgehen(S, items, runden, { zaehlt, beschriftung, kennung, 
   assert.equal(karten.length, items.length, 'Karten gefunden: ' + karten.map((k) => k.item).join(','));
   let n = 0, mit = 0; const ohne = new Set(), fehl = [];
   for (const k of karten) {
-    for (let r = 0; r < runden; r++) {
-      S.karteOeffnen(k, ZEITLIMIT);
+    for (let r = 0; r < runden; r++) S.lauf(() => {
+      S.karteOeffnen(k);
       for (let i = 0; i < 8; i++) {
         const s = S.zustand(), q = s.round[s.idx];
         if (S.$('#qAnswers').querySelector('#takeChallenge')) S.klick('#takeChallenge');
@@ -168,7 +168,7 @@ function beispieleDurchgehen(S, items, runden, { zaehlt, beschriftung, kennung, 
         if (S.sichtbar('#results')) break;
       }
       S.klick('#homeBtn');
-    }
+    }, RUNDENLIMIT);
   }
   return { n, mit, ohne: [...ohne], fehl };
 }

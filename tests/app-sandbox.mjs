@@ -249,8 +249,14 @@ export function appSandbox({ anpassen, seed = Number(process.env.BQ_SEED) || Dat
   const holen = (name) => ctx.__bqHolen(name);
 
   /** fn mit Zeitlimit ausfuehren (ms); eine Endlosschleife der App wird so zum Fehler. */
+  // jedes Zeitlimit startet einen Waechter-Thread; innerhalb eines laufenden lauf() gilt dessen Limit weiter
   const job = new vm.Script('__bqJob()');
-  function lauf(fn, ms = 5000) { ctx.__bqJob = fn; try { return job.runInContext(ctx, { timeout: ms }); } finally { ctx.__bqJob = null; } }
+  let innen = false;
+  function lauf(fn, ms = 5000) {
+    if (innen) return fn();
+    innen = true; ctx.__bqJob = fn;
+    try { return job.runInContext(ctx, { timeout: ms }); } finally { ctx.__bqJob = null; innen = false; }
+  }
 
   const $ = (sel) => document.querySelector(sel);
   /** sichtbar wie im Browser-Test: weder das Element noch ein Vorfahr ist hidden */
