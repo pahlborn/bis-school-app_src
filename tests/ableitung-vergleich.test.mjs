@@ -12,6 +12,7 @@ import assert from 'node:assert/strict';
 import { appServer, browserStarten, appOeffnen, zustand, klick, sichtbar, zurStart, elternOeffnen, elternSeite, alleKarten, karteOeffnen, frageBeantworten } from './app-hilfen.mjs';
 import { derive, DERIVE_LIMITS, DERIVE_GAPS, DERIVE_TREE_AT, DERIVE_RANKS } from '../src/module/ableitung.mjs';
 import { checkEvent } from '../src/module/ereignisse.mjs';
+import { lesenArt } from '../src/module/lesen.mjs';
 
 /* ---------- Zugang zum Bereich der App (nur lesen) ---------- */
 function haken() {
@@ -22,12 +23,16 @@ function haken() {
   };
 }
 
-let browser, server;
+/* the same random numbers in both builds (3b-2a): the same clicks then give the same questions */
+const zufall = (h) => h.replace(/(\(function\(\)\{\r?\n'use strict';)/, (m) => m + ' (function(M){ let s=20261104; M.random=()=>{ s=(s+0x6D2B79F5)|0; let t=Math.imul(s^(s>>>15),1|s); t=(t+Math.imul(t^(t>>>7),61|t))^t; return ((t^(t>>>14))>>>0)/4294967296; }; })(Math);');
+
+let browser, server, liveServer;
 before(async () => {
   browser = await browserStarten();
-  server = await appServer({ bauart: 'test', anpassen: (h) => h.replace(/\}\)\(\);\s*<\/script>/, () => `(${haken.toString()})();})();</script>`) });
+  server = await appServer({ bauart: 'test', anpassen: (h) => zufall(h).replace(/\}\)\(\);\s*<\/script>/, () => `(${haken.toString()})();})();</script>`) });
+  liveServer = await appServer({ bauart: 'live', anpassen: zufall });
 });
-after(async () => { await browser?.close(); server?.close(); });
+after(async () => { await browser?.close(); server?.close(); liveServer?.close(); });
 
 /* ---------- Spielen mit echten Klicks ---------- */
 const lies = (page, k) => page.evaluate((key) => JSON.parse(localStorage.getItem('bq2_' + key) || 'null'), k);
@@ -74,8 +79,9 @@ async function heute(page, { falschDue = true } = {}) {
 /* ---------- der Vergleich ---------- */
 const STANDARD = { attempts: [], ev: {}, due: [], total: 0, badges: {}, tried: [], treeStage: 0, sheets: [], sheetNo: 0 };
 
-test('derive(Ereignisse) liefert denselben Stand, den die App nach einem Verlauf mit echten Klicks gespeichert hat', async () => {
-  const { ctx, page, fehler } = await appOeffnen(browser, server.url, { zeit: '2026-11-02T09:00:00' });
+/** der Verlauf mit echten Klicks (in beiden Bauarten derselbe) */
+async function verlauf(url) {
+  const { ctx, page, fehler } = await appOeffnen(browser, url, { zeit: '2026-11-02T09:00:00' });
   await page.evaluate(() => { window.print = () => {}; });
   const wartend = { due: 0, boxMax: 0 };
 
@@ -116,8 +122,25 @@ test('derive(Ereignisse) liefert denselben Stand, den die App nach einem Verlauf
   }
   await zurStart(page);
 
-  /* was die App gespeichert hat */
-  const app = await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('bq2_')).map((k) => [k.slice(4), JSON.parse(localStorage.getItem(k))])));
+  return { ctx, page, fehler, wartend };
+}
+
+test('Testbau = Live-Bau (3b-2a): derselbe Verlauf; was der Live-Bau speichert, liest der Testbau aus den Ereignissen - und derive rechnet es nach', async () => {
+  const lv = await verlauf(liveServer.url);
+  const live = await lv.page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith('bq2_')).map((k) => [k.slice(4), JSON.parse(localStorage.getItem(k))])));
+  assert.deepEqual(lv.fehler, []);
+  await lv.ctx.close();
+  const { ctx, page, fehler, wartend } = await verlauf(server.url);
+
+  /* der Testbau: im Speicher nur Ereignisse und Geraetenotizen, die Werte liest er aus den Ereignissen */
+  const roh = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('bq2_')).map((k) => k.slice(4)).sort());
+  assert.deepEqual(roh.filter((k) => lesenArt(k)), [], 'der alte Speicher wird fuer abzugleichende Werte nicht mehr geschrieben');
+  const schluessel = Object.keys(live).filter((k) => lesenArt(k) === 'kind');
+  assert.ok(schluessel.length >= 10, 'der Live-Bau hat gespeichert: ' + schluessel);
+  const app = { events: await lies(page, 'events'), evDevice: await lies(page, 'evDevice'), treeStage: await lies(page, 'treeStage') };
+  for (const k of schluessel) app[k] = await lies(page, k);
+  for (const k of schluessel) assert.deepEqual(app[k], live[k], 'Testbau aus Ereignissen = Live-Bau gespeichert: ' + k);
+  assert.equal(app.treeStage, live.treeStage, 'treeStage (Geraetenotiz, in beiden gespeichert)');
   const ereignisse = app.events, jetzt = Date.parse('2026-11-20T00:00:00Z');
   assert.ok(Array.isArray(ereignisse) && ereignisse.length > 50, 'die App hat Ereignisse geschrieben: ' + (ereignisse && ereignisse.length));
   assert.deepEqual(await page.evaluate(() => window.__bqa.probleme()), { abgelehnt: [], fehler: [] }, 'nichts abgelehnt, kein Fehler im Schreiber');
@@ -171,7 +194,7 @@ test('derive(Ereignisse) liefert denselben Stand, den die App nach einem Verlauf
 });
 
 test('Live-Bau (3b-1): dieselben Klicks schreiben keine Ereignisse und keine Geraete-Kennung; Stand wie gewohnt', async () => {
-  const live = await appServer();
+  const live = await appServer({ bauart: 'live' });
   try {
     const { ctx, page, fehler } = await appOeffnen(browser, live.url, { zeit: '2026-11-02T09:00:00' });
     await page.evaluate(() => { window.print = () => {}; });

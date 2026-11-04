@@ -12,7 +12,7 @@
     { "key": "total", "bereich": "kind", "abgleich": "abgeleitet", "sicherung": true },
     { "key": "badges", "bereich": "kind", "abgleich": "protokoll", "sicherung": true },
     { "key": "tried", "bereich": "kind", "abgleich": "abgeleitet", "sicherung": true },
-    { "key": "treeStage", "bereich": "kind", "abgleich": "abgeleitet", "sicherung": true },
+    { "key": "treeStage", "bereich": "kind", "abgleich": "lokal", "sicherung": true, "hinweis": "Geraetenotiz (3b-2a): der Hinweis \"Baum gewachsen\" kommt einmal je Geraet; der Baum selbst folgt den Uebungstagen aus den Ereignissen" },
     { "key": "rankSeen", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true },
     { "key": "name", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true },
     { "key": "birthday", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true },
@@ -56,7 +56,8 @@
   "localStorageDirekt": [
     { "key": "bq_schluessel", "bereich": "geraet", "hinweis": "gemerkter Familienschluessel der Huelle" },
     { "key": "bq2_session", "bereich": "geraet", "hinweis": "Sitzung, direkt gelesen" },
-    { "key": "bq2_migr", "bereich": "geraet", "hinweis": "Umzug auf Kennungen, vor dem Store gelesen" }
+    { "key": "bq2_migr", "bereich": "geraet", "hinweis": "Umzug auf Kennungen, vor dem Store gelesen" },
+    { "key": "bq2_personEvents", "bereich": "person", "hinweis": "Protokolle der Personen (personEvents); seit 3b-2a liest und schreibt das Protokoll sie selbst (Testbau)" }
   ],
   "sessionStorage": [
     { "key": "bqUpdateTo", "bereich": "geraet", "hinweis": "Update-Merker" }

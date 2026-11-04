@@ -3,6 +3,7 @@
 
 import fs from 'node:fs/promises';
 import { appLesen } from '../werkzeug/module.mjs';
+import { testbauLeser } from './testbau-leser.mjs';
 import http from 'node:http';
 import path from 'node:path';
 import { WURZEL, QUELLEN } from '../werkzeug/bauen.mjs';
@@ -16,10 +17,11 @@ export async function konto(user, role, code, extra = {}) {
 }
 
 /** Testserver mit eingesetzten Konten (altes Format wird mit ausV1 ins Kontenmodell v2 umgestellt). */
-export async function kontenServer(konten, { anpassen, schule, bauart = 'live' } = {}) {
+export async function kontenServer(konten, { anpassen, schule, bauart = process.env.BQ_BAUART || 'live' } = {}) {
   const k2 = ausV1(konten);
   let app = schuleEinsetzen(kontenEinsetzen(await appLesen(null, { bauart }), k2), schule || null, k2).toString('utf8');
   if (anpassen) app = anpassen(app);
+  if (bauart === 'test') app = testbauLeser(app);   // tests read/prepare the storage through the app's logs (3b-2a)
   const server = http.createServer((q, r) => {
     // /leer: an empty page of the same origin, to prepare storage before the app runs (S11 P2 tests)
     if (q.url.split('?')[0] === '/leer') { r.writeHead(200, { 'content-type': 'text/html' }); return r.end('<!doctype html><title>leer</title>'); }
