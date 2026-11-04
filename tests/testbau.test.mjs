@@ -12,7 +12,7 @@ const GH_TOKEN = 'github_pat_BROWSERTEST_' + 'k3'.repeat(20);   // nur im Nachba
 let browser, server, gh;
 before(async () => {
   browser = await browserStarten();
-  server = await appServer({ bauart: 'test', anpassen: (h) => h.replace(/\}\)\(\);\s*<\/script>/, 'window.__bqk={sealEntry,openEntryText,entryAad,newAreaKey,newPersonKeys,publicKeysOf,lockPersonKeys,unlockPersonKeys,createKeyring,rotateKeyring,keysForHolder,keyFingerprint};window.__bqe={newEvent,checkEvent,effectiveTime,mergeLog,fieldKey,lastWins};window.__bqs={makeSnapshot,stateFrom,needsSnapshot,derive};window.__bqb={halter,schluesselVerteilen,schluesselLesen,passtZumBereich,lokalerSpeicher,signEvent,acceptEvent,zulassungAus};window.__bqg={githubSpeicher};})();</script>') });
+  server = await appServer({ bauart: 'test', anpassen: (h) => h.replace(/\}\)\(\);\s*<\/script>/, 'window.__bqk={sealEntry,openEntryText,entryAad,newAreaKey,newPersonKeys,publicKeysOf,lockPersonKeys,unlockPersonKeys,createKeyring,rotateKeyring,keysForHolder,keyFingerprint};window.__bqe={newEvent,checkEvent,effectiveTime,mergeLog,fieldKey,lastWins};window.__bqs={makeSnapshot,stateFrom,needsSnapshot,derive};window.__bqb={halter,schluesselVerteilen,schluesselLesen,passtZumBereich,lokalerSpeicher,signEvent,acceptEvent,zulassungAus};window.__bqg={githubSpeicher};window.__bqkt={startcodeAusstellen,ersteAnmeldung,anmelden,wiederherstellen,kontoLookup};})();</script>') });
   gh = await githubNachbau({ token: GH_TOKEN });
 });
 after(async () => { await browser?.close(); server?.close(); await gh?.schliessen(); });
@@ -148,6 +148,38 @@ test('Testbau: GitHub-Speicher im Browser gegen den Nachbau (Stufe 3a) - base64 
   assert.deepEqual(r, { kennungen: 'd_a1/1', leer: 0, inhalt: 'Größe – Äpfel 🍎', vorhanden: 'vorhanden', luecke: 'luecke', unbekannt: 'unbekannt', einladung: 'zweiter Elternteil', zweimal: 'unbekannt', zugang: 'zugang', offline: 'offline', unveraendert: 1 });
   assert.equal(gh.zaehler.unveraendert - vorher.unveraendert, 1, 'der Browser reicht 304 an das Modul durch (kein eigener Zwischenspeicher)');
   assert.equal(gh.dateien().get('browser/events/kind:lern:p_k1/d_a1/1.json'), '{"text":"Größe – Äpfel 🍎"}', 'UTF-8 unveraendert im Repo');
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
+
+test('Testbau: Konto-Modul im Browser gegen den GitHub-Nachbau (Stufe 3b) - Startcode, erste Anmeldung, zweites Geraet, Wiederherstellung; 600 000 Runden', async () => {
+  const { ctx, page, fehler } = await appOeffnen(browser, server.url);
+  await ctx.route(gh.basis + '/**', (r) => r.continue());
+  const r = await page.evaluate(async ({ basis, token }) => {
+    const K = window.__bqkt, G = window.__bqg;
+    const speicher = () => G.githubSpeicher({ repo: 'pahlborn/bis-school-app-testdaten', token, basis, wurzel: 'konto-browser' });
+    const code = async (p) => { try { await p; return 'ok'; } catch (e) { return e.code; } };
+    const t0 = performance.now();
+    const s = await K.startcodeAusstellen({ zugang: speicher().geraet('d_a1'), aussteller: null, anmeldename: 'verwalter', art: 'admin', now: Date.now() });
+    const a = await K.ersteAnmeldung({ zugang: speicher().geraet('d_a1'), code: s.code, passwort: 'Tiger-Lamp-River-4271', now: Date.now() });
+    const t1 = performance.now();
+    const b = await K.anmelden({ zugang: speicher().geraet('d_a2'), anmeldename: 'Verwalter', passwort: 'Tiger-Lamp-River-4271' });
+    const t2 = performance.now();
+    const w = await K.wiederherstellen({ zugang: speicher().geraet('d_a2'), anmeldename: 'verwalter', code: a.wiederherstellungscode, neuesPasswort: 'Otter-Cake-Moss-1234', runden: 600000 });
+    return {
+      gleich: b.kennung === a.kennung && JSON.stringify(b.pub) === JSON.stringify(a.pub), extractable: b.schluessel.ecdsa.privateKey.extractable,
+      zweimal: await code(K.ersteAnmeldung({ zugang: speicher().geraet('d_a3'), code: s.code, passwort: 'Tiger-Lamp-River-4271', now: Date.now() })),
+      falsch: await code(K.anmelden({ zugang: speicher().geraet('d_a3'), anmeldename: 'verwalter', passwort: 'Tiger-Lamp-River-4271' })),
+      neu: (await K.anmelden({ zugang: speicher().geraet('d_a3'), anmeldename: 'verwalter', passwort: 'Otter-Cake-Moss-1234' })).stand,
+      codeNeu: w.wiederherstellungscode !== a.wiederherstellungscode, lookup: await K.kontoLookup('verwalter'),
+      ms: [Math.round(t1 - t0), Math.round(t2 - t1)],
+    };
+  }, { basis: gh.basis, token: GH_TOKEN });
+  console.log(`# Browser, 600 000 Runden: erste Anmeldung ${r.ms[0]} ms, Anmeldung zweites Geraet ${r.ms[1]} ms`);
+  assert.deepEqual({ ...r, ms: undefined }, { gleich: true, extractable: false, zweimal: 'startcode-ungueltig', falsch: 'anmeldung', neu: 2, codeNeu: true, lookup: r.lookup, ms: undefined });
+  const pfade = [...gh.dateien().keys()].filter((p) => p.startsWith('konto-browser/')).sort();
+  assert.deepEqual(pfade, ['konto-browser/directory/' + r.lookup + '-2.json', 'konto-browser/directory/' + r.lookup + '.json'], 'Verzeichnis nach Konzept 12, Einladung verbraucht');
+  assert.equal([...gh.dateien().values()].some((t) => /verwalter/i.test(t)), false, 'kein Name im Repo');
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
