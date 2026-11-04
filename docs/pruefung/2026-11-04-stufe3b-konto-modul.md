@@ -53,7 +53,7 @@ Hash des Anmeldenamens: SHA-256 ueber `bq-verzeichnis|<festes App-Salz>|<name>`;
 | Zwei Familien mit gleichen Namen und gleichen Passwoertern: getrennt, kein Schluessel beim anderen | beide | gruen |
 | 600 000 Runden: Node erste Anmeldung (Erwachsener) ~240 ms, zweites Geraet ~80 ms; Chromium 249 ms / 84 ms | Sim. / Nachbau | gruen |
 
-Modultests gesamt 277/277 (vor dem Einmergen von `main`), Testbau 7/7. Volle Reihe: siehe PR.
+Testbau 7/7. **Volle Reihe 661/661** (343 s, `main` = 5ced6af unveraendert). Ein erster Lauf zuvor: 654/661 - alle 7 roten waren `page.goto`-Zeitueberschreitungen unter Last (558 s statt ~240 s; about, altlasten, ableitung-vergleich, elternbereich-b1/c1/d1, themen), einzeln 20/20 gruen; keiner beruehrt das Konto-Modul.
 
 ## Gegenproben (29, alle rot)
 Skript `%TEMP%\opencode\gegenproben-konto.mjs` (aendert je Fall eine Stelle, laesst den passenden Test laufen, stellt wieder her). Eine Gegenprobe blieb zuerst gruen ("Startcode 6 statt 7 Tage" - der Test rechnete mit der Konstante des Moduls); der Test prueft jetzt feste 7 Tage.
