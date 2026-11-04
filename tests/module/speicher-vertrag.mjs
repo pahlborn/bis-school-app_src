@@ -164,18 +164,21 @@ export function speicherVertrag(name, neu) {
     assert.equal(await a.directory('h00000000'), null);
   });
 
-  test(`${name}: Einladungen - 10 Minuten gueltig (stellbare Uhr), einmal nutzbar, delete`, async () => {
+  test(`${name}: Einladungen - 7 Tage gueltig (stellbare Uhr; Peter 04.11.: nicht 10 Minuten), einmal nutzbar, zurueckziehen (delete)`, async () => {
     const { uhr, z: [a, b] } = await aufbau('d_a1', 'd_b1');
-    assert.equal(SPEICHER_EINLADUNG_MS, 600000);
+    assert.equal(SPEICHER_EINLADUNG_MS, 7 * 24 * 3600 * 1000, 'Vorgabe 7 Tage');
     await a.invite.put('i1', { fuer: 'zweiter Elternteil', ct: 'abc' });
+    uhr.t = START + 10 * 60 * 1000;
+    await a.invite.put('i0', 'nach 10 Minuten');
     uhr.t = START + SPEICHER_EINLADUNG_MS - 1;
-    assert.deepEqual(await b.invite.get('i1'), { fuer: 'zweiter Elternteil', ct: 'abc' }, 'kurz vor Ablauf gueltig, anderes Geraet holt ab');
+    assert.deepEqual(await b.invite.get('i1'), { fuer: 'zweiter Elternteil', ct: 'abc' }, 'nach 6 Tagen und 23:59 noch gueltig, anderes Geraet holt ab');
     await fehlt(b.invite.get('i1'), 'unbekannt', 'zweite Nutzung');
     await fehlt(a.invite.get('i1'), 'unbekannt', 'zweite Nutzung, anderes Geraet');
+    assert.equal(await b.invite.get('i0'), 'nach 10 Minuten', 'nach 10 Minuten nicht abgelaufen');
     uhr.t = START;
     await a.invite.put('i2', 'x');
     uhr.t = START + SPEICHER_EINLADUNG_MS;
-    await fehlt(b.invite.get('i2'), 'abgelaufen', 'nach genau 10 Minuten');
+    await fehlt(b.invite.get('i2'), 'abgelaufen', 'nach genau 7 Tagen');
     uhr.t += 24 * 3600 * 1000;
     await fehlt(b.invite.get('i2'), 'abgelaufen');
     assert.equal(await a.invite.delete('i2'), true);
@@ -199,10 +202,10 @@ export function speicherVertrag(name, neu) {
     await a.invite.put('s2', 'zwei', { gueltigMs: SPEICHER_EINLADUNG_MAX_MS });
     await a.invite.put('s3', 'kurz', { gueltigMs: 1000 });
     await a.invite.put('s4', 'normal', {});
-    uhr.t = START + SPEICHER_EINLADUNG_MS;
+    uhr.t = START + 1000;
     await fehlt(b.invite.get('s3'), 'abgelaufen', 'eigene kurze Gueltigkeit');
-    await fehlt(b.invite.get('s4'), 'abgelaufen', 'ohne gueltigMs: 10 Minuten');
     uhr.t = START + SPEICHER_EINLADUNG_MAX_MS - 1;
+    assert.equal(await b.invite.get('s4'), 'normal', 'ohne gueltigMs: die Vorgabe (7 Tage)');
     assert.deepEqual(await b.invite.get('s1'), { start: 'abc' }, 'nach 6 Tagen und 23:59 noch gueltig');
     await fehlt(b.invite.get('s1'), 'unbekannt', 'einmal nutzbar');
     uhr.t = START + SPEICHER_EINLADUNG_MAX_MS;

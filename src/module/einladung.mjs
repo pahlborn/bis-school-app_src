@@ -1,0 +1,348 @@
+// Module einladung - invitations and connections without a screen (stage 3b, task "Einladungen"; US9.5, US9.6, US8.3,
+// US6.5; concept 4, 5.1, 8.2, 8.3). Test build only (module.json: bau "test", after konto). No screen, no timer, no clock,
+// no network of its own: device storage, storage access, opened accounts and time are passed in.
+//
+//   Order (Peter, 04.11.): the first parent (start code from the admin) founds the family -> children (created by a parent)
+//   and the second parent (invited by a parent) in any order. Every invitation is a start code (module konto): valid
+//   7 days, once, can be withdrawn; its QR code carries the issuer's fingerprint.
+//
+//   Where it is kept (events, module ereignisse; synced by module geraeteabgleich):
+//     person:<id>    anchor_set  where I belong: a parent -> the founding parent of his family ("family"), a child ->
+//                                the parent who created it ("child", the anchor of its areas)
+//                    invite_set  the invitations I gave out, with the key of their proof (konto.kontoBeweisPruefen)
+//     familie:<id>   family_set  every child and parent of the family with checked keys (written by a parent) - so both
+//                                parents see the same children, on every device
+//   Checking keys (US6.5): an invited person's keys count only when their directory entry carries the proof of the
+//   start code (beweis); a swapped entry -> warning, nothing is noted, so nothing is wrapped for it. A parent notes every
+//   other parent of the family he knows (family_set): that note, signed by a child's anchor, is the buergschaft another
+//   parent needs to give that child a new password (konto.neustartAusstellen).
+//
+//   abgleichMitVerbindungen = what the app calls instead of geraetAbgleichen: it builds families, children and directory
+//   from the logs, syncs, checks open invitations, and syncs again while something new came (at most 4 rounds).
+//   After writing into the app's logs the app calls evNeuLaden() (as after geraetAbgleichen).
+//
+// Errors: Error with err.code - one of EINLADUNG_FEHLER, or a code of module konto or of the storage.
+// Names: every helper starts with "eld"/"ELD_" because all modules and index.html share one scope in the app.
+
+import { newEvent, lastWins } from './ereignisse.mjs';
+import { bereichName } from './bereiche.mjs';
+import { geraetAbgleichen, GERAETEABGLEICH_SPEICHER } from './geraeteabgleich.mjs';
+import { startcodeAusstellen, neustartAusstellen, kontoBeweisPruefen, kontoLookup, kontoName, kontoPersonen, kontoStand } from './konto.mjs';
+
+/* error codes of this module */
+export const EINLADUNG_FEHLER = Object.freeze(['nicht-erlaubt', 'familie-fehlt', 'kind-unbekannt', 'buergschaft-fehlt', 'name-ungueltig']);
+/* at most this many rounds of sync per call (sync -> new children/keys -> sync again) */
+export const EINLADUNG_RUNDEN = 4;
+
+const eldObj = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
+const eldPid = (x) => typeof x === 'string' && /^p_[0-9A-Za-z]{1,40}$/.test(x);
+const eldGleichePub = (a, b) => eldObj(a) && eldObj(b) && a.ecdh === b.ecdh && a.ecdsa === b.ecdsa;
+const eldRand = (n) => globalThis.crypto.getRandomValues(new Uint8Array(n));
+function eldFehler(code) { const e = new Error('einladung: ' + code); e.code = code; return e; }
+function eldFalsch(text) { return new Error('einladung: ' + text); }
+function eldJson(ablage, k, d) {
+  const v = ablage.getItem(k);
+  if (v === null || v === undefined) return d;
+  try { return JSON.parse(v); } catch (e) { return d; }
+}
+function eldPruefen({ ablage, konto, now }) {
+  if (!eldObj(ablage) || typeof ablage.getItem !== 'function' || typeof ablage.setItem !== 'function') throw eldFalsch('ablage (getItem/setItem) fehlt.');
+  if (!eldObj(konto) || !eldPid(konto.kennung) || typeof konto.art !== 'string' || !eldObj(konto.pub)) throw eldFalsch('geoeffnetes Konto erwartet.');
+  if (!Number.isFinite(now)) throw eldFalsch('"now" fehlt.');
+}
+const eldPre = (kind) => 'bq2_' + kind + '__';
+
+/* ---------- the app's logs ---------- */
+/* a log of the app: { lesen, schreiben }; ziel = { person } | { familie } | { kind } */
+function eldLog(ablage, ziel) {
+  if (ziel.kind) {
+    const k = eldPre(ziel.kind) + 'events';
+    return { lesen: () => { const l = eldJson(ablage, k, []); return Array.isArray(l) ? l : []; }, schreiben: (l) => ablage.setItem(k, JSON.stringify(l)) };
+  }
+  const [K, id] = ziel.familie ? [GERAETEABGLEICH_SPEICHER.familien, ziel.familie] : [GERAETEABGLEICH_SPEICHER.personen, ziel.person];
+  return {
+    lesen: () => { const l = eldJson(ablage, K, {})[id]; return Array.isArray(l) ? l : []; },
+    schreiben: (l) => { const alle = eldJson(ablage, K, {}); alle[id] = l; ablage.setItem(K, JSON.stringify(alle)); },
+  };
+}
+/* appends an event of this person on this device; its time is after every event of that log (a later event of the
+   same call never ties with an earlier one - "last wins" decides by time) */
+function eldSchreiben(ablage, ziel, konto, type, payload, now) {
+  const geraet = eldJson(ablage, GERAETEABGLEICH_SPEICHER.geraet, null);
+  if (typeof geraet !== 'string' || !/^d_[0-9A-Za-z]{1,40}$/.test(geraet)) throw eldFalsch('Geraet ohne Kennung (bq2_evDevice).');
+  const log = eldLog(ablage, ziel), l = log.lesen();
+  let t = now;
+  for (const e of l) { const x = eldObj(e) ? Date.parse(e.at) : NaN; if (Number.isFinite(x) && x >= t) t = x + 1; }
+  const e = newEvent({ type, author: konto.kennung, device: geraet, at: new Date(t).toISOString(), payload });
+  log.schreiben(l.concat([e]));
+  return e;
+}
+/* the winning event per field of one type in a log */
+function eldGewinner(log, type, now) {
+  return Object.values(lastWins(log.filter((e) => eldObj(e) && e.type === type), now));
+}
+
+/* ---------- connections ---------- */
+/* what this account is connected to, from its own log and the log of its family:
+   -> { familien: [{ id, anker }], kinder: [{ id, pre, anker, name }], verzeichnis: { <pid>: { role, pub, stand? } },
+        eltern: [pid], offen: [invite_set payload], familie: id | null } - familien, kinder and verzeichnis go into
+   geraetAbgleichen as they are */
+export function verbindungen({ ablage, konto, now } = {}) {
+  eldPruefen({ ablage, konto, now });
+  const out = { familien: [], kinder: [], verzeichnis: {}, eltern: [], offen: [], familie: null };
+  const eigen = eldLog(ablage, { person: konto.kennung }).lesen();
+  const anker = Object.fromEntries(eldGewinner(eigen, 'anchor_set', now).filter((e) => e.author === konto.kennung).map((e) => [e.payload.kind, e.payload]));
+  out.offen = eldGewinner(eigen, 'invite_set', now).filter((e) => e.author === konto.kennung && e.payload.state === 'open').map((e) => ({ ...e.payload }));
+  if (konto.art === 'child' && anker.child) {
+    out.kinder.push({ id: konto.kennung, pre: eldPre(konto.kennung), anker: { person: anker.child.person, role: 'parent', pub: { ...anker.child.pub } }, name: konto.anmeldename || null });
+  }
+  if (konto.art === 'parent' && anker.family) {
+    const f = anker.family;
+    out.familie = f.person;
+    out.familien.push({ id: f.person, anker: { person: f.person, role: 'parent', pub: { ...f.pub } } });
+    out.verzeichnis[f.person] = { role: 'parent', pub: { ...f.pub } };
+    for (const e of eldGewinner(eldLog(ablage, { familie: f.person }).lesen(), 'family_set', now)) {
+      const p = e.payload;
+      if (p.person === f.person) continue;                              // the founding parent: his keys come with the anchor
+      out.verzeichnis[p.person] = { role: p.role, pub: { ...p.pub }, ...(p.stand > 1 ? { stand: p.stand } : {}) };
+      if (p.role === 'child' && eldPid(p.anchor) && eldObj(p.anchorPub)) out.kinder.push({ id: p.person, pre: eldPre(p.person), anker: { person: p.anchor, role: 'parent', pub: { ...p.anchorPub } }, name: p.name || null });
+    }
+    out.eltern = Object.keys(out.verzeichnis).filter((pid) => out.verzeichnis[pid].role === 'parent').sort();
+    out.kinder.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  }
+  return out;
+}
+
+/* ---------- after the first login ---------- */
+/* notes where a new account belongs - only for the result of konto.ersteAnmeldung (it carries anker/familie; an account
+   from konto.anmelden finds this in its own area): a child -> its anchor; a parent invited by a parent -> that family;
+   the first parent (start code from the admin) -> his own family. Teacher and admin: nothing. Called by
+   abgleichMitVerbindungen after the device is registered in the person's own area (an event from before would not
+   count on the person's other devices). -> the event written, or null */
+function eldEinrichten(ablage, konto, now) {
+  if (!Object.prototype.hasOwnProperty.call(konto, 'familie') || !Object.prototype.hasOwnProperty.call(konto, 'anker')) return null;
+  let p = null;
+  if (konto.art === 'child' && eldObj(konto.anker) && eldPid(konto.anker.person)) {
+    p = { kind: 'child', person: konto.anker.person, pub: { ...konto.anker.pub } };
+  } else if (konto.art === 'parent') {
+    const f = eldObj(konto.familie) ? konto.familie : { person: konto.kennung, pub: konto.pub };
+    p = { kind: 'family', person: f.person, pub: { ...f.pub } };
+  }
+  if (!p) return null;
+  const da = eldGewinner(eldLog(ablage, { person: konto.kennung }).lesen(), 'anchor_set', now).find((e) => e.payload.kind === p.kind);
+  if (da && da.payload.person === p.person && eldGleichePub(da.payload.pub, p.pub)) return null;
+  return eldSchreiben(ablage, { person: konto.kennung }, konto, 'anchor_set', p, now);
+}
+
+/* ---------- invitations ---------- */
+function eldElternteil(ablage, konto, now) {
+  if (konto.art !== 'parent' || !eldObj(konto.schluessel)) throw eldFehler('nicht-erlaubt');
+  const v = verbindungen({ ablage, konto, now });
+  if (!v.familie) throw eldFehler('familie-fehlt');
+  return v;
+}
+function eldMerken(ablage, konto, r, art, person, name, now, display) {
+  const p = { invite: r.id, art, person, name, check: r.pruef, until: new Date(r.gueltigBis).toISOString(), state: 'open', ...(display ? { display } : {}) };
+  eldSchreiben(ablage, { person: konto.kennung }, konto, 'invite_set', p, now);
+  return { code: r.code, fingerabdruck: r.fingerabdruck, id: r.id, kennung: r.kennung, anmeldename: r.anmeldename, gueltigBis: r.gueltigBis };
+}
+
+/* US9.5: a parent creates a child: login name (anmeldenameVorschlag), display name, start QR code for the child.
+   -> { code, fingerabdruck, id, kennung, anmeldename, gueltigBis } (code + fingerabdruck go into the QR code).
+   The child belongs to the family once its keys are checked (einladungenPruefen, after it logged in). */
+export async function kindAnlegen({ zugang, ablage, konto, anmeldename, anzeigename, now, rand = eldRand } = {}) {
+  eldPruefen({ ablage, konto, now });
+  eldElternteil(ablage, konto, now);
+  const display = typeof anzeigename === 'string' && anzeigename.trim() ? anzeigename.trim().slice(0, 40) : '';
+  const r = await startcodeAusstellen({ zugang, aussteller: konto, anmeldename, art: 'child', now, rand });
+  return eldMerken(ablage, konto, r, 'child', r.kennung, r.anmeldename, now, display);
+}
+
+/* US9.6: a parent invites the second parent of his family. -> like kindAnlegen */
+export async function elternteilEinladen({ zugang, ablage, konto, anmeldename, now, rand = eldRand } = {}) {
+  eldPruefen({ ablage, konto, now });
+  const v = eldElternteil(ablage, konto, now);
+  const f = v.familien[0].anker;
+  const r = await startcodeAusstellen({ zugang, aussteller: konto, anmeldename, art: 'parent', familie: { person: f.person, pub: f.pub }, now, rand });
+  return eldMerken(ablage, konto, r, 'parent', r.kennung, r.anmeldename, now, '');
+}
+
+/* the family_set about me, signed by "anker" in the area of the family -> { area, event, sig } or null */
+function eldBuergschaft(ablage, familie, anker, konto) {
+  const area = bereichName('familie', familie), st = eldJson(ablage, GERAETEABGLEICH_SPEICHER.staende, {})[area];
+  const log = eldObj(st) && Array.isArray(st.log) ? st.log : [];
+  const x = log.filter((y) => eldObj(y) && eldObj(y.event) && y.event.type === 'family_set' && y.event.author === anker && y.event.payload.person === konto.kennung
+    && y.event.payload.role === 'parent' && eldGleichePub(y.event.payload.pub, konto.pub)).pop();
+  return x ? { area, event: JSON.parse(JSON.stringify(x.event)), sig: x.sig } : null;
+}
+
+/* US9.5 "new password of the child" (concept 8.2): a new start QR code for the existing child; with it the child makes new
+   keys, the parents give it every key again - nothing is lost. kind = the child's person id. -> like kindAnlegen */
+export async function kindPasswortNeu({ zugang, ablage, konto, kind, now, rand = eldRand } = {}) {
+  eldPruefen({ ablage, konto, now });
+  const v = eldElternteil(ablage, konto, now);
+  const k = v.kinder.find((c) => c.id === kind);
+  if (!k || !k.name) throw eldFehler('kind-unbekannt');
+  let buergschaft;
+  if (k.anker.person !== konto.kennung) {
+    buergschaft = eldBuergschaft(ablage, v.familie, k.anker.person, konto);
+    if (!buergschaft) throw eldFehler('buergschaft-fehlt');
+  }
+  const r = await neustartAusstellen({ zugang, aussteller: konto, anmeldename: k.name, kennung: k.id, anker: { kennung: k.anker.person, pub: k.anker.pub }, buergschaft, now, rand });
+  return eldMerken(ablage, konto, r, 'reset', k.id, k.name, now, '');
+}
+
+/* US8.3: the issuer withdraws an open invitation (id from the result above or verbindungen().offen).
+   -> { zurueckgezogen: true } - or false when it was already used or is gone (einladungenPruefen then finds out) */
+export async function einladungZurueckziehen({ zugang, ablage, konto, id, now } = {}) {
+  eldPruefen({ ablage, konto, now });
+  const o = verbindungen({ ablage, konto, now }).offen.find((x) => x.invite === id);
+  if (!o) throw eldFehler('nicht-erlaubt');
+  if (!(await zugang.invite.delete(id))) return { zurueckgezogen: false };
+  eldSchreiben(ablage, { person: konto.kennung }, konto, 'invite_set', { ...o, state: 'withdrawn' }, now);
+  return { zurueckgezogen: true };
+}
+
+/* the directory entry the invited person wrote with this invitation, if its proof is right -> { pub, stand } or a reason */
+async function eldEingeloest(zugang, o) {
+  if (kontoName(o.name) !== o.name) return { grund: 'fingerabdruck' };
+  const lookup = await kontoLookup(o.name);
+  if (o.art !== 'reset') {
+    const e = await zugang.directory(lookup);
+    if (e === null) return { grund: null };
+    // someone else's entry under this name, or the entry was swapped: no proof -> nothing is noted (US6.5)
+    if (!eldObj(e) || e.kennung !== o.person || !(await kontoBeweisPruefen(o.check, e))) return { grund: 'fingerabdruck' };
+    const s = await kontoStand({ zugang, anmeldename: o.name });
+    if (!s || s.kennung !== o.person || !eldGleichePub(s.pub, e.pub)) return { grund: 'fingerabdruck' };
+    return { pub: e.pub, stand: 1 };
+  }
+  // new password: the entry that counts now (konto) must be the one made with this invitation
+  const s = await kontoStand({ zugang, anmeldename: o.name });
+  if (!s || s.kennung !== o.person) return { grund: 'fingerabdruck' };
+  if (!s.neu || s.neu[o.invite] === undefined) return { grund: null };
+  const e = await zugang.directory(lookup + '-' + s.neu[o.invite]);
+  if (s.neu[o.invite] !== s.stand || !(await kontoBeweisPruefen(o.check, e)) || !eldGleichePub(e.pub, s.pub)) return { grund: 'fingerabdruck' };
+  return { pub: s.pub, stand: s.stand };
+}
+
+/* the issuer's device checks its open invitations (abgleichMitVerbindungen calls it):
+   - used, with the right proof -> the person goes into the family (family_set; a new child also gets its display name),
+     the invitation is "done"
+   - an entry without the right proof (swapped keys, US6.5) -> warning; nothing is noted, so no key is wrapped for it
+   - not used and over -> "expired" (the invitation is deleted from the storage)
+   -> { bestaetigt: [{ id, art, person, pub }], warnungen: [{ id, art, person, grund }], abgelaufen: [id] } */
+export async function einladungenPruefen({ zugang, ablage, konto, now } = {}) {
+  eldPruefen({ ablage, konto, now });
+  const out = { bestaetigt: [], warnungen: [], abgelaufen: [] };
+  if (konto.art !== 'parent') return out;
+  const v = verbindungen({ ablage, konto, now });
+  for (const o of v.offen) {
+    const r = await eldEingeloest(zugang, o);
+    if (r.grund) { out.warnungen.push({ id: o.invite, art: o.art, person: o.person, grund: r.grund }); continue; }
+    if (!r.pub) {
+      if (now >= Date.parse(o.until)) {
+        try { await zugang.invite.delete(o.invite); } catch (e) { if (!e || typeof e.code !== 'string') throw e; continue; }
+        eldSchreiben(ablage, { person: konto.kennung }, konto, 'invite_set', { ...o, state: 'expired' }, now);
+        out.abgelaufen.push(o.invite);
+      }
+      continue;
+    }
+    if (!v.familie) { out.warnungen.push({ id: o.invite, art: o.art, person: o.person, grund: 'familie-fehlt' }); continue; }
+    const fam = { familie: v.familie };
+    if (o.art === 'parent') {
+      eldSchreiben(ablage, fam, konto, 'family_set', { person: o.person, role: 'parent', pub: r.pub, stand: r.stand, name: o.name }, now);
+    } else {
+      // a new child: its anchor is me; new password: the anchor stays (the family knows it)
+      const k = v.kinder.find((c) => c.id === o.person);
+      if (o.art === 'reset' && !k) { out.warnungen.push({ id: o.invite, art: o.art, person: o.person, grund: 'kind-unbekannt' }); continue; }
+      const a = o.art === 'reset' ? k.anker : { person: konto.kennung, pub: konto.pub };
+      eldSchreiben(ablage, fam, konto, 'family_set', { person: o.person, role: 'child', pub: r.pub, stand: r.stand, name: o.name, anchor: a.person, anchorPub: { ...a.pub } }, now);
+      if (o.art === 'child' && o.display) eldSchreiben(ablage, { kind: o.person }, konto, 'profile_set', { field: 'name', value: o.display }, now);
+    }
+    eldSchreiben(ablage, { person: konto.kennung }, konto, 'invite_set', { ...o, state: 'done' }, now);
+    out.bestaetigt.push({ id: o.invite, art: o.art, person: o.person, pub: r.pub });
+  }
+  return out;
+}
+
+/* a parent notes every other parent of his family he does not have a note of his own about yet - once he belongs to the
+   family area (his note must count there). That note is the buergschaft for a child he created. -> notes written */
+function eldBuergen(ablage, konto, now) {
+  if (konto.art !== 'parent') return 0;
+  const v = verbindungen({ ablage, konto, now });
+  if (!v.familie) return 0;
+  const area = bereichName('familie', v.familie), st = eldJson(ablage, GERAETEABGLEICH_SPEICHER.staende, {})[area];
+  const log = eldObj(st) && Array.isArray(st.log) ? st.log.map((x) => x && x.event).filter(eldObj) : [];
+  const mitglied = v.familie === konto.kennung || log.some((e) => e.type === 'member_added' && e.payload.person === konto.kennung);
+  if (!mitglied) return 0;
+  const eigene = eldLog(ablage, { familie: v.familie }).lesen().concat(log).filter((e) => eldObj(e) && e.type === 'family_set' && e.author === konto.kennung);
+  let n = 0;
+  for (const pid of v.eltern) {
+    if (pid === konto.kennung) continue;
+    const m = v.verzeichnis[pid];
+    if (eigene.some((e) => e.payload.person === pid && eldGleichePub(e.payload.pub, m.pub))) continue;
+    eldSchreiben(ablage, { familie: v.familie }, konto, 'family_set', { person: pid, role: 'parent', pub: { ...m.pub }, stand: m.stand || 1 }, now);
+    n++;
+  }
+  return n;
+}
+
+/* ---------- one call for the app ---------- */
+/* syncs this device with everything its accounts are connected to (instead of geraeteabgleich.geraetAbgleichen):
+   konten = the opened accounts on this device (usually one) - right after the first login pass the result of
+   konto.ersteAnmeldung: it notes where the new account belongs. Builds families, children and directory from the logs,
+   syncs, lets every parent check his open invitations and note the other parents, and syncs again while that changed
+   something (at most EINLADUNG_RUNDEN rounds).
+   -> { runden, bericht (of the last geraetAbgleichen), inDieApp (sum), bestaetigt, warnungen, abgelaufen } */
+export async function abgleichMitVerbindungen({ ablage, zugang, konten, now, heute } = {}) {
+  if (!Array.isArray(konten) || !konten.length) throw eldFalsch('konten erwartet.');
+  for (const k of konten) eldPruefen({ ablage, konto: k, now });
+  const personen = kontoPersonen(...konten);
+  const out = { runden: 0, bericht: null, inDieApp: 0, bestaetigt: [], warnungen: [], abgelaufen: [] };
+  const sammeln = () => {
+    const g = { familien: new Map(), kinder: new Map(), verzeichnis: {} };
+    for (const k of konten) {
+      const v = verbindungen({ ablage, konto: k, now });
+      for (const f of v.familien) g.familien.set(f.id, f);
+      for (const c of v.kinder) g.kinder.set(c.id, { id: c.id, pre: c.pre, anker: c.anker });
+      Object.assign(g.verzeichnis, v.verzeichnis);
+    }
+    return { familien: [...g.familien.values()], kinder: [...g.kinder.values()], verzeichnis: g.verzeichnis };
+  };
+  let plan = sammeln();
+  for (let i = 0; i < EINLADUNG_RUNDEN; i++) {
+    out.bericht = await geraetAbgleichen({ ablage, zugang, personen, kinder: plan.kinder, familien: plan.familien, verzeichnis: plan.verzeichnis, now, heute });
+    out.runden++;
+    out.inDieApp += out.bericht.inDieApp;
+    let geschrieben = 0;
+    for (const k of konten) {
+      if (eldEinrichten(ablage, k, now)) geschrieben++;
+      const r = await einladungenPruefen({ zugang, ablage, konto: k, now });
+      out.bestaetigt.push(...r.bestaetigt); out.abgelaufen.push(...r.abgelaufen);
+      for (const w of r.warnungen) if (!out.warnungen.some((x) => x.id === w.id)) out.warnungen.push(w);
+      geschrieben += r.bestaetigt.length + eldBuergen(ablage, k, now);
+    }
+    const neu = sammeln();
+    const neuIn = out.bericht.inDieApp > 0 || Object.values(out.bericht.bereiche).some((b) => b.aktion === 'angelegt' || b.aktion === 'ergaenzt' || b.aktion === 'gewechselt');
+    if (!geschrieben && !neuIn && JSON.stringify(neu) === JSON.stringify(plan)) break;
+    plan = neu;
+  }
+  return out;
+}
+
+/* ---------- login name suggestion ---------- */
+const ELD_UMLAUT = { 'ä': 'ae', 'ö': 'oe', 'ü': 'ue', 'ß': 'ss' };
+/* a free login name from a display name ("Kathie Müller" -> "kathie.mueller", else with two digits) -> name */
+export async function anmeldenameVorschlag({ zugang, anzeigename, rand = eldRand } = {}) {
+  if (!eldObj(zugang) || typeof zugang.directory !== 'function') throw eldFalsch('zugang fehlt.');
+  let b = String(anzeigename === undefined || anzeigename === null ? '' : anzeigename).toLowerCase().replace(/[äöüß]/g, (z) => ELD_UMLAUT[z])
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '').slice(0, 17).replace(/\.+$/, '');
+  if (b.length < 3) b += 'kid';
+  const frei = async (n) => kontoName(n) === n && (await zugang.directory(await kontoLookup(n))) === null;
+  if (await frei(b)) return b;
+  for (let i = 0; i < 40; i++) {
+    const n = b + (10 + (rand(1)[0] % 90));
+    if (await frei(n)) return n;
+  }
+  throw eldFehler('name-ungueltig');
+}

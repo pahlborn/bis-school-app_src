@@ -282,6 +282,22 @@ test('2b Neuer Schluessel: jeder Zeitraum prueft mit seinem eigenen Schluessel u
   assert.equal(await grund(await ev('p_k1', 'answer', antwort('y'), 21)), 'rolle-darf-nicht');
 });
 
+test('Einladungen: neue Schluessel eines Kindes ("Passwort neu", stand 2) - ein spaeter Eintrag mit aelterem Stand stellt die alten nicht zurueck', async () => {
+  const neuK = await newPersonKeys(), neuKpub = await publicKeysOf(neuK);
+  const z = await aus([...(await grundstock()),
+    await dazu('p_e1', 'p_k1', 10, { pub: neuKpub, stand: 2 }),                          // Peter: Kathies neue Schluessel
+    await dazu('p_e2', 'p_k1', 11, { stand: undefined }),                                // Annas altes Geraet: alte Schluessel (stand 1)
+    await ev('p_e2', 'member_added', { person: 'p_k1', role: 'child', pub: neuKpub, stand: 2 }, 12)]);   // gleich wie gilt: nichts Neues
+  assert.deepEqual(z.verworfen.map((v) => v.grund), ['stand-alt']);
+  assert.deepEqual([z.members.p_k1.pub, z.members.p_k1.stand], [neuKpub, 2]);
+  assert.deepEqual(z.members.p_k1.perioden.map((p) => [p.von, p.bis, p.stand]), [[T0 + 3 * 60000, T0 + 10 * 60000, undefined], [T0 + 10 * 60000, null, 2]]);
+  assert.deepEqual(aktiveMitglieder(z).p_k1.stand, 2, 'auch fuer die Schluesselverteilung');
+  const grund = async (x) => { const r = await acceptEvent(x, z); return r.ok ? 'ok' : r.grund; };
+  assert.equal(await grund(await ev('p_k1', 'answer', antwort('n'), 13, { keys: neuK })), 'ok', 'neuer Schluessel zaehlt');
+  assert.equal(await grund(await ev('p_k1', 'answer', antwort('a'), 13)), 'unterschrift', 'alter Schluessel nach dem Wechsel nicht');
+  assert.equal(await grund(await ev('p_k1', 'answer', antwort('b'), 9)), 'ok', 'was vorher mit dem alten geschrieben wurde, bleibt');
+});
+
 test('2b Ex-Halter (E6): rueckdatierte Buendel mit alter Version nach dem Wechsel -> nach-entfernung; nach erneuter Aufnahme zaehlt Neues', async () => {
   const F1 = 'freigabe:g1', s = lokalerSpeicher({ now: () => JETZT }), m = M();
   const zug = { p_e1: s.geraet('d_e1'), p_l1: s.geraet('d_l1') };
