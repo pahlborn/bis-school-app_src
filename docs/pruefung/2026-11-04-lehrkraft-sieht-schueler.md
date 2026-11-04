@@ -63,4 +63,7 @@ Skript `%TEMP%\opencode\gegenprobe-lehrkraft.mjs` (Tests: `lehrkraft-schueler`, 
 - **Nicht getestet:** Admin mit Freigabe (gleicher Weg wie Lehrkraft), zweiter Elternteil als eigene Instanz.
 
 ## Volle Reihe
-Siehe PR.
+Eigener Arbeitsordner, mit `main` = 79dda0d (Stufe 3a Teil 1, #123). Rechner stark belegt durch andere Sitzungen (Laufzeit 450 s und 498 s statt ~240 s):
+- Lauf 1: **628/629** – `begruessung` „nicht am Tag der ersten Anmeldung …“: `page.goto`-Zeitüberschreitung; einzeln 4/4 grün.
+- Lauf 2: **628/629** – `stufe1-p3` „erstes Passwort …“: `page.goto`-Zeitüberschreitung; einzeln 4/4 grün.
+Beide betreffen den Live-Bau im Browser, nicht die geänderten Testbau-Module; jeder Test war in mindestens einem vollen Lauf und einzeln grün. Neue Tests (`lehrkraft-schueler`, `module/bereiche`, `module/geraeteabgleich`) in beiden Läufen grün.
