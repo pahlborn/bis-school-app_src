@@ -1,13 +1,13 @@
 {
-  "hinweis": "Reihenfolge = Reihenfolge in der App. bau: live (immer) oder test (nur Testinstanz, Stufe 2). browserTests: Browser-Tests des Bereichs fuer npm run test:bereich.",
+  "hinweis": "Reihenfolge = Reihenfolge in der App. bau: live (immer) oder test (nur Testinstanz, Stufe 2). browserTests: Tests der ganzen App fuer den Bereich (npm run test:bereich; aufgaben-* laufen ohne Browser in der Sandbox).",
   "module": [
     { "name": "rechte", "bau": "live", "browserTests": ["stufe1-p4", "stufe1-p3", "stufe1-ist", "anmeldung", "schule"] },
     { "name": "passwort", "bau": "live", "browserTests": ["stufe1-p3", "anmeldung", "hilfe-rollen"] },
     { "name": "witze", "bau": "live", "browserTests": ["spass", "begruessung"] },
     { "name": "geschichten", "bau": "live", "browserTests": ["spass"] },
-    { "name": "textfragen", "bau": "live", "browserTests": ["fragen", "lernlogik", "neutral"] },
-    { "name": "grundlage", "bau": "live", "browserTests": ["auftrag1-grundlage", "fragen", "lernlogik", "elternbereich-d2"] },
-    { "name": "runde", "bau": "live", "browserTests": ["runde-ohne-doppelte", "fragen", "lernlogik", "elternbereich-d2"] },
+    { "name": "textfragen", "bau": "live", "browserTests": ["aufgaben-node", "aufgaben-anpassung", "fragen", "lernlogik", "neutral"] },
+    { "name": "grundlage", "bau": "live", "browserTests": ["aufgaben-node", "aufgaben-anpassung", "auftrag1-grundlage", "fragen", "lernlogik", "elternbereich-d2"] },
+    { "name": "runde", "bau": "live", "browserTests": ["aufgaben-node", "aufgaben-anpassung", "runde-ohne-doppelte", "fragen", "lernlogik", "elternbereich-d2"] },
     { "name": "krypto", "bau": "test", "browserTests": ["testbau"] },
     { "name": "ereignisse", "bau": "test", "browserTests": ["testbau"] },
     { "name": "ableitung", "bau": "test", "browserTests": ["ableitung-vergleich"] },
