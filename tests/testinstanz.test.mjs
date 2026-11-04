@@ -12,7 +12,7 @@ import os from 'node:os';
 import path from 'node:path';
 import http from 'node:http';
 import { WURZEL, QUELLEN, testinstanzBauen, appZusammensetzen } from '../werkzeug/bauen.mjs';
-import { TESTINSTANZ, ersatzLesen, testinstanzUmwandeln, testinstanzPruefen, testinstanzManifest, geraeteNamen } from '../werkzeug/testinstanz.mjs';
+import { TESTINSTANZ, ersatzLesen, testinstanzUmwandeln, testinstanzPruefen, testinstanzManifest, geraeteNamen, VERSION_AUS_KLARTEXT } from '../werkzeug/testinstanz.mjs';
 import { woerterLesen } from '../werkzeug/kern.mjs';
 import { appLesen } from '../werkzeug/module.mjs';
 import { GITHUB_TOKEN_SCHLUESSEL } from '../src/module/github.mjs';
@@ -44,7 +44,7 @@ const nurFund = (app, pruefung, manifest) => { const f = funde(app, manifest); a
 test('Bau: Suchlauf bestanden, fuenf Dateien, App im Klartext = umgewandelter Testbau, eigener Name, Version drin', () => {
   assert.deepEqual(GEBAUT.dateien, ['index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png']);
   for (const d of GEBAUT.dateien) assert.ok(fs.existsSync(path.join(ZIEL, d)), d);
-  assert.equal(GEBAUT.pruefungen.length, 14);
+  assert.equal(GEBAUT.pruefungen.length, 15);
   assert.deepEqual(GEBAUT.pruefungen.filter((p) => !p.ok), []);
   assert.deepEqual(funde(APP), []);
   assert.ok(APP.startsWith('<!DOCTYPE html>') || APP.startsWith('<!doctype html>'), 'die App selbst, keine Huelle');
@@ -60,11 +60,15 @@ test('Umwandlung: alle Speicherstellen bqt_, Geraetedaten und Token geraeteweit,
   const roh = appZusammensetzen(testbau, VERSION, null, null).toString('utf8');
   assert.ok(roh.includes('bq2_') && /\bbq_/.test(roh) && roh.includes('bqUpdateTo'), 'Ausgangslage: der Testbau nutzt bq2_, bq_, bqUpdateTo');
   assert.deepEqual(geraeteNamen(roh), ['abgleich', 'abgleichVerworfen', 'schluessel']);
-  assert.match(APP, /const GLOBAL_KEYS=\/\^\(abgleich\|abgleichVerworfen\|schluessel\|gh\|session\|/);
-  for (const k of ["'bqt_session'", "'bqt_abgleich'", "'bqt_abgleichVerworfen'", "'bqt_schluessel'", "'bqt_evDevice'", "'bqt_gh'", "'bqtUpdateTo'"]) assert.ok(APP.includes(k), k);
+  // bq_schluessel (Familienschluessel) las nur publishedVersion - die Testinstanz liest die Version ohne Schluessel
+  assert.match(APP, /const GLOBAL_KEYS=\/\^\(abgleich\|abgleichVerworfen\|gh\|session\|/);
+  for (const k of ["'bqt_session'", "'bqt_abgleich'", "'bqt_abgleichVerworfen'", "'bqt_evDevice'", "'bqt_gh'", "'bqtUpdateTo'"]) assert.ok(APP.includes(k), k);
+  assert.ok(!APP.includes('bqt_schluessel'), 'kein Familienschluessel');
+  assert.ok(APP.includes(VERSION_AUS_KLARTEXT), 'Aktualisierung ohne Schluessel');
   assert.ok(APP.includes('Stage Show') && APP.includes('Save the Park') && APP.includes('https://pahlborn.github.io/bis-school-app-test/'));
-  // ausser Praefixen, Ersetzungen, GLOBAL_KEYS und Titeln ist jede Zeile gleich
-  const zeilenA = roh.split('\n'), zeilenB = APP.split('\n');
+  // ausser Praefixen, Ersetzungen, GLOBAL_KEYS, Titeln und publishedVersion ist jede Zeile gleich
+  const ohnePV = (x) => x.replace(/async function publishedVersion\(\)\{[\s\S]*?\n\}/, 'PUBLISHED_VERSION');
+  const zeilenA = ohnePV(roh).split('\n'), zeilenB = ohnePV(APP).split('\n');
   assert.equal(zeilenA.length, zeilenB.length, 'gleiche Zeilenzahl');
   const praefix = (z) => z.replace(/bq2_|\bbq_/g, 'bqt_').replace(/\bbqUpdateTo\b/g, 'bqtUpdateTo');
   const anders = zeilenA.map((z, i) => [z, zeilenB[i]]).filter(([a, b]) => praefix(a) !== b);
@@ -93,7 +97,12 @@ test('Gegenproben Suchlauf: jede Abweichung wird gefunden (Schuldaten, Konten, T
   }
   nurFund(APP + "<script>localStorage.getItem('fremd')</script>", 'feste Speicherstellen');
   nurFund(APP.replace("const GITHUB_TOKEN_SCHLUESSEL = 'bqt_gh';", "const GITHUB_TOKEN_SCHLUESSEL = 'bqt_token';"), 'Token-Eintrag');
-  nurFund(APP.replace('const GLOBAL_KEYS=/^(abgleich|abgleichVerworfen|schluessel|gh|', 'const GLOBAL_KEYS=/^(abgleich|abgleichVerworfen|schluessel|'), 'Geraetedaten und Token');
+  nurFund(APP.replace('const GLOBAL_KEYS=/^(abgleich|abgleichVerworfen|gh|', 'const GLOBAL_KEYS=/^(abgleich|abgleichVerworfen|'), 'Geraetedaten und Token');
+  // Aktualisierung: alte publishedVersion (mit Schluessel und Tresor, Speicherstelle schon bqt_), doppelt, ohne Version
+  const mitTresor = /async function publishedVersion\(\)\{[\s\S]*?\n\}/.exec(appLesen('utf8', { bauart: 'test' }))[0].replace(/\r/g, '').replace('bq_schluessel', 'bqt_schluessel');
+  nurFund(APP.replace(VERSION_AUS_KLARTEXT, () => mitTresor), 'Aktualisierung ohne Schluessel');
+  nurFund(APP.replace(VERSION_AUS_KLARTEXT, () => VERSION_AUS_KLARTEXT + '\n' + VERSION_AUS_KLARTEXT), 'Aktualisierung ohne Schluessel');
+  nurFund(APP.replace(VERSION_AUS_KLARTEXT, () => VERSION_AUS_KLARTEXT.replace('const APP_VERSION=', 'const APP_NAME=')), 'Aktualisierung ohne Schluessel');
   // verbotene Woerter: jedes einzelne, irgendwo in der App, und im Manifest
   for (const w of [...WOERTER, ...ERSATZ.auchVerboten]) nurFund(APP.replace('</body>', `<!-- ${w.toUpperCase()} --></body>`), 'keine verbotenen Woerter');
   nurFund(APP, 'keine verbotenen Woerter', JSON.stringify({ ...JSON.parse(MANIFEST), description: 'Toddle' }));
@@ -109,6 +118,7 @@ test('Gegenproben Umwandlung: geaenderte Stellen in index.html und Namensgleichh
   assert.throws(() => testinstanzUmwandeln(testbau.replace('const GLOBAL_KEYS=/^(', 'const GLOBAL_KEYS = /^('), ERSATZ), /GLOBAL_KEYS 0x statt 1x/);
   assert.throws(() => testinstanzUmwandeln(testbau.replace(/<title>/, '<title>A</title><title>'), ERSATZ), /<title> 2x/);
   assert.throws(() => testinstanzUmwandeln(testbau.replace('<meta name="apple-mobile-web-app-title"', '<meta name="x"'), ERSATZ), /apple-mobile-web-app-title 0x/);
+  assert.throws(() => testinstanzUmwandeln(testbau.replace("localStorage.getItem('bq_schluessel')", "localStorage.getItem('bq_key')"), ERSATZ), /publishedVersion \(mit Schluessel\) 0x/);
   assert.throws(() => testinstanzUmwandeln(testbau + "<script>localStorage.getItem('bq2_abgleich')</script>", ERSATZ), /"abgleich" ist Geraetename und zugleich Speicherstelle/);
   assert.throws(() => testinstanzUmwandeln(testbau + "<script>store.get('gh',null)</script>", ERSATZ), /"gh" ist Geraetename/);
 });

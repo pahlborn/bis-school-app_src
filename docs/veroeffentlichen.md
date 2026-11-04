@@ -54,3 +54,15 @@ Der gemerkte Schlüssel ist nur eine Abkürzung. Er entsteht immer wieder aus de
   3. Änderungen an den Abläufen (`.github/`) nur mit Peters Prüfung (Regel für den Zweig `main`).
   4. Nach jedem Verdacht: Familienpasswort wechseln (Abschnitt 3).
   5. Der Notzugang aus Abschnitt 3 bleibt unabhängig davon bestehen.
+
+## 5. Testinstanz (Stufe 3c) – eigene Fassung nur für Testpersonen
+Die Testinstanz ist eine eigene Fassung der App unter `https://pahlborn.github.io/bis-school-app-test/`. Sie enthält keine Schuldaten, keine Konten aus `konten.json` und kein Familienpasswort; sie liegt **unverschlüsselt** im öffentlichen Repo `pahlborn/bis-school-app-test`. Kathies App bleibt davon unberührt.
+
+- **Wer:** wie Abschnitt 1 – nur nach Peters ausdrücklicher Freigabe. Ein Schlüssel ist nicht nötig.
+- **Einmalig (Peter):** Auf GitHub ein neues Repo `bis-school-app-test` anlegen: **Public**, Haken bei „Add a README file“. Dann *Settings → Pages → Build and deployment*: „Deploy from a branch“, Zweig `main`, Ordner `/ (root)`. Klonen nach `C:\dev\Peters Bastelbude\bis-school-app-test`.
+- **Ablauf** (Arbeitsordner wie Abschnitt 2, Schritte 1–2):
+  1. `node werkzeug/testinstanz.mjs` – baut `dist-test/` und zeigt den Suchlauf (alle Prüfungen „ok“, Version **ohne** „-entwurf“).
+  2. `node werkzeug/testinstanz-veroeffentlichen.mjs --ziel "C:\dev\Peters Bastelbude\bis-school-app-test" --text "<kurz, was neu ist>"`
+     Prüft vor dem Kopieren noch einmal alles (derselbe Suchlauf auf genau den Dateien, die kopiert werden; `dist-test/` passt zum Quellstand; Ziel ist wirklich `bis-school-app-test` und nicht Kathies App; keine ältere Version über eine neuere). Kopiert `index.html`, `manifest.webmanifest` und die drei Icons, committet „Big Quest Test vN: …“, pusht und prüft, dass der Push angekommen ist.
+  3. Prüfen: `gh run list -R pahlborn/bis-school-app-test -L 1` → `success`; `node werkzeug/testinstanz-veroeffentlichen.mjs --live-pruefen` → „gleich“.
+- **Aktualisierung:** Geräte holen eine neue Fassung von selbst – beim Start und beim Zurückkehren in die App (höchstens alle 5 Minuten), nie mitten in einer Runde. Die Testinstanz liest die Version dafür im Klartext von ihrer eigenen Seite; einen Schlüssel braucht sie nicht. Die Versionsnummer ist dieselbe wie bei Kathies App (Stand von `main`), nur der veröffentlichte Stand kann sich unterscheiden.
