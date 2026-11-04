@@ -42,10 +42,13 @@ export const ANNAHME_GRUENDE = ['format', 'autor-unbekannt', 'nicht-mitglied', '
             own admission - the registration of their own device; they never write into child data
    own settings (task 3b-1c): everybody writes person_set - into the own person area only (module bereiche checks
             the author against the area). "At a glance" (glance_set) and the last backup (backup_made) are the parents':
-            a teacher's glance would keep the child's state in his own area after the grant ended. */
+            a teacher's glance would keep the child's state in his own area after the grant ended.
+   invitations (task "Einladungen"): a child notes the parent who created it (anchor_set, own area); a parent notes its
+            family (anchor_set), the invitations it gave out (invite_set, own area) and the members of the family whose
+            keys it checked (family_set) */
 const ANN_RIGHTS = {
-  child: ['answer', 'round_done', 'badge', 'review', 'practice_day', 'profile_set', 'rank_seen', 'sheet_created', 'sheet_result', 'checklist_set', 'day_flag', 'device_added', 'gap_state', 'advent_open', 'joke_seen', 'story_read', 'person_set'],
-  parent: ['profile_set', 'sheet_created', 'sheet_discarded', 'setting_set', 'school_import', 'grant_set', 'grant_revoked', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated', 'snapshot', 'gap_state', 'gap_active', 'list_set', 'advent_open', 'joke_seen', 'story_read', 'person_set', 'glance_set', 'backup_made'],
+  child: ['answer', 'round_done', 'badge', 'review', 'practice_day', 'profile_set', 'rank_seen', 'sheet_created', 'sheet_result', 'checklist_set', 'day_flag', 'device_added', 'gap_state', 'advent_open', 'joke_seen', 'story_read', 'person_set', 'anchor_set'],
+  parent: ['profile_set', 'sheet_created', 'sheet_discarded', 'setting_set', 'school_import', 'grant_set', 'grant_revoked', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated', 'snapshot', 'gap_state', 'gap_active', 'list_set', 'advent_open', 'joke_seen', 'story_read', 'person_set', 'glance_set', 'backup_made', 'anchor_set', 'family_set', 'invite_set'],
   teacher: ['grant_opened', 'device_added', 'person_set'],
   admin: ['grant_opened', 'device_added', 'person_set'],
 };
@@ -56,6 +59,7 @@ const ANN_LIMITS = {
   device_added: (e) => e.payload.device === e.device,                         // a device registers itself, nobody adds a foreign device
   grant_opened: (e) => e.payload.grantee === e.author,                        // the recipient logs his own opening, nobody else's
   gap_state: (e, role) => role !== 'child' || (e.payload.state === 'closed' && e.payload.by === 'app'),   // the child: only the automatic close
+  anchor_set: (e, role) => (role === 'child' ? e.payload.kind === 'child' : e.payload.kind === 'family'),   // a child has a creating parent, a parent a family
 };
 
 /* ---------- helpers ---------- */

@@ -145,19 +145,25 @@ jedeWelt('US9.2 - Startcode: einmal nutzbar; 7 Tage gueltig (kurz davor ja, dana
   }
 });
 
-jedeWelt('US9.2 - wer ausstellt: der Admin fuer Erwachsene, ein Elternteil fuer Kinder, sonst niemand; nur der erste Admin ohne Aussteller', async (W) => {
+jedeWelt('US9.2 - wer ausstellt: der Admin fuer Erwachsene, ein Elternteil fuer Kinder und (Einladungen) den zweiten Elternteil seiner Familie, sonst niemand; nur der erste Admin ohne Aussteller', async (W) => {
   const { admin, p, k } = await familie(W);
   const l = await ersteAnmeldung({ zugang: W.geraet('d_L1'), code: (await startcodeAusstellen({ zugang: W.geraet('d_A1'), aussteller: admin, anmeldename: 'lehrerin', art: 'teacher', now: W.uhr.t })).code, passwort: 'Lynx-Pear-Dune-3141', now: W.uhr.t, runden: R });
   const wer = { admin, parent: p, child: k, teacher: l };
+  const fam = { person: p.kennung, pub: p.pub };
   let n = 0;
   for (const von of KONTO_ARTEN) {
     for (const fuer of KONTO_ARTEN) {
-      const p0 = startcodeAusstellen({ zugang: W.geraet('d_X1'), aussteller: wer[von], anmeldename: 'neu' + (++n), art: fuer, now: W.uhr.t });
+      const zweiter = von === 'parent' && fuer === 'parent';
+      const p0 = startcodeAusstellen({ zugang: W.geraet('d_X1'), aussteller: wer[von], anmeldename: 'neu' + (++n), art: fuer, ...(zweiter ? { familie: fam } : {}), now: W.uhr.t });
       if ((KONTO_AUSSTELLER[von] || []).includes(fuer)) assert.ok((await p0).code, von + ' -> ' + fuer);
       else await fehlt(p0, 'nicht-erlaubt', von + ' -> ' + fuer);
     }
   }
-  assert.deepEqual(KONTO_AUSSTELLER, { admin: ['parent', 'teacher', 'admin'], parent: ['child'] });
+  assert.deepEqual(KONTO_AUSSTELLER, { admin: ['parent', 'teacher', 'admin'], parent: ['child', 'parent'] });
+  // der zweite Elternteil nur mit Familie; Familie nur dort
+  await fehlt(startcodeAusstellen({ zugang: W.geraet('d_X1'), aussteller: p, anmeldename: 'ohnefam', art: 'parent', now: W.uhr.t }), 'nicht-erlaubt', 'Elternteil -> Elternteil ohne Familie');
+  await fehlt(startcodeAusstellen({ zugang: W.geraet('d_X1'), aussteller: admin, anmeldename: 'mitfam', art: 'parent', familie: fam, now: W.uhr.t }), 'nicht-erlaubt', 'Admin mit Familie');
+  await fehlt(startcodeAusstellen({ zugang: W.geraet('d_X1'), aussteller: p, anmeldename: 'kindfam', art: 'child', familie: fam, now: W.uhr.t }), 'nicht-erlaubt', 'Kind mit Familie');
   for (const fuer of ['parent', 'teacher', 'child']) await fehlt(startcodeAusstellen({ zugang: W.geraet('d_X1'), aussteller: null, anmeldename: 'ohne' + fuer, art: fuer, now: W.uhr.t }), 'nicht-erlaubt', 'ohne Aussteller: ' + fuer);
   await fehlt(startcodeAusstellen({ zugang: W.geraet('d_X1'), aussteller: admin, anmeldename: 'x', art: 'parent', now: W.uhr.t }), 'name-ungueltig');
   await fehlt(startcodeAusstellen({ zugang: W.geraet('d_X1'), aussteller: admin, anmeldename: 'eltern', art: 'king', now: W.uhr.t }), 'nicht-erlaubt');
@@ -273,7 +279,7 @@ test('US9.1 - Hash des Anmeldenamens: fest, Gross/Klein und Leerzeichen egal, je
   assert.match(kontoKennung(), /^p_[0-9A-HJKMNP-TV-Z]{26}$/);
 });
 
-jedeWelt('US9.1 + E5 - im Speicher stehen weder Anmeldenamen noch Passwoerter, Codes oder Wiederherstellungscodes; Eintrag genau: v, lookup, kennung, art, pub, gesperrt', async (W) => {
+jedeWelt('US9.1 + E5 - im Speicher stehen weder Anmeldenamen noch Passwoerter, Codes oder Wiederherstellungscodes; Eintrag genau: v, lookup, kennung, art, pub, gesperrt, beweis (Einladungen; Kind: anker)', async (W) => {
   // alles mitschreiben, was ueber die Zugaenge in den Speicher geht
   const geschrieben = [];
   const mit = (z) => ({ ...z, putDirectory: (e) => { geschrieben.push(JSON.stringify(e)); return z.putDirectory(e); }, putKey: (b, h, x) => { geschrieben.push(b + h + JSON.stringify(x)); return z.putKey(b, h, x); }, put: (b, g, x) => { geschrieben.push(b + JSON.stringify(x)); return z.put(b, g, x); }, invite: { ...z.invite, put: (i, x, o) => { geschrieben.push(i + JSON.stringify(x)); return z.invite.put(i, x, o); } } });
@@ -298,9 +304,11 @@ jedeWelt('US9.1 + E5 - im Speicher stehen weder Anmeldenamen noch Passwoerter, C
   // der Eintrag hat genau diese Felder
   const z = roh('d_X1');
   const e = await z.directory(await kontoLookup('kathie'));
-  assert.deepEqual(Object.keys(e).sort(), ['art', 'gesperrt', 'kennung', 'lookup', 'pub', 'v']);
+  assert.deepEqual(Object.keys(e).sort(), ['anker', 'art', 'beweis', 'gesperrt', 'kennung', 'lookup', 'pub', 'v']);
   assert.deepEqual([e.kennung, e.art, e.pub, e.gesperrt.locks.length, e.gesperrt.locks[0].rounds], [f1.k.kennung, 'child', f1.k.pub, 1, R]);
+  assert.deepEqual(e.anker, { kennung: f1.p.kennung, pub: f1.p.pub }, 'Kind: der Elternteil, der es angelegt hat');
   const ep = await z.directory(await kontoLookup('peter'));
+  assert.deepEqual(Object.keys(ep).sort(), ['art', 'beweis', 'gesperrt', 'kennung', 'lookup', 'pub', 'v']);
   assert.equal(ep.gesperrt.locks.length, 2, 'Erwachsene: Passwort und Wiederherstellungscode');
   const e2 = await z.directory((await kontoLookup('peter')) + '-2');
   assert.deepEqual(Object.keys(e2).sort(), ['gesperrt', 'kennung', 'lookup', 'pub', 'sig', 'stand', 'v']);
@@ -457,7 +465,8 @@ test('Eingaben: Zugang, Uhr, Runden; kontoPersonen fuer geraeteabgleich', async 
   await assert.rejects(startcodeAusstellen({ zugang: z, aussteller: { art: 'admin' }, anmeldename: 'abc', art: 'parent', now: T0 }), /aussteller/);
   const s = await startcodeAusstellen({ zugang: z, aussteller: null, anmeldename: 'verwalter', art: 'admin', now: T0 });
   const a = await ersteAnmeldung({ zugang: z, code: s.code, passwort: PW.verwalter, now: T0, runden: R });
-  assert.deepEqual(Object.keys(a).sort(), ['anmeldename', 'art', 'aussteller', 'kennung', 'pub', 'schluessel', 'stand', 'wiederherstellungscode']);
+  assert.deepEqual(Object.keys(a).sort(), ['anker', 'anmeldename', 'art', 'aussteller', 'familie', 'kennung', 'neu', 'pub', 'schluessel', 'stand', 'wiederherstellungscode']);
+  assert.deepEqual([a.anker, a.familie, a.neu], [null, null, false]);
   const pers = kontoPersonen(a);
   assert.deepEqual(Object.keys(pers), [a.kennung]);
   assert.deepEqual([pers[a.kennung].role, pers[a.kennung].pub], ['admin', a.pub]);
@@ -465,10 +474,10 @@ test('Eingaben: Zugang, Uhr, Runden; kontoPersonen fuer geraeteabgleich', async 
   assert.throws(() => kontoPersonen({ kennung: a.kennung }), /Konto/);
 });
 
-test('Reinheit: kein Netz, kein Browser-Speicher, keine Uhr, kein Math.random; Importe nur krypto und passwort; Hilfsnamen kto/KTO_; nur im Testbau, nach geraeteabgleich', () => {
+test('Reinheit: kein Netz, kein Browser-Speicher, keine Uhr, kein Math.random; Importe nur krypto, annahme (Buergschaft, Einladungen) und passwort; Hilfsnamen kto/KTO_; nur im Testbau, nach geraeteabgleich', () => {
   const src = fs.readFileSync(new URL('../../src/module/konto.mjs', import.meta.url), 'utf8');
   for (const w of ['fetch(', 'XMLHttpRequest', 'localStorage', 'sessionStorage', 'indexedDB', 'Math.random', 'Date.now', 'new Date(', 'setTimeout', 'setInterval', 'document.', 'window.']) assert.equal(src.includes(w), false, w);
-  assert.deepEqual([...src.matchAll(/^import .* from '(.+)';$/gm)].map((m) => m[1]), ['./krypto.mjs', './passwort.mjs']);
+  assert.deepEqual([...src.matchAll(/^import .* from '(.+)';$/gm)].map((m) => m[1]), ['./krypto.mjs', './annahme.mjs', './passwort.mjs']);
   for (const m of src.matchAll(/^(?:export\s+)?(?:async\s+)?(?:function\s+([\w$]+)|(?:const|let|class)\s+([\w$]+))/gm)) {
     const name = m[1] || m[2];
     assert.ok(m[0].startsWith('export') || /^(kto|KTO_)/.test(name), name);

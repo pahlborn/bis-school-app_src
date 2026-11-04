@@ -8,7 +8,7 @@
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { BEREICH_ARTEN, BEREICH_JE_TYP, BEREICH_AUCH, bereichName, bereichZerlegen, bereichVonEreignis, passtZumBereich, bereicheFuer, halter, schluesselLesen, schluesselVerteilen } from '../../src/module/bereiche.mjs';
+import { BEREICH_ARTEN, BEREICH_JE_TYP, BEREICH_AUCH, bereichName, bereichZerlegen, bereichVonEreignis, passtZumBereich, bereicheFuer, halter, schluesselLesen, schluesselVerteilen, schluesselFuer } from '../../src/module/bereiche.mjs';
 import { lokalerSpeicher } from '../../src/module/speicher.mjs';
 import { abgleichStand, vormerken, senden, holen } from '../../src/module/abgleich.mjs';
 import { newPersonKeys, publicKeysOf, newAreaKey, wrapKeyFor, signBytes, openEntryText, entryAad } from '../../src/module/krypto.mjs';
@@ -260,7 +260,7 @@ test('Typ und Bereich: jeder Typ hat genau einen Bereich; Ereignis im falschen B
     'kind:privat': ['profile_set:emoji', 'profile_set:kidLang', 'profile_set:muted', 'setting_set', 'list_set', 'checklist_set', 'day_flag', 'advent_open', 'joke_seen', 'story_read'],
     schule: ['school_import', 'gap_state', 'gap_active'],
     'eltern:allg': ['grant_set', 'grant_revoked', 'backup_made'],
-    freigabe: ['grant_opened'], person: ['person_set', 'glance_set'], '*': ['snapshot', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated'],
+    freigabe: ['grant_opened'], person: ['person_set', 'glance_set', 'anchor_set', 'invite_set'], familie: ['family_set'], '*': ['snapshot', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated'],
   };
   const ist = {};
   for (const [t, b] of Object.entries(BEREICH_JE_TYP)) for (const [name, art] of typeof b === 'string' ? [[t, b]] : Object.entries(b).map(([fd, a]) => [t + ':' + fd, a])) (ist[art] = ist[art] || []).push(name);
@@ -315,12 +315,13 @@ test('Typ und Bereich: jeder Typ hat genau einen Bereich; Ereignis im falschen B
 });
 
 test('Bereichsnamen: nur das feste Schema; alles andere passt zu nichts', () => {
-  assert.deepEqual(BEREICH_ARTEN, ['kind:lern', 'kind:privat', 'schule', 'eltern:allg', 'freigabe', 'person']);
+  assert.deepEqual(BEREICH_ARTEN, ['kind:lern', 'kind:privat', 'schule', 'eltern:allg', 'freigabe', 'person', 'familie']);
+  assert.deepEqual(bereichZerlegen('familie:p_e1'), { art: 'familie', id: 'p_e1' }, 'Einladungen: Familie des Gruenders');
   assert.equal(bereichName('kind:lern', 'p_k1'), L);
   assert.equal(bereichName('freigabe', 'g1'), F1);
   assert.deepEqual(bereichZerlegen('eltern:allg:p_k1'), { art: 'eltern:allg', id: 'p_k1' });
   assert.deepEqual(bereichZerlegen('freigabe:g-7_x'), { art: 'freigabe', id: 'g-7_x' });
-  for (const n of ['kind:lern:', 'kind:lern:p_', 'kind:lern:k1', 'KIND:lern:p_k1', 'kind:lern:p_k1 ', 'kind:lern:p_k1:x', 'kind:p_k1', 'freigabe:', 'freigabe:a/b', 'freigabe:a:b', 'person:p_e1:x', 'kid:p_k1', '__proto__', 'toString', '', null, 7, {}]) {
+  for (const n of ['kind:lern:', 'kind:lern:p_', 'kind:lern:k1', 'KIND:lern:p_k1', 'kind:lern:p_k1 ', 'kind:lern:p_k1:x', 'kind:p_k1', 'freigabe:', 'freigabe:a/b', 'freigabe:a:b', 'person:p_e1:x', 'familie:g1', 'familie:', 'kid:p_k1', '__proto__', 'toString', '', null, 7, {}]) {
     assert.equal(bereichZerlegen(n), null, String(n));
     assert.equal(passtZumBereich({ type: 'snapshot', payload: {} }, n), false, 'snapshot in ' + String(n));
   }
@@ -330,7 +331,7 @@ test('Bereichsnamen: nur das feste Schema; alles andere passt zu nichts', () => 
 /* ---------- Halter und Rollen ---------- */
 test('bereicheFuer und halter: Rolle, Umfang, Datum, Widerruf, Geschwister, fremde Rollen', () => {
   assert.deepEqual(bereicheFuer('child'), ['kind:lern', 'kind:privat', 'schule']);
-  assert.deepEqual(bereicheFuer('parent'), ['kind:lern', 'kind:privat', 'schule', 'eltern:allg', 'freigabe']);
+  assert.deepEqual(bereicheFuer('parent'), ['kind:lern', 'kind:privat', 'schule', 'eltern:allg', 'freigabe', 'familie']);
   for (const r of ['teacher', 'admin']) {
     for (const u of [undefined, null, [], ['toString'], 'learning']) assert.deepEqual(bereicheFuer(r, u), [], `${r} ${JSON.stringify(u)}`);
     assert.deepEqual(bereicheFuer(r, ['learning']), ['kind:lern', 'freigabe']);
@@ -345,6 +346,7 @@ test('bereicheFuer und halter: Rolle, Umfang, Datum, Widerruf, Geschwister, frem
   assert.deepEqual(ids(EA), ['p_e1', 'p_e2']);
   assert.deepEqual(ids(F1), ['p_e1', 'p_e2', 'p_l1']);
   assert.deepEqual(ids(PE1), ['p_e1']);
+  assert.deepEqual(ids('familie:p_e1'), ['p_e1', 'p_e2'], 'Einladungen: Familienbereich nur fuer die Eltern (kein Kind, keine Lehrkraft, kein Admin mit Freigabe)');
   assert.deepEqual(ids('kind:lern:p_k2', []), ['p_e1', 'p_e2', 'p_k2'], 'Geschwister: eigener Bereich (mit seinen eigenen Freigaben), nicht der von p_k1');
   assert.deepEqual(ids('person:p_x1'), []);
   assert.deepEqual(halter(L, M, FREIGABEN, HEUTE).find((h) => h.id === 'p_k1'), { id: 'p_k1', pub: PUB.p_k1 });
@@ -435,6 +437,40 @@ test('Neuer Halter bekommt die ganze Geschichte: dritter Elternteil, erneute Fre
   await assert.rejects(schluesselVerteilen(g, EA, { soll: [halter(EA, M, [], HEUTE)[0], halter(EA, M, [], HEUTE)[0]], ich: 'p_e1', meineSchluessel: KEYS.p_e1, mitglieder: M }), /soll ungueltig/);
   await assert.rejects(schluesselVerteilen(g, 'kid:p_k1', { soll: [], ich: 'p_e1', meineSchluessel: KEYS.p_e1, mitglieder: M }), /bereiche/);
   await assert.rejects(schluesselLesen(g, 'kid:p_k1', { ich: 'p_e1', meineSchluessel: KEYS.p_e1, mitglieder: M }), /bereiche/);
+});
+
+/* ---------- Einladungen: neue Schluessel eines Halters ---------- */
+test('Einladungen: Kind mit neuen Schluesseln ("Passwort neu") bekommt jede Version neu verpackt (fuer), member_added mit stand; der alte Schluessel oeffnet nichts Neues', async () => {
+  const g = lokalerSpeicher().geraet('d_e1'), neu = await newPersonKeys(), neuPub = await publicKeysOf(neu);
+  const mit = (m) => ({ soll: halter(L, m, FREIGABEN, HEUTE), ich: 'p_e1', meineSchluessel: KEYS.p_e1, mitglieder: m });
+  assert.equal((await schluesselVerteilen(g, L, mit(M))).aktion, 'angelegt');
+  const e1 = (await g.keys(L)).p_k1;
+  assert.equal(e1.fuer, await schluesselFuer(PUB.p_k1), 'jeder Eintrag sagt, fuer welche Schluessel er verpackt ist');
+  assert.match(e1.fuer, /^[0-9a-f]{64}$/);
+  const M1 = { ...M, p_l1: undefined };
+  delete M1.p_l1;
+  const w = await schluesselVerteilen(g, L, mit(M1));                      // Freigabe p_l1 endet: Version 2
+  assert.deepEqual([w.aktion, w.version, w.geaendert], ['gewechselt', 2, []]);
+  // Kathie hat neue Schluessel (stand 2): beide Versionen neu verpackt, sonst aendert sich nichts
+  const M2 = { ...M1, p_k1: { role: 'child', pub: neuPub, stand: 2 } };
+  const vorher = await g.keys(L), r = await schluesselVerteilen(g, L, mit(M2));
+  assert.deepEqual([r.aktion, r.version, r.neu, r.geaendert, r.entfernt], ['ergaenzt', 2, [], ['p_k1'], []]);
+  assert.deepEqual(r.ereignisse, [{ type: 'member_added', payload: { person: 'p_k1', role: 'child', pub: neuPub, stand: 2 } }]);
+  const nachher = await g.keys(L);
+  assert.equal(nachher.p_k1.fuer, await schluesselFuer(neuPub));
+  for (const h of Object.keys(nachher).filter((x) => x !== 'p_k1')) assert.deepEqual(nachher[h], vorher[h], 'unveraendert: ' + h);
+  const jetzt = await schluesselLesen(g, L, { ich: 'p_k1', meineSchluessel: neu, mitglieder: M2 });
+  assert.deepEqual([jetzt.aktuell, [...jetzt.keys.keys()].sort()], [2, [1, 2]], 'mit den neuen Schluesseln: ganze Geschichte');
+  const alt = await schluesselLesen(g, L, { ich: 'p_k1', meineSchluessel: KEYS.p_k1, mitglieder: M2 });
+  assert.equal(alt.keys.size, 0, 'mit den alten nichts mehr');
+  assert.deepEqual(kurz(await schluesselVerteilen(g, L, mit(M2))), { aktion: 'unveraendert', version: 2, neu: [], entfernt: [] }, 'einmal reicht');
+  // ein Eintrag ohne "fuer" (vor dieser Aufgabe) gilt als passend - nichts wird neu verpackt
+  const ohne = { v: 1, von: 'p_e1', versionen: nachher.p_e2.versionen };
+  await g.putKey(L, 'p_e2', { ...ohne, sig: await signBytes(KEYS.p_e1, keyBytes(L, 'p_e2', ohne)) });
+  assert.deepEqual((await schluesselVerteilen(g, L, mit(M2))).geaendert, []);
+  // ein falsches "fuer" macht den Eintrag ungueltig
+  await g.putKey(L, 'p_e2', { ...nachher.p_e2, fuer: 'xyz' });
+  assert.ok((await schluesselLesen(g, L, { ich: 'p_e2', meineSchluessel: KEYS.p_e2, mitglieder: M2 })).ungueltig.includes('p_e2'));
 });
 
 /* ---------- Reinheit ---------- */

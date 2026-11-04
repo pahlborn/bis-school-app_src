@@ -11,13 +11,18 @@
 //     freigabe:<grantId>     the grant itself (grant_set, grant_revoked - a copy of the same events, so the recipient's
 //                            app knows it and finds the child) and the recipient's log "opened" (grant_opened)
 //                                                                          parents, the recipient while the grant runs
-//     person:<personId>      settings of one person (person_set, glance_set; task 3b-1c)   the person
+//     person:<personId>      settings of one person (person_set, glance_set; task 3b-1c), where it belongs and the
+//                            invitations it gave out (anchor_set, invite_set; task "Einladungen")   the person
 //                            - only the person itself writes there: an event of somebody else does not fit the area
+//     familie:<personId>     the family of the founding parent: its children and parents with their checked keys
+//                            (family_set; task "Einladungen") - so both parents see the same children   parents
 //   The area follows from the event type (for profile_set: from the field). snapshot and the admission events
 //   (member_*, device_*, key_rotated; task P3b-2) fit every area: each area carries its own admission.
 //
 //   key entry in the storage (speicher.keys / putKey), one per holder and area:
-//     { v: 1, von: <personId of the distributor>, versionen: { "<n>": wrapped key (krypto.wrapKeyFor) }, sig }
+//     { v: 1, von: <personId of the distributor>, versionen: { "<n>": wrapped key (krypto.wrapKeyFor) }, fuer, sig }
+//     fuer = bereichFuer(public keys of the holder) - the keys it was wrapped for (task "Einladungen": a child with new
+//            keys after "new password" gets every version again; an entry without fuer counts as wrapped for today's keys)
 //     sig = signature of the distributor over "bq-key1|" + area + "|" + holder + "|" + entry without sig.
 //     Only parents distribute (person areas: the person). An entry with another or a broken signature is ignored -
 //     so nobody with write access to the storage can slip in a key version he knows.
@@ -27,7 +32,7 @@
 import { createKeyring, rotateKeyring, wrapKeyFor, unwrapKey, signBytes, verifyBytes } from './krypto.mjs';
 
 /* the kinds of area, in this order everywhere */
-export const BEREICH_ARTEN = Object.freeze(['kind:lern', 'kind:privat', 'schule', 'eltern:allg', 'freigabe', 'person']);
+export const BEREICH_ARTEN = Object.freeze(['kind:lern', 'kind:privat', 'schule', 'eltern:allg', 'freigabe', 'person', 'familie']);
 
 /* ---------- type -> area (decided by Peter, 03.11.: the teacher sees the name; the child's account holds the
    school data so the app can compute focus and gaps, but never shows them) ---------- */
@@ -43,6 +48,8 @@ const BER_TYP = {
   grant_set: 'eltern:allg', grant_revoked: 'eltern:allg', backup_made: 'eltern:allg',
   grant_opened: 'freigabe',
   person_set: 'person', glance_set: 'person',                       // task 3b-1c: settings of one person, its own area only
+  anchor_set: 'person', invite_set: 'person',                       // task "Einladungen": where I belong, what I invited
+  family_set: 'familie',                                            // task "Einladungen": children and parents of the family
   // every area carries its own admission (task P3b-2): members, devices and key changes of THIS area
   member_added: '*', member_removed: '*', device_added: '*', device_removed: '*', key_rotated: '*',
   snapshot: '*',
@@ -55,7 +62,7 @@ const BER_AUCH = { grant_set: 'freigabe', grant_revoked: 'freigabe' };
 export const BEREICH_AUCH = Object.freeze({ ...BER_AUCH });
 
 /* ---------- who gets which kind of area ---------- */
-const BER_ROLLE = { child: ['kind:lern', 'kind:privat', 'schule'], parent: ['kind:lern', 'kind:privat', 'schule', 'eltern:allg', 'freigabe'] };
+const BER_ROLLE = { child: ['kind:lern', 'kind:privat', 'schule'], parent: ['kind:lern', 'kind:privat', 'schule', 'eltern:allg', 'freigabe', 'familie'] };
 const BER_UMFANG = { learning: 'kind:lern', school: 'schule' };
 
 /* ---------- helpers ---------- */
@@ -72,7 +79,7 @@ function berCanon(x) {
   return '{' + Object.keys(x).sort().filter((k) => x[k] !== undefined).map((k) => JSON.stringify(k) + ':' + berCanon(x[k])).join(',') + '}';
 }
 function berFehler(text) { return new Error('bereiche: ' + text); }
-const BER_PRAEFIX = [['kind:lern:', 'kind:lern'], ['kind:privat:', 'kind:privat'], ['schule:', 'schule'], ['eltern:allg:', 'eltern:allg'], ['freigabe:', 'freigabe'], ['person:', 'person']];
+const BER_PRAEFIX = [['kind:lern:', 'kind:lern'], ['kind:privat:', 'kind:privat'], ['schule:', 'schule'], ['eltern:allg:', 'eltern:allg'], ['freigabe:', 'freigabe'], ['person:', 'person'], ['familie:', 'familie']];
 
 /* ---------- area names ---------- */
 /* "kind:lern" + "p_k1" -> "kind:lern:p_k1"; freigabe takes a grant id, all others a person id */
@@ -158,12 +165,18 @@ function berVerteiler(bereich, mitglieder) {
   if (z.art === 'person') return berOwn(mitglieder, z.id) ? [z.id] : [];
   return Object.keys(mitglieder).filter((id) => berObj(mitglieder[id]) && mitglieder[id].role === 'parent');
 }
-const berSignTeil = (bereich, h, e) => berTE.encode('bq-key1|' + bereich + '|' + h + '|' + berCanon({ v: e.v, von: e.von, versionen: e.versionen }));
+const berSignTeil = (bereich, h, e) => berTE.encode('bq-key1|' + bereich + '|' + h + '|' + berCanon({ v: e.v, von: e.von, versionen: e.versionen, fuer: e.fuer }));
+/* the "fuer" of a key entry: SHA-256 of the public keys it was wrapped for, as 64 hex characters */
+export async function schluesselFuer(pub) {
+  if (!berObj(pub) || typeof pub.ecdh !== 'string' || typeof pub.ecdsa !== 'string') throw berFehler('schluesselFuer braucht pub.');
+  const d = new Uint8Array(await globalThis.crypto.subtle.digest('SHA-256', berTE.encode('bq-fuer|' + pub.ecdh + '|' + pub.ecdsa)));
+  return Array.from(d, (b) => b.toString(16).padStart(2, '0')).join('');
+}
 async function berGueltige(zugang, bereich, mitglieder) {
   const alle = await zugang.keys(bereich), erlaubt = berVerteiler(bereich, mitglieder);
   const gueltig = new Map(), ungueltig = [];
   for (const [h, e] of Object.entries(alle)) {
-    const form = berObj(e) && e.v === 1 && typeof e.sig === 'string' && berObj(e.versionen) && Object.keys(e.versionen).length > 0 &&
+    const form = berObj(e) && e.v === 1 && typeof e.sig === 'string' && berObj(e.versionen) && Object.keys(e.versionen).length > 0 && (e.fuer === undefined || (typeof e.fuer === 'string' && /^[0-9a-f]{64}$/.test(e.fuer))) &&
       Object.entries(e.versionen).every(([v, w]) => /^[1-9][0-9]{0,8}$/.test(v) && berObj(w));
     const m = form && erlaubt.includes(e.von) ? mitglieder[e.von] : null;
     if (m && berObj(m.pub) && await verifyBytes(m.pub, berSignTeil(bereich, h, e), e.sig)) gueltig.set(h, e);
@@ -214,18 +227,24 @@ export async function schluesselLesen(zugang, bereich, { ich, meineSchluessel, m
                                        earlier versions stay, so everybody keeps reading what he could read before
    - somebody in soll lacks the current version -> he gets every version the distributor has ("ergaenzt"), so a
                                        second parent or a new grant reads the history, too
-   -> { aktion: 'angelegt' | 'gewechselt' | 'ergaenzt' | 'unveraendert', version, neu: [id], entfernt: [id], ereignisse }
+   - somebody in soll has new public keys (task "Einladungen": a child after "new password"; his entry carries another
+                                       "fuer") -> every version again, wrapped for the new keys ("ergaenzt"; geaendert),
+                                       so nothing is lost; nobody else's key changes
+   -> { aktion: 'angelegt' | 'gewechselt' | 'ergaenzt' | 'unveraendert', version, neu: [id], geaendert: [id], entfernt: [id], ereignisse }
    ereignisse (task P3b-2): what the distributor must write into this area now, as [{ type, payload }] - member_added
-   for everybody new (role and public keys from mitglieder), member_removed and key_rotated (with the bundles per device
-   at the change, speicher.list) for everybody removed. The app signs and sends them like any other event. */
+   for everybody new or with new keys (role, public keys and - above 1 - stand from mitglieder), member_removed and
+   key_rotated (with the bundles per device at the change, speicher.list) for everybody removed. The app signs and sends
+   them like any other event. */
 export async function schluesselVerteilen(zugang, bereich, { soll, ich, meineSchluessel, mitglieder } = {}) {
   if (!bereichZerlegen(bereich) || !berObj(mitglieder) || !Array.isArray(soll)) throw berFehler('schluesselVerteilen braucht Bereich, soll und mitglieder.');
   if (!berVerteiler(bereich, mitglieder).includes(ich)) throw berFehler('nur Eltern verteilen Schluessel (person: nur die Person selbst).');
   const ids = soll.map((h) => (berObj(h) && berPid(h.id) && berObj(h.pub) ? h.id : null));
   if (ids.includes(null) || new Set(ids).size !== ids.length) throw berFehler('soll ungueltig.');
+  const fuer = new Map();
+  for (const h of soll) fuer.set(h.id, await schluesselFuer(h.pub));
   const { gueltig } = await berGueltige(zugang, bereich, mitglieder);
   const schreiben = new Map();                       // holder -> versionen
-  let aktion, version, neu, entfernt = [];
+  let aktion, version, neu, entfernt = [], geaendert = [];
   if (gueltig.size === 0) {
     const { ring } = await createKeyring(bereich, soll);
     for (const h of soll) schreiben.set(h.id, { 1: ring.versions[1][h.id] });
@@ -236,34 +255,41 @@ export async function schluesselVerteilen(zugang, bereich, { soll, ich, meineSch
     const jetzt = Object.keys(ring.versions[ring.current]);
     entfernt = jetzt.filter((id) => !ids.includes(id)).sort(berCmp);
     neu = ids.filter((id) => !jetzt.includes(id)).sort(berCmp);
+    // wrapped for other keys than the holder has today (an entry without "fuer" counts as wrapped for today's keys)
+    geaendert = ids.filter((id) => jetzt.includes(id) && gueltig.has(id) && typeof gueltig.get(id).fuer === 'string' && gueltig.get(id).fuer !== fuer.get(id)).sort(berCmp);
     version = ring.current;
-    const alleVersionen = async (h) => {                // the whole history for somebody new
-      const v = { ...(gueltig.has(h.id) ? gueltig.get(h.id).versionen : {}) };
+    const alleVersionen = async (h) => {                // the whole history for somebody new or with new keys
+      const v = geaendert.includes(h.id) ? {} : { ...(gueltig.has(h.id) ? gueltig.get(h.id).versionen : {}) };
       for (const [n, key] of meine) v[n] = await wrapKeyFor(key, h, bereich, n);
       return v;
     };
+    const frisch = (id) => neu.includes(id) || geaendert.includes(id);
     if (entfernt.length) {
       const r = await rotateKeyring(ring, soll);
       version = r.ring.current;
       for (const h of soll) {
-        const v = neu.includes(h.id) ? await alleVersionen(h) : { ...gueltig.get(h.id).versionen };
+        const v = frisch(h.id) ? await alleVersionen(h) : { ...gueltig.get(h.id).versionen };
         v[version] = r.ring.versions[version][h.id];
         schreiben.set(h.id, v);
       }
       aktion = 'gewechselt';
     } else {
-      for (const h of soll) if (neu.includes(h.id)) schreiben.set(h.id, await alleVersionen(h));
-      aktion = neu.length ? 'ergaenzt' : 'unveraendert';
+      for (const h of soll) if (frisch(h.id)) schreiben.set(h.id, await alleVersionen(h));
+      aktion = neu.length || geaendert.length ? 'ergaenzt' : 'unveraendert';
     }
   }
   for (const [h, versionen] of [...schreiben].sort((a, b) => berCmp(a[0], b[0]))) {
-    const e = { v: 1, von: ich, versionen };
+    const e = { v: 1, von: ich, versionen, fuer: fuer.get(h) };
     await zugang.putKey(bereich, h, { ...e, sig: await signBytes(meineSchluessel, berSignTeil(bereich, h, e)) });
   }
-  const ereignisse = neu.map((id) => ({ type: 'member_added', payload: { person: id, role: mitglieder[id].role, pub: { ...soll.find((h) => h.id === id).pub } } }));
+  const dazu = (id) => {
+    const m = mitglieder[id], stand = berObj(m) && Number.isInteger(m.stand) && m.stand > 1 ? { stand: m.stand } : {};
+    return { type: 'member_added', payload: { person: id, role: m.role, pub: { ...soll.find((h) => h.id === id).pub }, ...stand } };
+  };
+  const ereignisse = [...neu, ...geaendert].map(dazu);
   if (aktion === 'gewechselt') {
     for (const id of entfernt) ereignisse.push({ type: 'member_removed', payload: { person: id } });
     ereignisse.push({ type: 'key_rotated', payload: { version, entfernt: entfernt.slice(), stand: { ...(await zugang.list(bereich, null)).merker.stand } } });
   }
-  return { aktion, version, neu, entfernt, ereignisse };
+  return { aktion, version, neu, geaendert, entfernt, ereignisse };
 }
