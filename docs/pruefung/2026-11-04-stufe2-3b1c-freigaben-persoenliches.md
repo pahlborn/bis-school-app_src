@@ -57,4 +57,4 @@ Letzter Teil von 3b-1 (Schreibhaken). Freigaben (`grants`, `grantlog`) als `gran
 - Zurückspielen einer Sicherung schreibt keine Ereignisse (Aufgabe 6 bzw. 3c).
 
 ## Volle Reihe
-(wird vor dem Merge eingetragen)
+**509/509 grün** (278 s, eigener Arbeitsordner, `main` = e385a1d). Ein erster Lauf hatte 503/509: sechs `page.goto`-Zeitüberschreitungen (about, blaetter, eltern, elternbereich-b2), weil eine andere Sitzung gleichzeitig Browser-Gegenproben laufen ließ; die vier Dateien einzeln 26/26 grün, Wiederholung der vollen Reihe grün.
