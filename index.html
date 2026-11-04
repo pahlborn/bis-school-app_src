@@ -640,7 +640,7 @@ const TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4
    bq2_<id>__<key>; passwords under bq2_pw_<id>. Before (and as a fallback if the move on this device
    failed): the FIRST student account used bq2_<key>, every other one bq2_<user>__<key>. Device-wide keys
    stay shared. */
-const GLOBAL_KEYS=/^(session|sessionPrev|adultSession|pw_.+|parentPin|muted|parentLang|migr|kidsHere|lastSeen|conceptSeen|glance|evDevice)$/;
+const GLOBAL_KEYS=/^(session|sessionPrev|adultSession|pw_.+|parentPin|muted|parentLang|migr|kidsHere|lastSeen|conceptSeen|glance|evDevice|personEvents)$/;
 let ID_STORAGE=false;
 /* account for a stored reference {id} or {user} (id first: login names may change, IDs never do) */
 function accByRef(r){
@@ -673,7 +673,7 @@ del(k){ try{ localStorage.removeItem(storeKey(k)); }catch(e){} }
    eventHook(type, payload). Only the test build has the module "schreiber"; there the event goes to
    bq2_<child>__events (who acts: the child, or the grown-up while the grown-ups' area is open). The live build
    has no such module: eventHook does nothing there and the app keeps working exactly as before. */
-let eventSink=null; const eventErrors=[], eventNoChild=[];
+let eventSink=null, personSink=null; const eventErrors=[], eventNoChild=[], eventNoPerson=[];
 function eventWho(){
   if(parentAccess){
     if(!accountsOn()) return {person:'p_eltern', role:'parent'};
@@ -683,18 +683,28 @@ function eventWho(){
   if(!accountsOn()) return {person:'p_kind', role:'child'};
   const s=studentSession(); return s ? {person:s.id, role:'child'} : null;
 }
-function eventHook(type, payload){
-  if(typeof evSchreiber!=='function') return;
+/* Settings of one person (area person:<id>, task 3b-1c: parentLang, a grown-up's sound, conceptSeen, glance) go to
+   the log of the person acting (bq2_personEvents, per person ID), not to the child's. kid (optional): the child the
+   caller means (grants: kidAccount) - if the store shows another child, nothing is written (eventErrors).
+   Returns the stored event (its time "at" is what the app keeps, e.g. in the grant log) or null. */
+function eventHook(type, payload, kid){
+  if(typeof evSchreiber!=='function') return null;
+  const own=typeof bereichVonEreignis==='function' && bereichVonEreignis({type, payload})==='person';
+  if(own && !eventWho()){ eventNoPerson.push(type); return null; }     // nobody logged in (e.g. the sound on the login page)
   // with accounts but no child's area (e.g. the start page behind the login stores bq2_rankSeen): no child's log to
   // write to - noted, not written (task 3b-1b-3)
-  if(accountsOn() && !childNs()){ eventNoChild.push(type); return; }
+  if(!own && accountsOn() && !childNs()){ eventNoChild.push(type); return null; }
+  if(!own && kid && kid!==childNs()){ eventErrors.push(type+': anderes Kind'); return null; }
   try{
     if(!eventSink){
       let d=store.get('evDevice',null); if(!d){ d=newDeviceId(); store.set('evDevice',d); }
-      eventSink=evSchreiber({read:()=>store.get('events',[]), write:l=>store.set('events',l), device:d, who:eventWho, now:()=>Date.now()});
+      const now=()=>Date.now(), mine=()=>(eventWho()||{}).person;
+      eventSink=evSchreiber({read:()=>store.get('events',[]), write:l=>store.set('events',l), device:d, who:eventWho, now});
+      personSink=evSchreiber({read:()=>(store.get('personEvents',{})||{})[mine()], write:l=>{ const all=store.get('personEvents',{})||{}; all[mine()]=l; store.set('personEvents',all); }, device:d, who:eventWho, now});
     }
-    eventSink.write(type, payload);
-  }catch(e){ eventErrors.push(type+': '+String(e&&e.message||e)); }
+    const r=(own?personSink:eventSink).write(type, payload);
+    return r.ok ? r.event : null;
+  }catch(e){ eventErrors.push(type+': '+String(e&&e.message||e)); return null; }
 }
 /* Lists stored whole but synced per entry (task 3b-1b-2: unlocked, focusManual): the list_set payloads that turn the
    old list into the new one - normally only what was removed or added; if the kept entries changed their order or a
@@ -4023,6 +4033,8 @@ const isTeacher = () => !!(accountsOn() && adultUser && (adultUser.role==='teach
    bring back an old visit). A visit lasts from opening the grown-ups area until it is locked (parentEpoch). */
 let glanceVisit={epoch:-1, base:{}};
 function glanceId(){ const a=accountsOn()&&adultUser?accByRef({user:adultUser.user}):null, k=accountsOn()?kidAccount():null; return (a?a.id:'parent')+'|'+(k?k.id:'kid'); }
+/* stage 2 (3b-1c): the visit follows the parent (his person area), one value per child; without accounts the child is p_kind */
+const glanceKid = () => !accountsOn() ? 'p_kind' : ((kidAccount()||{}).id||null);
 function glanceNow(){
   const b=store.get('badges',{});
   return {at:dayKey(), n:store.get('attempts',[]).filter(a=>a.attempt===1).length, b:Object.values(b).reduce((s,x)=>s+(+x||0),0), rank:shownRank(store.get('total',0)), closed:Object.keys(gapData().closed)};
@@ -4035,7 +4047,7 @@ function glanceBase(){
     const all=store.get('glance',{}), prev=all[id]||null, now=glanceNow();
     now.idea=prev?(prev.idea||0)+1:0;
     glanceVisit.base[id]=prev?Object.assign({}, prev, {idea:now.idea}):{first:true, idea:0};
-    all[id]=now; store.set('glance',all);
+    all[id]=now; store.set('glance',all); if((eventWho()||{}).role==='parent' && glanceKid()) eventHook('glance_set',{child:glanceKid(), value:now});   // parents only (3b-1c)
   }
   return glanceVisit.base[id];
 }
@@ -4168,7 +4180,9 @@ const kidKey = (acc,k) => ID_STORAGE && acc ? 'bq2_'+acc.id+'__'+k : null;
 function kidRead(acc,k,d){ const lk=kidKey(acc,k); if(!lk) return d; try{ const v=localStorage.getItem(lk); return v===null?d:JSON.parse(v); }catch(e){ return d; } }
 function kidWrite(acc,k,v){ const lk=kidKey(acc,k); if(lk) try{ localStorage.setItem(lk, JSON.stringify(v)); }catch(e){} }
 const grantActive = g => isGrantActive(g, dayKey());
-function grantLog(acc, entry){ const log=kidRead(acc,'grantlog',[]); log.push(Object.assign({at:new Date().toISOString()}, entry)); kidWrite(acc,'grantlog',log.slice(-200)); }
+/* Stage 2 (task 3b-1c): the log is what is synced - ev = [type, payload] of its event (none for "abgelaufen": that follows
+   from "until" when reading); "grants" follows from these events. The entry keeps the event's time; returns that time. */
+function grantLog(acc, entry, ev){ const e=ev&&kidKey(acc,'grantlog')?eventHook(ev[0], ev[1], acc&&acc.id):null, at=e?e.at:new Date().toISOString(), log=kidRead(acc,'grantlog',[]); log.push(Object.assign({at}, entry)); kidWrite(acc,'grantlog',log.slice(-200)); return at; }
 /* expired grants get their log entry once */
 function grantsExpire(acc){
   const gs=kidRead(acc,'grants',[]), neu=expireGrants(gs, dayKey());
@@ -4226,20 +4240,21 @@ function bindGrants(body){
     const days=Math.max(1,Math.min(90,Math.round(+$('#pGrantDays').value||14))), scope=['learning'].concat($('#pGrantSchool').checked?['school']:[]);
     const until=new Date(Date.parse(dayKey()+'T12:00:00')+(days-1)*864e5).toISOString().slice(0,10);
     const me=APP_ACCOUNTS.users.find(u=>u.user===adultUser.user), g={id:'g'+Date.now().toString(36)+Math.random().toString(36).slice(2,6), grantee:p.id, scope, from:dayKey(), until, by:me.id};
-    const gs=kidRead(acc,'grants',[]); gs.forEach(x=>{ if(x.grantee===p.id && grantActive(x)){ x.revokedAt=new Date().toISOString(); grantLog(acc,{ev:'widerrufen', grant:x.id, grantee:x.grantee, by:me.id}); } });
-    gs.push(g); kidWrite(acc,'grants',gs); grantLog(acc,{ev:'erteilt', grant:g.id, grantee:p.id, scope, until, by:me.id, text:grantConsentText(p.user, days, scope)});
+    const gs=kidRead(acc,'grants',[]); gs.forEach(x=>{ if(x.grantee===p.id && grantActive(x)) x.revokedAt=grantLog(acc,{ev:'widerrufen', grant:x.id, grantee:x.grantee, by:me.id}, ['grant_revoked',{grant:x.id, grantee:x.grantee}]); });
+    const text=grantConsentText(p.user, days, scope);
+    gs.push(g); kidWrite(acc,'grants',gs); grantLog(acc,{ev:'erteilt', grant:g.id, grantee:p.id, scope, until, by:me.id, text}, ['grant_set',{grant:g.id, grantee:p.id, scope, from:g.from, until, text}]);
     renderSheets();
   });
   body.querySelectorAll('[data-grantrevoke]').forEach(b=>b.addEventListener('click',()=>{
     if(!canBackup()) return; const acc=kidAccount(), me=APP_ACCOUNTS.users.find(u=>u.user===adultUser.user), gs=kidRead(acc,'grants',[]), g=gs.find(x=>x.id===b.dataset.grantrevoke); if(!g || g.revokedAt) return;
-    g.revokedAt=new Date().toISOString(); kidWrite(acc,'grants',gs); grantLog(acc,{ev:'widerrufen', grant:g.id, grantee:g.grantee, by:me.id}); renderSheets();
+    g.revokedAt=grantLog(acc,{ev:'widerrufen', grant:g.id, grantee:g.grantee, by:me.id}, ['grant_revoked',{grant:g.id, grantee:g.grantee}]); kidWrite(acc,'grants',gs); renderSheets();
   }));
 }
 /* "viewed" once a day per grantee and child */
 function grantOpened(){
   const g=viewerGrant(); if(!g) return; const acc=kidAccount(); if(!acc) return;
   const log=kidRead(acc,'grantlog',[]); if(log.some(e=>e.ev==='geöffnet' && e.grantee===g.grantee && e.at.slice(0,10)===new Date().toISOString().slice(0,10))) return;
-  grantLog(acc,{ev:'geöffnet', grant:g.id, grantee:g.grantee, scope:g.scope});
+  grantLog(acc,{ev:'geöffnet', grant:g.id, grantee:g.grantee, scope:g.scope}, ['grant_opened',{grant:g.id, grantee:g.grantee, scope:g.scope}]);
 }
 /* admin without a grant: only metadata of the accounts, no contents, no display names */
 function accountsAdminHTML(){
@@ -4295,7 +4310,7 @@ function backupLine(){
 /* "New here?" (concept 5.3, B4): until the grown-up has opened "How Big Quest works" once on this device. */
 const conceptSeenId = () => accountsOn() && adultUser ? ((APP_ACCOUNTS.users.find(u=>u.user===adultUser.user)||{}).id || adultUser.user) : 'pin';
 const conceptSeen = () => !!(store.get('conceptSeen',{})||{})[conceptSeenId()];
-function markConceptSeen(){ const s=store.get('conceptSeen',{})||{}; if(s[conceptSeenId()]) return; s[conceptSeenId()]=dayKey(); store.set('conceptSeen',s); }
+function markConceptSeen(){ const s=store.get('conceptSeen',{})||{}; if(s[conceptSeenId()]) return; s[conceptSeenId()]=dayKey(); store.set('conceptSeen',s); eventHook('person_set',{field:'conceptSeen', value:dayKey()}); }
 function newHereLine(){
   if(conceptSeen()) return '';
   const de=PL()==='de';
@@ -4327,7 +4342,7 @@ async function makeBackup(){
       try{ await navigator.share({files:[file], title:name}); done=true; }catch(e){ if(e && e.name==='AbortError') return; }
     }
     if(!done){ const a=document.createElement('a'); a.href=URL.createObjectURL(file); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),5000); }
-    store.set('lastBackup', dayKey());
+    store.set('lastBackup', dayKey()); eventHook('backup_made',{day:dayKey()});
     backupNote=(de?'Gesichert: ':'Saved: ')+countsText(backupCounts(data,audio));
   }catch(e){ backupNote=de?'Die Sicherung ließ sich nicht erstellen.':'The backup could not be created.'; }
   renderHome(); renderSheets();
@@ -5422,9 +5437,9 @@ function aboutChrome(){
   ['tabDe','tabEn'].forEach(id=>{ const on=PL()===(id==='tabDe'?'de':'en'); $('#'+id).classList.toggle('on',on); $('#'+id).setAttribute('aria-pressed',on); });
   ['tabInfo','tabSheets'].forEach(id=>$('#'+id).classList.toggle('primary', {tabInfo:'info',tabSheets:'sheets'}[id]===state.aboutTab));
 }
-function setLang(l){ store.set(langKey(),l); if(langKey()==='kidLang') eventHook('profile_set',{field:'kidLang', value:l}); if(state.screen==='about') openAbout(state.aboutTab==='sheets'?'sheets':'info'); }
+function setLang(l){ store.set(langKey(),l); if(langKey()==='kidLang') eventHook('profile_set',{field:'kidLang', value:l}); else eventHook('person_set',{field:'parentLang', value:l}); if(state.screen==='about') openAbout(state.aboutTab==='sheets'?'sheets':'info'); }
 function openAbout(tab, open){
-  if(tab==='de'||tab==='en'){ store.set(langKey(),tab); if(langKey()==='kidLang') eventHook('profile_set',{field:'kidLang', value:tab}); tab='info'; }
+  if(tab==='de'||tab==='en'){ store.set(langKey(),tab); if(langKey()==='kidLang') eventHook('profile_set',{field:'kidLang', value:tab}); else eventHook('person_set',{field:'parentLang', value:tab}); tab='info'; }
   // A logged-in grown-up may read the info pages without being logged out (Peter, 31.10.).
   if(tab!=='sheets' && !(accountsOn() && adultUser)) parentLock();
   state.aboutTab=tab||'info'; state.aboutSub=null;
@@ -5579,7 +5594,7 @@ $('#rankClose').addEventListener('click',()=>{ const d=$('#rankDlg'); if(d.close
 $('#pfClose').addEventListener('click',closeProfile);
 $('#profileForm').addEventListener('submit',e=>{ e.preventDefault(); saveProfile(); });
 document.addEventListener('pointerdown',e=>{ if(savedTimer && !e.target.closest('#profileDlg')) hideSaved(); });
-$('#soundBtn').addEventListener('click',()=>{ muted=!muted; store.set('muted',muted); if((eventWho()||{}).role==='child') eventHook('profile_set',{field:'muted', value:muted});   // the child's own switch (3b-1b-4); a grown-up's: 3b-1c
+$('#soundBtn').addEventListener('click',()=>{ muted=!muted; store.set('muted',muted); if((eventWho()||{}).role==='child') eventHook('profile_set',{field:'muted', value:muted}); else eventHook('person_set',{field:'muted', value:muted});   // the child's own switch (3b-1b-4); a grown-up's: his person area (3b-1c)
   $('#soundBtn').textContent='Sound: '+(muted?'off':'on'); if(!muted) beep('good'); });
 $('#quitBtn').addEventListener('click',goBack);
 $('#studioBack').addEventListener('click',goBack);

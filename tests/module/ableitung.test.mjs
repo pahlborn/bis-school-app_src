@@ -40,7 +40,7 @@ test('Leere Liste: die Werte eines neuen Kindes; "now" ist Pflicht', () => {
   assert.deepEqual(run(null), NEU);
   assert.throws(() => derive([]), /"now" is missing/);
   assert.throws(() => derive([], { now: NOW, base: { upTo: 'gestern', state: NEU } }), /base\.upTo/);
-  assert.deepEqual(DERIVE_LIMITS, { attempts: 200, evidence: 60, due: 40, sheets: 8, jokes: 200 });
+  assert.deepEqual(DERIVE_LIMITS, { attempts: 200, evidence: 60, due: 40, sheets: 8, jokes: 200, grantlog: 200 });
   assert.deepEqual(DERIVE_GAPS, [1, 3, 7]);
   assert.deepEqual(DERIVE_TREE_AT, [0, 1, 3, 6, 10, 15, 25]);
   assert.deepEqual(DERIVE_RANKS, ['Explorer', 'Investigator', 'Scientist', 'Professor', 'Legend']);

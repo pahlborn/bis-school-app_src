@@ -134,11 +134,13 @@ test('Was der Schreiber speichert, liest derive wie die App (Antworten, Runde, A
    Ohne Haken erlaubt: lokale Schluessel (speicherstellen.json "lokal") und die abgeleiteten Werte, die derive aus
    den Ereignissen der Nachbarstellen rechnet (der Klick-Vergleich in tests/ableitung-vergleich.test.mjs prueft sie).
    OFFEN: was 3b-1b/3b-1c noch anschliessen - die Liste darf nur kuerzer werden. */
-const ABGELEITET = { ev: 'aus answer und sheet_result', total: 'Summe aus round_done', best_: 'Maximum aus round_done', tried: 'aus dem Abzeichen inquirer', treeStage: 'aus den Uebungstagen', sheetNo: 'aus sheet_created' };
+const ABGELEITET = { ev: 'aus answer und sheet_result', total: 'Summe aus round_done', best_: 'Maximum aus round_done', tried: 'aus dem Abzeichen inquirer', treeStage: 'aus den Uebungstagen', sheetNo: 'aus sheet_created',
+  grants: 'aus grant_set und grant_revoked (3b-1c; expiredLogged ist eine Geraetenotiz)' };
+/* the writer itself: the child's log and the logs of the persons (3b-1c) - each written at exactly one place */
+const PROTOKOLLE = ['events', 'personEvents'];
 const OFFEN = {
-  // 3b-1b-1 (Profil, Sprache des Kindes, storyCap, Tageshinweise, Checkliste) ist angeschlossen
-  // 3b-1b-1, -2, -3 (Einzelwerte, Listen, Luecken) sind angeschlossen; Witze, Geschichten, Ton (3b-1b-4) waren bisher "lokal"
-  '3b-1c': ['grants', 'grantlog', 'parentLang'],
+  // 3b-1a, 3b-1b-1 ... -4 und 3b-1c sind angeschlossen: nichts mehr offen. Ohne Ereignis bleiben nur Gruppe B (Geraet)
+  // und C/D (entfaellt) aus "Was bleibt auf dem Geraet" - sie stehen in speicherstellen.json als "lokal".
 };
 /* Schluessel, die nicht als Text dastehen: Ausdruck -> [Schluessel, Pruefung der Stelle] */
 const AUSDRUCK = {
@@ -168,7 +170,7 @@ function schreibstellen() {
   });
   // hooks per line, each one claimed once, sites in the order of the file: same line first, then the line before, then after
   const frei = zeilen.map((z) => (z.match(/eventHook\(/g) || []).length);
-  const braucht = (s) => s.eintrag && s.eintrag.abgleich !== 'lokal' && !Object.hasOwn(ABGELEITET, s.eintrag.key) && s.eintrag.key !== 'events';
+  const braucht = (s) => s.eintrag && s.eintrag.abgleich !== 'lokal' && !Object.hasOwn(ABGELEITET, s.eintrag.key) && !PROTOKOLLE.includes(s.eintrag.key);
   for (const s of out) {
     if (!braucht(s)) continue;
     const i = s.zeile - 1, j = [i, i - 1, i + 1].find((x) => frei[x] > 0);
@@ -182,13 +184,18 @@ test('Waechter (3b-1): jede Schreibstelle eines abzugleichenden Schluessels hat 
   assert.ok(stellen.length > 60, 'the guard finds the write sites: ' + stellen.length);
   const unbekannt = stellen.filter((s) => !s.key || !s.eintrag).map((s) => `Zeile ${s.zeile}: ${s.ausdruck} -> ${s.key}`);
   assert.deepEqual(unbekannt, [], 'every write site has a known key with an entry in speicherstellen.json');
-  const pflicht = stellen.filter((s) => s.eintrag.abgleich !== 'lokal' && !Object.hasOwn(ABGELEITET, s.eintrag.key) && s.eintrag.key !== 'events');   // events: the writer itself
-  assert.equal(stellen.filter((s) => s.key === 'events').length, 1, 'events are written at exactly one place (eventHook)');
+  const pflicht = stellen.filter((s) => s.eintrag.abgleich !== 'lokal' && !Object.hasOwn(ABGELEITET, s.eintrag.key) && !PROTOKOLLE.includes(s.eintrag.key));   // the logs: the writer itself
+  for (const k of PROTOKOLLE) assert.equal(stellen.filter((s) => s.key === k).length, 1, k + ' is written at exactly one place (eventHook)');
   const ohne = pflicht.filter((s) => !s.haken && !offen.includes(s.eintrag.key)).map((s) => `Zeile ${s.zeile}: ${s.key}`);
   assert.deepEqual(ohne, [], 'write sites without eventHook');
   for (const k of offen) assert.ok(pflicht.some((s) => s.eintrag.key === k && !s.haken), `"${k}" is in OFFEN but has no open site any more - remove it from the list`);
   const mitHaken = new Set(pflicht.filter((s) => s.haken).map((s) => s.eintrag.key));
-  for (const k of ['attempts', 'due', 'badges', 'rankSeen', 'sheets', 'name', 'chk_', 'unlocked', 'focusManual', 'advent', 'gaps', 'jokeSeen', 'storyRead', 'muted']) assert.ok(mitHaken.has(k), 'hooked: ' + k);   // 3a, 3b-1b-1 ... -4
+  for (const k of ['attempts', 'due', 'badges', 'rankSeen', 'sheets', 'name', 'chk_', 'unlocked', 'focusManual', 'advent', 'gaps', 'jokeSeen', 'storyRead', 'muted',
+    'grantlog', 'parentLang', 'conceptSeen', 'glance', 'lastBackup']) assert.ok(mitHaken.has(k), 'hooked: ' + k);   // 3a, 3b-1b-1 ... -4, 3b-1c
+  assert.deepEqual(pflicht.filter((s) => !s.haken).map((s) => `Zeile ${s.zeile}: ${s.key}`), [], '3b-1c: the open list is empty');
+  // nothing that "Was bleibt auf dem Geraet" puts into group A stays "lokal" (except the recordings, decided later)
+  const verz = JSON.parse(fs.readFileSync(new URL('../../werkzeug/speicherstellen.json', import.meta.url), 'utf8')).localStorage;
+  for (const k of ['jokeSeen', 'storyRead', 'muted', 'parentLang', 'conceptSeen', 'glance', 'lastBackup']) assert.notEqual(verz.find((e) => e.key === k).abgleich, 'lokal', 'group A: ' + k);
   console.log(`  Waechter: ${stellen.length} Schreibstellen, ${pflicht.filter((s) => s.haken).length} mit Haken, offen: ${pflicht.filter((s) => !s.haken).length} (${[...new Set(pflicht.filter((s) => !s.haken).map((s) => s.eintrag.key))].join(', ')})`);
 });
 
@@ -198,6 +205,54 @@ test('Waechter: jeder Schluessel aus "abgeleitet" und "offen" steht so im Verzei
   for (const k of Object.keys(ABGELEITET)) assert.notEqual(verz.find((e) => e.key === k).abgleich, 'lokal', k);
   const s = derive([], { now: T0 });
   for (const k of ['ev', 'total', 'tried', 'treeStage', 'sheetNo']) assert.ok(k in s, 'derive: ' + k);
+  const a = app({ person: 'p_e1', role: 'parent' });                      // grants: only once there is a grant (as in the app)
+  a.w.write('grant_set', { grant: 'g1', grantee: 'p_l1', scope: ['learning'], from: DAY, until: DAY });
+  assert.deepEqual(derive(a.list, { now: T0 }).grants.map((g) => g.id), ['g1'], 'derive: grants');
+  assert.equal('grants' in s, false, 'no grant event: no key');
+});
+
+test('3b-1c: Freigaben, Personen-Einstellungen, Blick und Sicherung - was der Schreiber speichert, liest derive wie die App', () => {
+  const a = app({ person: 'p_e1', role: 'parent' });
+  const g = { grant: 'g1', grantee: 'p_l1', scope: ['learning', 'school'], from: DAY, until: '2026-11-16', text: 'Sie geben ...' };
+  assert.equal(a.w.write('grant_set', g).ok, true);
+  a.clock += 1000; assert.equal(a.w.write('grant_revoked', { grant: 'g1', grantee: 'p_l1' }).ok, true);
+  a.clock += 1000; a.w.write('grant_revoked', { grant: 'g1', grantee: 'p_l1' });   // twice (two devices): logged once
+  a.w.write('grant_revoked', { grant: 'gX', grantee: 'p_l1' });                       // unknown grant: nothing
+  a.w.write('grant_set', { ...g, grant: 'g2', scope: ['learning'] });
+  a.w.write('backup_made', { day: DAY });
+  a.me = { person: 'p_l1', role: 'teacher' };
+  assert.equal(a.w.write('grant_opened', { grant: 'g2', grantee: 'p_l1', scope: ['learning'] }).ok, true);
+  assert.equal(a.w.write('grant_opened', { grant: 'g2', grantee: 'p_e1' }).grund, 'rolle-darf-nicht', 'only for himself');
+  assert.equal(a.w.write('glance_set', { child: 'p_k1', value: {} }).grund, 'rolle-darf-nicht', 'no glance for a teacher');
+  assert.equal(a.w.write('backup_made', { day: DAY }).grund, 'rolle-darf-nicht');
+  a.me = { person: 'p_k1', role: 'child' };
+  assert.equal(a.w.write('grant_set', g).grund, 'rolle-darf-nicht', 'the child grants nothing');
+  const s = derive(a.list, { now: T0 + 86400000 }), at = (i) => a.list[i].at;
+  assert.deepEqual(s.grants, [
+    { id: 'g1', grantee: 'p_l1', scope: ['learning', 'school'], from: DAY, until: '2026-11-16', by: 'p_e1', revokedAt: at(1) },
+    { id: 'g2', grantee: 'p_l1', scope: ['learning'], from: DAY, until: '2026-11-16', by: 'p_e1' }]);
+  assert.deepEqual(s.grantlog, [
+    { at: at(0), ev: 'erteilt', grant: 'g1', grantee: 'p_l1', scope: ['learning', 'school'], until: '2026-11-16', by: 'p_e1', text: 'Sie geben ...' },
+    { at: at(1), ev: 'widerrufen', grant: 'g1', grantee: 'p_l1', by: 'p_e1' },
+    { at: at(4), ev: 'erteilt', grant: 'g2', grantee: 'p_l1', scope: ['learning'], until: '2026-11-16', by: 'p_e1', text: 'Sie geben ...' },
+    { at: at(6), ev: 'geöffnet', grant: 'g2', grantee: 'p_l1', scope: ['learning'] }]);
+  assert.equal(s.lastBackup, DAY);
+  // the log of one person: language, sound, "How it works", glance per child
+  const p = app({ person: 'p_e1', role: 'parent' });
+  p.w.write('person_set', { field: 'parentLang', value: 'en' });
+  p.w.write('person_set', { field: 'muted', value: true });
+  p.w.write('person_set', { field: 'conceptSeen', value: DAY });
+  p.w.write('glance_set', { child: 'p_k1', value: { at: DAY, n: 3, idea: 0 } });
+  p.w.write('glance_set', { child: 'p_k2', value: { at: DAY, n: 1, idea: 0 } });
+  p.w.write('glance_set', { child: 'p_k1', value: { at: DAY, n: 9, idea: 1 } });
+  p.w.write('person_set', { field: 'parentLang', value: 'de' });
+  p.w.write('person_set', { field: 'muted', value: null });
+  assert.deepEqual(p.w.problems, []);
+  const q = derive(p.list, { now: T0 });
+  assert.deepEqual([q.parentLang, 'muted' in q, q.conceptSeen], ['de', false, DAY]);
+  assert.deepEqual(q.glance, { p_k1: { at: DAY, n: 9, idea: 1 }, p_k2: { at: DAY, n: 1, idea: 0 } });
+  for (const role of ['child', 'teacher', 'admin']) { const x = app({ person: 'p_x1', role }); assert.equal(x.w.write('person_set', { field: 'parentLang', value: 'en' }).ok, true, role + ': own settings'); }
+  assert.equal(p.w.write('person_set', { field: 'kidLang', value: 'en' }).grund, 'format', 'the child\'s language is no person setting');
 });
 
 test('Modul ist rein: kein Speicher, kein Netz, keine eigene Uhr; Hilfsnamen mit sw-Praefix', () => {

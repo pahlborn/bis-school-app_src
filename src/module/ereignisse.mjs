@@ -78,6 +78,13 @@ const EV_SPEC = {
   // app drops when every joke of the moment was shown and the round starts again (witze.mjs jokeNext)
   joke_seen: ['joke:str', 'forget:arr'],
   story_read: ['story:str', ''],                                       // the story moves to the end (geschichten.mjs storyMarkRead)
+  // settings of one person (task 3b-1c; area person:<id>, before only on the device): language of the grown-ups' area,
+  // sound switch of a grown-up, "How Big Quest works" opened (day). Written by the person itself, into its own area.
+  person_set: ['field:enum(parentLang|muted|conceptSeen) value:any', ''],
+  // "At a glance" (index.html glanceBase): the state at the last visit of a parent, per child ("last wins" per child)
+  glance_set: ['child:pid value:obj', ''],
+  // the last backup of the child's data (index.html makeBackup, key lastBackup; area eltern:allg)
+  backup_made: ['day:day', ''],
 };
 function evParse(text) {
   const out = {};
@@ -175,7 +182,7 @@ export function mergeLog(logs, now) {
 
 /* ---------- "last wins" fields ----------
    type -> payload fields that name the field. Everything else is a protocol event (not listed here). */
-const EV_LAST_WINS = { profile_set: ['field'], setting_set: ['setting'], day_flag: ['flag'], checklist_set: ['studio', 'index'], rank_seen: [], gap_state: ['standard'], gap_active: [], list_set: ['list', 'item'] };
+const EV_LAST_WINS = { profile_set: ['field'], setting_set: ['setting'], day_flag: ['flag'], checklist_set: ['studio', 'index'], rank_seen: [], gap_state: ['standard'], gap_active: [], list_set: ['list', 'item'], person_set: ['field'], glance_set: ['child'], backup_made: [] };
 /* key of the field an event sets, e.g. "profile_set:name"; null for protocol events */
 export function fieldKey(e) {
   if (!evObj(e) || !evObj(e.payload) || !evOwn(EV_LAST_WINS, e.type)) return null;

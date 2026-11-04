@@ -39,12 +39,15 @@ export const ANNAHME_GRUENDE = ['format', 'autor-unbekannt', 'nicht-mitglied', '
             by the child - or by a parent while the grown-ups' area is open (advent_open)
    jokes shown, stories read (task 3b-1b-4): the child - or a parent while the grown-ups' area is open
    teacher, admin: only the protocol entry "opened" for their own grant (5.2) and - since P3b-2, where every area carries its
-            own admission - the registration of their own device; they never write into child data */
+            own admission - the registration of their own device; they never write into child data
+   own settings (task 3b-1c): everybody writes person_set - into the own person area only (module bereiche checks
+            the author against the area). "At a glance" (glance_set) and the last backup (backup_made) are the parents':
+            a teacher's glance would keep the child's state in his own area after the grant ended. */
 const ANN_RIGHTS = {
-  child: ['answer', 'round_done', 'badge', 'review', 'practice_day', 'profile_set', 'rank_seen', 'sheet_created', 'sheet_result', 'checklist_set', 'day_flag', 'device_added', 'gap_state', 'advent_open', 'joke_seen', 'story_read'],
-  parent: ['profile_set', 'sheet_created', 'sheet_discarded', 'setting_set', 'school_import', 'grant_set', 'grant_revoked', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated', 'snapshot', 'gap_state', 'gap_active', 'list_set', 'advent_open', 'joke_seen', 'story_read'],
-  teacher: ['grant_opened', 'device_added'],
-  admin: ['grant_opened', 'device_added'],
+  child: ['answer', 'round_done', 'badge', 'review', 'practice_day', 'profile_set', 'rank_seen', 'sheet_created', 'sheet_result', 'checklist_set', 'day_flag', 'device_added', 'gap_state', 'advent_open', 'joke_seen', 'story_read', 'person_set'],
+  parent: ['profile_set', 'sheet_created', 'sheet_discarded', 'setting_set', 'school_import', 'grant_set', 'grant_revoked', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated', 'snapshot', 'gap_state', 'gap_active', 'list_set', 'advent_open', 'joke_seen', 'story_read', 'person_set', 'glance_set', 'backup_made'],
+  teacher: ['grant_opened', 'device_added', 'person_set'],
+  admin: ['grant_opened', 'device_added', 'person_set'],
 };
 export const ANNAHME_RECHTE = Object.freeze(Object.fromEntries(Object.entries(ANN_RIGHTS).map(([r, t]) => [r, Object.freeze(t.slice())])));
 
