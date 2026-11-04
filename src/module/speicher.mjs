@@ -27,8 +27,8 @@
 
 /* the functions every implementation offers (dot = function of a group) */
 export const SPEICHER_FUNKTIONEN = Object.freeze(['put', 'list', 'get', 'keys', 'putKey', 'directory', 'putDirectory', 'invite.put', 'invite.get', 'invite.delete', 'exportFile', 'importFile']);
-/* error codes */
-export const SPEICHER_FEHLER = Object.freeze(['offline', 'ungueltig', 'fremdes-geraet', 'vorhanden', 'luecke', 'unbekannt', 'abgelaufen']);
+/* error codes ("zugang" and "limit" only come from a real storage: module github, stage 3a) */
+export const SPEICHER_FEHLER = Object.freeze(['offline', 'ungueltig', 'fremdes-geraet', 'vorhanden', 'luecke', 'unbekannt', 'abgelaufen', 'zugang', 'limit']);
 /* an invitation is valid this long (concept 12: 10 minutes) */
 export const SPEICHER_EINLADUNG_MS = 10 * 60 * 1000;
 /* file format of exportFile / importFile */

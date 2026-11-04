@@ -17,6 +17,7 @@
     { "name": "schreiber", "bau": "test", "browserTests": ["ableitung-vergleich", "schreibhaken-1b", "testbau"] },
     { "name": "speicher", "bau": "test", "browserTests": ["testbau"] },
     { "name": "abgleich", "bau": "test", "browserTests": ["testbau"] },
+    { "name": "github", "bau": "test", "browserTests": ["testbau"] },
     { "name": "zulassung", "bau": "test", "browserTests": ["testbau"] },
     { "name": "lesen", "bau": "test", "browserTests": ["testbau-lesen", "ableitung-vergleich", "schreibhaken-1b"] }
   ]

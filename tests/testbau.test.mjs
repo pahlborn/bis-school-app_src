@@ -1,17 +1,21 @@
 // Testbau (S12, D3): die App mit den Stufe-2-Modulen startet im echten Browser ohne Fehler, und das Modul
 // krypto, ereignisse, schnappschuss und bereiche arbeiten dort genauso wie in Node (Web Crypto, Datum und Zeitformate in Chromium; Safari folgt im Feldtest).
+// Seit Stufe 3a auch der GitHub-Speicher gegen den Nachbau auf 127.0.0.1 (fetch, CORS, 304, base64 im Browser).
 //   node --test tests/testbau.test.mjs
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { appServer, browserStarten, appOeffnen } from './app-hilfen.mjs';
+import { githubNachbau } from './module/github-nachbau.mjs';
 
-let browser, server;
+const GH_TOKEN = 'github_pat_BROWSERTEST_' + 'k3'.repeat(20);   // nur im Nachbau gueltig
+let browser, server, gh;
 before(async () => {
   browser = await browserStarten();
-  server = await appServer({ bauart: 'test', anpassen: (h) => h.replace(/\}\)\(\);\s*<\/script>/, 'window.__bqk={sealEntry,openEntryText,entryAad,newAreaKey,newPersonKeys,publicKeysOf,lockPersonKeys,unlockPersonKeys,createKeyring,rotateKeyring,keysForHolder,keyFingerprint};window.__bqe={newEvent,checkEvent,effectiveTime,mergeLog,fieldKey,lastWins};window.__bqs={makeSnapshot,stateFrom,needsSnapshot,derive};window.__bqb={halter,schluesselVerteilen,schluesselLesen,passtZumBereich,lokalerSpeicher,signEvent,acceptEvent,zulassungAus};})();</script>') });
+  server = await appServer({ bauart: 'test', anpassen: (h) => h.replace(/\}\)\(\);\s*<\/script>/, 'window.__bqk={sealEntry,openEntryText,entryAad,newAreaKey,newPersonKeys,publicKeysOf,lockPersonKeys,unlockPersonKeys,createKeyring,rotateKeyring,keysForHolder,keyFingerprint};window.__bqe={newEvent,checkEvent,effectiveTime,mergeLog,fieldKey,lastWins};window.__bqs={makeSnapshot,stateFrom,needsSnapshot,derive};window.__bqb={halter,schluesselVerteilen,schluesselLesen,passtZumBereich,lokalerSpeicher,signEvent,acceptEvent,zulassungAus};window.__bqg={githubSpeicher};})();</script>') });
+  gh = await githubNachbau({ token: GH_TOKEN });
 });
-after(async () => { await browser?.close(); server?.close(); });
+after(async () => { await browser?.close(); server?.close(); await gh?.schliessen(); });
 
 test('Testbau startet ohne Fehler; Verschluesseln, Sperren, Verpacken und Schluesselwechsel laufen im Browser', async () => {
   const { ctx, page, fehler } = await appOeffnen(browser, server.url);
@@ -113,6 +117,35 @@ test('Testbau: Zulassung aus den Ereignissen des Bereichs (P3b-2a)', async () =>
     return { mitglieder: Object.keys(z.members).join(), kind: z.members.p_k1.devices.join(), verworfen: z.verworfen.map((v) => v.grund).join() };
   });
   assert.deepEqual(r, { mitglieder: 'p_e1,p_k1', kind: 'd_k1', verworfen: 'autor-unbekannt' });
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
+
+test('Testbau: GitHub-Speicher im Browser gegen den Nachbau (Stufe 3a) - base64 mit Umlauten, 304 bei unveraendertem Ordner, Fehlercodes', async () => {
+  const { ctx, page, fehler } = await appOeffnen(browser, server.url);
+  await ctx.route(gh.basis + '/**', (r) => r.continue());          // nur der Nachbau auf 127.0.0.1; alles andere bleibt gesperrt
+  const vorher = { ...gh.zaehler };
+  const r = await page.evaluate(async ({ basis, token }) => {
+    const G = window.__bqg, B = 'kind:lern:p_k1';
+    const s = G.githubSpeicher({ repo: 'pahlborn/bis-school-app-testdaten', token, basis, wurzel: 'browser' });
+    const a = s.geraet('d_a1'), b = s.geraet('d_b1');
+    const code = async (p) => { try { await p; return 'ok'; } catch (e) { return e.code + (e.message.includes(token.slice(-10)) ? ' MIT TOKEN' : ''); } };
+    await a.put(B, 'd_a1', { nr: 1, inhalt: { text: 'Größe – Äpfel 🍎' } });
+    const l1 = await b.list(B);
+    const l2 = await b.list(B, l1.merker);
+    await a.invite.put('i1', { fuer: 'zweiter Elternteil' });
+    return {
+      kennungen: l1.kennungen.join(), leer: l2.kennungen.length, inhalt: (await b.get(B, 'd_a1/1')).text,
+      vorhanden: await code(a.put(B, 'd_a1', { nr: 1, inhalt: 'x' })), luecke: await code(a.put(B, 'd_a1', { nr: 3, inhalt: 'x' })),
+      unbekannt: await code(b.get(B, 'd_a1/9')), einladung: (await b.invite.get('i1')).fuer, zweimal: await code(b.invite.get('i1')),
+      zugang: await code(G.githubSpeicher({ repo: 'pahlborn/bis-school-app-testdaten', token: 'falsch-falsch-falsch', basis }).geraet('d_a1').list(B)),
+      offline: await code(G.githubSpeicher({ repo: 'pahlborn/bis-school-app-testdaten', token, basis: 'http://127.0.0.1:9' }).geraet('d_a1').list(B)),
+      unveraendert: s.anfragen().unveraendert,
+    };
+  }, { basis: gh.basis, token: GH_TOKEN });
+  assert.deepEqual(r, { kennungen: 'd_a1/1', leer: 0, inhalt: 'Größe – Äpfel 🍎', vorhanden: 'vorhanden', luecke: 'luecke', unbekannt: 'unbekannt', einladung: 'zweiter Elternteil', zweimal: 'unbekannt', zugang: 'zugang', offline: 'offline', unveraendert: 1 });
+  assert.equal(gh.zaehler.unveraendert - vorher.unveraendert, 1, 'der Browser reicht 304 an das Modul durch (kein eigener Zwischenspeicher)');
+  assert.equal(gh.dateien().get('browser/events/kind:lern:p_k1/d_a1/1.json'), '{"text":"Größe – Äpfel 🍎"}', 'UTF-8 unveraendert im Repo');
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
