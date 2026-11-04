@@ -100,9 +100,10 @@ async function verteilen(f, area, { heute = HEUTE, freigaben = FREIGABEN, ich = 
 async function familie() {
   const f = { s: lokalerSpeicher({ now: () => JETZT }), st: new Map(), ids: new Map(), angemeldet: new Set() };
   for (const area of [L, PR, S, EA, F1, F2, F3, PE1]) assert.equal((await verteilen(f, area)).aktion, 'angelegt', area);
-  await schreiben(f, L, 'p_k1', [['answer', NUTZ.answer()], ['answer', NUTZ.answer()], ['profile_set', NUTZ.name('Kathie')]]);
+  // Aufgabe "Name und Geburtsdatum" (04.11.): Nachname und Geburtsdatum liegen beim Namen (kind:lern)
+  await schreiben(f, L, 'p_k1', [['answer', NUTZ.answer()], ['answer', NUTZ.answer()], ['profile_set', NUTZ.name('Kathie')], ['profile_set', { field: 'lastName', value: 'Becker' }], ['profile_set', { field: 'birthday', value: '2017-05-14' }]]);
   await schreiben(f, L, 'p_e1', [['sheet_created', NUTZ.sheet()]]);
-  await schreiben(f, PR, 'p_k1', [['profile_set', { field: 'birthday', value: '2017-05-14' }], ['profile_set', { field: 'emoji', value: 'fox' }], ['day_flag', { flag: 'greetDay', day: TAG }]]);
+  await schreiben(f, PR, 'p_k1', [['profile_set', { field: 'emoji', value: 'fox' }], ['day_flag', { flag: 'greetDay', day: TAG }]]);
   await schreiben(f, PR, 'p_e1', [['setting_set', { setting: 'storyCap', value: 2 }]]);
   await schreiben(f, S, 'p_e1', [['school_import', NUTZ.schule()]]);
   await schreiben(f, S, 'p_k1', [['gap_state', NUTZ.luecke()]]);
@@ -111,8 +112,8 @@ async function familie() {
   await schreiben(f, F2, 'p_l2', [['grant_opened', { grant: 'g2', grantee: 'p_l2' }]]);
   await schreiben(f, PE1, 'p_e1', [['snapshot', NUTZ.snap()]]);
   for (const area of FREMD) await verteilen(f, area, { ich: 'p_e7', mitglieder: FM, freigaben: [] });
-  await schreiben(f, FREMD[0], 'p_k7', [['profile_set', NUTZ.name('Kathie')], ['answer', NUTZ.answer()]], FM);
-  await schreiben(f, FREMD[1], 'p_k7', [['profile_set', { field: 'birthday', value: '2017-02-02' }]], FM);
+  await schreiben(f, FREMD[0], 'p_k7', [['profile_set', NUTZ.name('Kathie')], ['answer', NUTZ.answer()], ['profile_set', { field: 'birthday', value: '2017-02-02' }]], FM);
+  await schreiben(f, FREMD[1], 'p_k7', [['profile_set', { field: 'emoji', value: 'owl' }]], FM);
   return f;
 }
 const gleich = (a, b) => a.length === b.length && [...a].sort().join() === [...b].sort().join();
@@ -166,24 +167,30 @@ test('Lese-Matrix: jede Zelle mit echten Schluesseln - erlaubt -> entschluesselt
 });
 
 /* ---------- 2 Profil ---------- */
-test('Profil: Lehrkraft mit Freigabe liest Antworten und den Namen, aber keinen Geburtstag, kein Emoji, keine Einstellungen', async () => {
+test('Profil: Lehrkraft mit Freigabe liest Antworten, Namen, Nachnamen und Geburtsdatum, aber kein Emoji, keine Einstellungen', async () => {
   const f = await familie();
   for (const pid of ['p_l1', 'p_l2', 'p_a2']) {
     const r = await lesen(f, L, pid);
-    assert.deepEqual(inhalt(r.events).map((e) => e.type).sort(), ['answer', 'answer', 'profile_set', 'sheet_created'], pid);
+    assert.deepEqual(inhalt(r.events).map((e) => e.type).sort(), ['answer', 'answer', 'profile_set', 'profile_set', 'profile_set', 'sheet_created'], pid);
     const st = derive(r.events, { now: JETZT });
     assert.equal(st.name, 'Kathie', pid + ' sieht, mit welchem Kind sie arbeitet');
+    assert.equal(st.lastName, 'Becker', pid + ': Nachname (Aufgabe 04.11.)');
+    assert.equal(st.birthday, '2017-05-14', pid + ': Geburtsdatum mit Jahr (Aufgabe 04.11.)');
     assert.equal(st.attempts.length, 2);
-    assert.equal(st.birthday, undefined);
+    assert.equal(st.emoji, undefined);
     // alles, was diese Person ueberhaupt entschluesseln kann
     let klartext = '';
     for (const area of [L, PR, S, EA, F1, F2, F3, PE1]) klartext += JSON.stringify((await lesen(f, area, pid)).events);
     assert.ok(klartext.includes('Kathie'));
     assert.ok(klartext.includes('member_added'), 'die Zulassung des Bereichs (Kennungen, oeffentliche Schluessel) liest sie mit');
-    for (const w of ['2017-05-14', 'birthday', '"fox"', 'emoji', 'storyCap', 'greetDay', 'grant_set']) assert.equal(klartext.includes(w), false, pid + ': ' + w);
+    for (const w of ['"fox"', 'emoji', 'storyCap', 'greetDay', 'grant_set', '2017-02-02', '"owl"']) assert.equal(klartext.includes(w), false, pid + ': ' + w);
   }
   const r2 = await lesen(f, PR, 'p_e2');
-  assert.deepEqual(inhalt(r2.events).map((e) => e.payload.field || e.payload.setting || e.payload.flag).sort(), ['birthday', 'emoji', 'greetDay', 'storyCap'], 'Eltern lesen das ganze Profil');
+  assert.deepEqual(inhalt(r2.events).map((e) => e.payload.field || e.payload.setting || e.payload.flag).sort(), ['emoji', 'greetDay', 'storyCap'], 'Eltern lesen das ganze Profil');
+  const r3 = await lesen(f, L, 'p_e2');
+  assert.deepEqual(inhalt(r3.events).filter((e) => e.type === 'profile_set').map((e) => e.payload.field).sort(), ['birthday', 'lastName', 'name'], 'Eltern lesen Name, Nachname und Geburtsdatum');
+  const k = await lesen(f, L, 'p_k1');
+  assert.equal(derive(k.events, { now: JETZT }).birthday, '2017-05-14', 'das Kind liest seinen Geburtstag (Geburtstagsfeier)');
 });
 
 /* ---------- 3 Kind und Schule ---------- */
@@ -249,8 +256,8 @@ test('Typ und Bereich: jeder Typ hat genau einen Bereich; Ereignis im falschen B
   assert.deepEqual(Object.keys(BEREICH_JE_TYP).sort(), EVENT_TYPES.slice().sort(), 'jeder Ereignistyp hat einen Bereich (neuer Typ -> hier eintragen)');
   // ausgeschrieben, nicht aus dem Modul abgeleitet
   const SOLL = {
-    'kind:lern': ['answer', 'round_done', 'badge', 'review', 'practice_day', 'rank_seen', 'sheet_created', 'sheet_result', 'sheet_discarded', 'profile_set:name'],
-    'kind:privat': ['profile_set:birthday', 'profile_set:emoji', 'profile_set:kidLang', 'profile_set:muted', 'setting_set', 'list_set', 'checklist_set', 'day_flag', 'advent_open', 'joke_seen', 'story_read'],
+    'kind:lern': ['answer', 'round_done', 'badge', 'review', 'practice_day', 'rank_seen', 'sheet_created', 'sheet_result', 'sheet_discarded', 'profile_set:name', 'profile_set:lastName', 'profile_set:birthday'],
+    'kind:privat': ['profile_set:emoji', 'profile_set:kidLang', 'profile_set:muted', 'setting_set', 'list_set', 'checklist_set', 'day_flag', 'advent_open', 'joke_seen', 'story_read'],
     schule: ['school_import', 'gap_state', 'gap_active'],
     'eltern:allg': ['grant_set', 'grant_revoked', 'backup_made'],
     freigabe: ['grant_opened'], person: ['person_set', 'glance_set'], '*': ['snapshot', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated'],
@@ -268,7 +275,7 @@ test('Typ und Bereich: jeder Typ hat genau einen Bereich; Ereignis im falschen B
   const z = (area) => ({ area, members: M });
   const grund = async (area, pid, type, payload) => { const r = await acceptEvent(await signiert(area, pid, type, payload), z(area)); return r.ok ? 'ok' : r.grund; };
   const FALSCH = [
-    [L, 'p_k1', 'profile_set', { field: 'birthday', value: '2017-05-14' }], [L, 'p_e1', 'profile_set', { field: 'emoji', value: 'fox' }],
+    [PR, 'p_k1', 'profile_set', { field: 'birthday', value: '2017-05-14' }], [PR, 'p_e1', 'profile_set', { field: 'lastName', value: 'Becker' }], [L, 'p_e1', 'profile_set', { field: 'emoji', value: 'fox' }],
     [L, 'p_e1', 'setting_set', { setting: 'storyCap', value: 2 }], [L, 'p_e1', 'school_import', NUTZ.schule()], [L, 'p_e1', 'grant_set', FREIGABEN[0]],
     [PR, 'p_k1', 'answer', NUTZ.answer()], [PR, 'p_k1', 'profile_set', NUTZ.name('Kathie')], [PR, 'p_e1', 'gap_active', { standard: 'X' }],
     [S, 'p_k1', 'answer', NUTZ.answer()], [S, 'p_e1', 'grant_revoked', { grant: 'g1', grantee: 'p_l1' }],
@@ -281,7 +288,7 @@ test('Typ und Bereich: jeder Typ hat genau einen Bereich; Ereignis im falschen B
     ['kid:p_k1', 'p_k1', 'answer', NUTZ.answer()], ['kind:lern', 'p_k1', 'answer', NUTZ.answer()], ['kind:lern:p_k1 ', 'p_k1', 'answer', NUTZ.answer()],
   ];
   for (const [area, pid, type, p] of FALSCH) assert.equal(await grund(area, pid, type, p), 'bereich-falsch', `${type} in ${area}`);
-  for (const [area, pid, type, p] of [[L, 'p_k1', 'profile_set', NUTZ.name('K')], [PR, 'p_k1', 'profile_set', { field: 'kidLang', value: 'de' }], [F1, 'p_l1', 'grant_opened', { grant: 'g1', grantee: 'p_l1' }], [S, 'p_k1', 'gap_state', NUTZ.luecke()],
+  for (const [area, pid, type, p] of [[L, 'p_k1', 'profile_set', NUTZ.name('K')], [L, 'p_k1', 'profile_set', { field: 'birthday', value: '2017-05-14' }], [L, 'p_e1', 'profile_set', { field: 'lastName', value: 'Becker' }], [L, 'p_k1', 'profile_set', { field: 'birthday', value: '05-14' }], [PR, 'p_k1', 'profile_set', { field: 'kidLang', value: 'de' }], [F1, 'p_l1', 'grant_opened', { grant: 'g1', grantee: 'p_l1' }], [S, 'p_k1', 'gap_state', NUTZ.luecke()],
     [PE1, 'p_e1', 'person_set', { field: 'conceptSeen', value: HEUTE }], [PE1, 'p_e1', 'glance_set', { child: 'p_k1', value: { n: 1 } }], [EA, 'p_e1', 'backup_made', { day: HEUTE }]]) {
     assert.equal(await grund(area, pid, type, p), 'ok', `${type} in ${area}`);
   }
@@ -299,9 +306,9 @@ test('Typ und Bereich: jeder Typ hat genau einen Bereich; Ereignis im falschen B
   assert.equal(await grund(F1, 'p_l1', 'grant_revoked', { grant: 'g1', grantee: 'p_l1' }), 'rolle-darf-nicht', 'und beendet nichts');
   assert.equal(await grund(L, 'p_l1', 'setting_set', { setting: 'storyCap', value: 9 }), 'bereich-falsch', 'erst der Bereich, dann die Rolle');
 
-  // ueber den Abgleich: das Kind legt seinen Geburtstag in kind:lern ab (es hat den Schluessel) -> Eltern verwerfen ihn
+  // ueber den Abgleich: das Kind legt sein Emoji in kind:lern ab (es hat den Schluessel) -> Eltern verwerfen es
   const f = await familie();
-  const [geb] = await schreiben(f, L, 'p_k1', [['profile_set', { field: 'birthday', value: '2017-05-14' }]]);
+  const [geb] = await schreiben(f, L, 'p_k1', [['profile_set', { field: 'emoji', value: 'fox' }]]);
   const e = await lesen(f, L, 'p_e1');
   assert.deepEqual(e.h.verworfen.map((v) => [v.id, v.grund]), [[geb.event.id, 'bereich-falsch']]);
   assert.equal(e.events.some((x) => x.id === geb.event.id), false);

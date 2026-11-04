@@ -12,7 +12,7 @@ import { derive } from '../src/module/ableitung.mjs';
 import { bereichVonEreignis } from '../src/module/bereiche.mjs';
 import { altStand, LESEN_ANFANG } from '../src/module/lesen.mjs';
 
-const WERTE = ['name', 'birthday', 'emoji', 'kidLang', 'storyCap', 'greetDay', 'mysteryDone', 'bdayParty', 'unlocked', 'focusMode', 'focusManual', 'gaps', 'jokeSeen', 'storyRead', 'muted', 'grants', 'grantlog', 'lastBackup'];
+const WERTE = ['name', 'lastName', 'birthday', 'emoji', 'kidLang', 'storyCap', 'greetDay', 'mysteryDone', 'bdayParty', 'unlocked', 'focusMode', 'focusManual', 'gaps', 'jokeSeen', 'storyRead', 'muted', 'grants', 'grantlog', 'lastBackup'];
 const betroffen = (k) => WERTE.includes(k) || k.startsWith('chk_') || /^advent\d{4}$/.test(k);
 function haken() { window.__bqh = { listEvents, eventHook, jokesFor, themeNow, ohneKind: () => eventNoChild.slice(), ohnePerson: () => eventNoPerson.slice(), probleme: () => ({ abgelehnt: eventSink ? eventSink.problems.concat(personSink.problems) : null, fehler: eventErrors }) }; }
 /* 3b-1c: what the app keeps on the device only and computes from "until" when reading (task 3b-2) - not in the events */
@@ -41,14 +41,14 @@ after(async () => { await browser?.close(); server?.close(); });
 test('ohne Konten: Profil, Geburtstagsfeier, Checkliste, Raetsel, Spannungsgrenze und Profil loeschen -> derive = gespeicherter Stand', async () => {
   const { ctx, page, fehler } = await appOeffnen(browser, server.url, { zeit: '2026-11-02T09:00:00' });
 
-  // Profil: Name, Geburtstag heute (-> Geburtstagsfeier auf der Startseite), Emoji
+  // Profil: Name, Nachname, Geburtstag heute mit Jahr (-> Geburtstagsfeier auf der Startseite), Emoji
   await page.locator('#profileBtn').click();
-  await page.fill('#pfName', 'Alex');
-  await page.selectOption('#pfDay', '02'); await page.selectOption('#pfMonth', '11');
+  await page.fill('#pfName', 'Alex'); await page.fill('#pfLast', 'Becker');
+  await page.selectOption('#pfDay', '02'); await page.selectOption('#pfMonth', '11'); await page.selectOption('#pfYear', '2017');
   await page.locator('#pfEmojis button').nth(2).click();
   await page.locator('#pfSave').click();
   let r = await vergleich(page);
-  assert.equal(r.app.name, 'Alex'); assert.equal(r.app.birthday, '11-02'); assert.equal(r.app.bdayParty, '2026-11-02');
+  assert.equal(r.app.name, 'Alex'); assert.equal(r.app.lastName, 'Becker'); assert.equal(r.app.birthday, '2017-11-02'); assert.equal(r.app.bdayParty, '2026-11-02');
   // der Name wird geaendert, der Geburtstag bleibt (kein zweites Ereignis dafuer)
   await page.locator('#profileBtn').click(); await page.fill('#pfName', 'Sam'); await page.locator('#pfSave').click();
   r = await vergleich(page);
@@ -86,15 +86,21 @@ test('ohne Konten: Profil, Geburtstagsfeier, Checkliste, Raetsel, Spannungsgrenz
   await page.selectOption('#storyCap', '3');
   r = await vergleich(page);
   assert.equal(r.app.storyCap, 3); assert.equal(r.app.mysteryDone, '2026-11-02');
+  // Eltern aendern Nachname und Geburtsjahr (Aufgabe "Name und Geburtsdatum", 04.11.)
+  await page.locator('.pprofile-edit summary').click();
+  await page.fill('#ppLast', 'Schmidt'); await page.selectOption('#ppYear', '2018');
+  await page.locator('#pProfileForm button[type="submit"]').click();
+  r = await vergleich(page);
+  assert.equal(r.app.name, 'Sam'); assert.equal(r.app.lastName, 'Schmidt'); assert.equal(r.app.birthday, '2018-11-02');
   page.once('dialog', (d) => d.accept());
   await page.locator('#profileDelete').click();
   await page.locator('#parentClose').click();
   r = await vergleich(page);
-  for (const k of ['name', 'birthday', 'emoji']) assert.equal(k in r.app, false, k + ' deleted');
+  for (const k of ['name', 'lastName', 'birthday', 'emoji']) assert.equal(k in r.app, false, k + ' deleted');
 
   const a = arten(r.events);
-  for (const t of ['profile_set:name', 'profile_set:birthday', 'profile_set:emoji', 'day_flag:bdayParty', 'day_flag:mysteryDone', 'setting_set:storyCap', 'checklist_set']) assert.ok(a[t] > 0, 'reached: ' + t);
-  assert.deepEqual([...new Set(r.events.filter((e) => e.author === 'p_eltern').map((e) => e.type + ':' + (e.payload.field || e.payload.setting)))].sort(), ['profile_set:birthday', 'profile_set:emoji', 'profile_set:name', 'setting_set:storyCap'], 'grown-up: only storyCap and the deletion');
+  for (const t of ['profile_set:name', 'profile_set:lastName', 'profile_set:birthday', 'profile_set:emoji', 'day_flag:bdayParty', 'day_flag:mysteryDone', 'setting_set:storyCap', 'checklist_set']) assert.ok(a[t] > 0, 'reached: ' + t);
+  assert.deepEqual([...new Set(r.events.filter((e) => e.author === 'p_eltern').map((e) => e.type + ':' + (e.payload.field || e.payload.setting)))].sort(), ['profile_set:birthday', 'profile_set:emoji', 'profile_set:lastName', 'profile_set:name', 'setting_set:storyCap'], 'grown-up: storyCap, name/birthday and the deletion');
   assert.deepEqual(fehler, []);
   await ctx.close();
 });

@@ -26,7 +26,7 @@ for (const [name, kontext] of GERAETE) {
     page.on('request', (r) => { if (!r.url().startsWith(server.url)) anfragen.push(r.url()); });
     assert.ok(await imBild(page, '#profileBtn'), 'profile button in view without scrolling');
     await page.locator('#profileBtn').click();
-    for (const sel of ['#pfName', '#pfDay', '#pfMonth', '#pfEmojis', '#pfClose', '#pfSave']) assert.ok(await imBild(page, sel), sel + ' fully on screen');
+    for (const sel of ['#pfName', '#pfLast', '#pfDay', '#pfMonth', '#pfYear', '#pfEmojis', '#pfClose', '#pfSave']) assert.ok(await imBild(page, sel), sel + ' fully on screen');
     const ueber = await page.$eval('#profileDlg', (d) => d.scrollWidth - d.clientWidth);
     assert.ok(ueber <= 0, 'no horizontal overflow: ' + ueber);
     const klein = await page.$$eval('#profileDlg button, #profileDlg select, #profileBtn', (b) => b.filter((x) => { const r = x.getBoundingClientRect(); return r.width < 44 || r.height < 44; }).map((x) => x.id || x.textContent));
@@ -88,17 +88,91 @@ test('birthday: "—" removes it, half a date or a non-existent day is not saved
   await ctx.close();
 });
 
-test('data minimisation: exactly name, birthday, emoji; no year, age or school field; old controls are gone', async () => {
+// Peter, 04.11. (task "Name und Geburtsdatum"): last name and the year of birth are added - so a teacher with a grant can
+// tell children with the same first name apart. Still no age, school, class or grade field.
+test('data minimisation: exactly first name, last name, birthday (year optional), emoji; no age or school field; old controls are gone', async () => {
   const { ctx, page } = await appOeffnen(browser, server.url);
   assert.equal(await page.locator('#bdayBtn').count(), 0);
   assert.equal(await page.locator('#playerName').count(), 0);
   await page.locator('#profileBtn').click();
-  assert.equal(await page.locator('#profileDlg input[type="text"]').count(), 1);
-  assert.equal(await page.locator('#profileDlg select').count(), 2);
+  assert.equal(await page.locator('#profileDlg input[type="text"]').count(), 2);
+  assert.equal(await page.locator('#profileDlg select').count(), 3);
   const text = await page.textContent('#profileDlg');
-  assert.ok(!/year|age|surname|last name|school|class|grade/i.test(text), text);
+  assert.ok(!/\bage\b|school|class|grade/i.test(text), text);
   assert.equal(text.split('This stays on this device.').length - 1, 1);
   assert.equal(await page.locator('#pfEmojis button').count(), 12);
+  await ctx.close();
+});
+
+test('last name and year: stored as bq2_lastName and "YYYY-MM-DD"; 29 February only in a leap year; a year needs day and month; old "MM-DD" is pre-filled without a year and stays unchanged', async () => {
+  const { ctx, page, fehler } = await appOeffnen(browser, server.url);
+  await page.evaluate(() => localStorage.setItem('bq2_birthday', '"03-14"'));
+  await page.reload(); await page.waitForSelector('#home h1');
+  await page.locator('#profileBtn').click();
+  assert.equal(await page.inputValue('#pfYear'), '', 'old date: no year');
+  const jahre = await page.$$eval('#pfYear option', (o) => o.map((x) => x.value).filter(Boolean).map(Number));
+  const jetzt = await page.evaluate(() => new Date().getFullYear());
+  assert.equal(Math.max(...jahre), jetzt - 3); assert.equal(Math.min(...jahre), jetzt - 16);
+  await page.locator('#pfSave').click();
+  assert.equal(await lies(page, 'birthday'), '"03-14"', 'unchanged');
+  await page.locator('#profileBtn').click();
+  await page.selectOption('#pfDay', ''); await page.selectOption('#pfMonth', ''); await page.selectOption('#pfYear', String(jetzt - 8));
+  await page.locator('#pfSave').click();
+  assert.match(await page.textContent('#pfMessage'), /day and a month for the year/);
+  const schalt = jahre.find((y) => y % 4 === 0), kein = jahre.find((y) => y % 4 !== 0);
+  await page.selectOption('#pfDay', '29'); await page.selectOption('#pfMonth', '02'); await page.selectOption('#pfYear', String(kein));
+  await page.locator('#pfSave').click();
+  assert.match(await page.textContent('#pfMessage'), /does not exist in February/);
+  await page.selectOption('#pfYear', String(schalt));
+  await page.fill('#pfLast', '  Becker  ');
+  await page.locator('#pfSave').click();
+  assert.equal(await page.isVisible('#profileDlg'), false);
+  assert.equal(await lies(page, 'birthday'), JSON.stringify(schalt + '-02-29'));
+  assert.equal(await lies(page, 'lastName'), '"Becker"');
+  await page.locator('#profileBtn').click();
+  assert.deepEqual([await page.inputValue('#pfDay'), await page.inputValue('#pfMonth'), await page.inputValue('#pfYear'), await page.inputValue('#pfLast')], ['29', '02', String(schalt), 'Becker'], 'pre-filled with the year');
+  await page.fill('#pfLast', ''); await page.selectOption('#pfYear', '');
+  await page.locator('#pfSave').click();
+  assert.equal(await lies(page, 'lastName'), null, 'empty last name removes it');
+  assert.equal(await lies(page, 'birthday'), '"02-29"', 'without a year again');
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
+
+test('birthday party with the year: two days before a countdown, on the day the wish with the name', async () => {
+  for (const [zeit, text] of [['2026-10-31T09:00:00', /coming in 2 days/], ['2026-11-02T09:00:00', /Happy birthday, Alex/]]) {
+    const { ctx, page } = await appOeffnen(browser, server.url, { zeit });
+    await page.evaluate(() => { localStorage.setItem('bq2_birthday', '"2017-11-02"'); localStorage.setItem('bq2_name', '"Alex"'); localStorage.setItem('bq2_lastName', '"Becker"'); });
+    await page.reload(); await page.waitForSelector('#home h1');
+    assert.match(await page.textContent('#homeNote'), text, zeit);
+    assert.equal(await page.textContent('#profileName'), 'Alex', 'the child sees its first name as before');
+    await ctx.close();
+  }
+});
+
+test('parents add last name and the year in the grown-ups area; a half date is refused; the name is shown as text', async () => {
+  const { ctx, page, fehler } = await appOeffnen(browser, server.url);
+  await page.evaluate(() => { localStorage.setItem('bq2_name', '"Alex"'); localStorage.setItem('bq2_birthday', '"03-14"'); });
+  await page.reload(); await page.waitForSelector('#home h1');
+  await elternOeffnen(page);
+  await elternSeite(page, 'settings');
+  await page.locator('.pprofile-edit summary').click();
+  assert.equal(await page.inputValue('#ppFirst'), 'Alex');
+  assert.deepEqual([await page.inputValue('#ppDay'), await page.inputValue('#ppMonth'), await page.inputValue('#ppYear')], ['14', '03', '']);
+  await page.selectOption('#ppMonth', '');
+  await page.locator('#pProfileForm button[type="submit"]').click();
+  assert.match(await page.textContent('#pProfileMsg'), /Tag und Monat/);
+  assert.equal(await lies(page, 'birthday'), '"03-14"');
+  await page.selectOption('#ppMonth', '03'); await page.selectOption('#ppYear', '2017'); await page.fill('#ppLast', 'Bé"cker<b>');
+  await page.locator('#pProfileForm button[type="submit"]').click();
+  assert.equal(await lies(page, 'birthday'), '"2017-03-14"');
+  assert.equal(await lies(page, 'lastName'), JSON.stringify('Bé"cker<b>'));
+  const t = await page.textContent('#aboutBody');
+  assert.ok(t.includes('Alex Bé"cker<b>') && t.includes('14.03.2017'), 'shown with name, last name and the full date');
+  assert.equal(await page.locator('#aboutBody b b').count(), 0, 'never as HTML');
+  await page.locator('.pprofile-edit summary').click();
+  assert.equal(await page.inputValue('#ppLast'), 'Bé"cker<b>', 'as a value, not cut at the quote');
+  assert.deepEqual(fehler, []);
   await ctx.close();
 });
 
@@ -114,15 +188,16 @@ test('name is shown as text, never as HTML', async () => {
 
 test('adults see the details behind the PIN and can delete only them; learning data stays', async () => {
   const { ctx, page, fehler } = await appOeffnen(browser, server.url);
-  await page.evaluate(() => { localStorage.setItem('bq2_name', '"Alex"'); localStorage.setItem('bq2_birthday', '"03-14"'); localStorage.setItem('bq2_emoji', '"🦊"'); localStorage.setItem('bq2_total', '12'); localStorage.setItem('bq2_ev', '{"round":[["2026-10-28",2,1]]}'); });
+  await page.evaluate(() => { localStorage.setItem('bq2_name', '"Alex"'); localStorage.setItem('bq2_lastName', '"Becker"'); localStorage.setItem('bq2_birthday', '"03-14"'); localStorage.setItem('bq2_emoji', '"🦊"'); localStorage.setItem('bq2_total', '12'); localStorage.setItem('bq2_ev', '{"round":[["2026-10-28",2,1]]}'); });
   await page.reload(); await page.waitForSelector('#home h1');
   await elternOeffnen(page);
   await elternSeite(page, 'settings');
   const t = await page.textContent('#aboutBody');
-  assert.ok(t.includes('Alex') && t.includes('14.03.') && t.includes('🦊'));
+  assert.ok(t.includes('Alex Becker') && t.includes('14.03.') && t.includes('🦊'));
   page.once('dialog', (d) => d.accept());
   await page.locator('#profileDelete').click();
   assert.equal(await lies(page, 'name'), null);
+  assert.equal(await lies(page, 'lastName'), null);
   assert.equal(await lies(page, 'birthday'), null);
   assert.equal(await lies(page, 'emoji'), null);
   assert.equal(await lies(page, 'total'), '12');

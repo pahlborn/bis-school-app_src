@@ -124,11 +124,11 @@ test('Freigabe mit echten Klicks: Einwilligungstext, nur Lehrkraft/Admin, Ersetz
     assert.match(await page.textContent('#pGrantMsg'), /keine Lehrkraft und keinen Admin/);
   }
   await page.locator('#pGrantWho').fill('frau'); await page.locator('#pGrantDays').fill('10');
-  assert.equal(await page.textContent('#pGrantConsent'), 'Sie geben frau für 10 Tage Einblick in: Lernstand. frau sieht dabei den Namen Ihres Kindes, aber nicht Geburtstag, Emoji und Einstellungen. frau kann nichts ändern. Sie können das jederzeit beenden. Was frau bis dahin gesehen hat, kann man nicht ungesehen machen.');
+  assert.equal(await page.textContent('#pGrantConsent'), 'Sie geben frau für 10 Tage Einblick in: Lernstand. frau sieht dabei Vor- und Nachnamen und das Geburtsdatum Ihres Kindes, aber nicht Emoji und Einstellungen. frau kann nichts ändern. Sie können das jederzeit beenden. Was frau bis dahin gesehen hat, kann man nicht ungesehen machen.');
   await page.locator('.phdr [data-plang="en"]').click();
   await page.waitForFunction(() => /You give/.test(document.querySelector('#pGrantConsent')?.textContent || ''));
   await page.locator('#pGrantWho').fill('frau'); await page.locator('#pGrantDays').fill('10');
-  assert.equal(await page.textContent('#pGrantConsent'), 'You give frau access for 10 days to: learning progress. frau will see your child’s name, but not the birthday, emoji or settings. frau cannot change anything. You can end this at any time. What frau has seen until then cannot be unseen.');
+  assert.equal(await page.textContent('#pGrantConsent'), 'You give frau access for 10 days to: learning progress. frau will see your child’s first and last name and date of birth, but not the emoji or settings. frau cannot change anything. You can end this at any time. What frau has seen until then cannot be unseen.');
   await page.locator('.phdr [data-plang="de"]').click();
   await page.waitForFunction(() => /Sie geben/.test(document.querySelector('#pGrantConsent')?.textContent || ''));
   await page.locator('#pGrantWho').fill('frau'); await page.locator('#pGrantDays').fill('10');
@@ -137,24 +137,24 @@ test('Freigabe mit echten Klicks: Einwilligungstext, nur Lehrkraft/Admin, Ersetz
   assert.match(await page.textContent('.pgrants'), /frau · Lernstand · läuft bis/);
   // the consent text as given is kept in the log and in the event
   const erteilt = await page.evaluate((id) => JSON.parse(localStorage.getItem('bq2_' + id + '__grantlog') || '[]').find((e) => e.ev === 'erteilt'), ID('mia'));
-  assert.match(erteilt.text, /sieht dabei den Namen Ihres Kindes, aber nicht Geburtstag, Emoji und Einstellungen/);
+  assert.match(erteilt.text, /sieht dabei Vor- und Nachnamen und das Geburtsdatum Ihres Kindes, aber nicht Emoji und Einstellungen/);
   // the teacher looks: read-only, without school ratings; the name, but no other profile details; logged as viewed (once a day)
   await erwachsen(page, 'frau');
   assert.equal((await page.textContent('#pKid')).trim(), '👧 Mia Sonnenschein (mia)', 'Peter, 03.11.: she must see whom she works with');
   assert.equal(await page.locator('details.psec[data-psec="school"]').count(), 0);
   const ueb = await page.textContent('#aboutBody');
   assert.match(ueb, /Auf einen Blick · Mia Sonnenschein/);
-  assert.ok(!PROFIL(ueb), 'no birthday, no emoji for the teacher');
+  assert.ok(!PROFIL(ueb), 'no emoji for the teacher; the birthday only when two children have the same name');
   // the header fits on a small screen
   await page.setViewportSize({ width: 320, height: 640 });
   assert.ok(await page.locator('#pKid').evaluate((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.right <= innerWidth + 1; }), 'name in view on 320 px');
   await page.setViewportSize({ width: 1280, height: 720 });
   // her guide says so (DE and EN)
   await page.locator('#pHelp').click(); await page.waitForSelector('#pHelpBack');
-  assert.match(await page.locator('.phelp-view').innerText(), /Oben steht der Name des Kindes, damit Sie wissen, mit wem Sie arbeiten\. Geburtstag, Emoji und Einstellungen sehen Sie nicht\./);
+  assert.match(await page.locator('.phelp-view').innerText(), /Oben stehen Vor- und Nachname des Kindes, damit Sie wissen, mit wem Sie arbeiten; heißen zwei Kinder gleich, auch das Geburtsdatum\. Emoji und Einstellungen sehen Sie nicht\./);
   await page.locator('.phdr [data-plang="en"]').click();
   await page.waitForFunction(() => /Help for teachers/.test(document.querySelector('.phelp-view')?.innerText || ''));
-  assert.match(await page.locator('.phelp-view').innerText(), /The child’s name is shown at the top, so you know whom you are working with\. You do not see the birthday, emoji or settings\./);
+  assert.match(await page.locator('.phelp-view').innerText(), /The child’s first and last name are shown at the top, so you know whom you are working with; if two children have the same name, the date of birth too\. You do not see the emoji or settings\./);
   await page.locator('.phdr [data-plang="de"]').click();
   await page.waitForFunction(() => /Hilfe für Lehrkräfte/.test(document.querySelector('.phelp-view')?.innerText || ''));
   await page.locator('#pHelpBack').click();
@@ -221,15 +221,50 @@ test('Name mit Freigabe (Peter, 03.11.): Kinderliste der Lehrkraft mit Namen, El
   await ctx.close();
 });
 
-test('Anleitungen und Freigabe-Hinweis nennen den Namen (Eltern, Lehrkraft, Admin; DE und EN)', async () => {
+test('Name und Geburtsdatum (Peter, 04.11.): zwei Kinder gleichen Namens - die Lehrkraft unterscheidet sie mit Nachnamen, bei gleichem Namen mit Geburtsdatum (DE und EN); Eltern unveraendert', async () => {
+  const { ctx, page, fehler } = await geraet();
+  const setze = (werte) => page.evaluate((w) => { for (const [k, v] of w) v === null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); }, werte);
+  const P = (k, f) => 'bq2_' + ID(k) + '__' + f;
+  await page.evaluate(([mia, lia, gm, gl]) => { localStorage.setItem('bq2_' + mia + '__grants', JSON.stringify([gm])); localStorage.setItem('bq2_' + lia + '__grants', JSON.stringify([gl])); },
+    [ID('mia'), ID('lia'), freigabe('frau', ['learning']), { ...freigabe('frau', ['learning']), id: 'g-frau-lia', by: ID('fremd') }]);
+  // beide heissen Mia, verschiedene Nachnamen -> ohne Geburtsdatum
+  await setze([[P('mia', 'name'), 'Mia'], [P('mia', 'lastName'), 'Sonnenschein'], [P('mia', 'birthday'), '2017-05-17'], [P('lia', 'name'), 'Mia'], [P('lia', 'lastName'), 'Regen'], [P('lia', 'birthday'), '09-03']]);
+  await erwachsen(page, 'frau');
+  let liste = await page.$$eval('#pKidSel option', (o) => o.map((x) => x.textContent.trim()));
+  assert.deepEqual(liste.sort(), ['👧 Mia Regen (lia)', '👧 Mia Sonnenschein (mia)']);
+  // gleicher Vor- und Nachname -> Geburtsdatum dazu (mit Jahr, wenn eingetragen)
+  await setze([[P('lia', 'lastName'), 'Sonnenschein']]);
+  await erwachsen(page, 'frau');
+  liste = await page.$$eval('#pKidSel option', (o) => o.map((x) => x.textContent.trim()));
+  assert.deepEqual(liste.sort(), ['👧 Mia Sonnenschein, 03.09. (lia)', '👧 Mia Sonnenschein, 17.05.2017 (mia)']);
+  await page.locator('#pKidSel').selectOption('mia');
+  await page.waitForFunction(() => /Auf einen Blick · Mia Sonnenschein, 17\.05\.2017/.test(document.querySelector('#aboutBody')?.textContent || ''));
+  assert.ok(!(await page.textContent('#aboutBody')).includes('🦉'), 'kein Emoji');
+  await page.locator('.phdr [data-plang="en"]').click();
+  await page.waitForFunction(() => [...document.querySelectorAll('#pKidSel option')].some((o) => o.textContent.includes('May 17, 2017')));
+  liste = await page.$$eval('#pKidSel option', (o) => o.map((x) => x.textContent.trim()));
+  assert.deepEqual(liste.sort(), ['👧 Mia Sonnenschein, May 17, 2017 (mia)', '👧 Mia Sonnenschein, September 3 (lia)']);
+  await page.locator('.phdr [data-plang="de"]').click();
+  // die Eltern: Kopf unveraendert, im Profil Name, Nachname und Geburtsdatum
+  await erwachsen(page, 'papa');
+  assert.equal((await page.textContent('#pKid')).trim(), '👧 mia');
+  await kapitel(page, 'settings');
+  const t = await page.textContent('details.psec[data-psec="settings"]');
+  assert.ok(t.includes('Mia Sonnenschein') && t.includes('17.05.2017'), t);
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
+
+// Aufgabe "Name und Geburtsdatum" (Peter, 04.11.): mit Freigabe auch Nachname und Geburtsdatum; Emoji und Einstellungen nie
+test('Anleitungen und Freigabe-Hinweis nennen Name, Nachname und Geburtsdatum (Eltern, Lehrkraft, Admin; DE und EN)', async () => {
   const { readFile } = await import('node:fs/promises');
   const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
   const teil = (name) => { const m = html.match(new RegExp('const ' + name + '=`([\\s\\S]*?)`;')); assert.ok(m, name); return m[1]; };
-  for (const g of ['GUIDE_ADULT_DE', 'GUIDE_TEACHER_DE', 'GUIDE_ADMIN_DE']) assert.match(teil(g), /Namen?\b[^<]*Geburtstag, Emoji und Einstellungen/, g);
-  for (const g of ['GUIDE_ADULT_EN', 'GUIDE_TEACHER_EN', 'GUIDE_ADMIN_EN']) assert.match(teil(g), /name[^<]*birthday, emoji (and|or) settings/, g);
-  for (const alt of ['Den Namen aus dem Profil sehen Sie nicht', 'You do not see the name from the profile']) assert.ok(!html.includes(alt), alt);
-  assert.match(html, /sieht den Lernstand und den Namen Ihres Kindes nur, wenn Sie es hier freigeben/);
-  assert.match(html, /sees your child’s progress and name only if you allow it here/);
+  for (const g of ['GUIDE_ADULT_DE', 'GUIDE_TEACHER_DE', 'GUIDE_ADMIN_DE']) assert.match(teil(g), /Vor- und Nachname[^<]*Geburtsdatum[^<]*Emoji und Einstellungen/, g);
+  for (const g of ['GUIDE_ADULT_EN', 'GUIDE_TEACHER_EN', 'GUIDE_ADMIN_EN']) assert.match(teil(g), /first and last name[^<]*date of birth[^<]*emoji (and|or) settings/, g);
+  for (const alt of ['Den Namen aus dem Profil sehen Sie nicht', 'You do not see the name from the profile', 'Geburtstag, Emoji und Einstellungen', 'birthday, emoji or settings', 'birthday, emoji and settings', 'Geburtstag (ohne Jahr)', 'birthday (without year)']) assert.ok(!html.includes(alt), alt);
+  assert.match(html, /sieht den Lernstand, Namen und Geburtsdatum Ihres Kindes nur, wenn Sie es hier freigeben/);
+  assert.match(html, /sees your child’s progress, name and date of birth only if you allow it here/);
 });
 
 test('Admin ohne Freigabe: nur Verwaltungsangaben, keine Inhalte und keine Anzeigenamen', async () => {
