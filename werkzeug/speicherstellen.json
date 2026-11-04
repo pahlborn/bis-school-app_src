@@ -54,7 +54,9 @@
     { "key": "bq_schluessel", "bereich": "geraet", "hinweis": "gemerkter Familienschluessel der Huelle" },
     { "key": "bq2_session", "bereich": "geraet", "hinweis": "Sitzung, direkt gelesen" },
     { "key": "bq2_migr", "bereich": "geraet", "hinweis": "Umzug auf Kennungen, vor dem Store gelesen" },
-    { "key": "bq2_personEvents", "bereich": "person", "hinweis": "Protokolle der Personen (personEvents); seit 3b-2a liest und schreibt das Protokoll sie selbst (Testbau)" }
+    { "key": "bq2_personEvents", "bereich": "person", "hinweis": "Protokolle der Personen (personEvents); seit 3b-2a liest und schreibt das Protokoll sie selbst (Testbau)" },
+    { "key": "bq_abgleich", "bereich": "geraet", "abgleich": "lokal", "hinweis": "Stufe 2 (3b-2b): Abgleich-Stand je Bereich (Modul geraeteabgleich, nur Testbau; nicht in index.html): Ausgang, Merker, angenommene Eintraege mit Unterschrift" },
+    { "key": "bq_abgleichVerworfen", "bereich": "geraet", "abgleich": "lokal", "hinweis": "Stufe 2 (3b-2b): beim Abgleich Verworfenes mit Grund (hoechstens 1000, Modul geraeteabgleich, nur Testbau)" }
   ],
   "sessionStorage": [
     { "key": "bqUpdateTo", "bereich": "geraet", "hinweis": "Update-Merker" }
