@@ -71,8 +71,10 @@ test('jede neue Grundlage-Aufgabe: Stufe 1, eigener Tipp, kein leichteres Beispi
     assert.deepEqual(r[k].fehler, [], k);
     assert.ok(r[k].varianten >= 6, `${k}: ${r[k].varianten} variants`);
   }
-  // maths: wherever it helps with a picture or a model (units: choosing cm/m or g/kg has only a tip)
-  for (const [k, min] of [['numbers', 0.6], ['combos', 0.6], ['wordprob', 0.6], ['graphs', 0.6], ['units', 0.4]]) assert.ok(r[k].bild / r[k].anzahl >= min, `${k}: foundation with a picture or model (${r[k].bild}/${r[k].anzahl})`);
+  // maths: wherever it helps with a picture or a model (units: choosing cm/m or g/kg has only a tip).
+  // Measured 04.11. over 3 000 rounds: numbers/combos/graphs 100 %, wordprob 76 %, units 49 %. With 80 rounds the old
+  // limit of 40 % for units failed in about 1 of 27 runs by chance; 30 % keeps the meaning and fails by chance < 1 in 4 000.
+  for (const [k, min] of [['numbers', 0.6], ['combos', 0.6], ['wordprob', 0.6], ['graphs', 0.6], ['units', 0.3]]) assert.ok(r[k].bild / r[k].anzahl >= min, `${k}: foundation with a picture or model (${r[k].bild}/${r[k].anzahl})`);
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
