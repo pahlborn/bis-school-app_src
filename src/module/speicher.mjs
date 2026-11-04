@@ -14,8 +14,9 @@
 //   keys(area) / putKey(area, holder, wrapped)   -> { holder: wrapped } / store; replaces the entry of this holder
 //   directory(lookup) / putDirectory(entry)      account entry for a hash of the login name (entry.lookup); creating the
 //                                     same lookup twice -> "vorhanden"; unknown lookup -> null
-//   invite.put(id, content) / invite.get(id) / invite.delete(id)
-//                                     an invitation is valid 10 minutes after put; get hands it out once (second use ->
+//   invite.put(id, content, options) / invite.get(id) / invite.delete(id)
+//                                     an invitation is valid 10 minutes after put - or options.gueltigMs (1 ms up to
+//                                     7 days: the start code of stage 3b, concept 10.6); get hands it out once (second use ->
 //                                     "unbekannt"); expired -> "abgelaufen"; delete -> gone (returns whether it existed)
 //   exportFile(area)                 -> text of a file with all bundles of the area (format below, same for all implementations)
 //   importFile(text)                 stores only what is missing -> { neu, gleich, abweichend }; nothing is overwritten;
@@ -31,6 +32,16 @@ export const SPEICHER_FUNKTIONEN = Object.freeze(['put', 'list', 'get', 'keys', 
 export const SPEICHER_FEHLER = Object.freeze(['offline', 'ungueltig', 'fremdes-geraet', 'vorhanden', 'luecke', 'unbekannt', 'abgelaufen', 'zugang', 'limit']);
 /* an invitation is valid this long (concept 12: 10 minutes) */
 export const SPEICHER_EINLADUNG_MS = 10 * 60 * 1000;
+/* the longest an invitation may be valid (invite.put options.gueltigMs): a start code, 7 days (concept 10.6) */
+export const SPEICHER_EINLADUNG_MAX_MS = 7 * 24 * 3600 * 1000;
+/* options of invite.put -> validity in ms (shared by every implementation); wrong options -> null */
+export function speicherEinladungGueltig(optionen) {
+  if (optionen === undefined) return SPEICHER_EINLADUNG_MS;
+  if (optionen === null || typeof optionen !== 'object' || Array.isArray(optionen) || Object.keys(optionen).some((k) => k !== 'gueltigMs')) return null;
+  if (optionen.gueltigMs === undefined) return SPEICHER_EINLADUNG_MS;
+  const g = optionen.gueltigMs;
+  return Number.isInteger(g) && g >= 1 && g <= SPEICHER_EINLADUNG_MAX_MS ? g : null;
+}
 /* file format of exportFile / importFile */
 export const SPEICHER_DATEI_FORMAT = 'bq-buendel-datei';
 
@@ -64,7 +75,7 @@ export function lokalerSpeicher({ now = () => Date.now() } = {}) {
   const buendel = new Map();      // area -> Map(device -> [text of nr 1, nr 2, ...])
   const schluessel = new Map();   // area -> Map(holder -> text)
   const verzeichnis = new Map();  // lookup -> text
-  const einladungen = new Map();  // id -> { text, angelegt }
+  const einladungen = new Map();  // id -> { text, angelegt, gueltig }
 
   const geraeteVon = (bereich) => buendel.get(bereich) || new Map();
   function reiheVon(bereich, geraet, anlegen) {
@@ -141,17 +152,18 @@ export function lokalerSpeicher({ now = () => Date.now() } = {}) {
   }
 
   const invite = {
-    put(kennung, inhalt) {
+    put(kennung, inhalt, optionen) {
       spkId(kennung);
-      const text = spkText(inhalt);
+      const text = spkText(inhalt), gueltig = speicherEinladungGueltig(optionen);
+      if (gueltig === null) throw spkFehler('ungueltig');
       if (einladungen.has(kennung)) throw spkFehler('vorhanden');
-      einladungen.set(kennung, { text, angelegt: now() });
+      einladungen.set(kennung, { text, angelegt: now(), gueltig });
     },
     get(kennung) {
       spkId(kennung);
       const e = einladungen.get(kennung);
       if (!e) throw spkFehler('unbekannt');
-      if (now() - e.angelegt >= SPEICHER_EINLADUNG_MS) throw spkFehler('abgelaufen');
+      if (now() - e.angelegt >= e.gueltig) throw spkFehler('abgelaufen');
       einladungen.delete(kennung);                // handed out once
       return JSON.parse(e.text);
     },

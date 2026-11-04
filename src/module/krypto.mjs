@@ -74,15 +74,17 @@ export async function lockPersonKeys(keys, personId, secrets, { rounds = PBKDF2_
   }
   return { v: 1, person: personId, pub: await publicKeysOf(keys), locks };
 }
-/* opens with any of the secrets; the private keys come back NOT extractable. Wrong secret: one neutral error. */
-export async function unlockPersonKeys(locked, personId, secret) {
+/* opens with any of the secrets; the private keys come back NOT extractable. Wrong secret: one neutral error.
+   exportierbar: true only to lock them again with a new secret (module konto: new password with the recovery code);
+   such keys are dropped right afterwards, never kept on the device. */
+export async function unlockPersonKeys(locked, personId, secret, { exportierbar = false } = {}) {
   for (const l of locked.locks || []) {
     try {
       const kek = await derivePasswordKey(secret, b64ToBytes(l.salt), l.rounds);
       const priv = JSON.parse(await openEntryText(kek, l.box, entryAad('person', 1, personId)));
       return {
-        ecdh: { publicKey: await importEcdhPub(locked.pub.ecdh), privateKey: await subtle().importKey('pkcs8', b64ToBytes(priv.ecdh), { name: 'ECDH', namedCurve: 'P-256' }, false, ['deriveBits']) },
-        ecdsa: { publicKey: await importEcdsaPub(locked.pub.ecdsa), privateKey: await subtle().importKey('pkcs8', b64ToBytes(priv.ecdsa), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']) },
+        ecdh: { publicKey: await importEcdhPub(locked.pub.ecdh), privateKey: await subtle().importKey('pkcs8', b64ToBytes(priv.ecdh), { name: 'ECDH', namedCurve: 'P-256' }, exportierbar === true, ['deriveBits']) },
+        ecdsa: { publicKey: await importEcdsaPub(locked.pub.ecdsa), privateKey: await subtle().importKey('pkcs8', b64ToBytes(priv.ecdsa), { name: 'ECDSA', namedCurve: 'P-256' }, exportierbar === true, ['sign']) },
       };
     } catch (e) { /* try the next lock */ }
   }
