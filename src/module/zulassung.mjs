@@ -10,12 +10,14 @@
 //              module annahme accepts it against the admission at that moment:
 //                member_added, member_removed, device_removed: a parent who is a member then, from a device of his
 //                device_added: any member, for his own device (the device is registered by this very event)
-//              member_added again with the same role and keys changes nothing; with others it starts a new period.
+//              member_added again with the same role and keys changes nothing; with others it starts a new period -
+//              unless its "stand" (directory entry of the keys, task "Einladungen"; missing = 1) is lower than the
+//              current period's: then it is dropped ("stand-alt"), so a late old device never puts old keys back.
 //              member_removed ends the membership and all devices of that person; device_removed ends the device
 //              for everybody who had it (a shared iPad).
-//   result:    { area, now, members: { <personId>: { role, pub, devices, perioden, geraete } }, verworfen: [{ id, grund }] }
-//              role, pub: of the latest period; devices: every device ever registered; perioden: [{ von, bis, role,
-//              pub }] and geraete: { <deviceId>: [{ von, bis }] } in milliseconds (von null = from the start, bis null
+//   result:    { area, now, members: { <personId>: { role, pub, stand?, devices, perioden, geraete } }, verworfen: [{ id, grund }] }
+//              role, pub, stand (only above 1): of the latest period; devices: every device ever registered; perioden:
+//              [{ von, bis, role, pub, stand? }] and geraete: { <deviceId>: [{ von, bis }] } in milliseconds (von null = from the start, bis null
 //              = still). Former members stay in the list, so what they wrote while they belonged keeps its signature.
 //              Module annahme checks "at this time" with perioden and geraete (task P3b-2b; now = the clock used here).
 //
@@ -75,10 +77,12 @@ export async function zulassungAus(eintraege, { area, anker, now } = {}) {
     const p = e.payload;
     if (e.type === 'member_added') {
       if (!personen.has(p.person)) personen.set(p.person, { perioden: [], geraete: new Map() });
-      const pe = personen.get(p.person), a = zulAktiv(pe.perioden);
+      const pe = personen.get(p.person), a = zulAktiv(pe.perioden), stand = p.stand || 1;
       if (a && a.role === p.role && zulGleichePub(a.pub, p.pub)) continue;
+      // task "Einladungen": keys of an older directory entry never replace newer ones (an old device writing late)
+      if (a && stand < (a.stand || 1)) { verworfen.push({ id: e.id, grund: 'stand-alt' }); continue; }
       if (a) a.bis = t;
-      pe.perioden.push({ von: t, bis: null, role: p.role, pub: { ecdh: p.pub.ecdh, ecdsa: p.pub.ecdsa } });
+      pe.perioden.push({ von: t, bis: null, role: p.role, pub: { ecdh: p.pub.ecdh, ecdsa: p.pub.ecdsa }, ...(stand > 1 ? { stand } : {}) });
     } else if (e.type === 'member_removed') {
       const pe = personen.get(p.person), a = pe && zulAktiv(pe.perioden);
       if (!a) continue;
@@ -98,7 +102,7 @@ export async function zulassungAus(eintraege, { area, anker, now } = {}) {
     if (!pe.perioden.length) continue;
     const letzte = pe.perioden[pe.perioden.length - 1];
     members[pid] = {
-      role: letzte.role, pub: { ...letzte.pub }, devices: [...pe.geraete.keys()].sort(zulCmp),
+      role: letzte.role, pub: { ...letzte.pub }, ...(letzte.stand ? { stand: letzte.stand } : {}), devices: [...pe.geraete.keys()].sort(zulCmp),
       perioden: pe.perioden.map((q) => ({ ...q, pub: { ...q.pub } })),
       geraete: Object.fromEntries([...pe.geraete.keys()].sort(zulCmp).map((d) => [d, pe.geraete.get(d).map((g) => ({ ...g }))])),
     };
@@ -109,7 +113,7 @@ export async function zulassungAus(eintraege, { area, anker, now } = {}) {
 /* members who belong now (for the check of key entries: a removed parent's signature no longer counts) */
 export function aktiveMitglieder(zulassung) {
   if (!zulObj(zulassung) || !zulObj(zulassung.members)) throw zulFehler('Zulassung erwartet.');
-  return Object.fromEntries(Object.entries(zulassung.members).filter(([, m]) => zulObj(m) && Array.isArray(m.perioden) && zulAktiv(m.perioden)).map(([pid, m]) => [pid, { role: m.role, pub: m.pub, devices: m.devices }]));
+  return Object.fromEntries(Object.entries(zulassung.members).filter(([, m]) => zulObj(m) && Array.isArray(m.perioden) && zulAktiv(m.perioden)).map(([pid, m]) => [pid, { role: m.role, pub: m.pub, devices: m.devices, ...(m.stand ? { stand: m.stand } : {}) }]));
 }
 const zulKennung = (z) => JSON.stringify(Object.entries(aktiveMitglieder(z)).map(([pid, m]) => [pid, m.role, m.pub.ecdh, m.pub.ecdsa]));
 

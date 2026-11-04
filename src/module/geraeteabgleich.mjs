@@ -30,7 +30,7 @@ import { abgleichStand, vormerken, senden } from './abgleich.mjs';
 import { zulassungAus, aktiveMitglieder, bereichHolen } from './zulassung.mjs';
 
 /* keys in the device storage */
-export const GERAETEABGLEICH_SPEICHER = Object.freeze({ staende: 'bq_abgleich', verworfen: 'bq_abgleichVerworfen', geraet: 'bq2_evDevice', personen: 'bq2_personEvents' });
+export const GERAETEABGLEICH_SPEICHER = Object.freeze({ staende: 'bq_abgleich', verworfen: 'bq_abgleichVerworfen', geraet: 'bq2_evDevice', personen: 'bq2_personEvents', familien: 'bq2_familyEvents' });
 /* at most this many dropped entries are kept on the device (the newest) */
 export const GERAETEABGLEICH_VERWORFEN_MAX = 1000;
 
@@ -60,7 +60,7 @@ function gabAnmelden(zul, pid, geraet) {
   return { ab: p.von === null ? 0 : p.von + 1 };
 }
 
-function gabPruefen({ ablage, zugang, personen, kinder, verzeichnis, now, heute }) {
+function gabPruefen({ ablage, zugang, personen, kinder, familien, verzeichnis, now, heute }) {
   if (!gabObj(ablage) || typeof ablage.getItem !== 'function' || typeof ablage.setItem !== 'function') throw gabFehler('ablage (getItem/setItem) fehlt.');
   if (!gabObj(zugang) || typeof zugang.list !== 'function') throw gabFehler('zugang fehlt.');
   if (!gabObj(personen) || !Object.keys(personen).length) throw gabFehler('personen fehlen.');
@@ -69,6 +69,7 @@ function gabPruefen({ ablage, zugang, personen, kinder, verzeichnis, now, heute 
   }
   if (!Array.isArray(kinder) || kinder.some((c) => !gabObj(c) || !gabPid(c.id) || typeof c.pre !== 'string' || !c.pre.startsWith('bq2_') || !gabObj(c.anker))) throw gabFehler('kinder: [{ id, pre, anker }] erwartet.');
   if (kinder.some((c) => c.freigaben !== undefined && (!Array.isArray(c.freigaben) || c.freigaben.some((g) => typeof g !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(g))))) throw gabFehler('kinder[].freigaben: Liste von Freigabe-Kennungen erwartet.');
+  if (!Array.isArray(familien) || familien.some((f) => !gabObj(f) || !gabPid(f.id) || !gabObj(f.anker))) throw gabFehler('familien: [{ id, anker }] erwartet.');
   if (!gabObj(verzeichnis)) throw gabFehler('verzeichnis erwartet.');
   if (!Number.isFinite(now)) throw gabFehler('"now" fehlt.');
   if (!gabTag(heute)) throw gabFehler('"heute" (JJJJ-MM-TT) fehlt.');
@@ -91,10 +92,11 @@ function gabZiel(ablage, ziel) {
     const k = ziel.pre + 'events';
     return { lesen: () => gabListe(gabJson(ablage, k, [])), schreiben: (l) => ablage.setItem(k, JSON.stringify(l)) };
   }
-  const K = GERAETEABGLEICH_SPEICHER.personen;
+  // a person's own log or (task "Einladungen") the log of a family, both one JSON object with a list per id
+  const [K, id] = ziel.familie ? [GERAETEABGLEICH_SPEICHER.familien, ziel.familie] : [GERAETEABGLEICH_SPEICHER.personen, ziel.person];
   return {
-    lesen: () => gabListe(gabJson(ablage, K, {})[ziel.person]),
-    schreiben: (l) => { const alle = gabJson(ablage, K, {}); alle[ziel.person] = l; ablage.setItem(K, JSON.stringify(alle)); },
+    lesen: () => gabListe(gabJson(ablage, K, {})[id]),
+    schreiben: (l) => { const alle = gabJson(ablage, K, {}); alle[id] = l; ablage.setItem(K, JSON.stringify(alle)); },
   };
 }
 
@@ -123,10 +125,12 @@ async function gabBereich(o, area, ziel, anker, stand) {
     if (verteiler) {
       // his device first: what he writes counts only from a registered device (also for the anchor)
       if (await anmelden(zul, verteiler)) zul = await zulassungAus(stand.log, { area, anker, now });
-      const mitglieder = {};
-      for (const [pid, m] of Object.entries(verzeichnis)) if (gabObj(m) && GAB_ROLLEN.includes(m.role) && gabPub(m.pub)) mitglieder[pid] = { role: m.role, pub: m.pub };
+      const mitglieder = {}, gabStand = (m) => (Number.isInteger(m.stand) && m.stand > 1 ? m.stand : 1);
+      for (const [pid, m] of Object.entries(verzeichnis)) if (gabObj(m) && GAB_ROLLEN.includes(m.role) && gabPub(m.pub)) mitglieder[pid] = { role: m.role, pub: m.pub, ...(gabStand(m) > 1 ? { stand: gabStand(m) } : {}) };
       for (const [pid, p] of Object.entries(personen)) mitglieder[pid] = { role: p.role, pub: p.pub };
-      Object.assign(mitglieder, aktiveMitglieder(zul));
+      // the area's own admission counts - except for keys from a newer directory entry (task "Einladungen": a child's new
+      // keys after "new password", known from the family; an older device keeps the newer keys, see zulassung "stand")
+      for (const [pid, m] of Object.entries(aktiveMitglieder(zul))) if (!(mitglieder[pid] && gabStand(mitglieder[pid]) > gabStand(m))) mitglieder[pid] = m;
       const freigaben = ziel.pre ? gabFreigaben(gabZiel(o.ablage, ziel).lesen()) : [];
       // the area of a grant carries the grant itself, for its recipient (task "Lehrkraft sieht ihre Schueler"): a copy
       // by the distributor, without the consent text - the app's own grant_set was written before this area existed
@@ -200,16 +204,20 @@ async function gabBereich(o, area, ziel, anker, stand) {
                 freigaben = ids of grants for this child this device was invited to (a teacher's or the admin's device;
                 EP9: the invitation). A teacher's device finds its grant there (freigabe:<id>: grant_set, grant_revoked)
                 and with it the child; parents' devices find the grants in the child's log.
-   verzeichnis: { <personId>: { role, pub } } - public keys a parent knows (family, grant recipients; EP9: invitations)
+   familien:    [{ id, anker }] - families this device takes part in (task "Einladungen"): id = the founding parent, anker
+                = { person, role, pub } of him; their area familie:<id> is synced first, into the app's log bq2_familyEvents
+   verzeichnis: { <personId>: { role, pub, stand? } } - public keys a parent knows (family, grant recipients; task
+                "Einladungen": module einladung builds it from the family); stand above the admission's -> these keys count
    now (ms), heute ("YYYY-MM-DD", for the grants)
    -> { bereiche: { <area>: { ok, fehler, aktion, gesendet, neu, verworfen, ohneSchluessel, inDieApp } },
         inDieApp: events written into the app's logs (the app then calls evNeuLaden), verworfen: [{ bereich, kennung, id, grund }] } */
-export async function geraetAbgleichen({ ablage, zugang, personen, kinder = [], verzeichnis = {}, now, heute } = {}) {
-  gabPruefen({ ablage, zugang, personen, kinder, verzeichnis, now, heute });
+export async function geraetAbgleichen({ ablage, zugang, personen, kinder = [], familien = [], verzeichnis = {}, now, heute } = {}) {
+  gabPruefen({ ablage, zugang, personen, kinder, familien, verzeichnis, now, heute });
   const geraet = gabJson(ablage, GERAETEABGLEICH_SPEICHER.geraet, null);
   if (typeof geraet !== 'string' || !/^d_[0-9A-Za-z]{1,40}$/.test(geraet)) throw gabFehler('Geraet ohne Kennung (bq2_evDevice).');
   const o = { ablage, zugang, personen, geraet, now, heute, verzeichnis };
   const plan = [];                                                      // [area, target, anchor]
+  for (const f of familien) plan.push([bereichName('familie', f.id), { familie: f.id }, f.anker]);
   for (const c of kinder) {
     for (const art of GAB_KIND_ARTEN) plan.push([bereichName(art, c.id), { pre: c.pre }, c.anker]);
     // the grants of this child: those in its log (parents) and those this device was invited to (teacher, admin) - the

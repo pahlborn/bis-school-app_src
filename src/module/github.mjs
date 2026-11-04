@@ -18,8 +18,9 @@
 //   <wurzel>/events/<area>/<device>/<nr>.json   bundle; created, never overwritten
 //   <wurzel>/keys/<area>/<holder>.json          wrapped keys; replaced with the sha of the old file
 //   <wurzel>/directory/<lookup>.json            account entry; created once
-//   <wurzel>/invites/<id>.json                  { angelegt, inhalt } valid 10 minutes, or { angelegt, gueltig, inhalt }
-//                                               (invite.put options.gueltigMs, up to 7 days); deleted when fetched
+//   <wurzel>/invites/<id>.json                  { angelegt, inhalt } valid 7 days (SPEICHER_EINLADUNG_MS), or { angelegt,
+//                                               gueltig, inhalt } (invite.put options.gueltigMs, shorter); deleted when
+//                                               fetched or withdrawn (invite.delete)
 //
 // Few requests (5 000 per hour and token):
 //   list = one request for the folder <wurzel>/events with If-None-Match (unchanged -> 304, free) and, only when the
@@ -316,7 +317,7 @@ export function githubSpeicher({ repo, token, fetch: holer = globalThis.fetch, n
       ghsId(kennung);
       const text = ghsText(inhalt), gueltig = speicherEinladungGueltig(optionen);
       if (gueltig === null) throw ghsFehler('ungueltig');
-      // the default (10 minutes) is not written: such files look exactly as before
+      // the default (7 days) is not written
       const dauer = gueltig === SPEICHER_EINLADUNG_MS ? '' : ',"gueltig":' + gueltig;
       if ((await dateiAnlegen(ipfad(kennung), '{"angelegt":' + Number(now()) + dauer + ',"inhalt":' + text + '}')) !== true) throw ghsFehler('vorhanden');
     },

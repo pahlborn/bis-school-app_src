@@ -21,6 +21,7 @@
     { "name": "zulassung", "bau": "test", "browserTests": ["testbau"] },
     { "name": "lesen", "bau": "test", "browserTests": ["testbau-lesen", "ableitung-vergleich", "schreibhaken-1b"] },
     { "name": "geraeteabgleich", "bau": "test", "browserTests": ["zwei-geraete", "lehrkraft-schueler"] },
-    { "name": "konto", "bau": "test", "browserTests": ["testbau"] }
+    { "name": "konto", "bau": "test", "browserTests": ["testbau"] },
+    { "name": "einladung", "bau": "test", "browserTests": ["testbau"] }
   ]
 }
