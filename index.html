@@ -4872,7 +4872,7 @@ function loginDone(u, welcomed){
   $('#loginBody').innerHTML='';
   const seen=store.get('lastSeen',{}); seen[u.id]=new Date().toISOString(); store.set('lastSeen',seen);
   if(u.role==='student'){ pendingRoute=null; store.set('session',sessionOf(u)); const here=store.get('kidsHere',[]); if(!here.includes(u.id)) store.set('kidsHere',here.concat([u.id])); adultUser=null; if(welcomed){ store.set('greetDay',dayKey()); eventHook('day_flag',{flag:'greetDay', day:dayKey()}); } renderHome(); show('home'); }
-  else { store.set('adultSession',sessionOf(u)); adultUser={user:u.user, role:u.role, admin:!!u.admin}; parentAccess=true; state.psubj=null; state.popen=EV_LESEN && state.popenBy!==u.id ? [] : state.popen||[]; state.popenBy=u.id; const r=takePendingRoute();   /* test build (3b-2a): another person starts with all chapters closed - an open chapter of the one before does not count as read */ openAbout('sheets'); scrollToRouteSec(r); }
+  else { store.set('adultSession',sessionOf(u)); adultUser={user:u.user, role:u.role, admin:!!u.admin}; parentAccess=true; state.psubj=null; state.popen=state.popenBy!==u.id ? [] : state.popen||[]; state.popenBy=u.id; const r=takePendingRoute();   /* another person starts with all chapters closed - an open chapter of the one before does not count as read (3b-2a; live since 04.11., Peter) */ openAbout('sheets'); scrollToRouteSec(r); }
 }
 /* Test account bar (for grown-ups, in their language): clearly marked, separate data, jump ahead one
    day, reset everything, and – while a grown-up is logged in – back to the grown-ups area. */
