@@ -7,9 +7,10 @@
 //     kind:privat:<childId>  rest of the profile, settings, day hints ...  child, parents
 //     schule:<childId>       school data and gaps (the child's app computes with them, never shows them)
 //                                                                          child, parents, grant with "school"
-//     eltern:allg:<childId>  grants (later: last backup)                   parents
+//     eltern:allg:<childId>  grants, last backup                           parents
 //     freigabe:<grantId>     the recipient's log "opened" (grant_opened)    parents, the recipient while the grant runs
-//     person:<personId>      settings of one grown-up                       the person
+//     person:<personId>      settings of one person (person_set, glance_set; task 3b-1c)   the person
+//                            - only the person itself writes there: an event of somebody else does not fit the area
 //   The area follows from the event type (for profile_set: from the field). snapshot and the admission events
 //   (member_*, device_*, key_rotated; task P3b-2) fit every area: each area carries its own admission.
 //
@@ -35,8 +36,9 @@ const BER_TYP = {
   setting_set: 'kind:privat', list_set: 'kind:privat', checklist_set: 'kind:privat', day_flag: 'kind:privat', advent_open: 'kind:privat',
   joke_seen: 'kind:privat', story_read: 'kind:privat',
   school_import: 'schule', gap_state: 'schule', gap_active: 'schule',
-  grant_set: 'eltern:allg', grant_revoked: 'eltern:allg',
+  grant_set: 'eltern:allg', grant_revoked: 'eltern:allg', backup_made: 'eltern:allg',
   grant_opened: 'freigabe',
+  person_set: 'person', glance_set: 'person',                       // task 3b-1c: settings of one person, its own area only
   // every area carries its own admission (task P3b-2): members, devices and key changes of THIS area
   member_added: '*', member_removed: '*', device_added: '*', device_removed: '*', key_rotated: '*',
   snapshot: '*',
@@ -93,6 +95,7 @@ export function passtZumBereich(e, bereich) {
   if (!z || !art) return false;
   if (art === '*') return true;
   if (art !== z.art) return false;
+  if (art === 'person') return e.author === z.id;            // task 3b-1c: a person writes its own settings, nobody else's
   return art !== 'freigabe' || e.payload.grant === z.id;      // the log of grant g1 lies in freigabe:g1 only
 }
 

@@ -5,8 +5,11 @@
 // The result looks exactly like what index.html keeps today, so the app can later read it unchanged:
 //   attempts, ev, due, total, best_<quest>, badges, tried, treeStage, rankSeen, sheets, sheetNo
 //   and the "last wins" values name, birthday, emoji, kidLang, focusMode, focusManual, unlocked, storyCap,
-//   greetDay, mysteryDone, bdayParty, chk_<studio>; and gaps (task 3b-0: {closed, active, hold}, see abGaps).
-// Not here: grants and their log (task 4), school data, recordings, everything that stays on the device.
+//   greetDay, mysteryDone, bdayParty, chk_<studio>; and gaps (task 3b-0: {closed, active, hold}, see abGaps);
+//   grants, grantlog, lastBackup (task 3b-1c, see abGrant).
+// From the log of a person (task 3b-1c, area person:<id>): parentLang, muted, conceptSeen (the day it was opened) and
+//   glance ({ <childId>: state at the last visit }) - the values of THIS person (the app keeps them per device today).
+// Not here: school data, recordings, everything that stays on the device.
 //
 // How: the events are merged (mergeLog: one id once, sorted by time) and then replayed one by one - each event does
 // to the state what the matching place in index.html does today (rules copied from the code, see the comments).
@@ -19,7 +22,7 @@ import { mergeLog, lastWins, lastWinsOrder, effectiveTime } from './ereignisse.m
 
 /* the limits of today's app (index.html: slice(-200) in attempts, EVIDENCE_MAX, DUE_MAX, GAPS, slice(-8) in sheets,
    TREE_AT, RANKS); the browser test compares them with the app */
-export const DERIVE_LIMITS = { attempts: 200, evidence: 60, due: 40, sheets: 8, jokes: 200 };
+export const DERIVE_LIMITS = { attempts: 200, evidence: 60, due: 40, sheets: 8, jokes: 200, grantlog: 200 };
 export const DERIVE_GAPS = [1, 3, 7];
 export const DERIVE_TREE_AT = [0, 1, 3, 6, 10, 15, 25];
 export const DERIVE_RANKS = ['Explorer', 'Investigator', 'Scientist', 'Professor', 'Legend'];
@@ -132,7 +135,32 @@ function abApply(st, ctx, e) {
     case 'story_read':                                                          // geschichten.mjs storyMarkRead: moves to the end
       st.storyRead = (Array.isArray(st.storyRead) ? st.storyRead : []).filter((id) => id !== p.story).concat([p.story]);
       break;
+    case 'grant_set': case 'grant_revoked': case 'grant_opened': abGrant(st, e); break;
     default: break;                                                             // "last wins" types and everything else: see derive
+  }
+}
+
+/* grants and their log (task 3b-1c; index.html bindGrants, grantOpened, grantLog). The log is the protocol: one entry per
+   event, at = the event's time (the app stores the time of its event). "grants" follows from the log:
+     grant_set      a new grant { id, grantee, scope, from, until, by } + log "erteilt" (with until, by, text)
+     grant_revoked  revokedAt = the time; log "widerrufen" - only for a known grant that is not ended yet (as the app)
+     grant_opened   log "geöffnet" (with scope)
+   Not here (device notes, computed from "until" when reading - task 3b-2): expiredLogged and the log entry "abgelaufen". */
+function abGrant(st, e) {
+  const p = e.payload, gs = Array.isArray(st.grants) ? st.grants : [], log = Array.isArray(st.grantlog) ? st.grantlog : [];
+  const add = (entry) => { log.push(entry); st.grantlog = log.slice(-DERIVE_LIMITS.grantlog); };
+  if (e.type === 'grant_set') {
+    if (gs.some((g) => g.id === p.grant)) return;
+    gs.push({ id: p.grant, grantee: p.grantee, scope: p.scope.slice(), from: p.from, until: p.until, by: e.author });
+    st.grants = gs;
+    add(Object.assign({ at: e.at, ev: 'erteilt', grant: p.grant, grantee: p.grantee, scope: p.scope.slice(), until: p.until, by: e.author }, p.text === undefined ? {} : { text: p.text }));
+  } else if (e.type === 'grant_revoked') {
+    const g = gs.find((x) => x.id === p.grant);
+    if (!g || g.revokedAt) return;
+    g.revokedAt = e.at;
+    add({ at: e.at, ev: 'widerrufen', grant: p.grant, grantee: p.grantee, by: e.author });
+  } else {
+    add(Object.assign({ at: e.at, ev: 'geöffnet', grant: p.grant, grantee: p.grantee }, p.scope === undefined ? {} : { scope: p.scope.slice() }));
   }
 }
 
@@ -153,6 +181,10 @@ function abApplyWinner(st, e) {
       st[key] = a;
       break;
     }
+    // task 3b-1c: a person's own settings (its log, area person:<id>) and the parents' last backup
+    case 'person_set': abSetField(st, p.field, p.value); break;               // parentLang, muted, conceptSeen (the day)
+    case 'glance_set': st.glance = Object.assign({}, st.glance, { [p.child]: abClone(p.value) }); break;   // per child (a pid, never "__proto__")
+    case 'backup_made': st.lastBackup = p.day; break;
     default: break;                                                             // rank_seen: the highest one counts (abApply)
   }
 }

@@ -1,6 +1,7 @@
 // Schreibhaken 3b-1b-1 (S12, Aufgabe 3b-1): Profil, Sprache des Kindes, Spannungsgrenze (storyCap), Tageshinweise
 // (Begruessung, Raetsel, Geburtstagsfeier) und Checklisten schreiben im Testbau je ein Ereignis ("Letzte gilt").
 // Mit echten Klicks; danach liefert derive(Ereignisse) fuer diese Werte genau das, was die App gespeichert hat.
+// Dazu 3b-1b-2 bis -4 (Listen, Luecken, Witze/Geschichten/Ton) und 3b-1c (Freigaben, Sicherung, Personen-Einstellungen).
 //   node --test tests/schreibhaken-1b.test.mjs
 
 import { test, before, after } from 'node:test';
@@ -8,10 +9,13 @@ import assert from 'node:assert/strict';
 import { appServer, browserStarten, appOeffnen, zustand, klick, zurStart, elternOeffnen, elternSeite, alleKarten, karteOeffnen, frageBeantworten } from './app-hilfen.mjs';
 import { konto, kontenServer, oeffnen, anmelden, passwortSetzen } from './konten-hilfen.mjs';
 import { derive } from '../src/module/ableitung.mjs';
+import { bereichVonEreignis } from '../src/module/bereiche.mjs';
 
-const WERTE = ['name', 'birthday', 'emoji', 'kidLang', 'storyCap', 'greetDay', 'mysteryDone', 'bdayParty', 'unlocked', 'focusMode', 'focusManual', 'gaps', 'jokeSeen', 'storyRead', 'muted'];
+const WERTE = ['name', 'birthday', 'emoji', 'kidLang', 'storyCap', 'greetDay', 'mysteryDone', 'bdayParty', 'unlocked', 'focusMode', 'focusManual', 'gaps', 'jokeSeen', 'storyRead', 'muted', 'grants', 'grantlog', 'lastBackup'];
 const betroffen = (k) => WERTE.includes(k) || k.startsWith('chk_') || /^advent\d{4}$/.test(k);
-function haken() { window.__bqh = { listEvents, eventHook, jokesFor, themeNow, ohneKind: () => eventNoChild.slice(), probleme: () => ({ abgelehnt: eventSink ? eventSink.problems : null, fehler: eventErrors }) }; }
+function haken() { window.__bqh = { listEvents, eventHook, jokesFor, themeNow, ohneKind: () => eventNoChild.slice(), ohnePerson: () => eventNoPerson.slice(), probleme: () => ({ abgelehnt: eventSink ? eventSink.problems.concat(personSink.problems) : null, fehler: eventErrors }) }; }
+/* 3b-1c: what the app keeps on the device only and computes from "until" when reading (task 3b-2) - not in the events */
+const ohneGeraetenotiz = (k, v) => (k === 'grants' && Array.isArray(v) ? v.map(({ expiredLogged, ...g }) => g) : k === 'grantlog' && Array.isArray(v) ? v.filter((e) => e.ev !== 'abgelaufen') : v);
 const mitHaken = (h) => h.replace(/\}\)\(\);\s*<\/script>/, () => `(${haken.toString()})();})();</script>`);
 
 /* the stored values of one child namespace ('' = without accounts) and derive of its events */
@@ -19,7 +23,7 @@ async function vergleich(page, ns = '') {
   const app = await page.evaluate((p) => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith(p)).map((k) => [k.slice(p.length), JSON.parse(localStorage.getItem(k))])), 'bq2_' + (ns ? ns + '__' : ''));
   const st = derive(app.events || [], { now: Date.parse('2027-01-01T00:00:00Z') });
   const keys = [...new Set([...Object.keys(app), ...Object.keys(st)])].filter(betroffen).sort();
-  for (const k of keys) assert.deepEqual(st[k], app[k], 'Wert ' + k);
+  for (const k of keys) assert.deepEqual(st[k], ohneGeraetenotiz(k, app[k]), 'Wert ' + k);
   assert.deepEqual(await page.evaluate(() => window.__bqh.probleme()), { abgelehnt: [], fehler: [] }, 'nichts abgelehnt, kein Fehler im Schreiber');
   return { app, keys, events: app.events || [] };
 }
@@ -285,6 +289,113 @@ test('3b-1b-4 Witze, Geschichten, Ton: drei Runden mit Witz und Geschichte, Ton 
   const a = arten(r.events);
   assert.deepEqual([a.joke_seen - vorher, a.story_read, a['profile_set:muted']], [3, 3, 3]);
   assert.ok(r.events.some((e) => e.type === 'joke_seen' && e.payload.forget && e.payload.forget.length === vorher - 1), 'the restart was written with forget (all of the moment except the new joke)');
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
+
+/* ---------- 3b-1c: grants, backup, the settings of a person ---------- */
+const personenLog = (page) => page.evaluate(() => JSON.parse(localStorage.getItem('bq2_personEvents') || '{}'));
+const geraetWert = (page, k) => page.evaluate((key) => JSON.parse(localStorage.getItem('bq2_' + key) || 'null'), k);
+const JETZT = Date.parse('2027-01-01T00:00:00Z');
+
+test('3b-1c mit Konten: Freigaben (erteilen, ersetzen, beenden, angesehen), Sicherung, Sprache, "So funktioniert", Blick -> derive = gespeicherter Stand', async () => {
+  const C = { mia: 'MIAA-2345', papa: 'PAPA-2345', frau: 'FRAU-2345' }, PW = { mia: 'Tiger-Lamp-River-4271', papa: 'Papa-Eltern-Test-1', frau: 'Lehrkraft-Test-22' };
+  const ks = await kontenServer({ users: [await konto('mia', 'student', C.mia), await konto('papa', 'parent', C.papa, { kinder: ['mia'] }), await konto('frau', 'teacher', C.frau)] }, { bauart: 'test', anpassen: mitHaken });
+  try {
+    const ID = (n) => ks.konten.users.find((u) => u.user === n).id, mia = ID('mia'), papa = ID('papa'), frau = ID('frau');
+    const { ctx, page, fehler } = await oeffnen(browser, ks, { acceptDownloads: true });
+    await anmelden(page, 'student', 'mia', C.mia); await passwortSetzen(page, PW.mia);
+    await page.waitForSelector('#home:not([hidden])');
+    async function erwachsen(wer) {                                                   // as in tests/stufe1-p4.test.mjs
+      if (await page.locator('#parentClose').count()) { await page.locator('#parentClose').click(); await page.waitForSelector('#home:not([hidden]), #login:not([hidden])'); }
+      if (await page.locator('#adultBtn').isVisible().catch(() => false)) await page.locator('#adultBtn').click();
+      else if (await page.locator('#roleAdult').count()) await page.locator('#roleAdult').click();
+      await page.locator('#loginUser').fill(wer);
+      const ersterMal = !(await page.evaluate((id) => localStorage.getItem('bq2_pw_' + id), ID(wer)));
+      await page.locator('#loginPw').fill(ersterMal ? C[wer] : PW[wer]); await page.locator('#loginGo').click();
+      if (ersterMal) { await page.waitForSelector('#setPwForm'); await page.locator('#newPw1').fill(PW[wer]); await page.locator('#newPw2').fill(PW[wer]); await page.locator('#setPwGo').click(); await page.locator('#welcomeGo').click(); }
+      await page.waitForSelector('#parentClose');
+    }
+    async function kapitel(id) {                                                      // grants and backup are in the settings
+      if (!(await page.$('#pSetBack'))) { await page.locator('#pSettings').click(); await page.waitForSelector('#pSetBack'); }
+      const d = page.locator(`details.psec[data-psec="${id}"]`);
+      if (!(await d.evaluate((e) => e.open))) await d.locator('summary').first().click();
+    }
+    // papa: the overview (glance), the language of the grown-ups' area, "How Big Quest works"
+    await erwachsen('papa');
+    await page.locator('.phdr [data-plang="en"]').click(); await page.locator('.phdr [data-plang="de"]').click();
+    await page.locator('details.psec[data-psec="concept"] > summary').click();
+    // grant to the teacher, she looks, a new grant with school ratings replaces it, then papa ends it
+    await kapitel('grants');
+    await page.locator('#pGrantWho').fill('frau'); await page.locator('#pGrantDays').fill('10');
+    await page.locator('#pGrantForm button[type="submit"]').click();
+    await page.waitForSelector('[data-grantrevoke]');
+    await erwachsen('frau');
+    assert.match(await page.textContent('#pKid'), /mia/);
+    await page.reload(); await page.waitForSelector('#parentClose');                    // viewed again the same day: logged once
+    await erwachsen('papa');
+    await kapitel('grants');
+    await page.locator('#pGrantWho').fill('frau'); await page.locator('#pGrantSchool').check();
+    await page.locator('#pGrantForm button[type="submit"]').click();
+    await page.waitForFunction(() => document.querySelectorAll('.pgrants li').length === 2);
+    await page.locator('[data-grantrevoke]').click();
+    await page.waitForFunction(() => !document.querySelector('[data-grantrevoke]'));
+    // backup
+    await kapitel('backup');
+    await Promise.all([page.waitForEvent('download'), page.locator('details.psec[data-psec="backup"] [data-backup]').first().click()]);
+    await page.waitForFunction((id) => localStorage.getItem('bq2_' + id + '__lastBackup') !== null, mia);
+
+    // the child's log: grants, their log and the backup (derive = stored, without the device notes)
+    const r = await vergleich(page, mia);
+    assert.equal(r.app.grants.length, 2); assert.ok(r.app.grants.every((g) => g.revokedAt), 'both ended');
+    assert.deepEqual(r.app.grantlog.map((e) => e.ev), ['erteilt', 'geöffnet', 'widerrufen', 'erteilt', 'widerrufen']);
+    assert.ok(r.app.lastBackup);
+    const wer = (t) => r.events.filter((e) => e.type === t).map((e) => e.author);
+    assert.deepEqual([wer('grant_set'), wer('grant_revoked'), wer('grant_opened'), wer('backup_made')], [[papa, papa], [papa, papa], [frau], [papa]]);
+    assert.ok(r.events.every((e) => bereichVonEreignis(e) !== 'person'), 'no person setting in the child\'s log');
+    // the log of each person: language, "How it works", glance of the parent; the teacher keeps no glance
+    const pe = await personenLog(page), glance = await geraetWert(page, 'glance');
+    const arten2 = (l) => (l || []).map((e) => e.type + (e.payload.field ? ':' + e.payload.field : ''));
+    assert.deepEqual(Object.keys(pe).sort(), [papa, frau].sort(), JSON.stringify(Object.fromEntries(Object.entries(pe).map(([k, v]) => [k === papa ? 'papa' : k === frau ? 'frau' : k, arten2(v)]))));
+    for (const p of [papa, frau]) assert.ok(pe[p].every((e) => e.author === p && bereichVonEreignis(e) === 'person'), 'each person writes into its own log');
+    // the teacher: the chapter "How it works" was still open from papa's visit (state.popen) - so it counts as seen for her
+    // as well (as the app stores it); no glance of the child in her area
+    assert.deepEqual(arten2(pe[frau]), ['person_set:conceptSeen']);
+    assert.equal(derive(pe[frau], { now: JETZT }).conceptSeen, (await geraetWert(page, 'conceptSeen'))[frau]);
+    const st = derive(pe[papa], { now: JETZT });
+    assert.equal(st.parentLang, await geraetWert(page, 'parentLang'));
+    assert.equal(st.parentLang, 'de');
+    assert.equal(st.conceptSeen, (await geraetWert(page, 'conceptSeen'))[papa]);
+    assert.deepEqual(st.glance, { [mia]: glance[papa + '|' + mia] });
+    assert.ok(glance[frau + '|' + mia], 'the teacher\'s glance stays on the device');
+    assert.ok(pe[papa].filter((e) => e.type === 'glance_set').length >= 2, 'one glance per visit');
+    assert.deepEqual(await page.evaluate(() => window.__bqh.ohnePerson()), []);
+    // safety: a grant event meant for another child than the one the store shows is not written, but reported
+    const vorher = (await vergleich(page, mia)).events.length;
+    assert.equal(await page.evaluate(() => window.__bqh.eventHook('backup_made', { day: '2026-11-04' }, 'p_ANDERESKIND')), null);
+    assert.deepEqual(await page.evaluate(() => window.__bqh.probleme().fehler), ['backup_made: anderes Kind']);
+    assert.equal((await geraetWert(page, mia + '__events')).length, vorher);
+    assert.deepEqual(fehler, []);
+    await ctx.close();
+  } finally { ks.close(); }
+});
+
+test('3b-1c ohne Konten: Sprache, "So funktioniert", Blick der Eltern -> Protokoll p_eltern, derive = gespeicherter Stand', async () => {
+  const { ctx, page, fehler } = await appOeffnen(browser, server.url, { zeit: '2026-11-04T09:00:00' });
+  await elternOeffnen(page);
+  await page.locator('.phdr [data-plang="en"]').click();
+  await page.locator('details.psec[data-psec="concept"] > summary').click();
+  await page.locator('#parentClose').click();
+  await elternOeffnen(page);                                                         // a second visit: a new glance
+  const r = await vergleich(page);
+  assert.ok(r.events.every((e) => bereichVonEreignis(e) !== 'person'), 'no person setting in the child\'s log');
+  const pe = await personenLog(page);
+  assert.deepEqual(Object.keys(pe), ['p_eltern']);
+  const st = derive(pe.p_eltern, { now: JETZT }), glance = await geraetWert(page, 'glance');
+  assert.deepEqual([st.parentLang, st.conceptSeen], [await geraetWert(page, 'parentLang'), (await geraetWert(page, 'conceptSeen')).pin]);
+  assert.equal(st.parentLang, 'en');
+  assert.deepEqual(st.glance, { p_kind: glance['parent|kid'] });
+  assert.equal(pe.p_eltern.filter((e) => e.type === 'glance_set').length, 2);
   assert.deepEqual(fehler, []);
   await ctx.close();
 });

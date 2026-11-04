@@ -12,7 +12,7 @@ import { bereichVonEreignis, bereichName } from '../../src/module/bereiche.mjs';
 /* ---------- the family: one person per role, each with one device ----------
    Since P3b every type has its area (module bereiche); AREA is the learning area of the child. */
 const AREA = 'kind:lern:p_k1';
-const areaOf = (e) => { const art = bereichVonEreignis(e); return !art || art === '*' ? AREA : bereichName(art, art === 'freigabe' ? e.payload.grant : 'p_k1'); };
+const areaOf = (e) => { const art = bereichVonEreignis(e); return !art || art === '*' ? AREA : bereichName(art, art === 'freigabe' ? e.payload.grant : art === 'person' ? e.author : 'p_k1'); };   // person: the author's own (3b-1c)
 const WHO = { child: ['p_k1', 'd_k1'], parent: ['p_e1', 'd_e1'], teacher: ['p_l1', 'd_l1'], admin: ['p_a1', 'd_a1'] };
 const ROLES = Object.keys(WHO);
 let KEYS = {}, Z;            // KEYS: personId -> private keys; Z: the admission for AREA
@@ -62,6 +62,9 @@ function payloadFor(type, author, device) {
     advent_open: { year: 2026, door: 3 },
     joke_seen: { joke: 'gb-tired' },
     story_read: { story: 'alltag-stern-trampolin' },
+    person_set: { field: 'parentLang', value: 'en' },
+    glance_set: { child: 'p_k1', value: { at: DAY, n: 3 } },
+    backup_made: { day: DAY },
   }[type];
 }
 let n = 0;
@@ -83,6 +86,7 @@ const ERWARTET = {
   sheet_discarded: 'p', setting_set: 'p', school_import: 'p', grant_set: 'p', grant_revoked: 'p',
   member_added: 'p', member_removed: 'p', device_removed: 'p', key_rotated: 'p', snapshot: 'p', gap_active: 'p', list_set: 'p', advent_open: 'cp', joke_seen: 'cp', story_read: 'cp',
   grant_opened: 'ta',
+  person_set: 'cpta', glance_set: 'p', backup_made: 'p',          // 3b-1c: everybody his own settings; glance and backup: parents
 };
 const darf = (role, type) => ERWARTET[type].includes(role[0]);
 
@@ -90,7 +94,7 @@ const darf = (role, type) => ERWARTET[type].includes(role[0]);
 test('Annehmen: gueltig unterschriebene Ereignisse je Rolle und erlaubtem Typ zaehlen', async () => {
   let k = 0;
   for (const role of ROLES) for (const type of EVENT_TYPES) if (darf(role, type)) { assert.equal(await reason(await signed(role, type)), 'ok', `${role} ${type}`); k++; }
-  assert.equal(k, 9 + 6 * 2 + 4 + 12 + 2, 'every allowed pair was tried once');   // cp: profile_set, sheet_created, gap_state, advent_open, joke_seen, story_read
+  assert.equal(k, 9 + 6 * 2 + 4 + 12 + 2 + 4 + 2, 'every allowed pair was tried once');   // cp: profile_set, sheet_created, gap_state, advent_open, joke_seen, story_read; 3b-1c: person_set x4, glance_set, backup_made
   const p2 = await sg(mk('setting_set', 'p_e2', 'd_e3'), KEYS.p_e2);
   assert.deepEqual(await acceptEvent(p2, zOf(p2)), { ok: true }, 'second parent from his second device');
 });
@@ -163,6 +167,20 @@ test('Bereich: dasselbe unterschriebene Ereignis in einem anderen Bereich wird v
   for (const area of ['kind:lern:p_k1', 'eltern:allg:p_k1', 'kid:p_k1']) assert.equal(await reason(await signed('parent', 'school_import', { area }), { ...Z, area }), 'bereich-falsch', area);
 });
 
+test('3b-1c Personen-Bereich: jede Person schreibt nur ihre eigenen Einstellungen; Blick und Sicherung nur Eltern', async () => {
+  const p = (pid, did, type, payload, area) => signEvent(mk(type, pid, did, payload), area, KEYS[pid]);
+  for (const [role, [pid, did]] of Object.entries(WHO)) {
+    assert.equal(await reason(await p(pid, did, 'person_set', { field: 'muted', value: true }, 'person:' + pid), { ...Z, area: 'person:' + pid }), 'ok', role + ' in his own area');
+    const fremd = pid === 'p_e1' ? 'p_k1' : 'p_e1';
+    assert.equal(await reason(await p(pid, did, 'person_set', { field: 'muted', value: true }, 'person:' + fremd), { ...Z, area: 'person:' + fremd }), 'bereich-falsch', role + ' in the area of ' + fremd);
+  }
+  assert.equal(await reason(await p('p_e1', 'd_e1', 'glance_set', { child: 'p_k1', value: {} }, 'person:p_e1'), { ...Z, area: 'person:p_e1' }), 'ok');
+  assert.equal(await reason(await p('p_l1', 'd_l1', 'glance_set', { child: 'p_k1', value: {} }, 'person:p_l1'), { ...Z, area: 'person:p_l1' }), 'rolle-darf-nicht', 'a teacher keeps no glance of the child');
+  for (const area of ['kind:privat:p_k1', 'eltern:allg:p_k1']) assert.equal(await reason(await p('p_e1', 'd_e1', 'person_set', { field: 'parentLang', value: 'de' }, area), { ...Z, area }), 'bereich-falsch', 'person_set in ' + area);
+  assert.equal(await reason(await p('p_e1', 'd_e1', 'backup_made', { day: DAY }, 'person:p_e1'), { ...Z, area: 'person:p_e1' }), 'bereich-falsch', 'the backup belongs to the child');
+  assert.equal(await reason(await p('p_k1', 'd_k1', 'backup_made', { day: DAY }, 'eltern:allg:p_k1'), { ...Z, area: 'eltern:allg:p_k1' }), 'rolle-darf-nicht', 'the child makes no backup');
+});
+
 test('canonicalBytes: feste Bytefolge, unabhaengig von der Schluesselreihenfolge; Bereich gehoert dazu', () => {
   const e = mk('answer', 'p_k1', 'd_k1');
   const turned = Object.fromEntries(Object.entries(e).reverse()); turned.payload = Object.fromEntries(Object.entries(e.payload).reverse());
@@ -176,9 +194,9 @@ test('canonicalBytes: feste Bytefolge, unabhaengig von der Schluesselreihenfolge
 });
 
 /* ---------- 5 matrix ---------- */
-test('Matrix: alle 29 Typen x 4 Rollen gegen die hier ausgeschriebene Tabelle', async () => {
+test('Matrix: alle 32 Typen x 4 Rollen gegen die hier ausgeschriebene Tabelle', async () => {
   assert.deepEqual(Object.keys(ERWARTET).sort(), EVENT_TYPES.slice().sort(), 'the table covers every type');
-  assert.equal(EVENT_TYPES.length, 29);
+  assert.equal(EVENT_TYPES.length, 32);
   const falsch = [];
   for (const type of EVENT_TYPES) for (const role of ROLES) {
     const got = await reason(await signed(role, type)), want = darf(role, type) ? 'ok' : 'rolle-darf-nicht';
