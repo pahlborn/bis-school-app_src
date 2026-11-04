@@ -1,0 +1,16 @@
+{
+  "hinweis": "Stufe 3c, Testinstanz: die App wird dort OHNE Familienpasswort, also im Klartext veroeffentlicht. Diese Datei bleibt im privaten Repo. 'ersetzen' = [suchen, ersetzen], Gross/klein egal; nur in der Testinstanz. 'auchVerboten' = Woerter, die zusaetzlich zu verbotene-woerter.txt nirgends in der Testinstanz stehen duerfen (Suchlauf in werkzeug/testinstanz.mjs; ein Treffer bricht den Bau ab).",
+  "ersetzen": [
+    ["Friction Frenzy", "Friction Lab"],
+    ["Persuade for the Park", "Save the Park"],
+    ["Travel for Work", "Road Trip"],
+    ["Pantastic", "Stage Show"],
+    ["https://www.bis-school.com/about/purpose", "https://example.org/"],
+    ["https://www.bis-school.com/fs/pages/1629", "https://example.org/"],
+    ["https://www.bis-school.com/academic-life/primary-school-haimhausen", "https://example.org/"],
+    ["https://www.bis-school.com/admissions/resources", "https://example.org/"],
+    ["https://pahlborn.github.io/bis-school-app/", "https://pahlborn.github.io/bis-school-app-test/"],
+    ["Kathie", "Mia"]
+  ],
+  "auchVerboten": ["bis-school.com", "Kathie", "pahlborn.github.io/bis-school-app/"]
+}
