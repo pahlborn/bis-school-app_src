@@ -95,9 +95,11 @@ test('Testbau: Bereiche - Schluessel verteilen, nach Ablauf wechseln, falscher B
     const a = await verteilen('2026-11-03'), b = await verteilen('2026-11-15');
     const lehrkraft = await B.schluesselLesen(z, L, { ich: 'p_l1', meineSchluessel: keys.p_l1, mitglieder: M });
     const kind = await B.schluesselLesen(z, L, { ich: 'p_k1', meineSchluessel: keys.p_k1, mitglieder: M });
-    const geb = E.newEvent({ type: 'profile_set', author: 'p_k1', device: 'd_k1', at: '2026-11-03T10:00:00.000Z', payload: { field: 'birthday', value: '2017-05-14' } });
+    const geb = E.newEvent({ type: 'profile_set', author: 'p_k1', device: 'd_k1', at: '2026-11-03T10:00:00.000Z', payload: { field: 'emoji', value: 'fox' } });
     const falsch = await B.acceptEvent(await B.signEvent(geb, L, keys.p_k1), { area: L, members: M });
-    return { a: a.aktion, b: b.aktion + b.version + b.entfernt.join(), lehrkraft: [lehrkraft.aktuell, ...lehrkraft.keys.keys()].join(), kind: [kind.aktuell, ...kind.keys.keys()].join(), falsch: falsch.grund, name: B.passtZumBereich({ ...geb, payload: { field: 'name', value: 'K' } }, L) };
+    // Aufgabe "Name und Geburtsdatum" (04.11.): Nachname und Geburtsdatum gehoeren zum Namen in kind:lern, das Emoji nicht
+    const p = (field, value) => B.passtZumBereich({ ...geb, payload: { field, value } }, L);
+    return { a: a.aktion, b: b.aktion + b.version + b.entfernt.join(), lehrkraft: [lehrkraft.aktuell, ...lehrkraft.keys.keys()].join(), kind: [kind.aktuell, ...kind.keys.keys()].join(), falsch: falsch.grund, name: p('name', 'K') && p('lastName', 'B') && p('birthday', '2017-05-14') };
   });
   assert.deepEqual(r, { a: 'angelegt', b: 'gewechselt2p_l1', lehrkraft: '2,1', kind: '2,1,2', falsch: 'bereich-falsch', name: true });
   assert.deepEqual(fehler, []);
