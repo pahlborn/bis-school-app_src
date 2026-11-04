@@ -42,8 +42,11 @@ test('Zwei Geraete ohne App: Eltern richten ein, Kind meldet sich an; Antworten 
   await K.sync();
   const a1 = K.schreibt('p_k1', 'answer', antwort('a'), 10), a2 = K.schreibt('p_k1', 'answer', antwort('b'), 11);
   const s1 = E.schreibt('p_e1', 'setting_set', { setting: 'focusMode', value: 'manual' }, 12);
+  // ein Zulassungs-Ereignis im Protokoll der App (die App schreibt keine) geht nicht mit: die Zulassung macht nur dieses Modul
+  const fremd = K.schreibt('p_k1', 'device_added', { device: 'd_K1' }, 13);
   const rk = await K.sync(), re = await E.sync(), rk2 = await K.sync();
   assert.equal(rk.bereiche['kind:lern:p_k1'].gesendet, 2);
+  K.a.setItem('bq2_p_k1__events', JSON.stringify(K.log().filter((e) => e.id !== fremd.id)));
   assert.equal(re.inDieApp, 2); assert.equal(rk2.inDieApp, 1);
   assert.deepEqual(E.log().map((e) => e.id).sort(), [a1.id, a2.id, s1.id].sort());
   assert.deepEqual(K.log().map((e) => e.id).sort(), [a1.id, a2.id, s1.id].sort());
