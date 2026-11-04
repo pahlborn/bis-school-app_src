@@ -23,6 +23,7 @@ import { versionErmitteln, versionEinsetzen, versionAuslesen, versionText } from
 import { kontenLesen, kontenEinsetzen } from './konten.mjs';
 import { schuleLesen, schuleEinsetzen } from './schule.mjs';
 import { moduleEinsetzen } from './module.mjs';
+import { TESTINSTANZ, ersatzLesen, testinstanzUmwandeln, testinstanzManifest, testinstanzPruefen } from './testinstanz.mjs';
 
 /** The app as it goes into the vault: version, accounts (S3/S11) and school data by ID (S11 P2). */
 export function appZusammensetzen(app, version, konten, schule) {
@@ -114,6 +115,33 @@ export async function distBauen(zugang, { wurzel = WURZEL, ziel = path.join(wurz
     ziel, dateien: ['index.html', 'manifest.webmanifest', ...ICONS], appBytes: app.length, version: v, konten: k ? k.users.length : 0, huelleBytes: Buffer.byteLength(html),
     schluesselRoh: await schluesselRoh(schluessel), salt: q.salt
   };
+}
+
+/**
+ * Bauart "Testinstanz" (Stufe 3c, werkzeug/testinstanz.mjs): Testbau ohne Schuldaten, ohne konten.json, ohne
+ * Familienpasswort (keine Huelle - die App liegt im Klartext), Speicher unter bqt_. Schreibt erst, wenn der Suchlauf
+ * (testinstanzPruefen) nichts findet. Ziel: dist-test/ (nicht eingecheckt).
+ */
+export async function testinstanzBauen({ wurzel = WURZEL, ziel = path.join(wurzel, TESTINSTANZ.ordner), version = null } = {}) {
+  const lies = (rel, enc) => fs.readFile(path.join(wurzel, rel), enc);
+  const v = version || versionErmitteln(wurzel);
+  const testbau = moduleEinsetzen(await lies(QUELLEN.app), { bauart: 'test', ordner: path.join(wurzel, 'src', 'module') });
+  const ersatz = await ersatzLesen(wurzel);
+  // konten und schule bewusst null: die Marken bleiben leer (nicht aus werkzeug/konten.json, werkzeug/schuldaten.json)
+  const app = testinstanzUmwandeln(appZusammensetzen(testbau, v, null, null).toString('utf8'), ersatz);
+  const manifest = testinstanzManifest(await lies(QUELLEN.manifest, 'utf8'));
+  const woerter = woerterLesen(await lies(QUELLEN.woerter, 'utf8'));
+  if (woerter.length === 0) throw new Error(`${QUELLEN.woerter} ist leer - ohne Liste prueft der Suchlauf nichts.`);
+  const { funde, pruefungen } = testinstanzPruefen(app, manifest, {
+    woerter, auchVerboten: ersatz.auchVerboten, schule: await schuleLesen(wurzel), konten: await kontenLesen(wurzel),
+    salt: JSON.parse(await lies(QUELLEN.salz, 'utf8')).salt || ''
+  });
+  if (funde.length) throw new Error('Suchlauf Testinstanz, nichts geschrieben:\n  - ' + funde.join('\n  - '));
+  await fs.mkdir(ziel, { recursive: true });
+  await fs.writeFile(path.join(ziel, 'index.html'), app, 'utf8');
+  await fs.writeFile(path.join(ziel, 'manifest.webmanifest'), manifest, 'utf8');
+  for (const icon of ICONS) await fs.copyFile(path.join(wurzel, icon), path.join(ziel, icon));
+  return { ziel, dateien: ['index.html', 'manifest.webmanifest', ...ICONS], appBytes: Buffer.byteLength(app), version: v, pruefungen };
 }
 
 /**
