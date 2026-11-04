@@ -791,8 +791,21 @@ function migrateCleanup(){
   if(m.audio==='ok') for(const n of m.oldAudio||[]){ try{ indexedDB.deleteDatabase(n); }catch(e){} }
   m.cleaned=true; try{ localStorage.setItem('bq2_migr', JSON.stringify(m)); }catch(e){}
 }
+/* Old keys without any function (04.11., "Was bleibt auf dem Geraet", group D): the old focus form (focus, focusOn,
+   focusOff - before "Automatic/Manual") in every child's area and, with accounts, the old parent PIN. Deleted at every
+   start; nothing is taken over. Without accounts (unbuilt app, tests) the PIN still guards the grown-ups area. */
+function dropOldKeys(){
+  const old=['focus','focusOn','focusOff'], accounts=!!(APP_ACCOUNTS && APP_ACCOUNTS.users && APP_ACCOUNTS.users.length), keys=[];
+  try{ for(let i=0;i<localStorage.length;i++) keys.push(localStorage.key(i)); }catch(e){ return; }
+  for(const k of keys){
+    if(!k || !k.startsWith('bq2_')) continue;
+    const rest=k.slice(4), name=rest.includes('__') ? rest.slice(rest.lastIndexOf('__')+2) : rest;
+    if(old.includes(name) || (accounts && rest==='parentPin')) try{ localStorage.removeItem(k); }catch(e){}
+  }
+}
 migrateToIds();
 migrateCleanup();
+dropOldKeys();
 
 /* ---------- sound ---------- */
 let muted = store.get('muted', false);
@@ -2448,8 +2461,7 @@ const FOCUS=['wordprob','round','combos','units','graphs','sentences','examples'
 /* Focus mode (Peter, 01.11.): "Automatic" (default) = what is taught in class now plus the quests where
    the grown-ups' summary suggests support ("Needs support" / "Getting there", only with enough evidence)
    - it adapts by itself. "Manual" = grown-ups decide exactly which quests are in focus (focusManual),
-   e.g. before a test. Tapping a switch in automatic mode starts manual mode from the current choice.
-   Choices of earlier versions (a list, or focusOn/focusOff) are taken over once as a manual choice. */
+   e.g. before a test. Tapping a switch in automatic mode starts manual mode from the current choice. */
 /* the quests where the parents' assessment suggests support ("needs support" / "getting there") */
 const focusNeed = () => SUBJECTS.flatMap(questsIn).map(assessQuest).filter(a=>a.level==='rs'||a.level==='c').map(a=>a.k);
 function focusAuto(){
@@ -2623,26 +2635,9 @@ function classTopics(){
   return list.length?list:FOCUS;
 }
 const cleanFocus = l => uniq(l).filter(k=>WORLDS[k] && !k.startsWith('mix_') && k!=='today' && !isArchived(WORLDS[k]) && !isLocked(k));
-function migrateFocus(){
-  const saved=store.get('focus',null), on=store.get('focusOn',null), off=store.get('focusOff',null);
-  // (the events go out under whoever is acting; a child may not set the focus - then they are reported, task 3c converts old data)
-  if(Array.isArray(saved)){
-    store.set('focusMode','manual'); eventHook('setting_set',{setting:'focusMode', value:'manual'});
-    const old=store.get('focusManual',[]), nu=cleanFocus(saved); store.set('focusManual',nu); listEvents('focusManual',old,nu).forEach(p=>eventHook('list_set',p));
-    store.del('focus');
-  }
-  if(Array.isArray(on) || Array.isArray(off)){
-    if((on||[]).length || (off||[]).length){
-      store.set('focusMode','manual'); eventHook('setting_set',{setting:'focusMode', value:'manual'});
-      const old=store.get('focusManual',[]), nu=cleanFocus(focusAuto().concat(on||[])).filter(k=>!(off||[]).includes(k)); store.set('focusManual',nu); listEvents('focusManual',old,nu).forEach(p=>eventHook('list_set',p));
-    }
-    store.del('focusOn'); store.del('focusOff');
-  }
-}
 const focusManualMode = () => store.get('focusMode','auto')==='manual';
 let focusMemo={key:null,val:[]};
 function focusTopics(){
-  migrateFocus();
   const raw=k=>{ try{ return localStorage.getItem(storeKey(k))||''; }catch(e){ return ''; } };
   // computed once per change of the data (the start page asks for it many times)
   const key=[storeKey('x'),raw('attempts').length,raw('ev').length,raw('focusMode'),raw('focusManual'),raw('unlocked'),raw('gaps'),dayKey()].join('|');
@@ -4268,7 +4263,7 @@ function accountsAdminHTML(){
    restored after the move to IDs (S11 P2). Which keys belong to a child is fixed in
    werkzeug/speicherstellen.json (checked by tests/stufe1-p1.test.mjs). Never in a backup: passwords,
    sessions, device keys. Recordings are included (the file stays with the family). */
-const BACKUP_KEYS={exact:['grants','grantlog','attempts','ev','due','total','badges','tried','treeStage','rankSeen','name','birthday','emoji','bdayParty','sheets','sheetNo','focusMode','focusManual','unlocked','gaps','storyCap','focus','focusOn','focusOff','greetDay','mysteryDone','kidLang'], prefix:['best_','chk_','advent']};
+const BACKUP_KEYS={exact:['grants','grantlog','attempts','ev','due','total','badges','tried','treeStage','rankSeen','name','birthday','emoji','bdayParty','sheets','sheetNo','focusMode','focusManual','unlocked','gaps','storyCap','greetDay','mysteryDone','kidLang'], prefix:['best_','chk_','advent']};
 const isBackupKey = k => BACKUP_KEYS.exact.includes(k) || BACKUP_KEYS.prefix.some(p=>k.startsWith(p));
 function childStoreKeys(){
   const pre=storeKey('x').slice(0,-1), plain=pre==='bq2_', out=[];

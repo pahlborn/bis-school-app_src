@@ -49,7 +49,7 @@ test('practice sheet: dialog with PDF first; PDF has tasks, writing task and the
 
 test('pictures of maths tasks (number lines, graphs) are embedded as images', async () => {
   const { ctx, page } = await appOeffnen(browser, server.url, { acceptDownloads: true });
-  await page.evaluate(() => localStorage.setItem('bq2_focus', JSON.stringify(['round', 'graphs'])));
+  await page.evaluate(() => { localStorage.setItem('bq2_focusMode', '"manual"'); localStorage.setItem('bq2_focusManual', JSON.stringify(['round', 'graphs'])); });
   await page.reload(); await page.waitForSelector('#home h1'); await ohneTeilen(page);
   let bilder = 0;
   for (let i = 0; i < 4 && !bilder; i++) {
@@ -64,7 +64,7 @@ test('pictures of maths tasks (number lines, graphs) are embedded as images', as
 
 test('umlauts and German writing task come out as WinAnsi text', async () => {
   const { ctx, page } = await appOeffnen(browser, server.url, { acceptDownloads: true });
-  await page.evaluate(() => localStorage.setItem('bq2_focus', JSON.stringify(['anleitung'])));
+  await page.evaluate(() => { localStorage.setItem('bq2_focusMode', '"manual"'); localStorage.setItem('bq2_focusManual', JSON.stringify(['anleitung'])); });
   await page.reload(); await page.waitForSelector('#home h1'); await ohneTeilen(page);
   await page.locator('#sheetBtn').click();
   const [d] = await Promise.all([page.waitForEvent('download'), page.locator('#sheetPdf').click()]);
