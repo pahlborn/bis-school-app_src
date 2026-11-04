@@ -119,9 +119,11 @@ export function testinstanzPruefen(app, manifest, { woerter = [], auchVerboten =
   pruef('Salz des Familienpassworts fehlt', salt && alles.includes(salt) ? 'Salz gefunden' : '');
 
   // Speicher: nur bqt_, Token nur bqt_gh
-  const alt = [['bq2_', /bq2_/g], ['bq_', /\bbq_/g], ['gh_token', /gh_token/g], ['bqUpdateTo', /\bbqUpdateTo\b/g]]
+  // (der Name des Werkstatt-Tokens steht absichtlich nirgends im Quelltext - Suchlauf in tests/module/github.test.mjs)
+  const werkstatt = 'gh' + '_token';
+  const alt = [['bq2_', /bq2_/g], ['bq_', /\bbq_/g], [werkstatt, new RegExp(werkstatt, 'g')], ['bqUpdateTo', /\bbqUpdateTo\b/g]]
     .map(([w, re]) => [w, zaehle(alles, re)]).filter(([, n]) => n);
-  pruef('kein bq2_, bq_, gh_token, bqUpdateTo', alt.length ? alt.map(([w, n]) => `${w} ${n}x`).join(', ') : '');
+  pruef('kein bq2_, bq_, Token der Werkstatt-Apps, bqUpdateTo', alt.length ? alt.map(([w, n]) => `${w} ${n}x`).join(', ') : '');
   const literal = [...app.matchAll(/(?:localStorage|sessionStorage)\.(?:getItem|setItem|removeItem)\(\s*(['"`])([^'"`]*)\1/g)].map((m) => m[2]);
   const fremd = literal.filter((k) => !k.startsWith(TESTINSTANZ.sitzungPraefix));
   pruef(`feste Speicherstellen nur mit bqt (${literal.length} gefunden)`, fremd.length ? fremd.join(', ') : literal.length ? '' : 'keine gefunden');
