@@ -46,7 +46,7 @@ function teilPasst(el, teil) {
   return true;
 }
 
-export function appSandbox({ anpassen, seed = Number(process.env.BQ_SEED) || Date.now() % 1e9, speicher = {}, bauart = process.env.BQ_BAUART || 'live' } = {}) {
+export function appSandbox({ anpassen, seed = Number(process.env.BQ_SEED) || Date.now() % 1e9, speicher = {}, bauart = process.env.BQ_BAUART || 'live', seite = false } = {}) {
   /* ---------- Elemente ---------- */
   const reg = new Map();                                                     // id -> Element (wie getElementById)
   class Knoten {
@@ -242,6 +242,13 @@ export function appSandbox({ anpassen, seed = Number(process.env.BQ_SEED) || Dat
   if (anpassen) html = anpassen(html);
   const m = /<script>\s*(\(function\(\)\{[\s\S]*\}\)\(\);)\s*<\/script>/.exec(html);
   if (!m) throw new Error('App-Skript (function(){ … })(); nicht gefunden');
+  // seite: the page's own markup (everything in <body> before the app script) as elements - needed where the app looks
+  // for elements inside fixed ones (e.g. "#aboutTop .flags" after a grown-up's login; task 3b-2b). Off by default.
+  if (seite) {
+    const b = /<body[^>]*>([\s\S]*?)<script>\s*\(function\(\)\{/.exec(html);
+    if (!b) throw new Error('Seite (<body> vor dem App-Skript) nicht gefunden');
+    zerlegen(b[1], body);
+  }
   // Globale Namen im vm-Kontext sind langsam (jeder Zugriff geht ueber den Kontext); die haeufigen als lokale Namen
   // hineinreichen - fuer die App aendert sich nichts, es sind dieselben Objekte.
   const NAH = ['Math', 'JSON', 'Object', 'Array', 'String', 'Number', 'Date', 'Set', 'Map', 'RegExp', 'Symbol', 'Error', 'Promise', 'Intl',
