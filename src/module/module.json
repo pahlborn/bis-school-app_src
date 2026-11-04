@@ -18,6 +18,7 @@
     { "name": "speicher", "bau": "test", "browserTests": ["testbau"] },
     { "name": "abgleich", "bau": "test", "browserTests": ["testbau"] },
     { "name": "zulassung", "bau": "test", "browserTests": ["testbau"] },
-    { "name": "lesen", "bau": "test", "browserTests": ["testbau-lesen", "ableitung-vergleich", "schreibhaken-1b"] }
+    { "name": "lesen", "bau": "test", "browserTests": ["testbau-lesen", "ableitung-vergleich", "schreibhaken-1b"] },
+    { "name": "geraeteabgleich", "bau": "test", "browserTests": ["zwei-geraete"] }
   ]
 }
