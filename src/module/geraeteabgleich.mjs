@@ -14,6 +14,9 @@
 //     5. sends them (abgleich.senden) with the current key
 //     6. writes what other devices wrote - accepted by module annahme - into the app's log (never admission events);
 //        the app reads it after evNeuLaden()
+//   In the area of a grant (freigabe:<id>) the distributor also writes a copy of the grant (grant_set without the consent
+//   text; grant_revoked once it was ended - sent BEFORE the key changes, with the key the recipient still holds), so the
+//   recipient's app knows its grant, finds the child and learns that it ended (task "Lehrkraft sieht ihre Schueler").
 //   Device storage (plain JSON, technical, never synced): bq_abgleich = { <area>: device state of module abgleich },
 //   bq_abgleichVerworfen = everything dropped, with reason (module abgleich reports it once, so it is kept here).
 //   A storage error (err.code, e.g. "offline") ends only that area; its state stays as it was, nothing is lost.
@@ -22,7 +25,7 @@
 
 import { newEvent, mergeLog } from './ereignisse.mjs';
 import { signEvent } from './annahme.mjs';
-import { bereichName, bereichVonEreignis, passtZumBereich, halter, schluesselLesen, schluesselVerteilen } from './bereiche.mjs';
+import { BEREICH_AUCH, bereichName, bereichVonEreignis, passtZumBereich, halter, schluesselLesen, schluesselVerteilen } from './bereiche.mjs';
 import { abgleichStand, vormerken, senden } from './abgleich.mjs';
 import { zulassungAus, aktiveMitglieder, bereichHolen } from './zulassung.mjs';
 
@@ -65,6 +68,7 @@ function gabPruefen({ ablage, zugang, personen, kinder, verzeichnis, now, heute 
     if (!gabPid(pid) || !gabObj(p) || !GAB_ROLLEN.includes(p.role) || !gabObj(p.keys) || !gabPub(p.pub)) throw gabFehler('Person ' + pid + ' braucht role, keys und pub.');
   }
   if (!Array.isArray(kinder) || kinder.some((c) => !gabObj(c) || !gabPid(c.id) || typeof c.pre !== 'string' || !c.pre.startsWith('bq2_') || !gabObj(c.anker))) throw gabFehler('kinder: [{ id, pre, anker }] erwartet.');
+  if (kinder.some((c) => c.freigaben !== undefined && (!Array.isArray(c.freigaben) || c.freigaben.some((g) => typeof g !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(g))))) throw gabFehler('kinder[].freigaben: Liste von Freigabe-Kennungen erwartet.');
   if (!gabObj(verzeichnis)) throw gabFehler('verzeichnis erwartet.');
   if (!Number.isFinite(now)) throw gabFehler('"now" fehlt.');
   if (!gabTag(heute)) throw gabFehler('"heute" (JJJJ-MM-TT) fehlt.');
@@ -113,8 +117,8 @@ async function gabBereich(o, area, ziel, anker, stand) {
       bericht.verworfen = h.verworfen.map((v) => ({ bereich: area, ...v }));
     }
     let zul = await zulassungAus(stand.log, { area, anker, now });
-    // 2. hand out the keys
     const art = area.split(':').slice(0, -1).join(':');
+    // 2. hand out the keys
     const verteiler = reihe.find((pid) => (art === 'person' ? area === 'person:' + pid : personen[pid].role === 'parent' && Object.prototype.hasOwnProperty.call(aktiveMitglieder(zul), pid)));
     if (verteiler) {
       // his device first: what he writes counts only from a registered device (also for the anchor)
@@ -124,10 +128,28 @@ async function gabBereich(o, area, ziel, anker, stand) {
       for (const [pid, p] of Object.entries(personen)) mitglieder[pid] = { role: p.role, pub: p.pub };
       Object.assign(mitglieder, aktiveMitglieder(zul));
       const freigaben = ziel.pre ? gabFreigaben(gabZiel(o.ablage, ziel).lesen()) : [];
+      // the area of a grant carries the grant itself, for its recipient (task "Lehrkraft sieht ihre Schueler"): a copy
+      // by the distributor, without the consent text - the app's own grant_set was written before this area existed
+      // (and maybe by the other parent), so it could never count here. The end goes out BEFORE the key changes, with the
+      // key the recipient still holds, so his app learns it; an expired grant needs no entry (it follows from "until").
+      const g = art === 'freigabe' ? freigaben.find((x) => x.grant === area.slice('freigabe:'.length)) : null;
+      const kopien = async () => {
+        const da = (type) => stand.log.some((x) => x.event.type === type && x.event.payload.grant === g.grant);
+        if (!da('grant_set')) await eintragen(verteiler, 'grant_set', { grant: g.grant, grantee: g.grantee, scope: g.scope.slice(), from: g.from, until: g.until });
+        if (g.widerrufen && !da('grant_revoked')) await eintragen(verteiler, 'grant_revoked', { grant: g.grant, grantee: g.grantee });
+      };
+      if (g && g.widerrufen) {
+        const s = await schluesselLesen(zugang, area, { ich: verteiler, meineSchluessel: personen[verteiler].keys, mitglieder: aktiveMitglieder(zul) });
+        if (s.aktuell && s.keys.has(s.aktuell)) {
+          await kopien();
+          bericht.gesendet += (await senden(stand, { zugang, schluessel: { aktuell: s.aktuell, keys: s.keys } })).gesendet;
+        }
+      }
       const r = await schluesselVerteilen(zugang, area, { soll: halter(area, mitglieder, freigaben, heute), ich: verteiler, meineSchluessel: personen[verteiler].keys, mitglieder });
       bericht.aktion = r.aktion;
       for (const e of r.ereignisse) await eintragen(verteiler, e.type, e.payload);
       if (r.ereignisse.length) zul = await zulassungAus(stand.log, { area, anker, now });
+      if (g) await kopien();
     }
     // 3. register this device for everybody here who belongs and holds the current key
     const aktiv = aktiveMitglieder(zul);
@@ -141,19 +163,21 @@ async function gabBereich(o, area, ziel, anker, stand) {
     }
     // 4. the app's own new events of this area
     const bekannt = new Set([...stand.log, ...stand.ausgang].map((x) => x.event.id));
-    const app = gabZiel(o.ablage, ziel), appLog = app.lesen();
-    for (const e of appLog) {
-      // (admission events and snapshots fit every area - they are this module's and module bereiche's, never the app's)
+    for (const e of gabZiel(o.ablage, ziel).lesen()) {
+      // (admission events and snapshots fit every area - they are this module's and module bereiche's, never the app's;
+      // the grant itself goes into the area of the grant only as the distributor's copy, see step 2)
       if (!gabObj(e) || e.device !== geraet || bekannt.has(e.id) || bereichVonEreignis(e) === '*' || !passtZumBereich(e, area)) continue;
+      if (art === 'freigabe' && BEREICH_AUCH[e.type] === 'freigabe') continue;
       if (!Object.prototype.hasOwnProperty.call(personen, e.author)) { bericht.ohneSchluessel++; continue; }
       vormerken(stand, await signEvent(e, area, personen[e.author].keys), { now });
     }
     // 5. send
     if (stand.ausgang.length || stand.unterwegs) {
-      if (schreiber) bericht.gesendet = (await senden(stand, { zugang, schluessel: schreiber })).gesendet;
+      if (schreiber) bericht.gesendet += (await senden(stand, { zugang, schluessel: schreiber })).gesendet;
       else { bericht.ok = false; bericht.fehler = 'kein-schluessel'; }
     }
     // 6. into the app: what others wrote and annahme accepted (no admission events - they are the area's, not the app's)
+    const app = gabZiel(o.ablage, ziel);
     const da = new Set(app.lesen().map((e) => gabObj(e) && e.id));
     const neu = stand.log.map((x) => x.event).filter((e) => e.device !== geraet && !da.has(e.id) && bereichVonEreignis(e) !== '*');
     if (neu.length) {
@@ -171,8 +195,11 @@ async function gabBereich(o, area, ziel, anker, stand) {
    ablage:      { getItem, setItem } - the device's storage (in the app: the browser storage); the device id is bq2_evDevice
    zugang:      storage access of this device (module speicher: store.geraet(<device id>))
    personen:    { <personId>: { role, keys, pub } } - the persons whose keys are on this device (unlocked at login, EP9)
-   kinder:      [{ id, pre, anker }] - children whose data this device holds: person id, prefix of the app's storage
-                (bq2_<id>__; without accounts bq2_) and anker = the founding parent { person, role, pub }
+   kinder:      [{ id, pre, anker, freigaben? }] - children whose data this device holds: person id, prefix of the app's
+                storage (bq2_<id>__; without accounts bq2_) and anker = the founding parent { person, role, pub };
+                freigaben = ids of grants for this child this device was invited to (a teacher's or the admin's device;
+                EP9: the invitation). A teacher's device finds its grant there (freigabe:<id>: grant_set, grant_revoked)
+                and with it the child; parents' devices find the grants in the child's log.
    verzeichnis: { <personId>: { role, pub } } - public keys a parent knows (family, grant recipients; EP9: invitations)
    now (ms), heute ("YYYY-MM-DD", for the grants)
    -> { bereiche: { <area>: { ok, fehler, aktion, gesendet, neu, verworfen, ohneSchluessel, inDieApp } },
@@ -185,7 +212,10 @@ export async function geraetAbgleichen({ ablage, zugang, personen, kinder = [], 
   const plan = [];                                                      // [area, target, anchor]
   for (const c of kinder) {
     for (const art of GAB_KIND_ARTEN) plan.push([bereichName(art, c.id), { pre: c.pre }, c.anker]);
+    // the grants of this child: those in its log (parents) and those this device was invited to (teacher, admin) - the
+    // area of a grant is checked against THIS child's founding parent, so a grant of another family never counts here
     const grants = new Set(gabListe(gabZiel(ablage, { pre: c.pre }).lesen()).filter((e) => gabObj(e) && gabObj(e.payload) && /^grant_/.test(e.type)).map((e) => e.payload.grant));
+    for (const g of c.freigaben || []) grants.add(g);
     for (const g of [...grants].sort(gabCmp)) plan.push([bereichName('freigabe', g), { pre: c.pre }, c.anker]);
   }
   for (const pid of Object.keys(personen).sort(gabCmp)) plan.push([bereichName('person', pid), { person: pid }, { person: pid, role: personen[pid].role, pub: personen[pid].pub }]);

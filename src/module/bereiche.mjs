@@ -8,7 +8,9 @@
 //     schule:<childId>       school data and gaps (the child's app computes with them, never shows them)
 //                                                                          child, parents, grant with "school"
 //     eltern:allg:<childId>  grants, last backup                           parents
-//     freigabe:<grantId>     the recipient's log "opened" (grant_opened)    parents, the recipient while the grant runs
+//     freigabe:<grantId>     the grant itself (grant_set, grant_revoked - a copy of the same events, so the recipient's
+//                            app knows it and finds the child) and the recipient's log "opened" (grant_opened)
+//                                                                          parents, the recipient while the grant runs
 //     person:<personId>      settings of one person (person_set, glance_set; task 3b-1c)   the person
 //                            - only the person itself writes there: an event of somebody else does not fit the area
 //   The area follows from the event type (for profile_set: from the field). snapshot and the admission events
@@ -44,6 +46,11 @@ const BER_TYP = {
   snapshot: '*',
 };
 export const BEREICH_JE_TYP = Object.freeze(Object.fromEntries(Object.entries(BER_TYP).map(([t, b]) => [t, typeof b === 'string' ? b : Object.freeze({ ...b })])));
+/* task "Lehrkraft sieht ihre Schueler" (04.11.): the grant itself lies in eltern:allg AND in the area of this grant
+   (freigabe:<grant>), where its recipient reads it - the same event, so nothing is twice in the child's log. Only the
+   grant of that area fits there (payload.grant = area id); the parents' other entries (backup, other grants) do not. */
+const BER_AUCH = { grant_set: 'freigabe', grant_revoked: 'freigabe' };
+export const BEREICH_AUCH = Object.freeze({ ...BER_AUCH });
 
 /* ---------- who gets which kind of area ---------- */
 const BER_ROLLE = { child: ['kind:lern', 'kind:privat', 'schule'], parent: ['kind:lern', 'kind:privat', 'schule', 'eltern:allg', 'freigabe'] };
@@ -94,9 +101,9 @@ export function passtZumBereich(e, bereich) {
   const z = bereichZerlegen(bereich), art = bereichVonEreignis(e);
   if (!z || !art) return false;
   if (art === '*') return true;
-  if (art !== z.art) return false;
-  if (art === 'person') return e.author === z.id;            // task 3b-1c: a person writes its own settings, nobody else's
-  return art !== 'freigabe' || e.payload.grant === z.id;      // the log of grant g1 lies in freigabe:g1 only
+  if (art !== z.art && BER_AUCH[e.type] !== z.art) return false;
+  if (z.art === 'person') return e.author === z.id;          // task 3b-1c: a person writes its own settings, nobody else's
+  return z.art !== 'freigabe' || e.payload.grant === z.id;    // grant g1 and its log lie in freigabe:g1 only
 }
 
 /* ---------- rights to read ---------- */

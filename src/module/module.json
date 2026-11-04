@@ -11,7 +11,7 @@
     { "name": "krypto", "bau": "test", "browserTests": ["testbau"] },
     { "name": "ereignisse", "bau": "test", "browserTests": ["testbau"] },
     { "name": "ableitung", "bau": "test", "browserTests": ["ableitung-vergleich"] },
-    { "name": "bereiche", "bau": "test", "browserTests": ["testbau"] },
+    { "name": "bereiche", "bau": "test", "browserTests": ["testbau", "lehrkraft-schueler"] },
     { "name": "annahme", "bau": "test", "browserTests": ["testbau"] },
     { "name": "schnappschuss", "bau": "test", "browserTests": ["testbau"] },
     { "name": "schreiber", "bau": "test", "browserTests": ["ableitung-vergleich", "schreibhaken-1b", "testbau"] },
@@ -20,6 +20,6 @@
     { "name": "github", "bau": "test", "browserTests": ["testbau"] },
     { "name": "zulassung", "bau": "test", "browserTests": ["testbau"] },
     { "name": "lesen", "bau": "test", "browserTests": ["testbau-lesen", "ableitung-vergleich", "schreibhaken-1b"] },
-    { "name": "geraeteabgleich", "bau": "test", "browserTests": ["zwei-geraete"] }
+    { "name": "geraeteabgleich", "bau": "test", "browserTests": ["zwei-geraete", "lehrkraft-schueler"] }
   ]
 }
