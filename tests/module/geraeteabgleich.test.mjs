@@ -137,6 +137,7 @@ test('Eingaben: ablage, zugang, personen (mit role, keys, pub), kinder, now, heu
   const gut = { ablage: a, zugang: welt.geraet('d_E1'), personen: { p_e1: P.p_e1 }, kinder: [KIND()], verzeichnis: VZ(), now: T0, heute: HEUTE };
   for (const [feld, wert, text] of [['ablage', {}, /ablage/], ['zugang', null, /zugang/], ['personen', {}, /personen/], ['personen', { p_e1: { role: 'parent', keys: P.p_e1.keys } }, /pub/],
     ['personen', { x: P.p_e1 }, /Person/], ['personen', { p_e1: { ...P.p_e1, role: 'king' } }, /role/], ['kinder', [{ id: 'p_k1', pre: 'x_', anker: {} }], /kinder/], ['kinder', null, /kinder/],
+    ['kinder', [{ ...KIND(), freigaben: 'g1' }], /freigaben/], ['kinder', [{ ...KIND(), freigaben: ['g 1'] }], /freigaben/], ['kinder', [{ ...KIND(), freigaben: [7] }], /freigaben/],
     ['verzeichnis', null, /verzeichnis/], ['now', undefined, /now/], ['heute', '4.11.2026', /heute/]]) {
     await assert.rejects(geraetAbgleichen({ ...gut, [feld]: wert }), text, feld + ' ' + JSON.stringify(wert));
   }
