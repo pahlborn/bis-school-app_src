@@ -252,8 +252,8 @@ test('Typ und Bereich: jeder Typ hat genau einen Bereich; Ereignis im falschen B
     'kind:lern': ['answer', 'round_done', 'badge', 'review', 'practice_day', 'rank_seen', 'sheet_created', 'sheet_result', 'sheet_discarded', 'profile_set:name'],
     'kind:privat': ['profile_set:birthday', 'profile_set:emoji', 'profile_set:kidLang', 'profile_set:muted', 'setting_set', 'list_set', 'checklist_set', 'day_flag', 'advent_open', 'joke_seen', 'story_read'],
     schule: ['school_import', 'gap_state', 'gap_active'],
-    'eltern:allg': ['grant_set', 'grant_revoked'],
-    freigabe: ['grant_opened'], person: [], '*': ['snapshot', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated'],
+    'eltern:allg': ['grant_set', 'grant_revoked', 'backup_made'],
+    freigabe: ['grant_opened'], person: ['person_set', 'glance_set'], '*': ['snapshot', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated'],
   };
   const ist = {};
   for (const [t, b] of Object.entries(BEREICH_JE_TYP)) for (const [name, art] of typeof b === 'string' ? [[t, b]] : Object.entries(b).map(([fd, a]) => [t + ':' + fd, a])) (ist[art] = ist[art] || []).push(name);
@@ -275,10 +275,14 @@ test('Typ und Bereich: jeder Typ hat genau einen Bereich; Ereignis im falschen B
     [EA, 'p_e1', 'school_import', NUTZ.schule()], [EA, 'p_l1', 'grant_opened', { grant: 'g1', grantee: 'p_l1' }],
     [F1, 'p_l2', 'grant_opened', { grant: 'g2', grantee: 'p_l2' }], [F2, 'p_e1', 'grant_set', FREIGABEN[0]],
     [PE1, 'p_e1', 'setting_set', { setting: 'storyCap', value: 2 }],
+    // 3b-1c: der Personen-Bereich gehoert nur der Person; Personen-Einstellungen nur dorthin
+    [PE1, 'p_e2', 'person_set', { field: 'parentLang', value: 'en' }], [PE1, 'p_k1', 'person_set', { field: 'muted', value: true }],
+    [PR, 'p_e1', 'person_set', { field: 'parentLang', value: 'en' }], [EA, 'p_e1', 'glance_set', { child: 'p_k1', value: {} }], [PE1, 'p_e1', 'backup_made', { day: HEUTE }],
     ['kid:p_k1', 'p_k1', 'answer', NUTZ.answer()], ['kind:lern', 'p_k1', 'answer', NUTZ.answer()], ['kind:lern:p_k1 ', 'p_k1', 'answer', NUTZ.answer()],
   ];
   for (const [area, pid, type, p] of FALSCH) assert.equal(await grund(area, pid, type, p), 'bereich-falsch', `${type} in ${area}`);
-  for (const [area, pid, type, p] of [[L, 'p_k1', 'profile_set', NUTZ.name('K')], [PR, 'p_k1', 'profile_set', { field: 'kidLang', value: 'de' }], [F1, 'p_l1', 'grant_opened', { grant: 'g1', grantee: 'p_l1' }], [S, 'p_k1', 'gap_state', NUTZ.luecke()]]) {
+  for (const [area, pid, type, p] of [[L, 'p_k1', 'profile_set', NUTZ.name('K')], [PR, 'p_k1', 'profile_set', { field: 'kidLang', value: 'de' }], [F1, 'p_l1', 'grant_opened', { grant: 'g1', grantee: 'p_l1' }], [S, 'p_k1', 'gap_state', NUTZ.luecke()],
+    [PE1, 'p_e1', 'person_set', { field: 'conceptSeen', value: HEUTE }], [PE1, 'p_e1', 'glance_set', { child: 'p_k1', value: { n: 1 } }], [EA, 'p_e1', 'backup_made', { day: HEUTE }]]) {
     assert.equal(await grund(area, pid, type, p), 'ok', `${type} in ${area}`);
   }
   for (const area of [L, PR, S, EA, F1, PE1]) assert.equal(await grund(area, 'p_e1', 'snapshot', NUTZ.snap()), 'ok', 'Schnappschuss in ' + area);
@@ -344,7 +348,7 @@ test('bereicheFuer und halter: Rolle, Umfang, Datum, Widerruf, Geschwister, frem
 test('Schreibrechte passen zu den Schluesseln: jede Rolle hat fuer jeden erlaubten Typ den Schluessel des Bereichs (seit P3b-2a ohne Ausnahme)', () => {
   const ohne = [];
   for (const [rolle, typen] of Object.entries(ANNAHME_RECHTE)) {
-    const arten = bereicheFuer(rolle, ['learning', 'school']).concat(['*']);
+    const arten = bereicheFuer(rolle, ['learning', 'school']).concat(['*', 'person']);   // person:<id>: immer der eigene (3b-1c)
     for (const t of typen) {
       const b = BEREICH_JE_TYP[t], noetig = typeof b === 'string' ? [b] : Object.values(b);
       if (!noetig.some((a) => arten.includes(a))) ohne.push(rolle + ' ' + t);

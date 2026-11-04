@@ -179,9 +179,15 @@ test('Live-Bau (3b-1): dieselben Klicks schreiben keine Ereignisse und keine Ger
     await runde(page, ['richtig', 'falsch', 'tipp+richtig', 'tipp+loesung', 'richtig', 'richtig', 'falsch+richtig', 'richtig']);
     await zurStart(page);
     await klick(page, '#sheetBtn'); await page.locator('#sheetClose').click(); await zurStart(page);
+    // 3b-1c: the grown-ups' area (glance, language, "How it works") writes no person log either
+    await elternOeffnen(page);
+    await page.locator('.phdr [data-plang="en"]').click();
+    await page.locator('details.psec[data-psec="concept"] > summary').click();
+    await page.waitForFunction(() => localStorage.getItem('bq2_conceptSeen') !== null);   // the toggle event comes a moment later
     const keys = await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('bq2_')).sort());
     assert.ok(keys.includes('bq2_attempts') && keys.includes('bq2_sheets') && keys.includes('bq2_due'), 'the app stored as usual: ' + keys);
-    assert.deepEqual(keys.filter((k) => /events|evDevice/.test(k)), [], 'no events in the live build');
+    assert.ok(keys.includes('bq2_parentLang') && keys.includes('bq2_conceptSeen') && keys.includes('bq2_glance'), 'grown-ups area stored as usual: ' + keys);
+    assert.deepEqual(keys.filter((k) => /events|evDevice/i.test(k)), [], 'no events in the live build (also no person log)');
     assert.deepEqual(fehler, []);
     await ctx.close();
   } finally { live.close(); }
