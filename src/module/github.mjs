@@ -18,7 +18,8 @@
 //   <wurzel>/events/<area>/<device>/<nr>.json   bundle; created, never overwritten
 //   <wurzel>/keys/<area>/<holder>.json          wrapped keys; replaced with the sha of the old file
 //   <wurzel>/directory/<lookup>.json            account entry; created once
-//   <wurzel>/invites/<id>.json                  { angelegt, inhalt }; valid 10 minutes, deleted when fetched
+//   <wurzel>/invites/<id>.json                  { angelegt, inhalt } valid 10 minutes, or { angelegt, gueltig, inhalt }
+//                                               (invite.put options.gueltigMs, up to 7 days); deleted when fetched
 //
 // Few requests (5 000 per hour and token):
 //   list = one request for the folder <wurzel>/events with If-None-Match (unchanged -> 304, free) and, only when the
@@ -32,7 +33,7 @@
 //
 // Names: every helper starts with "ghs"/"GHS_" because all modules and index.html share one scope in the app.
 
-import { SPEICHER_EINLADUNG_MS, SPEICHER_DATEI_FORMAT } from './speicher.mjs';
+import { SPEICHER_EINLADUNG_MS, SPEICHER_DATEI_FORMAT, speicherEinladungGueltig } from './speicher.mjs';
 
 /* storage entry for the token of the test instance (never the token of the workshop apps) */
 export const GITHUB_TOKEN_SCHLUESSEL = 'bqt_gh';
@@ -311,10 +312,13 @@ export function githubSpeicher({ repo, token, fetch: holer = globalThis.fetch, n
   /* ---------- invitations ---------- */
   const ipfad = (k) => pfad('invites', k + '.json');
   const invite = {
-    async put(kennung, inhalt) {
+    async put(kennung, inhalt, optionen) {
       ghsId(kennung);
-      const text = ghsText(inhalt);
-      if ((await dateiAnlegen(ipfad(kennung), '{"angelegt":' + Number(now()) + ',"inhalt":' + text + '}')) !== true) throw ghsFehler('vorhanden');
+      const text = ghsText(inhalt), gueltig = speicherEinladungGueltig(optionen);
+      if (gueltig === null) throw ghsFehler('ungueltig');
+      // the default (10 minutes) is not written: such files look exactly as before
+      const dauer = gueltig === SPEICHER_EINLADUNG_MS ? '' : ',"gueltig":' + gueltig;
+      if ((await dateiAnlegen(ipfad(kennung), '{"angelegt":' + Number(now()) + dauer + ',"inhalt":' + text + '}')) !== true) throw ghsFehler('vorhanden');
     },
     async get(kennung) {
       ghsId(kennung);
@@ -322,7 +326,9 @@ export function githubSpeicher({ repo, token, fetch: holer = globalThis.fetch, n
       if (!f) throw ghsFehler('unbekannt');
       const e = ghsJson(f.text);
       if (!ghsObj(e) || !Number.isFinite(e.angelegt) || !('inhalt' in e)) throw ghsFehler('ungueltig');
-      if (now() - e.angelegt >= SPEICHER_EINLADUNG_MS) throw ghsFehler('abgelaufen');
+      const gueltig = speicherEinladungGueltig('gueltig' in e ? { gueltigMs: e.gueltig } : undefined);
+      if (gueltig === null) throw ghsFehler('ungueltig');
+      if (now() - e.angelegt >= gueltig) throw ghsFehler('abgelaufen');
       if (!(await dateiLoeschen(ipfad(kennung), f.sha))) throw ghsFehler('unbekannt');   // someone else was faster
       return e.inhalt;
     },

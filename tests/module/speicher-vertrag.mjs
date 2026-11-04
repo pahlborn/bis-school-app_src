@@ -7,7 +7,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SPEICHER_FUNKTIONEN, SPEICHER_FEHLER, SPEICHER_EINLADUNG_MS, SPEICHER_DATEI_FORMAT } from '../../src/module/speicher.mjs';
+import { SPEICHER_FUNKTIONEN, SPEICHER_FEHLER, SPEICHER_EINLADUNG_MS, SPEICHER_EINLADUNG_MAX_MS, SPEICHER_DATEI_FORMAT } from '../../src/module/speicher.mjs';
 import { newAreaKey, sealEntry, openEntryText, entryAad } from '../../src/module/krypto.mjs';
 
 const B = 'kid:p_k1', B2 = 'kid:p_k2';
@@ -190,6 +190,27 @@ export function speicherVertrag(name, neu) {
     for (const k of ['', 'a/b', null]) await fehlt(a.invite.put(k, 1), 'ungueltig');
     await fehlt(a.invite.put('i5'), 'ungueltig', 'ohne Inhalt');
     await fehlt(a.invite.get('a/b'), 'ungueltig');
+  });
+
+  test(`${name}: Einladung mit eigener Gueltigkeit (Startcode, Stufe 3b) - bis 7 Tage, danach abgelaufen; falsche Angaben -> ungueltig`, async () => {
+    const { uhr, z: [a, b] } = await aufbau('d_a1', 'd_b1');
+    assert.equal(SPEICHER_EINLADUNG_MAX_MS, 7 * 24 * 3600 * 1000);
+    await a.invite.put('s1', { start: 'abc' }, { gueltigMs: SPEICHER_EINLADUNG_MAX_MS });
+    await a.invite.put('s2', 'zwei', { gueltigMs: SPEICHER_EINLADUNG_MAX_MS });
+    await a.invite.put('s3', 'kurz', { gueltigMs: 1000 });
+    await a.invite.put('s4', 'normal', {});
+    uhr.t = START + SPEICHER_EINLADUNG_MS;
+    await fehlt(b.invite.get('s3'), 'abgelaufen', 'eigene kurze Gueltigkeit');
+    await fehlt(b.invite.get('s4'), 'abgelaufen', 'ohne gueltigMs: 10 Minuten');
+    uhr.t = START + SPEICHER_EINLADUNG_MAX_MS - 1;
+    assert.deepEqual(await b.invite.get('s1'), { start: 'abc' }, 'nach 6 Tagen und 23:59 noch gueltig');
+    await fehlt(b.invite.get('s1'), 'unbekannt', 'einmal nutzbar');
+    uhr.t = START + SPEICHER_EINLADUNG_MAX_MS;
+    await fehlt(b.invite.get('s2'), 'abgelaufen', 'nach genau 7 Tagen');
+    for (const o of [{ gueltigMs: SPEICHER_EINLADUNG_MAX_MS + 1 }, { gueltigMs: 0 }, { gueltigMs: 1.5 }, { gueltigMs: '1000' }, { dauer: 1 }, null, 7, []]) {
+      await fehlt(a.invite.put('s9', 'x', o), 'ungueltig', JSON.stringify(o));
+    }
+    await fehlt(b.invite.get('s9'), 'unbekannt', 'abgelehnt -> nichts abgelegt');
   });
 
   test(`${name}: exportFile/importFile - festes Format, nur Fehlendes, doppelt einlesen aendert nichts`, async () => {
