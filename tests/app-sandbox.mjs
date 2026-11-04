@@ -9,6 +9,8 @@
 //    dieser id, das die App zuletzt gebaut hat, gewinnt.
 //  - Zeitgeber laufen nicht (kein Konfetti, keine Update-Pruefung); Zufall mit Startwert (BQ_SEED, sonst neu je Lauf).
 //  - lauf(fn, ms): fuehrt fn mit Zeitlimit aus - eine Endlosschleife der App wird zum Fehler statt zum Haenger.
+//  - bauart: 'live' oder 'test' (Stufe-2-Module; Aufgabe 3b-2a). Ohne Angabe gilt BQ_BAUART, sonst 'live' - so laufen
+//    dieselben Tests auch gegen den Testbau (tests/testbau-lesen.test.mjs).
 //
 // Zugriff auf Namen der App: holen('state'), holen('WORLDS') ... (am Skriptende eingesetzt; index.html bleibt gleich).
 
@@ -44,7 +46,7 @@ function teilPasst(el, teil) {
   return true;
 }
 
-export function appSandbox({ anpassen, seed = Number(process.env.BQ_SEED) || Date.now() % 1e9, speicher = {} } = {}) {
+export function appSandbox({ anpassen, seed = Number(process.env.BQ_SEED) || Date.now() % 1e9, speicher = {}, bauart = process.env.BQ_BAUART || 'live' } = {}) {
   /* ---------- Elemente ---------- */
   const reg = new Map();                                                     // id -> Element (wie getElementById)
   class Knoten {
@@ -236,7 +238,7 @@ export function appSandbox({ anpassen, seed = Number(process.env.BQ_SEED) || Dat
   vm.runInContext(`((M) => { const imul = M.imul; let s = ${seed >>> 0}; M.random = () => { s = (s + 0x6D2B79F5) | 0; let t = imul(s ^ (s >>> 15), 1 | s);
     t = (t + imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; })(Math);`, ctx);
 
-  let html = appLesen('utf8');
+  let html = appLesen('utf8', { bauart });
   if (anpassen) html = anpassen(html);
   const m = /<script>\s*(\(function\(\)\{[\s\S]*\}\)\(\);)\s*<\/script>/.exec(html);
   if (!m) throw new Error('App-Skript (function(){ … })(); nicht gefunden');
@@ -296,5 +298,9 @@ export function appSandbox({ anpassen, seed = Number(process.env.BQ_SEED) || Dat
     }, ms);
   }
 
-  return { ctx, holen, lauf, $, sichtbar, zustand, alleKarten, karteOeffnen, klick, frageBeantworten, seed, ablage };
+  /** einen Wert direkt in den Speicher legen (wie eine Vorbereitung im Browser-Test). Im Testbau sind die alten Werte der
+   *  feste Ausgangsstand der Protokolle (3b-2a): danach einmal neu rechnen lassen - wie nach einem Abgleich. */
+  function setzen(k, v) { ablage.set(String(k), typeof v === 'string' ? v : JSON.stringify(v)); if (bauart === 'test') holen('evNeuLaden')(); }
+
+  return { ctx, holen, lauf, $, sichtbar, zustand, alleKarten, karteOeffnen, klick, frageBeantworten, seed, ablage, setzen, bauart };
 }

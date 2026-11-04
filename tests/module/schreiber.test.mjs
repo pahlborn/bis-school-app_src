@@ -134,7 +134,7 @@ test('Was der Schreiber speichert, liest derive wie die App (Antworten, Runde, A
    Ohne Haken erlaubt: lokale Schluessel (speicherstellen.json "lokal") und die abgeleiteten Werte, die derive aus
    den Ereignissen der Nachbarstellen rechnet (der Klick-Vergleich in tests/ableitung-vergleich.test.mjs prueft sie).
    OFFEN: was 3b-1b/3b-1c noch anschliessen - die Liste darf nur kuerzer werden. */
-const ABGELEITET = { ev: 'aus answer und sheet_result', total: 'Summe aus round_done', best_: 'Maximum aus round_done', tried: 'aus dem Abzeichen inquirer', treeStage: 'aus den Uebungstagen', sheetNo: 'aus sheet_created',
+const ABGELEITET = { ev: 'aus answer und sheet_result', total: 'Summe aus round_done', best_: 'Maximum aus round_done', tried: 'aus dem Abzeichen inquirer', sheetNo: 'aus sheet_created',
   grants: 'aus grant_set und grant_revoked (3b-1c; expiredLogged ist eine Geraetenotiz)' };
 /* the writer itself: the child's log and the logs of the persons (3b-1c) - each written at exactly one place */
 const PROTOKOLLE = ['events', 'personEvents'];
@@ -185,7 +185,11 @@ test('Waechter (3b-1): jede Schreibstelle eines abzugleichenden Schluessels hat 
   const unbekannt = stellen.filter((s) => !s.key || !s.eintrag).map((s) => `Zeile ${s.zeile}: ${s.ausdruck} -> ${s.key}`);
   assert.deepEqual(unbekannt, [], 'every write site has a known key with an entry in speicherstellen.json');
   const pflicht = stellen.filter((s) => s.eintrag.abgleich !== 'lokal' && !Object.hasOwn(ABGELEITET, s.eintrag.key) && !PROTOKOLLE.includes(s.eintrag.key));   // the logs: the writer itself
-  for (const k of PROTOKOLLE) assert.equal(stellen.filter((s) => s.key === k).length, 1, k + ' is written at exactly one place (eventHook)');
+  // since 3b-2a the logs keep their list in memory and store it themselves (evKindLog, evPersonLog) - not via store.set
+  for (const k of PROTOKOLLE) assert.equal(stellen.filter((s) => s.key === k).length, 0, k + ' is not written with store.set any more');
+  const html = fs.readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+  assert.equal(html.split("localStorage.setItem(pre+'events'").length - 1, 1, 'events: written at exactly one place (evKindLog)');
+  assert.equal(html.split("localStorage.setItem('bq2_personEvents'").length - 1, 1, 'personEvents: written at exactly one place (evPersonLog)');
   const ohne = pflicht.filter((s) => !s.haken && !offen.includes(s.eintrag.key)).map((s) => `Zeile ${s.zeile}: ${s.key}`);
   assert.deepEqual(ohne, [], 'write sites without eventHook');
   for (const k of offen) assert.ok(pflicht.some((s) => s.eintrag.key === k && !s.haken), `"${k}" is in OFFEN but has no open site any more - remove it from the list`);

@@ -10,6 +10,7 @@ import { appServer, browserStarten, appOeffnen, zustand, klick, zurStart, eltern
 import { konto, kontenServer, oeffnen, anmelden, passwortSetzen } from './konten-hilfen.mjs';
 import { derive } from '../src/module/ableitung.mjs';
 import { bereichVonEreignis } from '../src/module/bereiche.mjs';
+import { altStand, LESEN_ANFANG } from '../src/module/lesen.mjs';
 
 const WERTE = ['name', 'birthday', 'emoji', 'kidLang', 'storyCap', 'greetDay', 'mysteryDone', 'bdayParty', 'unlocked', 'focusMode', 'focusManual', 'gaps', 'jokeSeen', 'storyRead', 'muted', 'grants', 'grantlog', 'lastBackup'];
 const betroffen = (k) => WERTE.includes(k) || k.startsWith('chk_') || /^advent\d{4}$/.test(k);
@@ -20,8 +21,12 @@ const mitHaken = (h) => h.replace(/\}\)\(\);\s*<\/script>/, () => `(${haken.toSt
 
 /* the stored values of one child namespace ('' = without accounts) and derive of its events */
 async function vergleich(page, ns = '') {
-  const app = await page.evaluate((p) => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith(p)).map((k) => [k.slice(p.length), JSON.parse(localStorage.getItem(k))])), 'bq2_' + (ns ? ns + '__' : ''));
-  const st = derive(app.events || [], { now: Date.parse('2027-01-01T00:00:00Z') });
+  // since 3b-2a the test build no longer stores these values: the page's localStorage answers from the logs (testbauLeser)
+  const pre = 'bq2_' + (ns ? ns + '__' : ''), events = await page.evaluate((k) => JSON.parse(localStorage.getItem(k) || '[]'), pre + 'events');
+  const alt = altStand(await page.evaluate((p) => Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith(p) && !k.slice(p.length).includes('__')).map((k) => [k.slice(p.length), JSON.parse(Storage.prototype.getItem.call(localStorage, k))])), pre));   // old values (a test prepared them): the base
+  const st = derive(events, alt ? { now: Date.parse('2027-01-01T00:00:00Z'), base: { upTo: LESEN_ANFANG, state: alt } } : { now: Date.parse('2027-01-01T00:00:00Z') });
+  const app = await page.evaluate(([p, extra]) => { const o = Object.fromEntries(Object.keys(localStorage).filter((k) => k.startsWith(p)).map((k) => [k.slice(p.length), JSON.parse(localStorage.getItem(k))]));
+    for (const k of extra) if (!(k in o)) { const v = localStorage.getItem(p + k); if (v !== null) o[k] = JSON.parse(v); } return o; }, [pre, [...new Set([...WERTE, ...Object.keys(st)])].filter(betroffen)]);
   const keys = [...new Set([...Object.keys(app), ...Object.keys(st)])].filter(betroffen).sort();
   for (const k of keys) assert.deepEqual(st[k], ohneGeraetenotiz(k, app[k]), 'Wert ' + k);
   assert.deepEqual(await page.evaluate(() => window.__bqh.probleme()), { abgelehnt: [], fehler: [] }, 'nichts abgelehnt, kein Fehler im Schreiber');
@@ -356,12 +361,12 @@ test('3b-1c mit Konten: Freigaben (erteilen, ersetzen, beenden, angesehen), Sich
     // the log of each person: language, "How it works", glance of the parent; the teacher keeps no glance
     const pe = await personenLog(page), glance = await geraetWert(page, 'glance');
     const arten2 = (l) => (l || []).map((e) => e.type + (e.payload.field ? ':' + e.payload.field : ''));
-    assert.deepEqual(Object.keys(pe).sort(), [papa, frau].sort(), JSON.stringify(Object.fromEntries(Object.entries(pe).map(([k, v]) => [k === papa ? 'papa' : k === frau ? 'frau' : k, arten2(v)]))));
-    for (const p of [papa, frau]) assert.ok(pe[p].every((e) => e.author === p && bereichVonEreignis(e) === 'person'), 'each person writes into its own log');
-    // the teacher: the chapter "How it works" was still open from papa's visit (state.popen) - so it counts as seen for her
-    // as well (as the app stores it); no glance of the child in her area
-    assert.deepEqual(arten2(pe[frau]), ['person_set:conceptSeen']);
-    assert.equal(derive(pe[frau], { now: JETZT }).conceptSeen, (await geraetWert(page, 'conceptSeen'))[frau]);
+    assert.deepEqual(Object.keys(pe).sort(), [papa], JSON.stringify(Object.fromEntries(Object.entries(pe).map(([k, v]) => [k === papa ? 'papa' : k === frau ? 'frau' : k, arten2(v)]))));
+    for (const p of Object.keys(pe)) assert.ok(pe[p].every((e) => e.author === p && bereichVonEreignis(e) === 'person'), 'each person writes into its own log');
+    // the teacher: until 3b-2a the chapter "How it works" stayed open from papa's visit (state.popen) and counted as seen for
+    // her too. Since 3b-2a (test build) another person starts with all chapters closed: no log, no glance of the child
+    assert.equal(pe[frau], undefined, 'the teacher wrote nothing into her area');
+    assert.equal((await geraetWert(page, 'conceptSeen'))[frau], undefined, '"How it works" does not count as read for the teacher');
     const st = derive(pe[papa], { now: JETZT });
     assert.equal(st.parentLang, await geraetWert(page, 'parentLang'));
     assert.equal(st.parentLang, 'de');

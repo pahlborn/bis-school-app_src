@@ -206,13 +206,17 @@ function abChecklistSize(st, list) {
    Focus: index.html keeps focusManual exactly while focusMode is "manual" (setFocusMode stores and deletes both),
    so the list exists then (empty if nothing is chosen) and is gone otherwise. */
 function abLists(st, list, now) {
+  // task 3b-2a: while the focus is not manual, the replayed list is kept in _focusManual (like _days, no storage key), so a
+  // base state plus later events gives the same as all events together (entries from another device stay counted)
+  if (!Array.isArray(st.focusManual) && Array.isArray(st._focusManual)) st.focusManual = st._focusManual;
+  delete st._focusManual;
   for (const e of lastWinsOrder(list, now)) {
     if (e.type !== 'list_set') continue;
     const p = e.payload, cur = Array.isArray(st[p.list]) ? st[p.list] : [];
     st[p.list] = p.on ? (cur.includes(p.item) ? cur : cur.concat([p.item])) : cur.filter((x) => x !== p.item);
   }
   if (st.focusMode === 'manual') { if (!Array.isArray(st.focusManual)) st.focusManual = []; }
-  else delete st.focusManual;
+  else { if (Array.isArray(st.focusManual) && st.focusManual.length) st._focusManual = st.focusManual; delete st.focusManual; }
 }
 
 /* gaps per school (concept "Elternbereich" 6; task 3b-0): today's key "gaps" =
@@ -261,7 +265,8 @@ function abGaps(st, list, now) {
    now:    milliseconds / Date / UTC text - needed for the clock rule (a time more than 24 h ahead counts as "now").
    base:   optional { upTo, state } - a state (a result of derive, e.g. from a snapshot) as of the time upTo;
            only events after upTo are replayed on top of it.
-   The result has one extra key, _days (the practice days so far), that a later base needs; it is not a storage key. */
+   The result has one extra key, _days (the practice days so far), that a later base needs; it is not a storage key.
+   Likewise _focusManual (task 3b-2a): the focus list while the focus is not manual, only when it has entries. */
 export function derive(events, { now, base } = {}) {
   if (now === undefined || now === null) throw new Error('derive: "now" is missing');
   const st = Object.assign({ attempts: [], ev: {}, due: [], total: 0, badges: {}, tried: [], treeStage: 0, sheets: [], sheetNo: 0, _days: [] }, base ? abClone(base.state) : {});

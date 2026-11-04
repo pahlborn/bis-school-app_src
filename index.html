@@ -665,9 +665,9 @@ const pwKey = u => 'pw_'+(ID_STORAGE ? u.id : u.user);
 const sessionOf = u => ({user:u.user, id:u.id});
 const storeKey = k => { const ns=GLOBAL_KEYS.test(k)?'':childNs(); return 'bq2_'+(ns?ns+'__':'')+k; };
 const store = {
-get(k,d){ try{ const v=localStorage.getItem(storeKey(k)); return v===null?d:JSON.parse(v); }catch(e){ return d; } },
-set(k,v){ try{ localStorage.setItem(storeKey(k), JSON.stringify(v)); }catch(e){} },
-del(k){ try{ localStorage.removeItem(storeKey(k)); }catch(e){} }
+get(k,d){ const q=evQuelle(k); if(q) return evLesen(q,k,d); try{ const v=localStorage.getItem(storeKey(k)); return v===null?d:JSON.parse(v); }catch(e){ return d; } },
+set(k,v){ if(evQuelle(k)) return; try{ localStorage.setItem(storeKey(k), JSON.stringify(v)); }catch(e){} },   // test build: the event is the change (3b-2a)
+del(k){ if(evQuelle(k)) return; try{ localStorage.removeItem(storeKey(k)); }catch(e){} }
 };
 /* Stage 2, task 3b-1: where the app stores something that is synced later, it also hands the change to
    eventHook(type, payload). Only the test build has the module "schreiber"; there the event goes to
@@ -699,8 +699,9 @@ function eventHook(type, payload, kid){
     if(!eventSink){
       let d=store.get('evDevice',null); if(!d){ d=newDeviceId(); store.set('evDevice',d); }
       const now=()=>Date.now(), mine=()=>(eventWho()||{}).person;
-      eventSink=evSchreiber({read:()=>store.get('events',[]), write:l=>store.set('events',l), device:d, who:eventWho, now});
-      personSink=evSchreiber({read:()=>(store.get('personEvents',{})||{})[mine()], write:l=>{ const all=store.get('personEvents',{})||{}; all[mine()]=l; store.set('personEvents',all); }, device:d, who:eventWho, now});
+      // the logs keep their list in memory (task 3b-2a: no reading of the whole list per event)
+      eventSink=evSchreiber({read:()=>evKindLog(evPre()).liste(), write:l=>evKindLog(evPre()).schreiben(l), device:d, who:eventWho, now});
+      personSink=evSchreiber({read:()=>evPersonLog(mine()).liste(), write:l=>evPersonLog(mine()).schreiben(l), device:d, who:eventWho, now});
     }
     const r=(own?personSink:eventSink).write(type, payload);
     return r.ok ? r.event : null;
@@ -715,6 +716,61 @@ function listEvents(list, oldL, newL){
   const plain=keptOld.every((x,i)=>keptNew[i]===x) && n.every((x,i)=>o.includes(x) || i>=keptNew.length);
   const off=plain?o.filter(x=>!n.includes(x)):o, on=plain?n.filter(x=>!o.includes(x)):n;
   return off.map(item=>({list, item, on:false})).concat(on.map(item=>({list, item, on:true})));
+}
+/* Stage 2, task 3b-2a: the test build READS the synced values from the events (module lesen). store.get of such a key
+   gives the value derived from the log; store.set/del of it do nothing there - the event written next to it (eventHook)
+   is the change. A child's old stored values are the read-only base (until task 3c turns them into a snapshot).
+   Without a child's area (accounts on, no child's data shown) or without a person (login page) the old storage stays as
+   it was: there is no log to read. The live build has no module lesen: EV_LESEN is false and nothing changes there. */
+const EV_LESEN = typeof lesenArt==='function';
+const evLogs = new Map();
+const evPre = () => storeKey('events').slice(0,-6);              // bq2_ or bq2_<child>__
+function evRaw(lk){ try{ const v=localStorage.getItem(lk); return v===null?undefined:JSON.parse(v); }catch(e){ return undefined; } }
+function evKindLog(pre){
+  let p=evLogs.get(pre); if(p) return p;
+  p=evProtokoll({
+    laden:()=>evRaw(pre+'events'),
+    speichern:l=>{ try{ localStorage.setItem(pre+'events', JSON.stringify(l)); }catch(e){ eventErrors.push('speichern: '+String(e&&e.message||e)); } },
+    basis:()=>{ const w={}; for(let i=0;i<localStorage.length;i++){ const full=localStorage.key(i); if(!full || !full.startsWith(pre)) continue; const k=full.slice(pre.length); if(pre==='bq2_' && k.includes('__')) continue; if(lesenArt(k)==='kind') w[k]=evRaw(full); } return altStand(w); },
+    now:()=>Date.now()
+  });
+  evLogs.set(pre,p); return p;
+}
+function evPersonLog(pid){
+  const id='person:'+pid; let p=evLogs.get(id); if(p) return p;
+  p=evProtokoll({
+    laden:()=>(evRaw('bq2_personEvents')||{})[pid],
+    speichern:l=>{ const all=evRaw('bq2_personEvents')||{}; all[pid]=l; try{ localStorage.setItem('bq2_personEvents', JSON.stringify(all)); }catch(e){ eventErrors.push('speichern: '+String(e&&e.message||e)); } },
+    now:()=>Date.now()
+  });
+  evLogs.set(id,p); return p;
+}
+/* after a sync, or when the old values changed (cleaning): read and compute anew, once */
+function evNeuLaden(){ evLogs.forEach(p=>p.neuLaden()); }
+const evKonten = () => !!(APP_ACCOUNTS && APP_ACCOUNTS.users && APP_ACCOUNTS.users.length);   // = accountsOn (defined further down; the store is read earlier)
+/* changes with every change of the current child's log ('' in the live build) - for caches keyed on stored values */
+function evVersion(){ const q=EV_LESEN && evKindQuelle(); return q ? 'e'+q.log.version() : ''; }
+function evKindQuelle(){ return evKonten() && !childNs() ? null : {log:evKindLog(evPre()), art:'kind'}; }
+/* which log a key is read from now - or null: the old storage */
+function evQuelle(k){
+  const art=EV_LESEN && lesenArt(k); if(!art) return null;
+  if(art==='kind') return evKindQuelle();
+  let w=null; try{ w=eventWho(); }catch(e){ return null; }            // (early at the start, before the login state exists)
+  if(!w) return null;
+  if(k==='muted' && w.role==='child') return evKindQuelle();         // the child's own switch: in its log (3b-1b-4)
+  if(k==='glance' && w.role!=='parent') return null;                  // teachers and admin: stays on the device (3b-1c)
+  return {log:evPersonLog(w.person), art:'person'};
+}
+const evCopy = v => v===undefined ? v : JSON.parse(JSON.stringify(v));
+function evLesen(q, k, d){
+  const st=q.log.stand(), has=Object.prototype.hasOwnProperty.call(st,k);
+  if(k==='grants' || k==='grantlog') return has ? evCopy(grantsAblauf(st, dayKey())[k]) : d;   // "expired" follows from "until"
+  if(q.art==='kind' && k!=='muted') return has ? evCopy(st[k]) : d;
+  // a person's values (and a child's sound): the log's value, else the old one of this device (the base)
+  const alt=evRaw(storeKey(k)), base=alt===undefined ? d : alt;
+  if(k==='conceptSeen'){ const m=Object.assign({}, base||{}); if(has) m[conceptSeenId()]=st.conceptSeen; return m; }
+  if(k==='glance'){ const m=Object.assign({}, base||{}), g=st.glance||{}, c=glanceKid(); if(c && Object.prototype.hasOwnProperty.call(g,c)) m[glanceId()]=evCopy(g[c]); return m; }
+  return has ? evCopy(st[k]) : base;
 }
 /* ---------- move to IDs (S11 Stufe 1, P2, 02.11.) ----------
    Once per device, before anything else reads the store: every child's data are COPIED from the old
@@ -808,10 +864,11 @@ migrateCleanup();
 dropOldKeys();
 
 /* ---------- sound ---------- */
-let muted = store.get('muted', false);
+/* sound on/off: read each time - in the test build it follows the person acting (3b-2a); live: this device */
+const isMuted = () => !!store.get('muted', false);
 let ac = null;
 function beep(kind){
-  if(muted) return;
+  if(isMuted()) return;
   try{
     ac = ac || new (window.AudioContext||window.webkitAudioContext)();
     const o=ac.createOscillator(), g=ac.createGain(); o.connect(g); g.connect(ac.destination);
@@ -2344,6 +2401,7 @@ function cleanStoredPrivate(){
     const out=JSON.stringify(v);
     if(out!==raw){ try{ localStorage.setItem(k,out); n++; }catch(e){} }
   }
+  if(n && EV_LESEN) evNeuLaden();   // test build: the cleaned old values are the base of the logs (3b-2a); events are never changed
   return n;
 }
 const dueToday = () => store.get('due',[]).filter(d=>d.at<=dayKey() && d.q && WORLDS[d.q.world]).map(d=>{
@@ -2640,7 +2698,7 @@ let focusMemo={key:null,val:[]};
 function focusTopics(){
   const raw=k=>{ try{ return localStorage.getItem(storeKey(k))||''; }catch(e){ return ''; } };
   // computed once per change of the data (the start page asks for it many times)
-  const key=[storeKey('x'),raw('attempts').length,raw('ev').length,raw('focusMode'),raw('focusManual'),raw('unlocked'),raw('gaps'),dayKey()].join('|');
+  const key=[storeKey('x'),raw('attempts').length,raw('ev').length,raw('focusMode'),raw('focusManual'),raw('unlocked'),raw('gaps'),dayKey(),evVersion()].join('|');   // test build: the values come from the log (3b-2a)
   if(focusMemo.key!==key) focusMemo={key, val:cleanFocus(focusManualMode()?store.get('focusManual',[]):focusAuto())};
   return focusMemo.val.slice();
 }
@@ -2769,7 +2827,7 @@ function renderHome(){
     b.innerHTML=`<span class="icon">${ICONS[s.icon]}</span><span class="name">${esc(s.name)}</span><span class="sub">${esc(s.sub)}</span>${n?`<span class="focus">${n} focus</span>`:''}`;
     b.addEventListener('click',()=>openSubject(s.key)); c.appendChild(b);
   });
-  $('#soundBtn').textContent='Sound: '+(muted?'off':'on');
+  $('#soundBtn').textContent='Sound: '+(isMuted()?'off':'on');
   renderFun(); renderMySheets();
 }
 function openSubject(key){
@@ -4172,8 +4230,9 @@ function migrLine(){
    revocable at any time, every step in a log the parents see. Stored in the child's area (grants,
    grantlog). Stage 1 has no syncing: the grantee sees the child only on a device that holds its data. */
 const kidKey = (acc,k) => ID_STORAGE && acc ? 'bq2_'+acc.id+'__'+k : null;
-function kidRead(acc,k,d){ const lk=kidKey(acc,k); if(!lk) return d; try{ const v=localStorage.getItem(lk); return v===null?d:JSON.parse(v); }catch(e){ return d; } }
-function kidWrite(acc,k,v){ const lk=kidKey(acc,k); if(lk) try{ localStorage.setItem(lk, JSON.stringify(v)); }catch(e){} }
+function kidRead(acc,k,d){ const lk=kidKey(acc,k); if(!lk) return d; if(EV_LESEN && lesenArt(k)==='kind') return evLesen({log:evKindLog('bq2_'+acc.id+'__'), art:'kind'}, k, d);   /* test build: from that child's log (3b-2a) */
+  try{ const v=localStorage.getItem(lk); return v===null?d:JSON.parse(v); }catch(e){ return d; } }
+function kidWrite(acc,k,v){ const lk=kidKey(acc,k); if(EV_LESEN && lesenArt(k)==='kind') return; if(lk) try{ localStorage.setItem(lk, JSON.stringify(v)); }catch(e){} }
 const grantActive = g => isGrantActive(g, dayKey());
 /* Stage 2 (task 3b-1c): the log is what is synced - ev = [type, payload] of its event (none for "abgelaufen": that follows
    from "until" when reading); "grants" follows from these events. The entry keeps the event's time; returns that time. */
@@ -4286,6 +4345,15 @@ function backupCounts(data, audio){
 const countsText = c => PL()==='de'
   ? `${c.answers} Antworten · ${c.stars} Sterne · ${c.badges} Abzeichen · ${c.sheets} Übungsblätter · ${c.recordings} Aufnahmen`
   : `${c.answers} answers · ${c.stars} stars · ${c.badges} badges · ${c.sheets} practice sheets · ${c.recordings} recordings`;
+/* the stored values of this child for the backup file; in the test build (3b-2a) the synced ones come from its log */
+function backupData(){
+  const data={}; for(const k of childStoreKeys()) data[k]=localStorage.getItem(storeKey(k));
+  const q=EV_LESEN && evKindQuelle(); if(!q) return data;
+  const st=q.log.stand();
+  for(const k of Object.keys(data)) if(lesenArt(k)==='kind') delete data[k];
+  for(const k of Object.keys(st)) if(isBackupKey(k) && lesenArt(k)==='kind') data[k]=JSON.stringify(store.get(k));
+  return Object.fromEntries(Object.keys(data).sort().map(k=>[k,data[k]]));
+}
 let backupNote='', restoreCandidate=null;
 /* the last day with practice in the app or an entered practice sheet */
 function lastPracticeDay(){
@@ -4326,7 +4394,7 @@ async function makeBackup(){
   if(!canBackup()) return;
   const de=PL()==='de', kid=kidAccount();
   try{
-    const data={}; for(const k of childStoreKeys()) data[k]=localStorage.getItem(storeKey(k));
+    const data=backupData();
     const audio=[];
     try{ for(const r of await recAll()) audio.push({id:r.id, created:r.created, durationMs:r.durationMs, mime:r.mime, size:r.blob.size, base64:toB64(await r.blob.arrayBuffer())}); }catch(e){}
     const body={format:'bq-sicherung-1', child:kid.id, user:kid.user, createdAt:new Date().toISOString(), appVersion:versionLabel(), data, audio};
@@ -4346,6 +4414,8 @@ async function readRestoreFile(file){
   const de=PL()==='de', kid=kidAccount(), msg=$('#pBackupMsg'), pv=$('#pRestorePreview');
   restoreCandidate=null; if(pv) pv.innerHTML='';
   if(!canBackup()) return;
+  // test build (3b-2a): a restore must become events (task 6) - writing the old values under the events would mix both
+  if(EV_LESEN){ msg.textContent=de?'In dieser Fassung lässt sich eine Sicherung noch nicht zurückspielen.':'This version cannot restore a backup yet.'; return; }
   let body;
   try{ body=JSON.parse(await file.text()); }catch(e){ body=null; }
   if(!body || body.format!=='bq-sicherung-1' || typeof body.data!=='object'){ msg.textContent=de?'Das ist keine Sicherung von Big Quest.':'This is not a Big Quest backup.'; return; }
@@ -4357,7 +4427,7 @@ async function readRestoreFile(file){
   $('#pRestoreCancel').addEventListener('click',()=>{ restoreCandidate=null; pv.innerHTML=''; msg.textContent=''; });
 }
 async function applyRestore(){
-  const body=restoreCandidate, de=PL()==='de'; if(!body || !canBackup()) return;
+  const body=restoreCandidate, de=PL()==='de'; if(!body || !canBackup() || EV_LESEN) return;
   const prev={}; for(const k of childStoreKeys()) prev[k]=localStorage.getItem(storeKey(k));
   store.set('vorRueckspielen',{at:new Date().toISOString(), data:prev});
   for(const k of childStoreKeys()) localStorage.removeItem(storeKey(k));
@@ -4368,7 +4438,7 @@ async function applyRestore(){
   renderHome(); renderSheets();
 }
 function undoRestore(){
-  const v=store.get('vorRueckspielen',null), de=PL()==='de'; if(!v || !canBackup()) return;
+  const v=store.get('vorRueckspielen',null), de=PL()==='de'; if(!v || !canBackup() || EV_LESEN) return;
   for(const k of childStoreKeys()) localStorage.removeItem(storeKey(k));
   for(const [k,val] of Object.entries(v.data||{})) localStorage.setItem(storeKey(k), val);
   store.del('vorRueckspielen'); cleanStoredPrivate(); backupNote=de?'Der Stand vor dem Zurückspielen ist wiederhergestellt.':'The progress from before the restore is back.';
@@ -4732,7 +4802,7 @@ const LOGIN_HELP=`<details class="login-help"><summary>❓ Help</summary>
 function whosHereHTML(){
   const ids=store.get('kidsHere',[]), kids=ids.map(id=>APP_ACCOUNTS.users.find(u=>u.id===id && u.role==='student')).filter(Boolean);
   if(!kids.length) return '';
-  const val=(id,k)=>{ if(!ID_STORAGE) return null; const lk='bq2_'+id+'__'+k; try{ return JSON.parse(localStorage.getItem(lk)||'null'); }catch(e){ return null; } };
+  const val=(id,k)=>{ if(!ID_STORAGE) return null; if(EV_LESEN) return kidRead({id},k,null); const lk='bq2_'+id+'__'+k; try{ return JSON.parse(localStorage.getItem(lk)||'null'); }catch(e){ return null; } };
   return `<div class="whos-here"><p class="greet-q">Who's here?</p><div class="row">${kids.map(u=>`<button type="button" class="btn kid-pick" data-kidpick="${esc(u.user)}">${esc(val(u.id,'emoji')||'🙂')} ${esc(val(u.id,'name')||u.user)}</button>`).join('')}</div><p class="small">Someone else? Type the user name below.</p></div>`;
 }
 function renderLogin(role){
@@ -4802,7 +4872,7 @@ function loginDone(u, welcomed){
   $('#loginBody').innerHTML='';
   const seen=store.get('lastSeen',{}); seen[u.id]=new Date().toISOString(); store.set('lastSeen',seen);
   if(u.role==='student'){ pendingRoute=null; store.set('session',sessionOf(u)); const here=store.get('kidsHere',[]); if(!here.includes(u.id)) store.set('kidsHere',here.concat([u.id])); adultUser=null; if(welcomed){ store.set('greetDay',dayKey()); eventHook('day_flag',{flag:'greetDay', day:dayKey()}); } renderHome(); show('home'); }
-  else { store.set('adultSession',sessionOf(u)); adultUser={user:u.user, role:u.role, admin:!!u.admin}; parentAccess=true; state.psubj=null; state.popen=state.popen||[]; const r=takePendingRoute(); openAbout('sheets'); scrollToRouteSec(r); }
+  else { store.set('adultSession',sessionOf(u)); adultUser={user:u.user, role:u.role, admin:!!u.admin}; parentAccess=true; state.psubj=null; state.popen=EV_LESEN && state.popenBy!==u.id ? [] : state.popen||[]; state.popenBy=u.id; const r=takePendingRoute();   /* test build (3b-2a): another person starts with all chapters closed - an open chapter of the one before does not count as read */ openAbout('sheets'); scrollToRouteSec(r); }
 }
 /* Test account bar (for grown-ups, in their language): clearly marked, separate data, jump ahead one
    day, reset everything, and – while a grown-up is logged in – back to the grown-ups area. */
@@ -5598,8 +5668,8 @@ $('#rankClose').addEventListener('click',()=>{ const d=$('#rankDlg'); if(d.close
 $('#pfClose').addEventListener('click',closeProfile);
 $('#profileForm').addEventListener('submit',e=>{ e.preventDefault(); saveProfile(); });
 document.addEventListener('pointerdown',e=>{ if(savedTimer && !e.target.closest('#profileDlg')) hideSaved(); });
-$('#soundBtn').addEventListener('click',()=>{ muted=!muted; store.set('muted',muted); if((eventWho()||{}).role==='child') eventHook('profile_set',{field:'muted', value:muted}); else eventHook('person_set',{field:'muted', value:muted});   // the child's own switch (3b-1b-4); a grown-up's: his person area (3b-1c)
-  $('#soundBtn').textContent='Sound: '+(muted?'off':'on'); if(!muted) beep('good'); });
+$('#soundBtn').addEventListener('click',()=>{ const muted=!isMuted(); store.set('muted',muted); if((eventWho()||{}).role==='child') eventHook('profile_set',{field:'muted', value:muted}); else eventHook('person_set',{field:'muted', value:muted});   // the child's own switch (3b-1b-4); a grown-up's: his person area (3b-1c)
+  $('#soundBtn').textContent='Sound: '+(isMuted()?'off':'on'); if(!isMuted()) beep('good'); });
 $('#quitBtn').addEventListener('click',goBack);
 $('#studioBack').addEventListener('click',goBack);
 $('#subjectBack').addEventListener('click',()=>{ state.back='home'; goBack(); });

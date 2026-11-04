@@ -22,7 +22,7 @@ test('Anpassung haelt die Vorgaben in jeder Quest zuverlaessig ein (viele Runden
   for (const k of quests) {
     const angebot = new Set(); for (let i = 0; i < 12; i++) WORLDS[k].build().forEach((q) => angebot.add(levelOf(q)));
     for (const [stand, ev] of [['RS', belege(10, 2, 2, 3)], ['M', belege(10, 2, 10, 3)]]) {
-      S.ablage.set('bq2_ev', JSON.stringify({ [k]: ev }));
+      S.setzen('bq2_ev', { [k]: ev });
       // 800 rounds for "shaky": the old fault (about 1 in 140 rounds) is then missed in fewer than 1 in 250 runs
       S.lauf(() => {
         for (let n = 0; n < (stand === 'RS' ? 800 : 250); n++) {

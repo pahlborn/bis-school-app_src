@@ -11,14 +11,17 @@
 
 import fs from 'node:fs/promises';
 import { appLesen } from '../werkzeug/module.mjs';
+import { testbauLeser } from './testbau-leser.mjs';
 import http from 'node:http';
 import path from 'node:path';
 import { chromium } from 'playwright';
 import { WURZEL, QUELLEN } from '../werkzeug/bauen.mjs';
 
 // bauart 'test' = with the stage-2 modules; anpassen(text) changes the page (e.g. a test hook)
-export async function appServer({ bauart = 'live', anpassen } = {}) {
-  const inhalt = anpassen ? anpassen(appLesen('utf8', { bauart })) : appLesen(null, { bauart });
+// bauart 'test': the test build; then tests read and prepare the storage through testbauLeser (3b-2a, see there)
+export async function appServer({ bauart = process.env.BQ_BAUART || 'live', anpassen } = {}) {
+  const leser = bauart === 'test' ? testbauLeser : null;
+  const inhalt = anpassen || leser ? (leser || ((h) => h))(anpassen ? anpassen(appLesen('utf8', { bauart })) : appLesen('utf8', { bauart })) : appLesen(null, { bauart });
   const server = http.createServer(async (req, res) => {
     if (req.url.split('?')[0] !== '/') { res.writeHead(404); return res.end(); }
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
