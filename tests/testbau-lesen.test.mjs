@@ -164,7 +164,8 @@ test('Messwert in der App: 5 000 Ereignisse im Speicher - Start, erste Seite und
   assert.equal(wert(S, 'attempts').length, 200, 'die letzten 200 wie immer');
   assert.ok(wert(S, 'total') > 0);
   assert.equal(log(S).zaehler.voll, 1, 'nur einmal ganz gerechnet');
-  assert.ok(zeiten[4] < 100, 'eine Antwort bleibt fluessig: ' + zeiten[4].toFixed(1) + ' ms');
+  // alone ~4 ms; in the full run (7 test files at once, browsers) up to ~115 ms were measured - the limit catches a full recompute per answer
+  assert.ok(zeiten[4] < 250, 'eine Antwort bleibt fluessig: ' + zeiten[4].toFixed(1) + ' ms');
 });
 
 test('Fokus-Themen (Zwischenspeicher der Startseite) folgen den Ereignissen: Eltern waehlen ein Thema und nehmen es wieder heraus', (t) => {
