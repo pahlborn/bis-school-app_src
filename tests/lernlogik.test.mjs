@@ -140,36 +140,8 @@ test('Practise Today: Aufwaermfrage zuerst, Herausforderung am Ende, sobald ein 
   await ctx.close();
 });
 
-// Fund 02.11. (Aufgabe 2b): adaptRound suchte nur in einem kleinen Vorrat und gab still auf - etwa 1 von
-// 140 Runden hatte bei "hakt es noch" zu wenig Aufgaben mit Hilfe (deshalb war der Test oben sporadisch rot).
-// Hier direkt und oft: jede Quest, viele Runden, ohne Klickweg.
-test('Anpassung haelt die Vorgaben in jeder Quest zuverlaessig ein (viele Runden, direkt gerechnet)', async () => {
-  const hook = await appServer({ anpassen: (h) => h.replace(/\}\)\(\);\s*<\/script>/, 'window.__bqa={adaptRound,WORLDS,levelOf};})();</script>') });
-  const { ctx, page, fehler } = await appOeffnen(browser, hook.url);
-  try {   // close the extra server even when an assertion fails - otherwise the test run never ends
-  const r = await page.evaluate(([unsicher, sicher]) => {
-    const A = window.__bqa, fehl = [];
-    const quests = Object.keys(A.WORLDS).filter((k) => k !== 'today' && !k.startsWith('mix_') && typeof A.WORLDS[k].build === 'function');
-    for (const k of quests) {
-      const angebot = new Set(); for (let i = 0; i < 12; i++) A.WORLDS[k].build().forEach((q) => angebot.add(A.levelOf(q)));
-      for (const [stand, ev] of [['RS', unsicher], ['M', sicher]]) {
-        localStorage.setItem('bq2_ev', JSON.stringify({ [k]: ev }));
-        // 800 rounds for "shaky": the old fault (about 1 in 140 rounds) is then missed in fewer than 1 in 250 runs
-        for (let n = 0; n < (stand === 'RS' ? 800 : 250); n++) {
-          const rd = A.adaptRound(k, A.WORLDS[k].build()), c = (l) => rd.filter((q) => A.levelOf(q) === l).length;
-          if (stand === 'RS' && (angebot.has(1) || angebot.has(2)) && c(3) > 0) { fehl.push(`${k} RS: ${c(3)} Herausforderungen`); break; }
-          if (stand === 'RS' && angebot.has(1) && c(1) < 2) { fehl.push(`${k} RS: nur ${c(1)} mit Hilfe`); break; }
-          if (stand === 'M' && angebot.has(3) && c(3) < 2) { fehl.push(`${k} M: nur ${c(3)} Herausforderungen`); break; }
-        }
-      }
-    }
-    return { quests: quests.length, fehl };
-  }, [belege(10, 2, 2, 3), belege(10, 2, 10, 3)]);
-  assert.ok(r.quests >= 10, 'quests checked: ' + r.quests);
-  assert.deepEqual(r.fehl, []);
-  assert.deepEqual(fehler, []);
-  } finally { await ctx.close(); hook.close(); }
-});
+// Die Pruefung "Anpassung haelt die Vorgaben in jeder Quest zuverlaessig ein" (viele Runden, direkt gerechnet) laeuft seit
+// 04.11. ohne Browser: tests/aufgaben-anpassung.test.mjs.
 
 // Fund 02.11. (Bündel 4, volle Reihe): seit A7 hat Specific Examples auch Aufgaben mit Hilfe. Eine Runde ganz
 // ohne Klassenniveau (nur Hilfe + eine Herausforderung) blieb bei "sitzt" bei einer Herausforderung stehen.
