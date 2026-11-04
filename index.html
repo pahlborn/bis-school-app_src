@@ -117,6 +117,9 @@ button{font:inherit;color:inherit}
 .profile-dlg form{display:flex;flex-direction:column;gap:12px}
 .pf-set{border:0;padding:0;margin:0;min-width:0}
 .pf-set legend{font-family:var(--display);font-weight:600;margin-bottom:6px;padding:0}
+.pf-names{display:flex;gap:8px}
+.pf-names .field{flex:1;min-width:0}
+.pf-names .field input{padding:10px 10px}
 .pf-bday{display:flex;gap:8px}
 .pf-bday select{font:inherit;font-size:1rem;min-height:44px;min-width:0;flex:1;border-radius:12px;border:2px solid var(--line);background:var(--surface);color:var(--ink);padding:6px 8px}
 .pf-emojis{display:grid;grid-template-columns:repeat(4,minmax(44px,1fr));gap:6px}
@@ -484,9 +487,9 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
   <dialog id="profileDlg" class="profile-dlg" aria-labelledby="profileTitle">
     <form id="profileForm" method="dialog">
       <h2 id="profileTitle">My profile</h2>
-      <div class="field"><label for="pfName">Your name or nickname</label><input id="pfName" type="text" maxlength="20" autocomplete="off"></div>
+      <div class="pf-names"><div class="field"><label for="pfName">First name</label><input id="pfName" type="text" maxlength="20" autocomplete="off"></div><div class="field"><label for="pfLast">Last name</label><input id="pfLast" type="text" maxlength="30" autocomplete="off"></div></div>
       <fieldset class="pf-set"><legend>Your birthday</legend>
-        <div class="pf-bday"><select id="pfDay" aria-label="Day"></select><select id="pfMonth" aria-label="Month"></select></div>
+        <div class="pf-bday"><select id="pfDay" aria-label="Day"></select><select id="pfMonth" aria-label="Month"></select><select id="pfYear" aria-label="Year"></select></div>
       </fieldset>
       <fieldset class="pf-set"><legend>Pick your emoji</legend><div id="pfEmojis" class="pf-emojis"></div></fieldset>
       <p class="small">This stays on this device.</p>
@@ -3385,8 +3388,11 @@ function themeNow(d=new Date()){
   return null;
 }
 const THEME_ICON={halloween:'🎃', advent:'🕯️', christmas:'🎄'};
+/* birthday (task "Name und Geburtsdatum", Peter 04.11.): 'MM-DD' as before or 'YYYY-MM-DD' with the year; both stay valid */
+const bdayParts = b => { const m=/^(?:(\d{4})-)?(\d{2})-(\d{2})$/.exec(String(b||'')); return m?{y:m[1]||'', m:m[2], d:m[3]}:null; };
+const fmtBirthday = (b, de) => { const p=bdayParts(b); if(!p) return ''; return de ? `${p.d}.${p.m}.${p.y}` : `${MONTHS[+p.m-1]} ${+p.d}${p.y?', '+p.y:''}`; };
 function birthdayIn(){ // days until the birthday (0 = today), or null
-  const b=store.get('birthday',null); if(!b) return null;
+  const p=bdayParts(store.get('birthday',null)); if(!p) return null; const b=p.m+'-'+p.d;
   const now=new Date(); now.setHours(12,0,0,0);
   for(const y of [now.getFullYear(), now.getFullYear()+1]){ const d=new Date(y+'-'+b+'T12:00:00'); const diff=Math.round((d-now)/864e5); if(diff>=0) return diff; }
   return null;
@@ -3483,8 +3489,10 @@ function openDoor(n){
     renderAdvent(); $('#doorBody').innerHTML=`<p>${ok?'Yes!':'Good try! It is '+esc(m[1])+'.'}</p>`+treat();
   }));
 }
-/* My profile: name, birthday (day + month, no year) and an emoji in one dialog.
-   Stored only on this device; formats of bq2_name and bq2_birthday ('MM-DD') are unchanged. */
+/* My profile: first and last name, birthday (day + month, year optional) and an emoji in one dialog.
+   Task "Name und Geburtsdatum" (Peter, 04.11.): with the last name and the birthday a teacher with a grant can tell two
+   children with the same first name apart; the child enters the year itself (or the parents in the grown-ups area).
+   bq2_birthday is 'MM-DD' (as before) or 'YYYY-MM-DD'; bq2_lastName is new. */
 const PROFILE_EMOJIS=['🦊','🐼','🦁','🐬','🦉','🐢','🦄','🐉','🌻','🌈','🚀','🪐'];
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 let savedTimer=null;
@@ -3494,11 +3502,39 @@ function renderProfileBtn(){
   $('#profileName').textContent=n||'My profile';
   $('#profileBtn').setAttribute('aria-label','My profile'+(n?': '+n:''));
 }
+/* the date pickers (child: #pfDay/#pfMonth/#pfYear, grown-ups: #ppDay/#ppMonth/#ppYear); year: the last 16 years
+   up to 3 years ago, plus a stored year outside that range */
+function bdayOptions(b, de){
+  const p=bdayParts(b)||{y:'',m:'',d:''}, y0=new Date().getFullYear(), years=Array.from({length:14},(_,i)=>String(y0-3-i));
+  if(p.y && !years.includes(p.y)) years.push(p.y);
+  const months=de?['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember']:MONTHS;
+  return {day:'<option value="">—</option>'+Array.from({length:31},(_,i)=>`<option value="${pad(i+1)}"${pad(i+1)===p.d?' selected':''}>${i+1}</option>`).join(''),
+    month:'<option value="">—</option>'+months.map((m,i)=>`<option value="${pad(i+1)}"${pad(i+1)===p.m?' selected':''}>${m}</option>`).join(''),
+    year:'<option value="">—</option>'+years.map(y=>`<option value="${y}"${y===p.y?' selected':''}>${y}</option>`).join('')};
+}
+/* day, month, year from the pickers -> {value} ('MM-DD', 'YYYY-MM-DD' or null) or {error} */
+function bdayFrom(d, m, y, de){
+  if((d&&!m)||(!d&&m)) return {error:de?'Bitte Tag und Monat wählen – oder keins von beiden.':'Please choose a day and a month – or neither.'};
+  if(y&&!d) return {error:de?'Bitte auch Tag und Monat wählen – oder kein Jahr.':'Please choose a day and a month for the year too – or no year.'};
+  if(d && new Date(y?+y:2024,+m-1,+d).getMonth()!==+m-1) return {error:de?'Diesen Tag gibt es im gewählten Monat nicht.':'That day does not exist in '+MONTHS[+m-1]+(y?' '+y:'')+'. Please choose another day.'};
+  return {value:d?(y?y+'-':'')+m+'-'+d:null};
+}
+/* stores name, last name and birthday and writes their events (only what changed) */
+function saveNameBday(name, last, bd){
+  if(name!==playerName()){ store.set('name',name); eventHook('profile_set',{field:'name', value:name}); }
+  if(last!==String(store.get('lastName','')||'').trim()){
+    if(last){ store.set('lastName',last); eventHook('profile_set',{field:'lastName', value:last}); }
+    else { store.del('lastName'); eventHook('profile_set',{field:'lastName', value:null}); }
+  }
+  if(bd!==store.get('birthday',null)){
+    if(bd){ store.set('birthday',bd); eventHook('profile_set',{field:'birthday', value:bd}); }
+    else { store.del('birthday'); eventHook('profile_set',{field:'birthday', value:null}); }
+  }
+}
 function openProfile(){
-  const b=(store.get('birthday','')||'-').split('-'), e=store.get('emoji','');
-  $('#pfName').value=playerName();
-  $('#pfDay').innerHTML='<option value="">—</option>'+Array.from({length:31},(_,i)=>`<option value="${pad(i+1)}"${pad(i+1)===b[1]?' selected':''}>${i+1}</option>`).join('');
-  $('#pfMonth').innerHTML='<option value="">—</option>'+MONTHS.map((m,i)=>`<option value="${pad(i+1)}"${pad(i+1)===b[0]?' selected':''}>${m}</option>`).join('');
+  const o=bdayOptions(store.get('birthday',''), false), e=store.get('emoji','');
+  $('#pfName').value=playerName(); $('#pfLast').value=String(store.get('lastName','')||'');
+  $('#pfDay').innerHTML=o.day; $('#pfMonth').innerHTML=o.month; $('#pfYear').innerHTML=o.year;
   const box=$('#pfEmojis'); box.innerHTML='';
   PROFILE_EMOJIS.forEach(x=>{ const btn=document.createElement('button'); btn.type='button'; btn.textContent=x; btn.setAttribute('aria-pressed',String(x===e)); btn.setAttribute('aria-label','Emoji '+x);
     btn.addEventListener('click',()=>box.querySelectorAll('button').forEach(o=>o.setAttribute('aria-pressed',String(o===btn && o.getAttribute('aria-pressed')!=='true')))); box.appendChild(btn); });
@@ -3509,16 +3545,9 @@ function openProfile(){
 }
 function closeProfile(){ const dlg=$('#profileDlg'); if(dlg.close) dlg.close(); else dlg.removeAttribute('open'); }
 function saveProfile(){
-  const d=$('#pfDay').value, m=$('#pfMonth').value;
-  if((d&&!m)||(!d&&m)){ $('#pfMessage').textContent='Please choose a day and a month – or neither.'; return; }
-  if(d && new Date(2024,+m-1,+d).getMonth()!==+m-1){ $('#pfMessage').textContent='That day does not exist in '+MONTHS[+m-1]+'. Please choose another day.'; return; }
-  const name=$('#pfName').value.trim().slice(0,20);
-  if(name!==playerName()){ store.set('name',name); eventHook('profile_set',{field:'name', value:name}); }
-  const bd=d?m+'-'+d:null;
-  if(bd!==store.get('birthday',null)){
-    if(bd){ store.set('birthday',bd); eventHook('profile_set',{field:'birthday', value:bd}); }
-    else { store.del('birthday'); eventHook('profile_set',{field:'birthday', value:null}); }
-  }
+  const r=bdayFrom($('#pfDay').value, $('#pfMonth').value, $('#pfYear').value, false);
+  if(r.error){ $('#pfMessage').textContent=r.error; return; }
+  saveNameBday($('#pfName').value.trim().slice(0,20), $('#pfLast').value.trim().slice(0,30), r.value);
   const pick=$('#pfEmojis button[aria-pressed="true"]'), emoji=pick?pick.textContent:'';
   if(emoji!==store.get('emoji','')){
     if(emoji){ store.set('emoji',emoji); eventHook('profile_set',{field:'emoji', value:emoji}); }
@@ -3583,19 +3612,31 @@ function bindVersionAdmin(){
     }catch(e){ msg.textContent=de?'Prüfung nicht möglich (keine Verbindung oder auf diesem Gerät nicht angemeldet).':'Check not possible (no connection, or not signed in on this device).'; }
   });
 }
-/* Adults (grown-ups area): see and delete the child's profile details; learning data stays. */
+/* Adults (grown-ups area): see the child's profile details, add or change name, last name and birthday (Peter, 04.11.:
+   the child or the parents enter the date with the year), delete the details; learning data stays. */
+const fullName = () => [playerName(), String(store.get('lastName','')||'').trim()].filter(Boolean).join(' ');
 function profileAdminHTML(){
-  const n=playerName(), b=store.get('birthday',''), e=store.get('emoji',''), de=PL()==='de';
-  const bd=!b?'–':de?b.split('-').reverse().join('.')+'.':MONTHS[+b.split('-')[0]-1]+' '+(+b.split('-')[1]);
+  const n=fullName(), b=store.get('birthday',''), e=store.get('emoji',''), de=PL()==='de', o=bdayOptions(b, de), bd=fmtBirthday(b, de)||'–';
+  const form=`<details class="pprofile-edit"><summary>${de?'Name und Geburtstag ändern':'Change name and birthday'}</summary><form id="pProfileForm" class="login-form">
+    <div class="pf-names"><div class="field"><label for="ppFirst">${de?'Vorname':'First name'}</label><input id="ppFirst" maxlength="20" autocomplete="off"></div><div class="field"><label for="ppLast">${de?'Nachname':'Last name'}</label><input id="ppLast" maxlength="30" autocomplete="off"></div></div>
+    <div class="pf-bday"><select id="ppDay" aria-label="${de?'Tag':'Day'}">${o.day}</select><select id="ppMonth" aria-label="${de?'Monat':'Month'}">${o.month}</select><select id="ppYear" aria-label="${de?'Jahr':'Year'}">${o.year}</select></div>
+    <p><button class="btn small primary" type="submit">${de?'Speichern':'Save'}</button></p><p id="pProfileMsg" class="small" role="status"></p></form></details>`;
   return de
-    ? `<h2>Profilangaben</h2><p>Name: <b>${esc(n||'–')}</b> · Geburtstag: <b>${esc(bd)}</b> · Emoji: <b>${esc(e||'–')}</b></p><p class="small">Hat das Kind unter „My profile“ eingetragen; nur auf diesem Gerät. Löschen entfernt nur diese Angaben, keine Lerndaten.</p><p><button class="btn small" id="profileDelete" type="button">Angaben löschen</button></p>`
-    : `<h2>Profile details</h2><p>Name: <b>${esc(n||'–')}</b> · Birthday: <b>${esc(bd)}</b> · Emoji: <b>${esc(e||'–')}</b></p><p class="small">Entered by your child under “My profile”; stored only on this device. Deleting removes only these details, no learning data.</p><p><button class="btn small" id="profileDelete" type="button">Delete details</button></p>`;
+    ? `<h2>Profilangaben</h2><p>Name: <b>${esc(n||'–')}</b> · Geburtstag: <b>${esc(bd)}</b> · Emoji: <b>${esc(e||'–')}</b></p><p class="small">Trägt Ihr Kind unter „My profile“ ein – oder Sie hier. Nur auf diesem Gerät. Löschen entfernt nur diese Angaben, keine Lerndaten.</p>${form}<p><button class="btn small" id="profileDelete" type="button">Angaben löschen</button></p>`
+    : `<h2>Profile details</h2><p>Name: <b>${esc(n||'–')}</b> · Birthday: <b>${esc(bd)}</b> · Emoji: <b>${esc(e||'–')}</b></p><p class="small">Your child enters them under “My profile” – or you do it here. Stored only on this device. Deleting removes only these details, no learning data.</p>${form}<p><button class="btn small" id="profileDelete" type="button">Delete details</button></p>`;
 }
 function bindProfileAdmin(){
+  const f=$('#pProfileForm');
+  if(f){ $('#ppFirst').value=playerName(); $('#ppLast').value=String(store.get('lastName','')||''); }   // as values, never as HTML
+  if(f) f.addEventListener('submit',e=>{ e.preventDefault(); if(!parentAccess) return;
+    const de=PL()==='de', r=bdayFrom($('#ppDay').value, $('#ppMonth').value, $('#ppYear').value, de);
+    if(r.error){ $('#pProfileMsg').textContent=r.error; return; }
+    saveNameBday($('#ppFirst').value.trim().slice(0,20), $('#ppLast').value.trim().slice(0,30), r.value);
+    renderHome(); renderSheets(); });
   const b=$('#profileDelete'); if(!b) return;
-  b.addEventListener('click',()=>{ if(!parentAccess) return; if(!confirm(PL()==='de'?'Name, Geburtstag und Emoji auf diesem Gerät löschen? Lerndaten bleiben.':'Delete name, birthday and emoji on this device? Learning data stays.')) return;
-    ['name','birthday','emoji'].forEach(k=>store.del(k));
-    eventHook('profile_set',{field:'name', value:null}); eventHook('profile_set',{field:'birthday', value:null}); eventHook('profile_set',{field:'emoji', value:null});
+  b.addEventListener('click',()=>{ if(!parentAccess) return; if(!confirm(PL()==='de'?'Name, Nachname, Geburtstag und Emoji auf diesem Gerät löschen? Lerndaten bleiben.':'Delete name, last name, birthday and emoji on this device? Learning data stays.')) return;
+    ['name','lastName','birthday','emoji'].forEach(k=>store.del(k));
+    eventHook('profile_set',{field:'name', value:null}); eventHook('profile_set',{field:'lastName', value:null}); eventHook('profile_set',{field:'birthday', value:null}); eventHook('profile_set',{field:'emoji', value:null});
     renderHome(); renderSheets(); });
 }
 
@@ -4105,7 +4146,7 @@ function glanceBase(){
   return glanceVisit.base[id];
 }
 function glanceHTML(){
-  const de=PL()==='de', T=PT[PL()], teacher=isTeacher(), nm=(playerName()||viewedKid())||T.child;
+  const de=PL()==='de', T=PT[PL()], teacher=isTeacher(), nm=(viewerGrant() ? grantKidLabel(viewedKid()) : '')||(playerName()||viewedKid())||T.child;   // with a grant: name, last name (+ birthday, task 04.11.)
   openGaps();   // closes gaps the app has confirmed, before counting
   const base=glanceBase(), now=glanceNow(), rows=[];
   const std=s=>esc((de?STANDARD_TEXT:STANDARD_TEXT_EN)[s]||s);
@@ -4267,7 +4308,7 @@ function grantsHTML(){
   const evText={erteilt:de?'erteilt':'granted', 'geöffnet':de?'angesehen':'viewed', widerrufen:de?'beendet':'ended', abgelaufen:de?'abgelaufen':'expired'};
   const protokoll=log.length?`<details class="pgrantlog"><summary>${de?'Protokoll':'Log'} (${log.length})</summary><ul>${log.slice().reverse().slice(0,30).map(e=>`<li>${fmtDay(e.at.slice(0,10))} · ${esc(name(e.grantee))} · ${esc(evText[e.ev]||e.ev)}${e.scope?` · ${sc(e.scope)}`:''}</li>`).join('')}</ul></details>`:'';
   return `<h2>${de?'Zugriff & Freigaben':'Access & grants'}</h2>
-    <p class="phow">${de?'Eine Lehrkraft oder der Admin sieht den Lernstand und den Namen Ihres Kindes nur, wenn Sie es hier freigeben – befristet, nur lesend, jederzeit beendbar.':'A teacher or the admin sees your child’s progress and name only if you allow it here – for a limited time, read-only, and you can end it any time.'}</p>
+    <p class="phow">${de?'Eine Lehrkraft oder der Admin sieht den Lernstand, Namen und Geburtsdatum Ihres Kindes nur, wenn Sie es hier freigeben – befristet, nur lesend, jederzeit beendbar.':'A teacher or the admin sees your child’s progress, name and date of birth only if you allow it here – for a limited time, read-only, and you can end it any time.'}</p>
     ${list}${protokoll}
     <form id="pGrantForm" class="login-form">
       <div class="field"><label for="pGrantWho">${de?'Anmeldename der Person':'Login name of the person'}</label><input id="pGrantWho" autocomplete="off" autocapitalize="off" spellcheck="false" required></div>
@@ -4280,8 +4321,8 @@ function grantsHTML(){
 }
 function grantConsentText(who, days, scope){
   const de=PL()==='de', sc=scope.map(x=>x==='school'?(de?'Schuldaten':'school ratings'):(de?'Lernstand':'learning progress')).join(de?' und ':' and ');
-  return de?`Sie geben ${who} für ${days} Tage Einblick in: ${sc}. ${who} sieht dabei den Namen Ihres Kindes, aber nicht Geburtstag, Emoji und Einstellungen. ${who} kann nichts ändern. Sie können das jederzeit beenden. Was ${who} bis dahin gesehen hat, kann man nicht ungesehen machen.`
-           :`You give ${who} access for ${days} days to: ${sc}. ${who} will see your child’s name, but not the birthday, emoji or settings. ${who} cannot change anything. You can end this at any time. What ${who} has seen until then cannot be unseen.`;
+  return de?`Sie geben ${who} für ${days} Tage Einblick in: ${sc}. ${who} sieht dabei Vor- und Nachnamen und das Geburtsdatum Ihres Kindes, aber nicht Emoji und Einstellungen. ${who} kann nichts ändern. Sie können das jederzeit beenden. Was ${who} bis dahin gesehen hat, kann man nicht ungesehen machen.`
+           :`You give ${who} access for ${days} days to: ${sc}. ${who} will see your child’s first and last name and date of birth, but not the emoji or settings. ${who} cannot change anything. You can end this at any time. What ${who} has seen until then cannot be unseen.`;
 }
 function bindGrants(body){
   const f=$('#pGrantForm'); if(!f) return;
@@ -4322,7 +4363,7 @@ function accountsAdminHTML(){
    restored after the move to IDs (S11 P2). Which keys belong to a child is fixed in
    werkzeug/speicherstellen.json (checked by tests/stufe1-p1.test.mjs). Never in a backup: passwords,
    sessions, device keys. Recordings are included (the file stays with the family). */
-const BACKUP_KEYS={exact:['grants','grantlog','attempts','ev','due','total','badges','tried','treeStage','rankSeen','name','birthday','emoji','bdayParty','sheets','sheetNo','focusMode','focusManual','unlocked','gaps','storyCap','greetDay','mysteryDone','kidLang'], prefix:['best_','chk_','advent']};
+const BACKUP_KEYS={exact:['grants','grantlog','attempts','ev','due','total','badges','tried','treeStage','rankSeen','name','lastName','birthday','emoji','bdayParty','sheets','sheetNo','focusMode','focusManual','unlocked','gaps','storyCap','greetDay','mysteryDone','kidLang'], prefix:['best_','chk_','advent']};
 const isBackupKey = k => BACKUP_KEYS.exact.includes(k) || BACKUP_KEYS.prefix.some(p=>k.startsWith(p));
 function childStoreKeys(){
   const pre=storeKey('x').slice(0,-1), plain=pre==='bq2_', out=[];
@@ -4658,14 +4699,24 @@ function playTest(){
 }
 function backFromTest(){ if(!adultResume()) renderHome(); }
 /* Peter, 03.11.: a teacher or the admin with a grant must see whom they work with - the child's name (display name),
-   but no birthday, emoji or settings. Parents keep the login name in the header (they know their child). */
-function grantKidName(user){
-  if(!accountsOn() || !adultUser) return '';
-  const acc=APP_ACCOUNTS.users.find(u=>u.user===user && u.role==='student'); if(!acc || acc.test) return '';
-  const me=APP_ACCOUNTS.users.find(u=>u.user===adultUser.user)||{}; if(isParentOf(me, acc) || !myGrantFor(acc)) return '';
-  return String(kidRead(acc,'name','') || (user===viewedKid() ? playerName() : '') || '').trim();
+   but no emoji or settings. Parents keep the login name in the header (they know their child).
+   Peter, 04.11. (task "Name und Geburtsdatum"): first and last name; when two children in the list have the same name,
+   the birthday too (with the year, if entered) - so children with the same first name can be told apart. */
+function grantKidInfo(user){
+  if(!accountsOn() || !adultUser) return null;
+  const acc=APP_ACCOUNTS.users.find(u=>u.user===user && u.role==='student'); if(!acc || acc.test) return null;
+  const me=APP_ACCOUNTS.users.find(u=>u.user===adultUser.user)||{}; if(isParentOf(me, acc) || !myGrantFor(acc)) return null;
+  const own=user===viewedKid(), val=(k,d)=>kidRead(acc,k,null) || (own ? store.get(k,null) : null) || d;
+  return {name:[val('name',''), val('lastName','')].map(x=>String(x||'').trim()).filter(Boolean).join(' '), bday:val('birthday',null)};
 }
-const kidChipLabel = user => { const n=grantKidName(user); return n && n!==user ? `${n} (${user})` : user; };
+const grantKidName = user => (grantKidInfo(user)||{}).name || '';
+function grantKidLabel(user){
+  const i=grantKidInfo(user); if(!i || !i.name) return '';
+  const same=kidChoices().some(u=>u!==user && grantKidName(u).toLowerCase()===i.name.toLowerCase());
+  const bd=same ? fmtBirthday(i.bday, PL()==='de') : '';
+  return bd ? i.name+', '+bd : i.name;
+}
+const kidChipLabel = user => { const n=grantKidLabel(user); return n && n!==user ? `${n} (${user})` : user; };
 /* Header of the grown-ups area: only what the user needs (Peter, 31.10.: no processing notes here;
    how log-out works belongs to the guide). */
 function parentHeaderHTML(){
@@ -4752,7 +4803,7 @@ const HELP={
   school:{title:'Einstufungen der Schule',text:'<p>Die Einstufungen stammen aus den bewerteten Aufgaben auf der Lernplattform der Schule. Am Anfang richtet die App die Schwierigkeit der Aufgaben danach aus. Ab 6 Antworten an 2 Tagen zählt die eigene Übung.</p><p>Die Einschätzung im Elternbereich beruht nur auf der Übung in der App. Neue Bewertungen der Schule werden bei Gelegenheit übernommen.</p>'},
   calendar:{title:'Kalender-Erinnerung',text:'<p>Freiwillig: erzeugt eine Kalenderdatei mit einer wiederkehrenden, freundlichen Einladung zum Üben. Die App selbst schickt keine Nachrichten.</p>'},
   storycap:{title:'Pisolala-Geschichten',text:'<p>Hier legen Sie fest, wie spannend eine Geschichte höchstens sein darf. Das Kind wählt selbst bis zu dieser Grenze. Jede Stufe bleibt freundlich.</p>'},
-  profile:{title:'Profilangaben',text:'<p>Name, Geburtstag (ohne Jahr) und Emoji, die das Kind unter „My profile“ eingetragen hat. Sie liegen nur auf diesem Gerät. Löschen entfernt nur diese Angaben, keine Lerndaten.</p>'},
+  profile:{title:'Profilangaben',text:'<p>Vorname, Nachname, Geburtstag (Jahr freiwillig) und Emoji. Das Kind trägt sie unter „My profile“ ein, Sie können Name und Geburtstag hier ergänzen oder ändern. Name und Geburtsdatum sieht eine Lehrkraft nur mit Ihrer Freigabe – so kann sie Kinder mit gleichem Vornamen unterscheiden. Die Angaben liegen nur auf diesem Gerät. Löschen entfernt nur diese Angaben, keine Lerndaten.</p>'},
   version:{title:'App-Version',text:'<p>Zeigt den Stand der App auf diesem Gerät. Die App aktualisiert sich beim Start und beim Zurückkehren selbst. „Nach neuer Version suchen“ vergleicht mit der veröffentlichten Seite.</p>'},
     sheets:{title:'Übungsblätter',text:'<p>Ihr Kind trägt seine Antworten vom Papier selbst ein: Startseite → „My sheets“. Die App prüft wie gewohnt, mit Tipp und zweitem Versuch.</p><p>Hier sehen Sie je Aufgabe „Richtig“, „Mit Hilfe“ oder „Noch nicht“. „Mit Hilfe“ und „Noch nicht“ sind gut so: Die App bietet dann leichtere Schritte an und wiederholt die Aufgabe später. Ein Blatt, das nicht eingetragen wird, zählt einfach nicht.</p>'},
   testday:{noGuide:true,title:'Testkonto: +1 Tag',text:'<p><b>+1 Tag</b> stellt die Uhr der App nur für dieses Testkonto einen Tag vor. So sehen Sie sofort, was sonst erst morgen passiert:</p><ul><li>Fehler kommen als Wiederholung zurück.</li><li>Der Lernbaum wächst.</li><li>Die Einschätzung im Elternbereich sammelt Übungstage.</li></ul><p>Die Daten des Kindes bleiben unberührt. <b>Testdaten löschen</b> setzt das Testkonto ganz zurück (auch den Tag).</p>'},
@@ -4767,7 +4818,7 @@ const HELP_EN={
   school:{title:'School ratings',text:'<p>The ratings come from the evaluated assignments on the school’s learning platform. At first, the app sets the difficulty of the tasks by them. From 6 answers on 2 days, your child’s own practice counts.</p><p>The summary in the grown-ups area is based only on practice in the app. New school evaluations are added from time to time.</p>'},
   calendar:{title:'Calendar reminder',text:'<p>Optional: creates a calendar file with a recurring, friendly invitation to practice. The app itself never sends messages.</p>'},
   storycap:{title:'Pisolala stories',text:'<p>Set how exciting a story may be at most. Your child chooses up to this limit. Every level stays kind.</p>'},
-  profile:{title:'Profile details',text:'<p>Name, birthday (without year) and emoji that your child entered under “My profile”. Stored only on this device. Deleting removes only these details, no learning data.</p>'},
+  profile:{title:'Profile details',text:'<p>First name, last name, birthday (year optional) and emoji. Your child enters them under “My profile”; you can add or change the name and birthday here. A teacher sees the name and date of birth only with your grant – so she can tell children with the same first name apart. Stored only on this device. Deleting removes only these details, no learning data.</p>'},
   version:{title:'App version',text:'<p>Shows the version on this device. The app updates itself when it starts and when you come back to it. “Check for a new version” compares it with the published page.</p>'},
     sheets:{title:'Practice sheets',text:'<p>Your child types in the answers from the paper: start page → “My sheets”. The app checks them as usual, with a tip and a second try.</p><p>Here you see “Correct”, “With help” or “Not yet” for each task. “With help” and “Not yet” are fine: the app then offers easier steps and brings the task back later. A sheet that isn’t entered simply doesn’t count.</p>'},
   testday:{title:'Test account: +1 day',text:'<p><b>+1 day</b> moves the app’s clock one day ahead, for this test account only. You see right away what would otherwise happen tomorrow:</p><ul><li>Mistakes come back as reviews.</li><li>The learning tree grows.</li><li>The summary in the grown-ups area collects practice days.</li></ul><p>Your child’s data is not touched. <b>Delete test data</b> resets the test account completely (including the day).</p>'},
@@ -5228,7 +5279,7 @@ const GUIDE_KID=`<div class="quick"><b>Quick guide</b><ol>
 <li><b>After a round:</b> choose a joke, the Mystery Question or a Pisolala story.</li>
 <li><b>Lese-Studio:</b> read aloud, record yourself and listen. Your grown-up can help you share the best recording with your class.</li>
 <li><b>Practice sheet:</b> make a sheet with a grown-up and work on paper. Then tap your sheet under “My sheets” and type in your answers – just like Practise Today.</li>
-<li><b>My profile:</b> tap your name at the top to change your name, birthday or emoji.</li>
+<li><b>My profile:</b> tap your name at the top to change your name, last name, birthday or emoji.</li>
 <li><b>Your grown-ups</b> can see what you have worked on. There are no grades in Big Quest – only learning. Other grown-ups, like a teacher, can only look if your parents allow it.</li>
 <li><b>Log out</b> when someone else wants to use this iPad. Your brother or sister then taps their own name and types their own password.</li>
 </ol>`;
@@ -5241,7 +5292,7 @@ const GUIDE_ADULT_DE=`<h3 class="pguide-h">Hilfe für Eltern</h3><ol class="step
 <li><b>Kind anmelden:</b> „🎒 Student“ mit dem Startcode des Kindes. Zusammen ein Merkpasswort wählen und im Passwortspeicher sichern. Geschwister am selben Gerät wählen sich unter „Who's here?“ aus.</li>
 <li><b>Nachsehen:</b> Der Lernstand liegt nur auf dem Gerät, auf dem Ihr Kind übt. Mit mehreren Kindern wählen Sie oben aus. <b>Danach abmelden</b> – dann ist dort wieder Ihr Kind angemeldet.</li>
 <li><b>Sichern:</b> einmal im Monat, auf dem Gerät des Kindes: ${GO('sicherung','💾 Sicherung & Daten')}.</li>
-<li><b>Freigaben:</b> Eine Lehrkraft oder der Admin sieht Ihr Kind nur mit Ihrer Freigabe – dann mit Namen, aber ohne Geburtstag, Emoji und Einstellungen: ${GO('freigaben','🔐 Zugriff & Freigaben')}.</li>
+<li><b>Freigaben:</b> Eine Lehrkraft oder der Admin sieht Ihr Kind nur mit Ihrer Freigabe – dann mit Vor- und Nachnamen und Geburtsdatum, aber ohne Emoji und Einstellungen: ${GO('freigaben','🔐 Zugriff & Freigaben')}.</li>
 <li><b>Passwort vergessen:</b> Der Startcode gilt weiter; sonst gibt der Admin einen neuen. Nach 5 Fehlversuchen 30 Sekunden warten. Familienpasswort, Startcodes und Startlinks nicht weitergeben.</li>
 </ol>`;
 const GUIDE_ADULT_EN=`<h3 class="pguide-h">Help for parents</h3><ol class="steps">
@@ -5250,13 +5301,13 @@ const GUIDE_ADULT_EN=`<h3 class="pguide-h">Help for parents</h3><ol class="steps
 <li><b>Log in your child:</b> “🎒 Student” with your child’s start code. Choose a memorable password together and save it in the password manager. Siblings on the same device pick themselves under “Who's here?”.</li>
 <li><b>Take a look:</b> the progress is only on the device where your child practices. With several children, choose at the top. <b>Log out afterwards</b> – your child is then logged in there again.</li>
 <li><b>Back up:</b> once a month, on your child’s device: ${GO_EN('sicherung','💾 Backup & data')}.</li>
-<li><b>Grants:</b> a teacher or the admin sees your child only with your grant – then with the name, but without birthday, emoji and settings: ${GO_EN('freigaben','🔐 Access & grants')}.</li>
+<li><b>Grants:</b> a teacher or the admin sees your child only with your grant – then with first and last name and date of birth, but without emoji and settings: ${GO_EN('freigaben','🔐 Access & grants')}.</li>
 <li><b>Forgot your password?</b> The start code keeps working; otherwise the admin gives you a new one. After 5 wrong tries, wait 30 seconds. Keep the family password, start codes and start links private.</li>
 </ol>`;
 const GUIDE_TEACHER_DE=`<h3 class="pguide-h">Hilfe für Lehrkräfte</h3><ol class="steps">
 <li><b>Anmelden:</b> „👪 Parent / Teacher“, Benutzername und Startcode vom Admin – oder Startlink bzw. QR-Code. Dann ein eigenes Passwort wählen.</li>
 <li><b>Einblick nur mit Freigabe:</b> Nennen Sie den Eltern Ihren Anmeldenamen. Sie geben Einblick, befristet und im gewählten Umfang. Schuldaten sehen Sie nur, wenn die Eltern sie freigeben.</li>
-<li><b>Ansehen:</b> auf dem Gerät, auf dem das Kind übt. Sie können nur lesen, nichts ändern. Oben steht der Name des Kindes, damit Sie wissen, mit wem Sie arbeiten. Geburtstag, Emoji und Einstellungen sehen Sie nicht.</li>
+<li><b>Ansehen:</b> auf dem Gerät, auf dem das Kind übt. Sie können nur lesen, nichts ändern. Oben stehen Vor- und Nachname des Kindes, damit Sie wissen, mit wem Sie arbeiten; heißen zwei Kinder gleich, auch das Geburtsdatum. Emoji und Einstellungen sehen Sie nicht.</li>
 <li><b>Protokoll:</b> Die Eltern sehen, wann Sie die Übersicht angesehen haben.</li>
 <li><b>Wofür:</b> eine private Übungs-App der Familie, nicht für den dienstlichen Einsatz in der Schule. Bitte keine Bildschirmfotos weitergeben; Fragen direkt mit den Eltern klären.</li>
 <li><b>Passwort vergessen:</b> Der Startcode gilt weiter; sonst gibt der Admin einen neuen. Nach 5 Fehlversuchen 30 Sekunden warten.</li>
@@ -5264,7 +5315,7 @@ const GUIDE_TEACHER_DE=`<h3 class="pguide-h">Hilfe für Lehrkräfte</h3><ol clas
 const GUIDE_TEACHER_EN=`<h3 class="pguide-h">Help for teachers</h3><ol class="steps">
 <li><b>Log in:</b> “👪 Parent / Teacher”, username and start code from the admin – or the start link or QR code. Then choose your own password.</li>
 <li><b>Access only with a grant:</b> tell the parents your login name. They give you access, for a limited time and to the extent they choose. You see school ratings only if the parents allow it.</li>
-<li><b>Look:</b> on the device where the child practices. You can only look; nothing can be changed. The child’s name is shown at the top, so you know whom you are working with. You do not see the birthday, emoji or settings.</li>
+<li><b>Look:</b> on the device where the child practices. You can only look; nothing can be changed. The child’s first and last name are shown at the top, so you know whom you are working with; if two children have the same name, the date of birth too. You do not see the emoji or settings.</li>
 <li><b>Log:</b> the parents see when you looked at the overview.</li>
 <li><b>Purpose:</b> the family’s private practice app, not for official use at school. Please do not pass on screenshots; talk to the parents directly.</li>
 <li><b>Forgot your password?</b> The start code keeps working; otherwise the admin gives you a new one. After 5 wrong tries, wait 30 seconds.</li>
@@ -5272,13 +5323,13 @@ const GUIDE_TEACHER_EN=`<h3 class="pguide-h">Help for teachers</h3><ol class="st
 const GUIDE_ADMIN_DE=`<h3 class="pguide-h">Für den Admin</h3><ol class="steps">
 <li><b>Konten und Startcodes</b> pflegen Sie mit dem Konten-Werkzeug auf Ihrem Rechner. Neue Startcodes als Startlink oder QR-Code nur persönlich übergeben.</li>
 <li><b>Übersicht der Konten:</b> ${GO('konten','🛠 Konten')} – nur Verwaltungsangaben, keine Inhalte.</li>
-<li><b>Lernstand eines Kindes:</b> nur mit Freigabe der Eltern, wie bei einer Lehrkraft – mit Namen, ohne Geburtstag, Emoji und Einstellungen. Ihr eigenes Kind sehen Sie über Ihr Elternkonto.</li>
+<li><b>Lernstand eines Kindes:</b> nur mit Freigabe der Eltern, wie bei einer Lehrkraft – mit Vor- und Nachnamen und Geburtsdatum, ohne Emoji und Einstellungen. Ihr eigenes Kind sehen Sie über Ihr Elternkonto.</li>
 <li><b>Testkinder:</b> oben in der Kinderauswahl unter „🧪 Testkinder“; „▶ Als Testkind spielen“ öffnet die Kinderseite mit Testdaten.</li>
 </ol>`;
 const GUIDE_ADMIN_EN=`<h3 class="pguide-h">For the admin</h3><ol class="steps">
 <li><b>Accounts and start codes</b> are maintained with the account tool on your computer. Hand over new start codes as a start link or QR code in person only.</li>
 <li><b>Account overview:</b> ${GO_EN('konten','🛠 Accounts')} – administrative details only, no contents.</li>
-<li><b>A child’s progress:</b> only with a grant from the parents, like a teacher – with the name, without birthday, emoji and settings. You see your own child through your parent account.</li>
+<li><b>A child’s progress:</b> only with a grant from the parents, like a teacher – with first and last name and date of birth, without emoji and settings. You see your own child through your parent account.</li>
 <li><b>Test children:</b> at the top in the child list under “🧪 Test children”; “▶ Play as test child” opens the child’s pages with test data.</li>
 </ol>`;
 /* the grown-ups guide that fits the person who is logged in */

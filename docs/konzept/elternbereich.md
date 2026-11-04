@@ -195,7 +195,7 @@ Eigene Ansicht mit „← Zurück“, ersetzt „📱 Bedienung & Technik“. Ei
 
 | Element | Eltern | Lehrkraft / Freigabe | Admin-Konto |
 |---|---|---|---|
-| Kinderauswahl | eigene Kinder mit Daten auf dem Gerät | Kinder mit Freigabe, als „Name (Anmeldename)“ (Peter, 03.11.: sie muss sehen, mit wem sie arbeitet; Geburtstag, Emoji, Einstellungen nie) | Testkinder + Kinder mit Freigabe (mit Namen wie Lehrkraft) |
+| Kinderauswahl | eigene Kinder mit Daten auf dem Gerät | Kinder mit Freigabe, als „Vorname Nachname (Anmeldename)“, bei gleichem Namen „Vorname Nachname, TT.MM.JJJJ (Anmeldename)“ (Peter, 03.11.: sie muss sehen, mit wem sie arbeitet; 04.11.: Nachname und Geburtsdatum mit Jahr dürfen dazu; Emoji, Einstellungen nie) | Testkinder + Kinder mit Freigabe (mit Namen wie Lehrkraft) |
 | Übersicht, Fachansicht | ✔ mit Schaltern | nur lesend | Testkind wie Eltern, sonst lesend |
 | Schule (Fachansicht, Kachel-Punkt, Verlauf) | ✔ | nur Umfang „Schuldaten“ | Testkind ✔, sonst nur mit Freigabe |
 | Lücken-Knöpfe (6.6) | ✔ | – | Testkind ✔ |

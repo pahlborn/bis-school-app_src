@@ -75,7 +75,7 @@ function stellenImCode() {
   for (const m of quelltext.matchAll(/store\.(?:get|set|del)\(\s*'([^']+)'/g)) s.add('ls:' + m[1]);
   for (const m of quelltext.matchAll(/const key='(\w+)'\+/g)) s.add('ls:' + m[1]);
   for (const m of quelltext.matchAll(/\?\s*'(kidLang)'\s*:\s*'(parentLang)'/g)) { s.add('ls:' + m[1]); s.add('ls:' + m[2]); }
-  for (const m of quelltext.matchAll(/\['(name)','(birthday)','(emoji)'\]\.forEach\(k=>store\.del\(k\)\)/g)) { s.add('ls:' + m[1]); s.add('ls:' + m[2]); s.add('ls:' + m[3]); }
+  for (const m of quelltext.matchAll(/\[((?:'\w+',?)+)\]\.forEach\(k=>store\.del\(k\)\)/g)) for (const k of m[1].match(/\w+/g)) s.add('ls:' + k);
   for (const m of quelltext.matchAll(/localStorage\.(?:getItem|setItem|removeItem)\(\s*'([^']+)'/g)) s.add('lsd:' + m[1]);
   for (const m of quelltext.matchAll(/sessionStorage\.(?:getItem|setItem|removeItem)\(\s*'([^']+)'/g)) s.add('ss:' + m[1]);
   for (const m of quelltext.matchAll(/indexedDB\.(?:open|deleteDatabase)\(\s*'([^']+)'/g)) s.add('idb:' + m[1]);

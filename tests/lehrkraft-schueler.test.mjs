@@ -81,12 +81,13 @@ function runde(S, item) {
   for (let f = 0; f < 8; f++) { const s = S.zustand(); S.frageBeantworten(s.round[s.idx]); S.klick('#nextBtn'); }
   S.klick('#homeBtn');
 }
-/* das Kind traegt im Profil seinen Namen ein (und den Geburtstag, der nur in kind:privat liegt) */
-function profil(S, name, [monat, tagNr] = []) {
+/* das Kind traegt im Profil seinen Namen ein (und Geburtstag, ggf. mit Jahr, und Nachnamen - seit 04.11. in kind:lern) */
+function profil(S, name, [monat, tagNr, jahr] = [], nachname) {
   S.lauf(() => {
     S.holen('openProfile')();
     S.$('#pfName').value = name;
-    if (monat) { S.$('#pfMonth').value = monat; S.$('#pfDay').value = tagNr; }
+    if (nachname !== undefined) S.$('#pfLast').value = nachname;
+    if (monat) { S.$('#pfMonth').value = monat; S.$('#pfDay').value = tagNr; S.$('#pfYear').value = jahr || ''; }
     S.holen('saveProfile')();
   });
 }
@@ -167,7 +168,8 @@ test('Lehrkraft sieht ihre Schueler: zwei Familien, Kinder mit gleichem Namen - 
 
   // beide Kinder, mit Name und Lernstand - jedes mit seinen eigenen Daten
   assert.deepEqual(auswahl(C), ['kathie', 'kathie.b'], 'beide Kinder');
-  assert.deepEqual(kopf(C), ['👧 Kathie (kathie)', '👧 Kathie (kathie.b)'], 'Name und Anmeldename im Kopf');
+  // gleicher Name: dazu der Geburtstag, soweit eingetragen (Aufgabe "Name und Geburtsdatum", 04.11.)
+  assert.deepEqual(kopf(C), ['👧 Kathie, 14.05. (kathie)', '👧 Kathie (kathie.b)'], 'Name und Anmeldename im Kopf');
   assert.equal(liest(C, 'kathie', 'name', ''), 'Kathie'); assert.equal(liest(C, 'kathie.b', 'name', ''), 'Kathie');
   assert.equal(liest(C, 'kathie', 'attempts', []).length, n1, 'Lernstand Kathie 1');
   assert.equal(liest(C, 'kathie.b', 'attempts', []).length, n2, 'Lernstand Kathie 2');
@@ -193,7 +195,8 @@ test('Lehrkraft sieht ihre Schueler: zwei Familien, Kinder mit gleichem Namen - 
     const fremd = C.log(kid).filter((e) => { const b = bereichVonEreignis(e); return b === 'kind:privat' || (b === 'eltern:allg' && !(/^grant_(set|revoked)$/.test(e.type) && e.payload.grantee === L.id)); });
     assert.deepEqual(fremd.map((e) => e.type), [], kid + ': nichts aus kind:privat / eltern:allg');
   }
-  assert.equal(liest(C, 'kathie', 'birthday', null), null, 'kein Geburtstag');
+  assert.equal(liest(C, 'kathie', 'birthday', null), '05-14', 'Geburtstag (seit 04.11. in kind:lern)');
+  assert.equal(liest(C, 'kathie', 'emoji', null), null, 'kein Emoji');
   for (const [art, kid] of [['eltern:allg', K1], ['kind:privat', K1], ['eltern:allg', K2], ['kind:privat', K2], ['schule', K2]]) {
     const s = await schluesselLesen(C.zugang, bereichName(art, kid), { ich: L.id, meineSchluessel: L.keys, mitglieder: {} });
     assert.equal(s.lesbar.size, 0, 'kein Schluessel: ' + art + ' ' + (kid === K1 ? 'Kathie 1' : 'Kathie 2'));
@@ -216,13 +219,70 @@ test('Lehrkraft sieht ihre Schueler: zwei Familien, Kinder mit gleichem Namen - 
   runde(A1.S, 'numbers'); runde(A2.S, 'numbers');
   await sync(A1, A2, C);
   assert.deepEqual(auswahl(C), ['kathie.b'], 'nach dem Ende: nur noch Kathie 2');
-  assert.deepEqual(kopf(C), ['👧 Kathie (kathie.b)']);
+  assert.deepEqual(kopf(C), ['👧 Kathie (kathie.b)'], 'allein in der Liste: ohne Geburtstag');
   assert.ok(C.log('kathie').some((e) => e.type === 'grant_revoked' && e.payload.grant === g1.id), 'das Ende kommt bei der Lehrkraft an');
   assert.ok(liest(C, 'kathie', 'grants', []).find((g) => g.id === g1.id).revokedAt, 'ihre App kennt das Ende');
   assert.equal(liest(C, 'kathie', 'attempts', []).length, n1 + 8, 'Kathie 1: nichts Neues');
   assert.equal(liest(C, 'kathie.b', 'attempts', []).length, n2 + 16, 'Kathie 2: weiter alles');
   assert.equal(A1.wert('attempts').length, n1 + 16);
   assert.equal(C.r.bereiche[bereichName('kind:lern', K1)].neu, 0);
+  for (const G of [A1, A2, B1, B2, C]) assert.equal(JSON.stringify(G.S.holen('eventErrors')), '[]', G.name);
+});
+
+/* die Eltern tragen Nachname und Geburtsdatum im Elternbereich ein - mit dem Formular und dem Knopf der App */
+function elternProfil(B, { nachname, tag: tagNr, monat, jahr }) {
+  B.S.lauf(() => {
+    B.S.holen('state').pview = 'settings'; B.S.holen('renderSheets')();
+    if (nachname !== undefined) B.S.$('#ppLast').value = nachname;
+    if (monat) { B.S.$('#ppDay').value = tagNr; B.S.$('#ppMonth').value = monat; B.S.$('#ppYear').value = jahr || ''; }
+    B.S.$('#pProfileForm').dispatchEvent({ type: 'submit', preventDefault() {} });
+    B.S.holen('state').pview = null;
+  });
+}
+const blick = (C) => C.S.lauf(() => { C.S.holen('state').pview = null; C.S.holen('renderSheets')(); const h = C.S.$('#aboutBody').querySelector('#pGlance h2'); return h ? h.textContent.trim() : null; });
+
+test('Aufgabe "Name und Geburtsdatum": zwei Kinder "Kathie" - mit Nachnamen eindeutig, bei gleichem Namen mit Geburtsdatum (Jahr vom Kind oder von den Eltern)', async (t) => {
+  const welt = lokalerSpeicher();
+  const ins = await installation({ kathie: ['student', 1], peter: ['parent', 1], 'kathie.b': ['student', 2], 'peter.b': ['parent', 2], lehrer: ['teacher', 0] });
+  const B1 = await geraet(t, welt, ins, { name: 'Familie 1: Peters Laptop', wer: 'peter', kinder: [ins.kind('kathie')] });
+  const A1 = await geraet(t, welt, ins, { name: 'Familie 1: Kathies iPad', wer: 'kathie', kinder: [ins.kind('kathie')] });
+  const B2 = await geraet(t, welt, ins, { name: 'Familie 2: Peters Laptop', wer: 'peter.b', kinder: [ins.kind('kathie.b')] });
+  const A2 = await geraet(t, welt, ins, { name: 'Familie 2: Kathies iPad', wer: 'kathie.b', kinder: [ins.kind('kathie.b')] });
+  const sync = async (...gs) => { for (const G of gs) { await G.abgleichen(); assert.deepEqual(G.r.verworfen, [], G.name); } };
+  // Kathie 1 traegt selbst alles ein (mit Jahr); Kathie 2 nur Vor- und Nachnamen und Geburtstag ohne Jahr
+  profil(A1.S, 'Kathie', ['05', '14', '2017'], 'Becker'); profil(A2.S, 'Kathie', ['09', '03'], 'Schmidt');
+  runde(A1.S, 'round'); runde(A2.S, 'units');
+  await sync(A1, A2, B1, B2);
+  const g1 = freigeben(B1, 'lehrer'), g2 = freigeben(B2, 'lehrer');
+  await sync(B1, B2);
+  const C = await geraet(t, welt, ins, { name: 'Geraet der Lehrkraft', wer: 'lehrer', kinder: [ins.kind('kathie', [g1.id]), ins.kind('kathie.b', [g2.id])] });
+  await sync(C);
+
+  // verschiedene Nachnamen: Vor- und Nachname reichen, kein Geburtsdatum
+  assert.deepEqual(kopf(C), ['👧 Kathie Becker (kathie)', '👧 Kathie Schmidt (kathie.b)'], 'mit Nachnamen eindeutig');
+  waehlen(C, 'kathie');
+  assert.equal(blick(C), 'Auf einen Blick · Kathie Becker');
+  assert.equal(liest(C, 'kathie', 'birthday', null), '2017-05-14', 'die Lehrkraft hat das Geburtsjahr');
+
+  // Familie 2: die Eltern aendern den Nachnamen auf den gleichen und tragen das Jahr nach -> gleicher Name, Geburtsdatum dazu
+  elternProfil(B2, { nachname: 'Becker', tag: '03', monat: '09', jahr: '2016' });
+  assert.equal(B2.wert('lastName'), 'Becker'); assert.equal(B2.wert('birthday'), '2016-09-03');
+  assert.ok(B2.log('kathie.b').some((e) => e.type === 'profile_set' && e.payload.field === 'birthday' && e.payload.value === '2016-09-03' && e.author === ins.P['peter.b'].id), 'Ereignis vom Elternteil');
+  await sync(B2, A2, C);
+  assert.equal(A2.wert('birthday'), '2016-09-03', 'beim Kind angekommen');
+  assert.deepEqual(kopf(C), ['👧 Kathie Becker, 14.05.2017 (kathie)', '👧 Kathie Becker, 03.09.2016 (kathie.b)'], 'gleicher Name: mit Geburtsdatum');
+  waehlen(C, 'kathie.b');
+  assert.equal(blick(C), 'Auf einen Blick · Kathie Becker, 03.09.2016');
+  assert.equal(C.S.lauf(() => C.S.holen('fmtBirthday')('2016-09-03', false)), 'September 3, 2016', 'englisch: amerikanische Schreibweise');
+  // die Eltern sehen weiter nur ihr Kind mit Anmeldenamen im Kopf; das Kind sieht sich selbst wie bisher
+  assert.deepEqual(kopf(B1), ['👧 kathie']);
+  assert.equal(A1.S.lauf(() => A1.S.$('#profileName').textContent), 'Kathie');
+  // Emoji und Einstellungen bleiben bei der Lehrkraft verborgen
+  profil(A1.S, 'Kathie', ['05', '14', '2017'], 'Becker');
+  A1.S.lauf(() => { A1.S.holen('store').set('emoji', '🦊'); A1.S.holen('eventHook')('profile_set', { field: 'emoji', value: '🦊' }); });
+  await sync(A1, C);
+  assert.equal(liest(C, 'kathie', 'emoji', null), null, 'kein Emoji');
+  assert.equal(C.log('kathie').some((e) => e.type === 'profile_set' && e.payload.field === 'emoji'), false);
   for (const G of [A1, A2, B1, B2, C]) assert.equal(JSON.stringify(G.S.holen('eventErrors')), '[]', G.name);
 });
 

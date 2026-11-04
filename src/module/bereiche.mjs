@@ -3,7 +3,7 @@
 // No screen, no browser storage, no network: the storage access (module speicher) is passed in.
 //
 //   area names (one key ring each):
-//     kind:lern:<childId>    learning progress + the child's name          child, parents, grant with "learning"
+//     kind:lern:<childId>    learning progress + name, last name, birthday child, parents, grant with "learning"
 //     kind:privat:<childId>  rest of the profile, settings, day hints ...  child, parents
 //     schule:<childId>       school data and gaps (the child's app computes with them, never shows them)
 //                                                                          child, parents, grant with "school"
@@ -34,7 +34,9 @@ export const BEREICH_ARTEN = Object.freeze(['kind:lern', 'kind:privat', 'schule'
 const BER_TYP = {
   answer: 'kind:lern', round_done: 'kind:lern', badge: 'kind:lern', review: 'kind:lern', practice_day: 'kind:lern', rank_seen: 'kind:lern',
   sheet_created: 'kind:lern', sheet_result: 'kind:lern', sheet_discarded: 'kind:lern',
-  profile_set: { name: 'kind:lern', birthday: 'kind:privat', emoji: 'kind:privat', kidLang: 'kind:privat', muted: 'kind:privat' },
+  // task "Name und Geburtsdatum" (Peter, 04.11.): last name and birthday (with the year) go with the name - a teacher with
+  // a grant tells children with the same first name apart by them
+  profile_set: { name: 'kind:lern', lastName: 'kind:lern', birthday: 'kind:lern', emoji: 'kind:privat', kidLang: 'kind:privat', muted: 'kind:privat' },
   setting_set: 'kind:privat', list_set: 'kind:privat', checklist_set: 'kind:privat', day_flag: 'kind:privat', advent_open: 'kind:privat',
   joke_seen: 'kind:privat', story_read: 'kind:privat',
   school_import: 'schule', gap_state: 'schule', gap_active: 'schule',
