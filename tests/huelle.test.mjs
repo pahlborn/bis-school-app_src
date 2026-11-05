@@ -4,8 +4,8 @@
 // Mit vorinstalliertem Browser (wenn der von Playwright erwartete fehlt):
 //   CHROMIUM_PATH=/pfad/zu/chrome node --test tests/huelle.test.mjs
 //
-// Externe Anfragen (Google Fonts der App) werden abgefangen: der Test soll
-// nicht vom Netz abhaengen.
+// Externe Anfragen werden abgefangen: der Test soll nicht vom Netz abhaengen
+// (die Schriften sind seit 05.11. eingebettet, die App laedt keine von aussen).
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';

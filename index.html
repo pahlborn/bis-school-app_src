@@ -13,8 +13,8 @@
 <link rel="icon" type="image/png" href="icon-192.png">
 <style>[hidden]{display:none!important}html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}</style>
 <title>Grade 3 – Big Quest</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap">
+<!-- Fredoka and Nunito are embedded when building (werkzeug/schriften.mjs, SIL Open Font License) - the app loads no fonts from outside -->
+<style>/*BQ_SCHRIFTEN*/</style>
 <style>
 /* Layout: one phone-first column (max 560px, wider start page on big screens), big tap targets; the start page is Practise Today plus one tile per school subject; each quest world tints the play screen through --world */
 :root{
@@ -6019,10 +6019,13 @@ const ABOUT_SOURCES=[
   ['Fyfe & Rittle-Johnson (2016) – Feedback; bibliografisch, nicht inhaltlich geprüft','https://doi.org/10.1016/j.jecp.2016.03.009',1],
   ['Kapur (2012) – Productive failure; bibliografisch, nicht inhaltlich geprüft','https://doi.org/10.1080/00461520.2012.683559',1],
   ['Roediger & Butler (2011) – Retrieval practice; bibliografisch, nicht inhaltlich geprüft','https://doi.org/10.1016/j.tics.2010.09.003',1],
-  ['Kluger & DeNisi (1996) – Feedback interventions; bibliografisch, nicht inhaltlich geprüft','https://doi.org/10.1037/0033-2909.119.2.254',1]
+  ['Kluger & DeNisi (1996) – Feedback interventions; bibliografisch, nicht inhaltlich geprüft','https://doi.org/10.1037/0033-2909.119.2.254',1],
+  /* fonts embedded in the app instead of loading them from Google (05.11.); licence text in werkzeug/schriften/OFL.txt */
+  [{de:'Schriftarten Fredoka (© 2016 The Fredoka Project Authors) und Nunito (© 2014 The Nunito Project Authors) – in die App eingebettet, SIL Open Font License 1.1',
+    en:'Fonts Fredoka (© 2016 The Fredoka Project Authors) and Nunito (© 2014 The Nunito Project Authors) – embedded in the app, SIL Open Font License 1.1'},'https://openfontlicense.org/',5]
 ];
 /* Sources in both languages (Peter, 31.10.: German view without English left-overs). */
-const sourceLabel = (t,de) => de ? t : t.replace('; bibliografisch, nicht inhaltlich geprüft','; bibliographic details checked, content not reviewed').replace('; bibliografisch geprüft','; bibliographic details checked');
+const sourceLabel = (t,de) => typeof t==='object' ? t[de?'de':'en'] : de ? t : t.replace('; bibliografisch, nicht inhaltlich geprüft','; bibliographic details checked, content not reviewed').replace('; bibliografisch geprüft','; bibliographic details checked');
 /* F4 (concept 7.4): the sources in six folded groups, none dropped; the school website joins group 2 only in the
    grown-ups area (aboutSectionsHTML fills <!--school-->; the child-reachable page never links the school) */
 const SOURCE_GROUPS={de:['Forschung zu Lernen, Feedback und Hilfe','IB und Schule','Lehrpläne zum Vergleich','Lernprogramme und Materialien','Technik und Datenschutz','Nicht öffentliche Quellen'],
@@ -6218,8 +6221,9 @@ const ABOUT_DE=()=>`
 <h3>Herkunft der Aufgaben</h3>
 <p>Themen und Erfolgskriterien folgen den Lerneinheiten der 3. Klasse im Schuljahr 2026/27, wie sie auf der Lernplattform der Schule veröffentlicht sind – darunter <i>Friction Frenzy</i> (How the World Works), <i>Persuade for the Park</i> (Who We Are), <i>Mastering Basic Numbers</i> mit <i>Travel for Work</i> und dem <i>Sticker Milestone</i>, das Runden auf Zehner und Hunderter, die <i>Anleitung</i> zur Traummaschine, die Leseaufnahme, die Bibliotheksstunden sowie die Primary Production <i>Pantastic</i>. Die Aufgaben selbst sind neu formuliert oder werden mit wechselnden Zahlen erzeugt; Arbeitsblätter der Schule werden nicht wiedergegeben. Die Geschichten um <i>Pisolala</i> sind eine Erfindung der Familie.</p>
 <h3>Datenschutz</h3>
+<p><b>Vorläufige Fassung, noch nicht DSGVO-konform.</b></p>
 <p><b>Konten und Rechte:</b> Jede Person hat ein eigenes Konto mit einer festen, zufälligen Kennung; Passwörter und Startcodes speichert die App nur als Prüfwert, nie im Klartext. Eltern sehen nur ihre eigenen Kinder, eine Lehrkraft oder der Admin ein Kind nur mit Freigabe der Eltern (Einzelheiten im Elternbereich unter ⚙ → „🔐 Zugriff & Freigaben“).</p>
-<p>Die Anwendung läuft vollständig im Browser und ist nur verschlüsselt veröffentlicht. Name, Sterne und Übungsstand werden ausschließlich auf dem jeweiligen Gerät gespeichert, für jedes Kind getrennt, und nicht weitergegeben; es gibt keinen Server, keine Werbung und keine Auswertungsdienste. Eine Sicherungsdatei erzeugen nur die Eltern; sie bleibt bei der Familie. Eine optionale Kalenderdatei wird lokal erzeugt; erst der von den Eltern gewählte Kalender bestimmt Speicherung und Benachrichtigungen. Nach dem Öffnen lädt die Anwendung Schriftarten von Google Fonts; dabei wird die IP-Adresse des Geräts an Google übermittelt.</p>
+<p>Die Anwendung läuft vollständig im Browser und ist nur verschlüsselt veröffentlicht. Name, Sterne und Übungsstand werden ausschließlich auf dem jeweiligen Gerät gespeichert, für jedes Kind getrennt, und nicht weitergegeben; es gibt keinen Server, keine Werbung und keine Auswertungsdienste. Eine Sicherungsdatei erzeugen nur die Eltern; sie bleibt bei der Familie. Eine optionale Kalenderdatei wird lokal erzeugt; erst der von den Eltern gewählte Kalender bestimmt Speicherung und Benachrichtigungen.</p>
 <p><b>Leseaufnahmen:</b> Das Mikrofon wird nur nach einem Tipp auf „Aufnahme starten“ geöffnet und nach „Stopp“ wieder freigegeben. Die letzten drei Aufnahmen bleiben ausschließlich im Speicher dieses Geräts; die Anwendung verschickt sie nicht. Weitergegeben werden sie nur, wenn jemand sie selbst über „Teilen / Sichern“ hochlädt oder speichert. Jede Aufnahme lässt sich löschen.</p>
 <h3>Quellen</h3>${sourcesHTML('de')}`;
 const ABOUT_EN=()=>`
@@ -6310,8 +6314,9 @@ const ABOUT_EN=()=>`
 <h3>Origin of the tasks</h3>
 <p>Topics and success criteria follow the Grade 3 units of the 2026/27 school year as published on the school's learning platform. The tasks themselves are rewritten or generated with varying numbers; school worksheets are not reproduced. The stories about <i>Pisolala</i> are a family invention.</p>
 <h3>Privacy</h3>
+<p><b>Preliminary version, not yet GDPR-compliant.</b></p>
 <p><b>Accounts and rights:</b> every person has their own account with a fixed, random ID; passwords and start codes are stored only as check values, never in plain text. Parents see only their own children, a teacher or the admin sees a child only with a grant from the parents (details in the grown-ups area under ⚙ → “🔐 Access & grants”).</p>
-<p>The app runs entirely in the browser and is published only in encrypted form. Name, stars and practice status are stored solely on the device, separately for each child, and never shared; there is no server, no advertising and no analytics. Only parents can create a backup file; it stays with the family. An optional calendar file is created locally; only the calendar the parents choose decides on storage and notifications. After opening, the app loads fonts from Google Fonts, which transmits the device’s IP address to Google.</p>
+<p>The app runs entirely in the browser and is published only in encrypted form. Name, stars and practice status are stored solely on the device, separately for each child, and never shared; there is no server, no advertising and no analytics. Only parents can create a backup file; it stays with the family. An optional calendar file is created locally; only the calendar the parents choose decides on storage and notifications.</p>
 <p><b>Reading recordings:</b> the microphone opens only after tapping “Aufnahme starten” and is released after “Stopp”. The last three recordings stay only in this device's storage; the app never sends them. They leave the device only if someone shares or saves them via “Teilen / Sichern”. Every recording can be deleted.</p>
 <h3>Sources</h3>${sourcesHTML('en')}
 `;

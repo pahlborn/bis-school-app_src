@@ -114,7 +114,7 @@ test('published shell: "check for new version" says current, then reports a newe
   await ctx.addInitScript((k) => localStorage.setItem('bq_schluessel', k), schluessel);
   const page = await ctx.newPage(); const fehler = [], anfragen = [];
   page.on('pageerror', (e) => fehler.push(e.message));
-  page.on('request', (q) => { if (!q.url().startsWith(server.url) && !q.url().includes('fonts.g')) anfragen.push(q.url()); });
+  page.on('request', (q) => { if (!q.url().startsWith(server.url)) anfragen.push(q.url()); });
   await page.goto(server.url + '/app/'); await page.waitForSelector('#home h1');
   await elternOeffnen(page);
   await elternSeite(page, 'aboutapp');

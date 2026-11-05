@@ -66,7 +66,7 @@ const testbauRoh = () => appZusammensetzen(appLesen('utf8', { bauart: 'test' }),
 test('Bau: Suchlauf bestanden, fuenf Dateien, Huelle mit Tresor, im Tresor der umgewandelte Testbau, Manifest wie Kathies App', () => {
   assert.deepEqual(GEBAUT.dateien, ['index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png']);
   for (const d of GEBAUT.dateien) assert.ok(fs.existsSync(path.join(ZIEL, d)), d);
-  assert.equal(GEBAUT.pruefungen.length, 18);
+  assert.equal(GEBAUT.pruefungen.length, 19);
   assert.deepEqual(GEBAUT.pruefungen.filter((p) => !p.ok), []);
   assert.deepEqual(funde(APP), []);
   assert.match(HTML, /<script type="application\/json" id="tresor">/, 'Huelle mit Tresor');
@@ -120,6 +120,9 @@ test('Gegenproben Suchlauf: jede Abweichung wird gefunden', () => {
     assert.ok(f.some((x) => x.startsWith('kein bq2_')) && f.some((x) => x.startsWith('feste Speicherstellen')), rest + ': ' + JSON.stringify(f));
   }
   nurFund(APP + "<script>localStorage.getItem('fremd')</script>", 'feste Speicherstellen');
+  // Schriften: wieder von Google Fonts, eine Schrift fehlt
+  nurFund(APP.replace('</head>', '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito"></head>'), 'Schriften eingebettet');
+  nurFund(APP.replace(/url\(data:font\/woff2;base64,[A-Za-z0-9+/]+={0,2}\)/, 'url(x.woff2)'), 'Schriften eingebettet');
   nurFund(APP.replace(TOKEN_ZEILE_FAMILIE, "const GITHUB_TOKEN_SCHLUESSEL = 'bqf_token';"), 'Token-Eintrag');
   nurFund(APP.replace('const GLOBAL_KEYS=/^(abgleich|abgleichVerworfen|geraetEntfernen|gh|', 'const GLOBAL_KEYS=/^(abgleich|abgleichVerworfen|geraetEntfernen|'), 'Geraetedaten und Token');
   // Speicher: Marke, null, anderes Repo (Kathies App, Test-Repo), Nachbau-Adresse, Unterordner, zweimal

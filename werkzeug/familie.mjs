@@ -23,6 +23,11 @@
 import { TESTINSTANZ, SPEICHER_MARKE, geraeteNamen } from './testinstanz.mjs';
 import { TESTPERSONEN } from './testpersonen.mjs';
 import { ohneTresor, verboteneTreffer } from './kern.mjs';
+import { GOOGLE_FONTS, ohneSchriften, schriftenLesen, schriftenPruefen } from './schriften.mjs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const WURZEL = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 export const FAMILIE = Object.freeze({
   praefix: 'bqf_',                                   // statt bq2_ (Daten der App) und bq_ (Geraetedaten)
@@ -93,9 +98,14 @@ export function testpersonenNamen() {
  * veroeffentlicht wird) und das Manifest. -> { funde (leer = bestanden), pruefungen }
  * kontext: { woerter (verbotene-woerter.txt), schule (schuldaten.json oder null), konten (konten.json oder null), version }
  */
-export function familiePruefen(app, html, manifest, { woerter = [], schule = null, konten = null, version = null } = {}) {
+export function familiePruefen(volleApp, html, manifest, { woerter = [], schule = null, konten = null, version = null, schriften = schriftenLesen(WURZEL) } = {}) {
   const pruefungen = [];
   const pruef = (name, fund) => pruefungen.push({ name, ok: !fund, fund: fund || '' });
+  // Textsuchen ohne die eingebetteten Schriften (rund 90 KB Base64 - darin tauchen kurze Woerter zufaellig auf); die
+  // Schriften selbst prueft "Schriften eingebettet"
+  const app = ohneSchriften(volleApp);
+  const sf = [...schriftenPruefen(volleApp, schriften), ...(GOOGLE_FONTS.test(manifest) ? ['Google Fonts im Manifest'] : [])];
+  pruef(`Schriften eingebettet, nichts von Google Fonts (${schriften.map((s) => s.familie).join(', ')})`, sf.join(', '));
 
   // keine Schuldaten im Code - sie kommen ins Konto des Kindes
   pruef('Schuldaten leer (SCHOOL_DATA=null)', /const SCHOOL_DATA=null\|\|\{\};/.test(app) ? '' : 'SCHOOL_DATA ist nicht null');

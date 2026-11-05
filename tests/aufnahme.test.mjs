@@ -40,7 +40,7 @@ const gespeichert = (page) => page.evaluate(() => new Promise((res) => { const r
 
 test('record, stop, listen: one saved recording with audio, microphone released, nothing sent', async () => {
   const { ctx, page, fehler } = await studio({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
-  const anfragen = []; page.on('request', (q) => { if (!q.url().startsWith(server.url) && !q.url().includes('fonts.g')) anfragen.push(q.url()); });
+  const anfragen = []; page.on('request', (q) => { if (!q.url().startsWith(server.url)) anfragen.push(q.url()); });
   assert.equal(await page.evaluate(() => window.__mic), 0, 'no microphone before the tap');
   await aufnehmen(page);
   await page.waitForFunction(() => document.querySelectorAll('#recList .rec-item').length === 1);

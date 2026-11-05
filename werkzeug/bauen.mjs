@@ -6,7 +6,8 @@
 //  - das Passwort zu kurz ist,
 //  - ausserhalb des verschluesselten Blocks ein verbotenes Wort steht,
 //  - die Probe-Entschluesselung nicht Byte fuer Byte die App ergibt,
-//  - die Version nicht ermittelbar ist oder im oeffentlichen Teil auftauchen wuerde.
+//  - die Version nicht ermittelbar ist oder im oeffentlichen Teil auftauchen wuerde,
+//  - die Schrift-Marke fehlt oder die App noch etwas von Google Fonts laedt (werkzeug/schriften.mjs).
 //
 // Die Version (S7) wird vor dem Verschluesseln in die App eingesetzt, steht also nur im
 // Tresor. Ohne Angabe wird sie aus dem Git-Stand dieses Repos ermittelt.
@@ -25,10 +26,12 @@ import { schuleLesen, schuleEinsetzen } from './schule.mjs';
 import { moduleEinsetzen } from './module.mjs';
 import { TESTINSTANZ, ersatzLesen, testinstanzUmwandeln, testinstanzManifest, testinstanzPruefen } from './testinstanz.mjs';
 import { FAMILIE, familieUmwandeln, familiePruefen } from './familie.mjs';
+import { schriftenLesen, schriftenEinsetzen, schriftenPruefen } from './schriften.mjs';
 
-/** The app as it goes into the vault: version, accounts (S3/S11) and school data by ID (S11 P2). */
-export function appZusammensetzen(app, version, konten, schule) {
-  return schuleEinsetzen(kontenEinsetzen(versionEinsetzen(app, version), konten), konten ? schule : null, konten);
+/** The app as it goes into the vault: version, accounts (S3/S11), school data by ID (S11 P2) and the embedded fonts
+ *  (werkzeug/schriften.mjs - nothing is loaded from Google Fonts any more). */
+export function appZusammensetzen(app, version, konten, schule, schriften = schriftenLesen(WURZEL)) {
+  return schriftenEinsetzen(schuleEinsetzen(kontenEinsetzen(versionEinsetzen(app, version), konten), konten ? schule : null, konten), schriften);
 }
 
 export const WURZEL = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -83,7 +86,10 @@ export async function distBauen(zugang, { wurzel = WURZEL, ziel = path.join(wurz
   const v = version || versionErmitteln(WURZEL);
   // Accounts (S3): from werkzeug/konten.json if present; without the file the app runs without login.
   const k = konten !== undefined ? konten : await kontenLesen(wurzel);
-  const app = appZusammensetzen(q.app, v, k, schule !== undefined ? schule : await schuleLesen(wurzel));
+  const schriften = schriftenLesen(wurzel);
+  const app = appZusammensetzen(q.app, v, k, schule !== undefined ? schule : await schuleLesen(wurzel), schriften);
+  const schriftFunde = schriftenPruefen(app.toString('utf8'), schriften);
+  if (schriftFunde.length) throw new Error('Schriften, nichts geschrieben: ' + schriftFunde.join(', '));
 
   const schluessel = passwort !== null
     ? await schluesselAusPasswort(passwort, q.salt)
@@ -128,7 +134,7 @@ export async function testinstanzKontext(wurzel = WURZEL, ersatz = null) {
   if (woerter.length === 0) throw new Error(`${QUELLEN.woerter} ist leer - ohne Liste prueft der Suchlauf nichts.`);
   return {
     woerter, auchVerboten: (ersatz || await ersatzLesen(wurzel)).auchVerboten, schule: await schuleLesen(wurzel), konten: await kontenLesen(wurzel),
-    salt: JSON.parse(await lies(QUELLEN.salz)).salt || ''
+    salt: JSON.parse(await lies(QUELLEN.salz)).salt || '', schriften: schriftenLesen(wurzel)
   };
 }
 
@@ -143,7 +149,7 @@ export async function testinstanzBauen({ wurzel = WURZEL, ziel = path.join(wurze
   const testbau = moduleEinsetzen(await lies(QUELLEN.app), { bauart: 'test', ordner: path.join(wurzel, 'src', 'module') });
   const ersatz = await ersatzLesen(wurzel);
   // konten und schule bewusst null: die Marken bleiben leer (nicht aus werkzeug/konten.json, werkzeug/schuldaten.json)
-  const app = testinstanzUmwandeln(appZusammensetzen(testbau, v, null, null).toString('utf8'), ersatz);
+  const app = testinstanzUmwandeln(appZusammensetzen(testbau, v, null, null, schriftenLesen(wurzel)).toString('utf8'), ersatz);
   const manifest = testinstanzManifest(await lies(QUELLEN.manifest, 'utf8'));
   const { funde, pruefungen } = testinstanzPruefen(app, manifest, await testinstanzKontext(wurzel, ersatz));
   if (funde.length) throw new Error('Suchlauf Testinstanz, nichts geschrieben:\n  - ' + funde.join('\n  - '));
@@ -170,11 +176,12 @@ export async function familieBauen(zugang, { wurzel = WURZEL, ziel = path.join(w
   const v = version || versionErmitteln(wurzel);
   const testbau = moduleEinsetzen(await lies(QUELLEN.app), { bauart: 'test', ordner: path.join(wurzel, 'src', 'module') });
   // konten und schule bewusst null: die Marken bleiben leer (Neubeginn; Schulbewertungen kommen ins Konto des Kindes)
-  const text = familieUmwandeln(appZusammensetzen(testbau, v, null, null).toString('utf8'));
+  const schriften = schriftenLesen(wurzel);
+  const text = familieUmwandeln(appZusammensetzen(testbau, v, null, null, schriften).toString('utf8'));
   const app = Buffer.from(text, 'utf8');
   const schluessel = passwort !== null ? await schluesselAusPasswort(passwort, q.salt) : await schluesselAusRoh(zugang.schluesselRoh);
   const html = huelleBauen(q.vorlage, await verschluesselnMitSchluessel(app, schluessel, q.salt));
-  const { funde, pruefungen } = familiePruefen(text, html, q.manifest, { woerter: q.woerter, schule: await schuleLesen(wurzel), konten: await kontenLesen(wurzel), version: v });
+  const { funde, pruefungen } = familiePruefen(text, html, q.manifest, { woerter: q.woerter, schule: await schuleLesen(wurzel), konten: await kontenLesen(wurzel), version: v, schriften });
   if (funde.length) throw new Error('Suchlauf Familienfassung, nichts geschrieben:\n  - ' + funde.join('\n  - '));
   const zurueck = passwort !== null ? await entschluesseln(tresorAusHuelle(html), passwort) : await entschluesselnMitSchluessel(tresorAusHuelle(html), schluessel);
   if (!Buffer.from(zurueck).equals(app)) throw new Error('Probe-Entschluesselung ergibt nicht die App, nichts geschrieben.');
