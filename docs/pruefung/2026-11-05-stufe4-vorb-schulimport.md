@@ -67,13 +67,21 @@ Datum/Standard/vorher/nachher - ohne Inhalte der Bewertungen, ohne Geheimnisse (
 - Schalter: `--repo` Pflicht, Repos der App (`bis-school-app`, `_src`, `-test`) abgelehnt, `--passwort` abgelehnt;
   ohne Terminal Abbruch (von Hand geprueft).
 
-**Gegenproben:** 18/18 rot (`%TEMP%\opencode\gegenproben-schulimport.mjs`): Gleichstand-Regel, asOf-Pruefung, verlorene
+**Gegenproben:** 20/20 rot (`%TEMP%\opencode\gegenproben-schulimport.mjs`): Gleichstand-Regel, asOf-Pruefung, verlorene
 wartende Aufgaben, Familie/Elternteil/Kinderkonto nicht geprueft, Probelauf schreibt, keine Erkennung "schon
 uebernommen", Zaehlprobe ohne Abbruch, Zaehlprobe aus der eigenen Ablage statt aus dem Speicher, aelterer Stand
 geschrieben, Kind ohne Zuordnung, unbekannte Einstufung, Repo der App, Passwort als Schalter, Einladung verbraucht,
+Loeschen (emoveArea/emoveDirectory, #140) nicht zurueckgehalten, GitHub-Sitzung nicht abgedeckt,
 Pruefsumme nicht verglichen, wartende Aufgaben gezaehlt.
 
 **Volle Reihe:** siehe PR.
+
+## Befund (behoben)
+Nach dem Einmergen von `main` (#139 "Abgleich in der App") gleicht `geraetAbgleichen` ueber `zugang.sitzung()` ab - die
+Sitzung des GitHub-Speichers schreibt ueber den **urspruenglichen** Zugang. Eine Huelle wie `nurLesen` wurde damit
+umgangen: der Probelauf haette gegen GitHub Geraete angemeldet (der GitHub-Nachbau-Test wurde rot, die Simulation hat keine
+Sitzung). Behoben: `nurLesen` huellt auch jede Sitzung ein; die Tests zaehlen Schreibzugriffe ebenso in Sitzungen.
+**Hinweis fuer alle, die einen Zugang einhuellen:** `sitzung` mit einhuellen.
 
 ## Entscheidungen (Peter kann widersprechen)
 - Der Anmeldename wird sichtbar abgefragt, nur das Passwort verdeckt (blind getippte Namen fuehren nur zu

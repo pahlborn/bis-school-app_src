@@ -50,15 +50,21 @@ const WELTEN = {
     return { uhr, roh: (d) => githubSpeicher({ repo: REPO, token: TOKEN, basis: N.basis, wurzel, now: () => uhr.t }).geraet(d) };
   },
 };
-const SCHREIBEN = ['put', 'putKey', 'putDirectory'];
+/* ersetzt Funktionen eines Zugangs - auch in seinen Sitzungen (Modul github: eine Sitzung schreibt ueber den
+   urspruenglichen Zugang, Aufgabe "Abgleich in der App") */
+function umhuellen(z, ersatz) {
+  const out = { ...z, ...ersatz(z) };
+  if (typeof z.sitzung === 'function') out.sitzung = () => umhuellen(z.sitzung(), ersatz);
+  return out;
+}
+const SCHREIBEN = ['put', 'putKey', 'putDirectory', 'removeArea', 'removeDirectory'];
 function welt(neu) {
   const W = neu();
   W.schreibvorgaenge = [];
-  W.geraet = (d) => {
-    const z = W.roh(d), out = { ...z };
-    for (const f of SCHREIBEN) out[f] = async (...a) => { W.schreibvorgaenge.push([d, f]); return z[f](...a); };
-    return out;
-  };
+  W.geraet = (d) => umhuellen(W.roh(d), (z) => ({
+    ...Object.fromEntries(SCHREIBEN.map((f) => [f, async (...a) => { W.schreibvorgaenge.push([d, f]); return z[f](...a); }])),
+    invite: { ...z.invite, put: async (...a) => { W.schreibvorgaenge.push([d, 'invite.put']); return z.invite.put(...a); }, delete: async (...a) => { W.schreibvorgaenge.push([d, 'invite.delete']); return z.invite.delete(...a); } },
+  }));
   W.speicher = { geraet: (d) => W.geraet(d) };
   return W;
 }
@@ -258,7 +264,7 @@ jedeWelt('Gegenprobe Zaehlprobe: kommt im Speicher etwas anderes an als in der D
   // ein Speicher, der meldet "geschrieben", aber im Bereich schule nichts ablegt (verlorener Schreibzugriff)
   const echt = W.speicher;
   let verloren = 0;
-  W.speicher = { geraet: (d) => { const z = echt.geraet(d); return { ...z, put: async (b, g, x) => { if (/^schule:/.test(b)) { verloren++; return g + '/' + x.nr; } return z.put(b, g, x); } }; } };
+  W.speicher = { geraet: (d) => umhuellen(echt.geraet(d), (z) => ({ put: async (b, g, x) => { if (/^schule:/.test(b)) { verloren++; return g + '/' + x.nr; } return z.put(b, g, x); } })) };
   await assert.rejects(uebernehmen(W), (e) => {
     assert.equal(e.code, 'zaehlprobe');
     assert.ok(e.unterschiede.includes('bewertungen: vorher 16, nachher 0') && e.unterschiede.some((u) => /2026-10-20 M-N1: vorher 1, nachher 0/.test(u)), e.unterschiede.join('; '));
@@ -277,7 +283,11 @@ test('nurLesen: Schreiben wird zurueckgehalten und gezaehlt, Einladungen werden 
   await assert.rejects(z.invite.get('i1'), (e) => e.code === 'unbekannt');
   await assert.rejects(z.invite.get('echt1'), (e) => e.code === 'unbekannt');
   assert.deepEqual(await s.geraet('d_Y').invite.get('echt1'), { a: 1 }, 'die echte Einladung ist nicht verbraucht');
-  assert.equal(z.zurueckgehalten(), 5);
+  await s.geraet('d_X').putDirectory({ lookup: 'v2' }); await s.geraet('d_X').put('kind:lern:p_B', 'd_X', { nr: 1, inhalt: {} });
+  await z.removeDirectory('v2'); await z.removeArea('kind:lern:p_B');
+  assert.ok(await s.geraet('d_X').directory('v2'), 'Loeschen zurueckgehalten (Verzeichnis)');
+  assert.deepEqual((await s.geraet('d_X').list('kind:lern:p_B', null)).kennungen, ['d_X/1'], 'Loeschen zurueckgehalten (Bereich)');
+  assert.equal(z.zurueckgehalten(), 7);
   assert.deepEqual((await s.geraet('d_X').list('kind:lern:p_A', null)).kennungen, []);
   assert.equal(await s.geraet('d_X').directory('v1'), null);
 });

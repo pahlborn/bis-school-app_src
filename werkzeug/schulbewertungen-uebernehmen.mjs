@@ -140,16 +140,19 @@ export function zuordnungPruefen(zuordnung, schule) {
 
 /* ---------- Speicher ---------- */
 /** Zugang, der nur liest: Schreiben wird gezaehlt und zurueckgehalten (Probelauf, Lesen zur Zaehlprobe) */
-export function nurLesen(zugang) {
-  let n = 0;
-  const halten = (antwort) => async () => { n++; return typeof antwort === 'function' ? antwort() : antwort; };
+export function nurLesen(zugang, zaehler = { n: 0 }) {
+  const halten = (antwort) => async () => { zaehler.n++; return typeof antwort === 'function' ? antwort() : antwort; };
   return {
     ...zugang,
-    put: async (bereich, geraet, b) => { n++; return geraet + '/' + (b && b.nr); },
+    // eine Sitzung (Modul github, Aufgabe "Abgleich in der App") schreibt ueber den urspruenglichen Zugang - auch sie
+    // liest nur
+    ...(typeof zugang.sitzung === 'function' ? { sitzung: () => nurLesen(zugang.sitzung(), zaehler) } : {}),
+    put: async (bereich, geraet, b) => { zaehler.n++; return geraet + '/' + (b && b.nr); },
     putKey: halten(undefined), putDirectory: halten(undefined),
     invite: { put: halten(undefined), delete: halten(false), get: async () => { const e = new Error('speicher: unbekannt'); e.code = 'unbekannt'; throw e; } },
     importFile: halten(() => ({ neu: 0, gleich: 0, abweichend: 0 })),
-    zurueckgehalten: () => n,
+    removeArea: halten(() => ({ buendel: 0, schluessel: 0 })), removeDirectory: halten(false),
+    zurueckgehalten: () => zaehler.n,
   };
 }
 const ablageNeu = (geraet) => {
