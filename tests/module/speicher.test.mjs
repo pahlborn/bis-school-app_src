@@ -25,6 +25,8 @@ const aufrufe = (g) => ({
   'invite.delete': () => g.invite.delete('i1'),
   exportFile: () => g.exportFile(B),
   importFile: () => g.importFile(JSON.stringify({ format: 'bq-buendel-datei', v: 1, bereich: B, buendel: [{ geraet: 'd_x1', nr: 1, inhalt: 'offline' }] })),
+  removeArea: () => g.removeArea(B),
+  removeDirectory: () => g.removeDirectory('h1'),
 });
 
 test('offline: jeder Aufruf -> Fehler offline; nichts geschrieben, nichts verbraucht', async () => {
@@ -32,6 +34,7 @@ test('offline: jeder Aufruf -> Fehler offline; nichts geschrieben, nichts verbra
   const a = s.geraet('d_a1'), b = s.geraet('d_b1');
   await b.put(B, 'd_b1', { nr: 1, inhalt: 'da' });
   await b.invite.put('i1', 'Einladung');
+  await b.putDirectory({ lookup: 'h1', kennung: 'p_e1' });
   a.offline();
   const f = aufrufe(a);
   assert.deepEqual(Object.keys(f), [...SPEICHER_FUNKTIONEN], 'alle Funktionen geprueft');
@@ -45,6 +48,7 @@ test('offline: jeder Aufruf -> Fehler offline; nichts geschrieben, nichts verbra
   assert.deepEqual((await b.list(B)).kennungen, ['d_b1/1']);
   assert.deepEqual(await b.keys(B), {});
   assert.equal(await b.directory('h2'), null);
+  assert.deepEqual(await b.directory('h1'), { lookup: 'h1', kennung: 'p_e1' }, 'offline nichts geloescht');
   await fehlt(b.invite.get('i2'), 'unbekannt');
   assert.equal(await b.get(B, 'd_b1/1'), 'da');
   a.online();

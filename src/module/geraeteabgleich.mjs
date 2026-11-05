@@ -26,10 +26,13 @@
 //   Device storage (plain JSON, technical, never synced): bq_abgleich = { <area>: device state of module abgleich },
 //   bq_abgleichVerworfen = everything dropped, with reason (module abgleich reports it once, so it is kept here).
 //   A storage error (err.code, e.g. "offline") ends only that area; its state stays as it was, nothing is lost.
+//   Task "Export und Loeschen" (EP12): an area this device knew in the storage that has no key entry any more was deleted
+//   -> fehler "geloescht", nothing is made anew or sent. A person the family took out (family_set removed, accepted in
+//   familie:*) gets no key any more: the distributor changes the key without him.
 //
 // Names: every helper starts with "gab"/"GAB_" because all modules and index.html share one scope in the app.
 
-import { newEvent, mergeLog } from './ereignisse.mjs';
+import { newEvent, mergeLog, lastWins } from './ereignisse.mjs';
 import { signEvent } from './annahme.mjs';
 import { BEREICH_AUCH, bereichName, bereichVonEreignis, passtZumBereich, halter, schluesselLesen, schluesselVerteilen } from './bereiche.mjs';
 import { abgleichStand, vormerken, senden } from './abgleich.mjs';
@@ -94,6 +97,17 @@ function gabFreigaben(log) {
   return [...g.values()];
 }
 
+/* task "Export und Loeschen": persons the family took out (newest family_set about them, accepted in an area familie:*
+   this device holds, says removed) -> Set of person ids. Only accepted entries count (a parent wrote them). */
+function gabAusgetreten(staende, now) {
+  const ereignisse = [];
+  for (const [area, st] of Object.entries(gabObj(staende) ? staende : {})) {
+    if (!area.startsWith('familie:') || !gabObj(st) || !Array.isArray(st.log)) continue;
+    for (const x of st.log) if (gabObj(x) && gabObj(x.event) && x.event.type === 'family_set' && gabObj(x.event.payload)) ereignisse.push(x.event);
+  }
+  return new Set(Object.values(lastWins(ereignisse, now)).filter((e) => e.payload.removed === true).map((e) => e.payload.person));
+}
+
 /* the app's log of a target: { lesen, schreiben } */
 function gabZiel(ablage, ziel) {
   if (ziel.pre) {
@@ -126,6 +140,13 @@ async function gabBereich(o, area, ziel, anker, stand) {
   try {
     // 1. fetch with the key of a person here
     const eintraege = await zugang.keys(area);
+    // task "Export und Loeschen": an area this device knew in the storage (it sent a bundle or read one) has no key
+    // entry at all any more - it was deleted (a child, an account). Never make it anew, never send into it.
+    const kannte = stand.naechsteNr > 1 || (gabObj(stand.merker) && gabObj(stand.merker.stand) && Object.values(stand.merker.stand).some((n) => n > 0));
+    if (kannte && gabObj(eintraege) && !Object.keys(eintraege).length) {
+      bericht.ok = false; bericht.fehler = 'geloescht';
+      return bericht;
+    }
     const leser = reihe.find((pid) => gabObj(eintraege) && Object.prototype.hasOwnProperty.call(eintraege, pid));
     if (leser) {
       const h = await bereichHolen(stand, { zugang, ich: leser, ...schl(leser), anker, now });
@@ -194,7 +215,12 @@ async function gabBereich(o, area, ziel, anker, stand) {
         weg.push(x.geraet);
       }
       if (weg.length) { await neuBilden(); bericht.entfernt = weg.slice(); }
-      const r = await schluesselVerteilen(zugang, area, { soll: halter(area, mitglieder, freigaben, heute), ich: verteiler, ...schl(verteiler), mitglieder, geraete: weg });
+      // task "Export und Loeschen": whoever left the family (family_set removed: a deleted child, a parent who deleted his
+      // account) holds no key any more - the key changes without him (member_removed). Not the distributor himself: his
+      // device still sends what it has (the removal itself); the other parent takes him out.
+      const aus = gabAusgetreten(o.staende, now);
+      const soll = halter(area, mitglieder, freigaben, heute).filter((h) => art === 'person' || h.id === verteiler || !aus.has(h.id));
+      const r = await schluesselVerteilen(zugang, area, { soll, ich: verteiler, ...schl(verteiler), mitglieder, geraete: weg });
       bericht.aktion = r.aktion;
       // (a member_added the admission already has - a renewed person announced his new keys himself in step 1b - is not
       // written a second time)
@@ -278,7 +304,8 @@ export async function geraetAbgleichen({ ablage, zugang, personen, kinder = [], 
   const name = typeof geraetName === 'string' ? geraetName.trim().slice(0, 40) : '';
   // task "Meine Geraete": devices to remove, noted by module geraete ([{ person, geraet, am }])
   const entfernen = gabListe(gabJson(ablage, GERAETEABGLEICH_SPEICHER.entfernen, [])).filter((x) => gabObj(x) && gabPid(x.person) && typeof x.geraet === 'string' && /^d_[0-9A-Za-z]{1,40}$/.test(x.geraet) && x.geraet !== geraet);
-  const o = { ablage, zugang, personen, geraet, now, heute, verzeichnis, geraetName: name, entfernen };
+  const staende = gabJson(ablage, GERAETEABGLEICH_SPEICHER.staende, {});
+  const o = { ablage, zugang, personen, geraet, now, heute, verzeichnis, geraetName: name, entfernen, staende };
   const plan = [];                                                      // [area, target, anchor]
   for (const f of familien) plan.push([bereichName('familie', f.id), { familie: f.id }, f.anker]);
   for (const c of kinder) {
@@ -292,7 +319,6 @@ export async function geraetAbgleichen({ ablage, zugang, personen, kinder = [], 
   // the own area is anchored at the person's first keys (task "Neuer Schluessel": later ones are announced in it)
   for (const pid of Object.keys(personen).sort(gabCmp)) plan.push([bereichName('person', pid), { person: pid }, { person: pid, role: personen[pid].role, pub: personen[pid].ursprung || personen[pid].pub }]);
 
-  const staende = gabJson(ablage, GERAETEABGLEICH_SPEICHER.staende, {});
   const out = { bereiche: {}, inDieApp: 0, verworfen: [], erneuerungOffen: [] };
   for (const [area, ziel, anker] of plan) {
     if (out.bereiche[area]) continue;

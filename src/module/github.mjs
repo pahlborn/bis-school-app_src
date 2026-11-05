@@ -21,6 +21,8 @@
 //   <wurzel>/invites/<id>.json                  { angelegt, inhalt } valid 7 days (SPEICHER_EINLADUNG_MS), or { angelegt,
 //                                               gueltig, inhalt } (invite.put options.gueltigMs, shorter); deleted when
 //                                               fetched or withdrawn (invite.delete)
+//   removeArea / removeDirectory (task "Export und Loeschen") delete these files - one commit per file; the git history
+//   keeps the old, encrypted versions (docs/endgueltig-loeschen.md).
 //
 // Few requests (5 000 per hour and token):
 //   list = one request for the folder <wurzel>/events with If-None-Match (unchanged -> 304, free) and, only when the
@@ -208,7 +210,7 @@ export function githubSpeicher({ repo, token, fetch: holer = globalThis.fetch, n
 
   /* ---------- bundles ---------- */
   const bpfad = (bereich, g, nr) => pfad('events', bereich, g, nr + '.json');
-  const bekannt = new Set();                // "area/device/nr" known to exist (files are never deleted)
+  const bekannt = new Set();                // "area/device/nr" known to exist (files are deleted only with the whole area: removeArea)
   const baeume = new Map();                 // tree sha -> Map(device -> count); a tree never changes
   let ordner = { etag: null, bereiche: new Map() };   // folder events: area -> tree sha
 
@@ -392,6 +394,52 @@ export function githubSpeicher({ repo, token, fetch: holer = globalThis.fetch, n
     return { neu: n, gleich, abweichend };
   }
 
+  /* ---------- deleting (task "Export und Loeschen", EP12) ---------- */
+  /* every file below events/<area> and keys/<area>, one DELETE (= one commit) each. Old versions stay in the git history
+     (encrypted; docs/endgueltig-loeschen.md). A file somebody changed meanwhile is listed and deleted again (up to
+     GITHUB_VERSUCHE rounds); whatever is still there then -> offline (deleting again later finishes it). */
+  async function removeArea(bereich) {
+    ghsId(bereich);
+    const out = { buendel: 0, schluessel: 0 };
+    for (let v = 0; v < GITHUB_VERSUCHE; v++) {
+      const dateien = [];
+      const ev = await ordnerHolen(pfad('events'));
+      const d = ev.eintraege.find((e) => e.type === 'dir' && e.name === bereich);
+      if (d) {
+        if (!/^[0-9a-f]{40,64}$/.test(d.sha)) throw ghsFehler('ungueltig');
+        const t = await anfrage('GET', api + '/git/trees/' + d.sha + '?recursive=1');
+        if (t.status !== 200 || !ghsObj(t.daten) || !Array.isArray(t.daten.tree) || t.daten.truncated === true) throw ghsFehler('ungueltig');
+        for (const e of t.daten.tree) {
+          if (!ghsObj(e) || e.type !== 'blob' || typeof e.path !== 'string' || typeof e.sha !== 'string' || e.path.split('/').some((s) => !s || s === '.' || s === '..')) continue;
+          dateien.push({ p: pfad('events', bereich, e.path), sha: e.sha, art: GHS_BAUMDATEI.test(e.path) ? 'buendel' : null });
+        }
+      }
+      const ks = await ordnerHolen(pfad('keys', bereich));
+      for (const e of ks.eintraege) if (e.type === 'file') dateien.push({ p: pfad('keys', bereich, e.name), sha: e.sha, art: 'schluessel' });
+      if (!dateien.length) break;
+      let offen = 0;
+      for (const f of dateien) {
+        if (await dateiLoeschen(f.p, f.sha)) { if (f.art) out[f.art]++; } else offen++;
+      }
+      // what this access knew about the area is gone with it
+      for (const k of [...bekannt]) if (k.startsWith(bereich + '/')) bekannt.delete(k);
+      ordner = { etag: null, bereiche: new Map() };
+      if (!offen) return out;
+      if (v === GITHUB_VERSUCHE - 1) throw ghsFehler('offline');
+    }
+    return out;
+  }
+  async function removeDirectory(lookup) {
+    ghsId(lookup);
+    const p = pfad('directory', lookup + '.json');
+    for (let v = 0; v < GITHUB_VERSUCHE; v++) {
+      const f = await dateiHolen(p);
+      if (!f) return false;
+      if (await dateiLoeschen(p, f.sha)) return true;
+    }
+    throw ghsFehler('offline');
+  }
+
   function geraet(name) {
     ghsId(name);
     return {
@@ -399,7 +447,7 @@ export function githubSpeicher({ repo, token, fetch: holer = globalThis.fetch, n
       put: (bereich, g, b) => put(name, bereich, g, b),
       list, get, keys, putKey, directory, putDirectory,
       invite: { put: invite.put, get: invite.get, delete: invite.delete },
-      exportFile, importFile,
+      exportFile, importFile, removeArea, removeDirectory,
     };
   }
 
