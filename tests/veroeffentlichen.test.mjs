@@ -41,6 +41,23 @@ test('gepruefte Huelle wird kopiert und mit Version committet; zweiter Lauf tut 
   assert.equal(r2.geaendert, false);
 });
 
+test('neue Fassung gleicher Groesse mit alter Aenderungszeit wird trotzdem veroeffentlicht (Fund 04.11.)', async () => {
+  const z = zielRepo();
+  await veroeffentlichen({ dist, ziel: z, text: 'erste', ohnePush: true, version: V });
+  // second build: same size, one character different, file time far in the past (as Windows keeps it when copying)
+  const d2 = distMit((h) => { const i = h.lastIndexOf('</body>'); return h.slice(0, i - 1) + (h[i - 1] === ' ' ? '\n' : ' ') + h.slice(i); });
+  const f2 = path.join(d2, 'index.html');
+  assert.equal(fs.statSync(f2).size, fs.statSync(path.join(dist, 'index.html')).size, 'same size');
+  // the dangerous case: size AND modification time equal to what git recorded for the last version - git then trusts
+  // its index and does not look at the content (copyFileSync keeps the time of the source file)
+  const alt = fs.statSync(path.join(z, 'index.html'));
+  fs.utimesSync(f2, alt.atime, alt.mtime);
+  const r = await veroeffentlichen({ dist: d2, ziel: z, text: 'zweite', ohnePush: true, version: { ...V, n: 8 } });
+  assert.equal(r.geaendert, true, 'the change was noticed');
+  assert.equal(git(z, 'log', '-1', '--format=%s'), 'Big Quest v8: zweite');
+  assert.ok(fs.readFileSync(path.join(z, 'index.html')).equals(fs.readFileSync(f2)));
+});
+
 test('Entwurf (nicht eingecheckte Aenderungen) wird nicht veroeffentlicht', async () => {
   const z = zielRepo();
   await assert.rejects(veroeffentlichen({ dist, ziel: z, ohnePush: true, version: { ...V, draft: true } }), /nicht eingecheckte/);
