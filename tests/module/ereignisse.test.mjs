@@ -24,7 +24,7 @@ const rand0 = bytesOf(seeded(20261102));
 const ev = (type, payload, { at = iso(NOW - HOUR), author = 'p_k1', device = 'd_a1', rand = rand0 } = {}) => newEvent({ type, author, device, payload, at }, { rand });
 const answer = (device, i, ms, rand) => ev('answer', { day: iso(ms).slice(0, 10), skill: 'round', level: 2, attempt: 1, ok: i % 3 !== 0, qid: 'q' + i }, { at: iso(ms), device, rand });
 const name = (value, ms, device, rand = rand0) => ev('profile_set', { field: 'name', value }, { at: iso(ms), device, rand });
-const KONZEPT_TYPEN = ['answer', 'round_done', 'badge', 'review', 'practice_day', 'profile_set', 'rank_seen', 'sheet_created', 'sheet_result', 'sheet_discarded', 'setting_set', 'checklist_set', 'day_flag', 'school_import', 'grant_set', 'grant_revoked', 'grant_opened', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated', 'snapshot', 'gap_state', 'gap_active', 'list_set', 'advent_open', 'joke_seen', 'story_read', 'person_set', 'glance_set', 'backup_made'];
+const KONZEPT_TYPEN = ['answer', 'round_done', 'badge', 'review', 'practice_day', 'profile_set', 'rank_seen', 'sheet_created', 'sheet_result', 'sheet_discarded', 'setting_set', 'checklist_set', 'day_flag', 'school_import', 'grant_set', 'grant_revoked', 'grant_opened', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated', 'snapshot', 'gap_state', 'gap_active', 'list_set', 'advent_open', 'joke_seen', 'story_read', 'person_set', 'glance_set', 'backup_made', 'anchor_set', 'family_set', 'invite_set'];
 const SAMPLE = {
   answer: { day: DAY, skill: 'round', family: null, level: 2, attempt: 1, ok: true, response: '3', qid: 'q|v|o|a', help: false, example: false },
   round_done: { day: DAY, skill: 'round', stars: 7, count: 8 },
@@ -58,15 +58,18 @@ const SAMPLE = {
   person_set: { field: 'parentLang', value: 'en' },
   glance_set: { child: 'p_k1', value: { at: DAY, n: 4, idea: 1 } },
   backup_made: { day: DAY },
+  anchor_set: { kind: 'family', person: 'p_e1', pub: { ecdh: 'QUJD', ecdsa: 'REVG' } },
+  family_set: { person: 'p_k1', role: 'child', pub: { ecdh: 'QUJD', ecdsa: 'REVG' }, stand: 2, name: 'kathie', anchor: 'p_e1', anchorPub: { ecdh: 'QUJE', ecdsa: 'REVH' } },
+  invite_set: { invite: 's' + 'a'.repeat(64), art: 'child', person: 'p_k1', name: 'kathie', check: 'eA==', until: '2026-11-09T18:00:00.000Z', state: 'open', display: 'Kathie' },
 };
 const gut = ev('answer', SAMPLE.answer);
 const mitGrund = (e, re, wo = '') => { const f = checkEvent(e); assert.ok(f.some((x) => re.test(x)), `${wo}: expected ${re}, got ${JSON.stringify(f)}`); };
 
 /* ---------- US7.1: format ---------- */
-test('US7.1: 32 Typen wie im Konzept 9.1 (23 + 2 fuer Luecken, 3b-0, + 2 fuer Listen und Advent, 3b-1b-2, + 2 fuer Witze und Geschichten, 3b-1b-4, + 3 fuer Person, Blick und Sicherung, 3b-1c); je Typ ein gueltiges Ereignis', () => {
+test('US7.1: 35 Typen wie im Konzept 9.1 (23 + 2 fuer Luecken, 3b-0, + 2 fuer Listen und Advent, 3b-1b-2, + 2 fuer Witze und Geschichten, 3b-1b-4, + 3 fuer Person, Blick und Sicherung, 3b-1c, + 3 fuer Anker, Familie und Einladung, Einladungen); je Typ ein gueltiges Ereignis', () => {
   assert.equal(EVENT_VERSION, 1);
   assert.deepEqual(EVENT_TYPES, KONZEPT_TYPEN);
-  assert.equal(EVENT_TYPES.length, 32);
+  assert.equal(EVENT_TYPES.length, 35);
   assert.deepEqual(Object.keys(SAMPLE), EVENT_TYPES);
   for (const type of EVENT_TYPES) {
     const e = ev(type, SAMPLE[type]);
@@ -325,7 +328,11 @@ test('US7.4 Feldschluessel: je "Letzte gilt"-Feld ein Schluessel; Protokoll-Erei
   assert.equal(fieldKey(ev('glance_set', SAMPLE.glance_set)), 'glance_set:p_k1');
   assert.notEqual(fieldKey(ev('glance_set', { ...SAMPLE.glance_set, child: 'p_k2' })), fieldKey(ev('glance_set', SAMPLE.glance_set)), 'one key per child');
   assert.equal(fieldKey(ev('backup_made', SAMPLE.backup_made)), 'backup_made');
-  for (const t of EVENT_TYPES.filter((x) => !['profile_set', 'setting_set', 'day_flag', 'checklist_set', 'rank_seen', 'gap_state', 'gap_active', 'list_set', 'person_set', 'glance_set', 'backup_made'].includes(x))) assert.equal(fieldKey(ev(t, SAMPLE[t])), null, t);
+  // Einladungen: Anker je Art, Familienmitglied je Person, Einladung je Kennung
+  assert.equal(fieldKey(ev('anchor_set', SAMPLE.anchor_set)), 'anchor_set:family');
+  assert.equal(fieldKey(ev('family_set', SAMPLE.family_set)), 'family_set:p_k1');
+  assert.equal(fieldKey(ev('invite_set', SAMPLE.invite_set)), 'invite_set:s' + 'a'.repeat(64));
+  for (const t of EVENT_TYPES.filter((x) => !['profile_set', 'setting_set', 'day_flag', 'checklist_set', 'rank_seen', 'gap_state', 'gap_active', 'list_set', 'person_set', 'glance_set', 'backup_made', 'anchor_set', 'family_set', 'invite_set'].includes(x))) assert.equal(fieldKey(ev(t, SAMPLE[t])), null, t);
   for (const x of [null, undefined, 5, {}, { type: 'profile_set' }, { type: 'profile_set', payload: {} }, { type: 'toString', payload: {} }, { type: 'constructor', payload: { field: 'name' } }]) assert.equal(fieldKey(x), null);
 });
 

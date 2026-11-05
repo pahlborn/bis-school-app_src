@@ -60,7 +60,9 @@ const EV_SPEC = {
   grant_revoked: ['grant:str grantee:pid', ''],
   grant_opened: ['grant:str grantee:pid', 'scope:scope'],
   // admission of an area (task P3b-2): each area carries its own members, devices and key changes
-  member_added: ['person:pid role:enum(child|parent|teacher|admin) pub:pub', ''],
+  // stand (task "Einladungen"): the directory entry the keys come from (konto) - a child's new keys after "new password"
+  // have a higher one, so an older device never puts the old keys back
+  member_added: ['person:pid role:enum(child|parent|teacher|admin) pub:pub', 'stand:pos'],
   member_removed: ['person:pid', ''],
   device_added: ['device:did', 'label:str'],
   device_removed: ['device:did', ''],
@@ -85,6 +87,15 @@ const EV_SPEC = {
   glance_set: ['child:pid value:obj', ''],
   // the last backup of the child's data (index.html makeBackup, key lastBackup; area eltern:allg)
   backup_made: ['day:day', ''],
+  // invitations and connections (task "Einladungen", module einladung): where a person belongs, in its own area -
+  // a parent: the family (its founding parent); a child: the parent who created it (anchor of its areas)
+  anchor_set: ['kind:enum(family|child) person:pid pub:pub', ''],
+  // a member of the family (area familie:<founding parent>), written by a parent who checked the keys: name = login name,
+  // stand = directory entry the keys come from (konto), anchor/anchorPub = the parent who created a child
+  family_set: ['person:pid role:enum(child|parent) pub:pub stand:pos', 'name:str anchor:pid anchorPub:pub'],
+  // an invitation (start code) its issuer gave out, in his own area: check = key that tests the proof in the directory
+  // entry of the invited person (konto.kontoBeweis), until = end of validity, display = display name of a new child
+  invite_set: ['invite:str art:enum(child|parent|reset) person:pid name:str check:str until:utc state:enum(open|done|withdrawn|expired)', 'display:str'],
 };
 function evParse(text) {
   const out = {};
@@ -182,7 +193,7 @@ export function mergeLog(logs, now) {
 
 /* ---------- "last wins" fields ----------
    type -> payload fields that name the field. Everything else is a protocol event (not listed here). */
-const EV_LAST_WINS = { profile_set: ['field'], setting_set: ['setting'], day_flag: ['flag'], checklist_set: ['studio', 'index'], rank_seen: [], gap_state: ['standard'], gap_active: [], list_set: ['list', 'item'], person_set: ['field'], glance_set: ['child'], backup_made: [] };
+const EV_LAST_WINS = { profile_set: ['field'], setting_set: ['setting'], day_flag: ['flag'], checklist_set: ['studio', 'index'], rank_seen: [], gap_state: ['standard'], gap_active: [], list_set: ['list', 'item'], person_set: ['field'], glance_set: ['child'], backup_made: [], anchor_set: ['kind'], family_set: ['person'], invite_set: ['invite'] };
 /* key of the field an event sets, e.g. "profile_set:name"; null for protocol events */
 export function fieldKey(e) {
   if (!evObj(e) || !evObj(e.payload) || !evOwn(EV_LAST_WINS, e.type)) return null;

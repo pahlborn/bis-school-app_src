@@ -9,7 +9,9 @@
 //  - OHNE Familienpasswort: keine Huelle, kein Tresor - die App liegt im Klartext. Darum gilt die Liste der verbotenen
 //    Woerter hier fuer die GANZE App; Schul-Namen ersetzt werkzeug/testinstanz-ersatz.json vorher durch neutrale,
 //  - Speicher im Browser unter eigenem Praefix bqt_ (statt bq2_ und bq_) und Token unter bqt_gh - gleiche Herkunft
-//    pahlborn.github.io wie Kathies App und die Werkstatt-Apps, darum liest die Testinstanz nie deren Eintraege.
+//    pahlborn.github.io wie Kathies App und die Werkstatt-Apps, darum liest die Testinstanz nie deren Eintraege,
+//  - aktualisiert sich selbst ohne Schluessel: die Version steht auf der veroeffentlichten Seite im Klartext
+//    (VERSION_AUS_KLARTEXT). Veroeffentlichen: werkzeug/testinstanz-veroeffentlichen.mjs.
 //
 // index.html bleibt unveraendert: das Werkzeug benennt die Speicherstellen im fertigen Text um und prueft danach mit
 // einem Suchlauf, dass nichts davon fehlt (testinstanzPruefen). Ein Fund bricht ab, bevor etwas geschrieben wird.
@@ -55,12 +57,30 @@ function einmal(text, re, ersatz, was) {
 }
 
 /**
+ * Selbst-Aktualisierung ohne Schluessel. Kathies App liest die neue Version aus dem Tresor der veroeffentlichten Seite
+ * (mit dem gemerkten Familienschluessel bq_schluessel). Die Testinstanz hat keinen Tresor und keinen Schluessel: die
+ * veroeffentlichte Seite IST die App, die Version steht darin im Klartext. Der Rest (checkForUpdate, applyUpdate: alle
+ * 5 Minuten, nie mitten in einer Runde, kein Neuladen im Kreis) bleibt wie in Kathies App.
+ */
+export const VERSION_AUS_KLARTEXT = [
+  'async function publishedVersion(){',
+  '  /* Test instance (stage 3c): the published page is the app itself in plain text - no key, no vault. */',
+  "  const res=await fetch(location.href.split('#')[0].split('?')[0]+'?t='+Date.now(),{cache:'no-store'});",
+  "  if(!res.ok) throw new Error('HTTP '+res.status);",
+  '  const v=(await res.text()).match(/const APP_VERSION=(\\{[^}]*\\});/); return v?JSON.parse(v[1]):null;',
+  '}'
+].join('\n');
+const VERSION_AUS_TRESOR = /async function publishedVersion\(\)\{\r?\n {2}const key=localStorage\.getItem\('bq_schluessel'\);[\s\S]*?return v\?JSON\.parse\(v\[1\]\):null;\r?\n\}/;
+
+/**
  * Fertige Testbau-App (Text, Module und Version eingesetzt) -> Text der Testinstanz.
- * 1. Schul-Namen neutral (ersatz.ersetzen), 2. geraeteweite Namen in GLOBAL_KEYS, 3. Praefixe, 4. Titel.
+ * 1. Schul-Namen neutral (ersatz.ersetzen), 2. Aktualisierung ohne Schluessel, 3. geraeteweite Namen in GLOBAL_KEYS,
+ * 4. Praefixe, 5. Titel.
  */
 export function testinstanzUmwandeln(app, ersatz) {
   let t = String(app);
   for (const [suche, neu] of ersatz.ersetzen) t = t.replace(new RegExp(reEsc(suche), 'gi'), () => neu);
+  t = einmal(t, VERSION_AUS_TRESOR, () => VERSION_AUS_KLARTEXT, 'publishedVersion (mit Schluessel)');
 
   // Geraetedaten (bq_abgleich, bq_schluessel ...) und der Token liegen kuenftig unter demselben Praefix wie die Daten
   // der App. Damit sie nie als Daten eines Kindes gelten (Umzug auf Kennungen, Sicherung), werden sie geraeteweit.
@@ -129,8 +149,13 @@ export function testinstanzPruefen(app, manifest, { woerter = [], auchVerboten =
   pruef(`feste Speicherstellen nur mit bqt (${literal.length} gefunden)`, fremd.length ? fremd.join(', ') : literal.length ? '' : 'keine gefunden');
   pruef('Token-Eintrag bqt_gh', /const GITHUB_TOKEN_SCHLUESSEL = 'bqt_gh';/.test(app) ? '' : 'GITHUB_TOKEN_SCHLUESSEL ist nicht bqt_gh');
   const gk = /const GLOBAL_KEYS=\/\^\(([^)]*)\)\$\//.exec(app);
-  const fehlendGlobal = ['gh', 'abgleich', 'abgleichVerworfen', 'schluessel'].filter((n) => !gk || !gk[1].split('|').includes(n));
+  const fehlendGlobal = ['gh', 'abgleich', 'abgleichVerworfen'].filter((n) => !gk || !gk[1].split('|').includes(n));
   pruef('Geraetedaten und Token geraeteweit (GLOBAL_KEYS)', fehlendGlobal.length ? 'fehlt: ' + fehlendGlobal.join(', ') : '');
+
+  // Selbst-Aktualisierung ohne Schluessel: genau eine publishedVersion, sie liest die Version im Klartext
+  const pv = [...app.matchAll(/async function publishedVersion\(\)\{[\s\S]*?\n\}/g)];
+  pruef('Aktualisierung ohne Schluessel (Version aus der Seite im Klartext)',
+    pv.length !== 1 ? `publishedVersion ${pv.length}x` : /schluessel|tresor|decrypt/i.test(pv[0][0]) ? 'publishedVersion braucht Schluessel oder Tresor' : !pv[0][0].includes('const APP_VERSION=') ? 'publishedVersion liest keine Version' : '');
 
   // verbotene Woerter: hier in der GANZEN App (sie liegt im Klartext)
   const verboten = [...woerter, ...auchVerboten];

@@ -46,8 +46,11 @@ export async function veroeffentlichen({ quelle = WURZEL, dist = null, ziel, tex
   if (ohneTresor(html).includes('observeAttempt')) throw new Error('Klartext der App in der Huelle - abgebrochen.');
   if (git(ziel, 'status', '--porcelain')) throw new Error('Ziel-Repo hat lokale Aenderungen - erst klaeren.');
   if (!ohnePush) git(ziel, 'pull', '-q');
-  fs.copyFileSync(path.join(distOrdner, 'index.html'), path.join(ziel, 'index.html'));
-  if (!git(ziel, 'status', '--porcelain')) return { version: versionText(v), geaendert: false };
+  // compare the content ourselves and write anew (not copyFileSync): Windows keeps the old modification time when copying,
+  // and with the same size git may then miss the change - the new version would silently not go online (found 04.11., #132)
+  const neu = fs.readFileSync(path.join(distOrdner, 'index.html')), zielDatei = path.join(ziel, 'index.html');
+  if (fs.existsSync(zielDatei) && fs.readFileSync(zielDatei).equals(neu)) return { version: versionText(v), geaendert: false };
+  fs.writeFileSync(zielDatei, neu);
   const nachricht = `Big Quest v${v.n}${text ? ': ' + text : ''}`;
   git(ziel, 'add', 'index.html');
   git(ziel, 'commit', '-q', '-m', nachricht);

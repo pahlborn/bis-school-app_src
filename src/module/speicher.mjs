@@ -15,9 +15,10 @@
 //   directory(lookup) / putDirectory(entry)      account entry for a hash of the login name (entry.lookup); creating the
 //                                     same lookup twice -> "vorhanden"; unknown lookup -> null
 //   invite.put(id, content, options) / invite.get(id) / invite.delete(id)
-//                                     an invitation is valid 10 minutes after put - or options.gueltigMs (1 ms up to
-//                                     7 days: the start code of stage 3b, concept 10.6); get hands it out once (second use ->
-//                                     "unbekannt"); expired -> "abgelaufen"; delete -> gone (returns whether it existed)
+//                                     an invitation is valid 7 days after put (Peter, 04.11.: not 10 minutes - the
+//                                     fingerprint protects, not the time) - or options.gueltigMs (1 ms up to 7 days); get
+//                                     hands it out once (second use -> "unbekannt"); expired -> "abgelaufen"; delete ->
+//                                     gone (returns whether it existed): the issuer withdraws an invitation with it
 //   exportFile(area)                 -> text of a file with all bundles of the area (format below, same for all implementations)
 //   importFile(text)                 stores only what is missing -> { neu, gleich, abweichend }; nothing is overwritten;
 //                                     a file that would leave a gap is refused as a whole ("ungueltig")
@@ -30,9 +31,9 @@
 export const SPEICHER_FUNKTIONEN = Object.freeze(['put', 'list', 'get', 'keys', 'putKey', 'directory', 'putDirectory', 'invite.put', 'invite.get', 'invite.delete', 'exportFile', 'importFile']);
 /* error codes ("zugang" and "limit" only come from a real storage: module github, stage 3a) */
 export const SPEICHER_FEHLER = Object.freeze(['offline', 'ungueltig', 'fremdes-geraet', 'vorhanden', 'luecke', 'unbekannt', 'abgelaufen', 'zugang', 'limit']);
-/* an invitation is valid this long (concept 12: 10 minutes) */
-export const SPEICHER_EINLADUNG_MS = 10 * 60 * 1000;
-/* the longest an invitation may be valid (invite.put options.gueltigMs): a start code, 7 days (concept 10.6) */
+/* an invitation is valid this long (Peter, 04.11.: 7 days, once, can be withdrawn - task "Einladungen"; before 10 minutes) */
+export const SPEICHER_EINLADUNG_MS = 7 * 24 * 3600 * 1000;
+/* the longest an invitation may be valid (invite.put options.gueltigMs): 7 days (concept 10.6, 12) */
 export const SPEICHER_EINLADUNG_MAX_MS = 7 * 24 * 3600 * 1000;
 /* options of invite.put -> validity in ms (shared by every implementation); wrong options -> null */
 export function speicherEinladungGueltig(optionen) {

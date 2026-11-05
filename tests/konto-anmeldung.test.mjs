@@ -90,7 +90,7 @@ async function welt() {
   const admin = await ersteAnmeldung({ zugang: z, code: sc.code, passwort: 'Werkzeug-Admin-Passwort-1', now: Date.now(), runden: RUNDEN });
   const offen = { admin };
   return {
-    w, z,
+    w, z, offen,
     startcode: async (name, art, von = 'admin') => (await startcodeAusstellen({ zugang: z, aussteller: offen[von], anmeldename: name, art, now: Date.now() })).code,
     elternteil: async (name) => { const c = (await startcodeAusstellen({ zugang: z, aussteller: admin, anmeldename: name, art: 'parent', now: Date.now() })).code; offen[name] = await ersteAnmeldung({ zugang: z, code: c, passwort: 'Werkzeug-Eltern-Passwort-' + name, now: Date.now(), runden: RUNDEN }); }
   };
@@ -311,6 +311,22 @@ test('3b Fehler beim ersten Mal: abgelaufener oder fremder Startcode, kein Speic
   Z.online();
   B.absenden('#loginGo');
   await B.wartenAuf('#setPwForm');
+
+  // Startlink mit dem Fingerabdruck des Ausstellers (Aufgabe "Einladungen"): falscher -> Warnung, nichts eingerichtet
+  const sc = await startcodeAusstellen({ zugang: W.z, aussteller: W.offen.admin, anmeldename: 'tom.c', art: 'parent', now: Date.now() });
+  assert.match(sc.fingerabdruck, /^[a-z]+(-[a-z]+){5}$/);
+  const falsch = sc.fingerabdruck.split('-').reverse().join('-');
+  const link = (fp) => { const l = anmStartlink('http://127.0.0.1/', { anmeldename: 'tom.c', code: sc.code, fingerabdruck: fp }); return l.slice(l.indexOf('#')); };
+  const C = geraet(t, W.w, { name: 'Geraet mit falschem QR', hash: link(falsch) });
+  C.klick('#roleAdult'); C.absenden('#loginGo');
+  await passwortWaehlen(C);
+  assert.match(await C.meldung('#setPwMsg'), /stammt nicht von der Person/);
+  assert.equal(await W.z.directory(await kontoLookup('tom.c')), null, 'nichts eingerichtet');
+  const D = geraet(t, W.w, { name: 'Geraet mit richtigem QR', hash: link(sc.fingerabdruck) });
+  D.klick('#roleAdult'); D.absenden('#loginGo');
+  await passwortWaehlen(D);
+  await D.wartenAuf('#recCode');
+  assert.ok((await W.z.directory(await kontoLookup('tom.c'))) !== null, 'mit richtigem Fingerabdruck eingerichtet (Code galt weiter)');
 });
 
 test('4 Testinstanz: ohne Zugangsschluessel fragt die Anmeldeseite einmal danach', async (t) => {
