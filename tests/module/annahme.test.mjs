@@ -214,7 +214,7 @@ test('Matrix: alle 35 Typen x 4 Rollen gegen die hier ausgeschriebene Tabelle', 
   assert.deepEqual(falsch, []);
   // Neuer Schluessel: Lehrkraft und Admin duerfen member_added/key_rotated nur unter Bedingungen (Test unten) - die
   // Matrix-Beispiele (ueber andere Personen, in fremden Bereichen) sind dort richtig abgelehnt
-  const BEDINGT = { teacher: ['key_rotated', 'member_added'], admin: ['key_rotated', 'member_added'] };
+  const BEDINGT = { teacher: ['device_removed', 'key_rotated', 'member_added'], admin: ['device_removed', 'key_rotated', 'member_added'] };
   for (const role of ROLES) assert.deepEqual(ANNAHME_RECHTE[role].slice().sort(), EVENT_TYPES.filter((t) => darf(role, t) || (BEDINGT[role] || []).includes(t)).sort(), 'exported table ' + role);
   assert.ok(Object.isFrozen(ANNAHME_RECHTE) && Object.isFrozen(ANNAHME_RECHTE.child), 'the exported table cannot be changed');
 });
@@ -233,6 +233,13 @@ test('Neuer Schluessel: Lehrkraft und Admin kuendigen nur ihren eigenen neuen Sc
   assert.equal(await reason(await signEvent(mk('member_added', kid, kdev, { person: kid, role: 'child', pub: pub2 }), AREA, KEYS[kid]), { ...Z, area: AREA }), 'rolle-darf-nicht', 'Kind: neue Schluessel nur ueber die Eltern');
   assert.equal(roleMayWrite('teacher', mk('key_rotated', 'p_l1', 'd_l1', { version: 2, entfernt: [], stand: {} }), 'person:p_l1'), true, 'eigener Personen-Bereich');
   assert.equal(roleMayWrite('teacher', mk('key_rotated', 'p_l1', 'd_l1', { version: 2, entfernt: [], stand: {} })), false, 'ohne Bereich: nein');
+  // Meine Geraete: Lehrkraft und Admin entfernen ein Geraet nur im eigenen Personen-Bereich
+  for (const role of ['teacher', 'admin']) {
+    const [pid, did] = WHO[role];
+    assert.equal(roleMayWrite(role, mk('device_removed', pid, did, { device: 'd_x9' }), 'person:' + pid), true, role + ': eigener Bereich');
+    assert.equal(roleMayWrite(role, mk('device_removed', pid, did, { device: 'd_x9' }), AREA), false, role + ': nicht im Kind-Bereich');
+  }
+  assert.equal(roleMayWrite('parent', mk('device_removed', 'p_e1', 'd_e1', { device: 'd_k1' }), AREA), true, 'Eltern: wie bisher');
 });
 
 /* ---------- 5b gaps (task 3b-0) ---------- */

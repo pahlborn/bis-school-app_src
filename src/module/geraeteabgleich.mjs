@@ -263,6 +263,10 @@ async function gabBereich(o, area, ziel, anker, stand) {
    now (ms), heute ("YYYY-MM-DD", for the grants)
    personen[id] may carry (task "Neuer Schluessel", module konto kontoPersonen): ursprung (anchor of the own area), stand
                 (directory entry of the keys), alt = { keys, pub } right after renewing
+   geraetName:  name of this device (task "Meine Geraete"; label of device_added, shown in the list - optional)
+   Devices to remove (task "Meine Geraete", device storage bq_geraetEntfernen, noted by module geraete): in every area
+   where such a device is registered for a member, the distributor writes device_removed and changes the key
+   (key_rotated.geraete) - report: bereiche[area].entfernt
    -> { bereiche: { <area>: { ok, fehler, aktion, gesendet, neu, verworfen, ohneSchluessel, inDieApp, erneuert?, erneuerungOffen? } },
         inDieApp: events written into the app's logs (the app then calls evNeuLaden), verworfen: [{ bereich, kennung, id, grund, typ? }],
         erneuerungOffen: areas that do not have the new key of a person with alt yet } */
