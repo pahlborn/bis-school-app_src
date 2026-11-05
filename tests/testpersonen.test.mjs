@@ -80,7 +80,9 @@ jedeWelt('--anlegen: Admin und die beiden Peter legt das Werkzeug an, die andere
     assert.equal(d.filter(([p]) => /\/invites\//.test(p)).length, 5, 'fuenf Einladungen');
     const alles = d.map(([p, v]) => p + ' ' + (typeof v === 'string' ? v : JSON.stringify(v))).join('\n').toLowerCase();
     // (die Art des Kontos - "admin", "parent" ... - steht absichtlich lesbar im Verzeichnis, Konto-Modul; Namen nie)
-    for (const wort of ['kathie', 'peter', 'anna', 'lehrkraft', 'beispiel', '2017', ...g.map((x) => x.toLowerCase())]) assert.equal(alles.includes(wort), false, 'nicht im Speicher: ' + wort);
+    // kurze Woerter nur als eigenes Wort (mitten in base64 kommen vier Buchstaben wie "anna" zufaellig vor - 05.11. einmal rot)
+    const wortIn = (w) => (w.length >= 10 ? alles.includes(w) : new RegExp('(^|[^a-z0-9+/_=-])' + w + '($|[^a-z0-9+/_=-])').test(alles));
+    for (const wort of ['kathie', 'peter', 'anna', 'lehrkraft', 'beispiel', '2017', ...g.map((x) => x.toLowerCase())]) assert.equal(wortIn(wort), false, 'nicht im Speicher: ' + wort);
   }
 });
 
