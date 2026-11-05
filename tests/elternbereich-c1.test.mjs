@@ -1,7 +1,7 @@
 // Paket C1 (Konzept Elternbereich 5.3, 5.4, 5.9): Schule in der Fachansicht. Erfundene Schuldaten, keine echten.
 //  T13: „Aus der Schule“ zeigt nur die Standards des Fachs, jeder Standard steht in genau einem Fach;
 //       Lehrkraft ohne Umfang „Schuldaten“ sieht weder Block noch Schul-Punkt noch Verlauf; Fokus-Etikett passt zu den nächsten Schritten.
-//  Außerdem: 🏫-Punkt an den Kacheln mit der schwächsten Einstufung; Kapitel „Bewertungen der Schule – Verlauf“ nur mit Aufgaben.
+//  Außerdem: 🏫-Punkt an den Kacheln mit der schwächsten Einstufung; Kapitel „Schulische Einstufungen“ (bis 05.11. „Bewertungen der Schule – Verlauf“) nur mit Aufgaben.
 // Echte Klicks.
 //   node --test tests/elternbereich-c1.test.mjs
 
@@ -75,7 +75,7 @@ test('T13 "From school" per subject: only its standards, each standard in exactl
   await page.locator('#pBack').click();
   await page.locator('details.psec[data-psec="school"] > summary').click();
   const h = await page.locator('details.psec[data-psec="school"]').innerText();
-  for (const w of ['Bewertungen der Schule – Verlauf', 'Rounding check B', 'Forces lab', 'Wartet auf Bewertung', 'Persuasive letter']) assert.ok(h.includes(w), w);
+  for (const w of ['Schulische Einstufungen', 'Rounding check B', 'Forces lab', 'Wartet auf Bewertung', 'Persuasive letter']) assert.ok(h.includes(w), w);
   assert.equal(await page.locator('details.psec[data-psec="school"] table').count(), 0, 'no standards table in the history');
   assert.deepEqual(fehler, []);
   await ctx.close();

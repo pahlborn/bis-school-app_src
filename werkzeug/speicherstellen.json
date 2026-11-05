@@ -43,7 +43,7 @@
     { "key": "muted", "bereich": "geraet", "abgleich": "letzte-gilt", "sicherung": false, "hinweis": "heute je Geraet; ab Stufe 2 je Person: Kind profile_set muted (3b-1b-4), Erwachsene person_set muted (3b-1c)" },
     { "key": "parentLang", "bereich": "person", "abgleich": "letzte-gilt", "sicherung": false, "hinweis": "heute je Geraet; ab 3b-1c Ereignis person_set parentLang (Personen-Bereich)" },
     { "key": "migr", "bereich": "geraet", "abgleich": "lokal", "sicherung": false, "hinweis": "Protokoll des Umzugs auf Kennungen (S11 P2)" },
-    { "key": "conceptSeen", "bereich": "person", "abgleich": "letzte-gilt", "sicherung": false, "hinweis": "Erwachsene, die \"So funktioniert Big Quest\" schon geoeffnet haben (Hinweis \"Neu hier?\", Konzept Elternbereich B4); ab 3b-1c Ereignis person_set conceptSeen" },
+    { "key": "conceptSeen", "bereich": "person", "abgleich": "letzte-gilt", "sicherung": false, "hinweis": "Erwachsene, die \"Das Konzept von Big Quest\" (bis 05.11. \"So funktioniert Big Quest\") schon geoeffnet haben (Hinweis \"Neu hier?\", Konzept Elternbereich B4); ab 3b-1c Ereignis person_set conceptSeen" },
     { "key": "lastSeen", "bereich": "geraet", "abgleich": "lokal", "sicherung": false, "hinweis": "letzte Anmeldung je Konto auf diesem Geraet (Admin-Metadaten, S11 P4)" },
     { "key": "glance", "bereich": "person", "abgleich": "letzte-gilt", "sicherung": false, "hinweis": "Auf einen Blick: Stand beim letzten Besuch je Erwachsenem und Kind (Elternbereich E3); ab 3b-1c Ereignis glance_set je Kind, nur Eltern (Lehrkraft/Admin: bleibt auf dem Geraet)" },
     { "key": "kidsHere", "bereich": "geraet", "abgleich": "lokal", "sicherung": false, "hinweis": "Kinder, die sich auf diesem Geraet angemeldet haben (S11 P3)" },
