@@ -195,8 +195,12 @@ export async function holen(stand, { zugang, schluessel, zulassung, now } = {}) 
   for (const x of pruefung.angenommen) {
     const m = kandidaten.get(x), [dev, nrText] = m.kennung.split('/'), nr = Number(nrText);
     const betroffen = (w) => w.entfernt.includes(x.event.author) || (Array.isArray(w.erneuert) && w.erneuert.includes(x.event.author));
-    const zuSpaet = wechsel.some((w) => m.kv < w.version && betroffen(w) && nr > (Object.prototype.hasOwnProperty.call(w.stand, dev) ? w.stand[dev] : 0));
-    if (zuSpaet) verworfen.push({ ...ohneKv(m), grund: 'nach-entfernung', ...typ(x) });
+    const bis = (w, d) => (Object.prototype.hasOwnProperty.call(w.stand, d) ? w.stand[d] : 0);
+    const zuSpaet = wechsel.some((w) => m.kv < w.version && betroffen(w) && nr > bis(w, dev));
+    // task "Meine Geraete": an event of a removed device counts only from its own bundles up to the stand of the change -
+    // the device may still hold the key (a child's device until the new password), so the version does not tell
+    const vomEntfernten = wechsel.some((w) => Array.isArray(w.geraete) && w.geraete.includes(x.event.device) && (dev !== x.event.device || nr > bis(w, dev)));
+    if (zuSpaet || vomEntfernten) verworfen.push({ ...ohneKv(m), grund: 'nach-entfernung', ...typ(x) });
     else if (abgEintragOk(x)) angenommen.push({ event: x.event, sig: x.sig });
   }
 

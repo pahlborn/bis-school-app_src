@@ -58,6 +58,7 @@
     { "key": "bq2_personEvents", "bereich": "person", "hinweis": "Protokolle der Personen (personEvents); seit 3b-2a liest und schreibt das Protokoll sie selbst (Testbau)" },
     { "key": "bq_abgleich", "bereich": "geraet", "abgleich": "lokal", "hinweis": "Stufe 2 (3b-2b): Abgleich-Stand je Bereich (Modul geraeteabgleich, nur Testbau; nicht in index.html): Ausgang, Merker, angenommene Eintraege mit Unterschrift" },
     { "key": "bq_abgleichVerworfen", "bereich": "geraet", "abgleich": "lokal", "hinweis": "Stufe 2 (3b-2b): beim Abgleich Verworfenes mit Grund (hoechstens 1000, Modul geraeteabgleich, nur Testbau)" },
+    { "key": "bq_geraetEntfernen", "bereich": "geraet", "abgleich": "lokal", "hinweis": "Vorbereitung Stufe 4 (Meine Geraete): Geraete, die beim naechsten Abgleich entfernt werden (Modul geraete/geraeteabgleich, nur Testbau; nicht in index.html)" },
     { "key": "bq2_kontoListe", "bereich": "geraet", "abgleich": "lokal", "hinweis": "Stufe 3b (Anmeldung im Testbau): Konten, die sich auf diesem Geraet angemeldet haben (Kennung, Anmeldename, Art; kein Passwort, kein Schluessel); geraeteweit (GLOBAL_KEYS), nur Konto-Modus" }
   ],
   "sessionStorage": [
