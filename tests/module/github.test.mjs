@@ -170,6 +170,13 @@ test('GitHub: removeArea loescht genau die Dateien des Bereichs (je Datei ein DE
   assert.deepEqual(unter('keys/' + B2 + '/'), [w + '/keys/' + B2 + '/p_e1.json']);
   assert.deepEqual(unter('directory/'), [w + '/directory/h1.json']);
   assert.ok((N.zaehler.je.DELETE || 0) - vorher >= 5, 'je Datei ein DELETE');
+  // eine Datei aendert sich immer wieder (409 beim Loeschen): nach GITHUB_VERSUCHE Runden -> offline, nichts still uebergangen
+  await a.put(B2, 'd_a1', { nr: 2, inhalt: 'zwei' });
+  N.stoerung({ status: 409, methode: 'DELETE', anzahl: 100 });
+  await fehlt(a.removeArea(B2), 'offline', 'Datei laesst sich nicht loeschen');
+  N.stoerungenLeeren();
+  assert.equal(unter('events/' + B2 + '/').length, 2, '409 hat nichts geloescht');
+  assert.deepEqual(await a.removeArea(B2), { buendel: 2, schluessel: 1 });
   assert.deepEqual((await a.list(B)).kennungen, []);
   assert.equal(await a.put(B, 'd_a1', { nr: 1, inhalt: 'neu' }), 'd_a1/1', 'danach wie neu (der Zugang vergisst, was er kannte)');
 });
