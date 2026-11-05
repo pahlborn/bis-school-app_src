@@ -21,6 +21,8 @@
 //   <wurzel>/invites/<id>.json                  { angelegt, inhalt } valid 7 days (SPEICHER_EINLADUNG_MS), or { angelegt,
 //                                               gueltig, inhalt } (invite.put options.gueltigMs, shorter); deleted when
 //                                               fetched or withdrawn (invite.delete)
+//   removeArea / removeDirectory (task "Export und Loeschen") delete these files - one commit per file; the git history
+//   keeps the old, encrypted versions (docs/endgueltig-loeschen.md).
 //
 // Few requests (5 000 per hour and token):
 //   list = one request for the folder <wurzel>/events with If-None-Match (unchanged -> 304, free) and, only when the
@@ -208,14 +210,17 @@ export function githubSpeicher({ repo, token, fetch: holer = globalThis.fetch, n
 
   /* ---------- bundles ---------- */
   const bpfad = (bereich, g, nr) => pfad('events', bereich, g, nr + '.json');
-  const bekannt = new Set();                // "area/device/nr" known to exist (files are never deleted)
+  const bekannt = new Set();                // "area/device/nr" known to exist (files are deleted only with the whole area: removeArea)
   const baeume = new Map();                 // tree sha -> Map(device -> count); a tree never changes
   let ordner = { etag: null, bereiche: new Map() };   // folder events: area -> tree sha
 
-  /* bundles per device in an area: Map(device -> count of 1..n without gap) */
-  async function standVon(bereich) {
-    const r = await ordnerHolen(pfad('events'), ordner.etag);
-    if (!r.unveraendert) ordner = { etag: r.etag, bereiche: new Map(r.eintraege.filter((e) => e.type === 'dir').map((e) => [e.name, e.sha])) };
+  /* bundles per device in an area: Map(device -> count of 1..n without gap). ohneNachfrage (a sitzung, see below): the
+     folder events was asked a moment ago - its list is taken as it is */
+  async function standVon(bereich, ohneNachfrage = false) {
+    if (!ohneNachfrage || !ordner.etag) {
+      const r = await ordnerHolen(pfad('events'), ordner.etag);
+      if (!r.unveraendert) ordner = { etag: r.etag, bereiche: new Map(r.eintraege.filter((e) => e.type === 'dir').map((e) => [e.name, e.sha])) };
+    }
     const sha = ordner.bereiche.get(bereich);
     if (!sha) return new Map();
     if (baeume.has(sha)) return baeume.get(sha);
@@ -252,10 +257,10 @@ export function githubSpeicher({ repo, token, fetch: holer = globalThis.fetch, n
     return g + '/' + b.nr;
   }
 
-  async function list(bereich, seit) {
+  async function list(bereich, seit, ohneNachfrage = false) {
     ghsId(bereich);
     if (seit !== null && seit !== undefined && (!ghsObj(seit) || seit.bereich !== bereich || !ghsObj(seit.stand))) throw ghsFehler('ungueltig');
-    const anzahl = await standVon(bereich);
+    const anzahl = await standVon(bereich, ohneNachfrage);
     const stand = {};
     if (seit !== null && seit !== undefined) {
       for (const [g, n] of Object.entries(seit.stand)) {
@@ -282,14 +287,30 @@ export function githubSpeicher({ repo, token, fetch: holer = globalThis.fetch, n
   }
 
   /* ---------- keys, directory ---------- */
+  // task "Abgleich in der App": the folder of an area's keys is asked with its ETag (unchanged -> 304, free), and a key
+  // file is fetched only when its sha is new (a file with the same sha has the same content) - so a sync without news
+  // costs no request against the hourly limit here either
+  const schluesselOrdner = new Map();       // area -> { etag, eintraege }
+  const schluesselTexte = new Map();        // blob sha -> text
   async function keys(bereich) {
     ghsId(bereich);
-    const { eintraege } = await ordnerHolen(pfad('keys', bereich));
-    const halter = ghsSortiert(eintraege.filter((e) => e.type === 'file' && /\.json$/.test(e.name)).map((e) => e.name.slice(0, -5)).filter((h) => GHS_ID.test(h)));
+    const alt = schluesselOrdner.get(bereich);
+    const r = await ordnerHolen(pfad('keys', bereich), alt && alt.etag);
+    const eintraege = r.unveraendert ? alt.eintraege : r.eintraege;
+    if (!r.unveraendert) { if (r.etag) schluesselOrdner.set(bereich, { etag: r.etag, eintraege }); else schluesselOrdner.delete(bereich); }
+    const dateien = eintraege.filter((e) => e.type === 'file' && /\.json$/.test(e.name) && GHS_ID.test(e.name.slice(0, -5)));
     const out = {};
-    for (const h of halter) {
-      const f = await dateiHolen(pfad('keys', bereich, h + '.json'));
-      if (f) out[h] = ghsJson(f.text);
+    for (const e of [...dateien].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))) {
+      const h = e.name.slice(0, -5);
+      let text = schluesselTexte.get(e.sha);
+      if (text === undefined) {
+        const f = await dateiHolen(pfad('keys', bereich, h + '.json'));
+        if (!f) continue;
+        text = f.text;
+        if (schluesselTexte.size >= 2000) schluesselTexte.clear();
+        schluesselTexte.set(f.sha, text);
+      }
+      out[h] = ghsJson(text);
     }
     return out;
   }
@@ -298,6 +319,13 @@ export function githubSpeicher({ repo, token, fetch: holer = globalThis.fetch, n
     await dateiSchreiben(pfad('keys', bereich, halter + '.json'), ghsText(verpackt));
   }
 
+  /* task "Abgleich in der App": does this repo hold accounts at all (folder directory with entries)? A repo the token
+     cannot see answers 404 like an empty one - both are not this app's storage. One request; only asked when a login
+     finds nothing (so the app can say "connected to another storage" instead of asking for a password first). */
+  async function verbunden() {
+    const r = await ordnerHolen(pfad('directory'));
+    return r.eintraege.some((e) => e.type === 'file' && /\.json$/.test(e.name));
+  }
   async function directory(lookup) {
     ghsId(lookup);
     const f = await dateiHolen(pfad('directory', lookup + '.json'));
@@ -392,14 +420,91 @@ export function githubSpeicher({ repo, token, fetch: holer = globalThis.fetch, n
     return { neu: n, gleich, abweichend };
   }
 
+  /* ---------- deleting (task "Export und Loeschen", EP12) ---------- */
+  /* every file below events/<area> and keys/<area>, one DELETE (= one commit) each. Old versions stay in the git history
+     (encrypted; docs/endgueltig-loeschen.md). A file somebody changed meanwhile is listed and deleted again (up to
+     GITHUB_VERSUCHE rounds); whatever is still there then -> offline (deleting again later finishes it). */
+  async function removeArea(bereich) {
+    ghsId(bereich);
+    const out = { buendel: 0, schluessel: 0 };
+    for (let v = 0; v < GITHUB_VERSUCHE; v++) {
+      const dateien = [];
+      const ev = await ordnerHolen(pfad('events'));
+      const d = ev.eintraege.find((e) => e.type === 'dir' && e.name === bereich);
+      if (d) {
+        if (!/^[0-9a-f]{40,64}$/.test(d.sha)) throw ghsFehler('ungueltig');
+        const t = await anfrage('GET', api + '/git/trees/' + d.sha + '?recursive=1');
+        if (t.status !== 200 || !ghsObj(t.daten) || !Array.isArray(t.daten.tree) || t.daten.truncated === true) throw ghsFehler('ungueltig');
+        for (const e of t.daten.tree) {
+          if (!ghsObj(e) || e.type !== 'blob' || typeof e.path !== 'string' || typeof e.sha !== 'string' || e.path.split('/').some((s) => !s || s === '.' || s === '..')) continue;
+          dateien.push({ p: pfad('events', bereich, e.path), sha: e.sha, art: GHS_BAUMDATEI.test(e.path) ? 'buendel' : null });
+        }
+      }
+      const ks = await ordnerHolen(pfad('keys', bereich));
+      for (const e of ks.eintraege) if (e.type === 'file') dateien.push({ p: pfad('keys', bereich, e.name), sha: e.sha, art: 'schluessel' });
+      if (!dateien.length) break;
+      let offen = 0;
+      for (const f of dateien) {
+        if (await dateiLoeschen(f.p, f.sha)) { if (f.art) out[f.art]++; } else offen++;
+      }
+      // what this access knew about the area is gone with it
+      for (const k of [...bekannt]) if (k.startsWith(bereich + '/')) bekannt.delete(k);
+      ordner = { etag: null, bereiche: new Map() };
+      schluesselOrdner.delete(bereich);
+      if (!offen) return out;
+      if (v === GITHUB_VERSUCHE - 1) throw ghsFehler('offline');
+    }
+    return out;
+  }
+  async function removeDirectory(lookup) {
+    ghsId(lookup);
+    const p = pfad('directory', lookup + '.json');
+    for (let v = 0; v < GITHUB_VERSUCHE; v++) {
+      const f = await dateiHolen(p);
+      if (!f) return false;
+      if (await dateiLoeschen(p, f.sha)) return true;
+    }
+    throw ghsFehler('offline');
+  }
+
   function geraet(name) {
     ghsId(name);
-    return {
+    const zugang = {
       geraet: name,
       put: (bereich, g, b) => put(name, bereich, g, b),
-      list, get, keys, putKey, directory, putDirectory,
+      list: (bereich, seit) => list(bereich, seit),
+      get, keys, putKey, directory, putDirectory,
       invite: { put: invite.put, get: invite.get, delete: invite.delete },
-      exportFile, importFile,
+      exportFile, importFile, verbunden, removeArea, removeDirectory,
+      sitzung: () => sitzung(zugang),
+    };
+    return zugang;
+  }
+  /* task "Abgleich in der App": one sync of a device (module geraeteabgleich) works in a sitzung - the same functions, but
+     within it the folder events is asked once (again only after this device wrote into the area it lists), and the keys
+     of an area are read once (again after this device wrote a key there). That saves the same question asked many
+     times within seconds (each would be a 304: free, but ~0.3 s). Others' changes during the sync come with the next. */
+  function sitzung(z) {
+    let gefragt = false;
+    const geschrieben = new Set(), schl = new Map();
+    return {
+      ...z,
+      put: async (bereich, g, b) => { geschrieben.add(bereich); return z.put(bereich, g, b); },
+      list: async (bereich, seit) => {
+        const ohne = gefragt && !geschrieben.has(bereich);
+        const r = await list(bereich, seit, ohne);
+        gefragt = true;
+        if (!ohne) geschrieben.clear();
+        return r;
+      },
+      keys: async (bereich) => {
+        if (!schl.has(bereich)) schl.set(bereich, ghsText(await z.keys(bereich)));
+        return JSON.parse(schl.get(bereich));
+      },
+      putKey: async (bereich, halter, verpackt) => { schl.delete(bereich); return z.putKey(bereich, halter, verpackt); },
+      // task "Export und Loeschen": a deleted area is asked anew
+      removeArea: async (bereich) => { schl.delete(bereich); geschrieben.add(bereich); return z.removeArea(bereich); },
+      sitzung: () => sitzung(z),
     };
   }
 

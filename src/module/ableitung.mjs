@@ -286,3 +286,20 @@ export function derive(events, { now, base } = {}) {
   st._days = [...ctx.days].sort();
   return st;
 }
+
+/* deriveSchool(events, { now }): the school ratings of a child from its log (task "Schulbewertungen uebernehmen",
+   preparation stage 4) - the object the app keeps per child today (werkzeug/schuldaten.json, kinder.<name> =
+   { asOf, tasks }), or null without any school_import. Not part of derive: today's app has no storage key for it.
+   Rule: the import with the newest asOf wins; on the same asOf the later one in the merged log (time, then id) - every
+   device decides the same. An import whose data does not carry the same asOf, or has no list of tasks, never counts. */
+export function deriveSchool(events, { now } = {}) {
+  if (now === undefined || now === null) throw new Error('deriveSchool: "now" is missing');
+  let best = null;
+  for (const e of mergeLog([Array.isArray(events) ? events : []], now).events) {
+    if (e.type !== 'school_import') continue;
+    const p = e.payload;
+    if (p.data.asOf !== p.asOf || !Array.isArray(p.data.tasks)) continue;
+    if (!best || p.asOf >= best.asOf) best = p;
+  }
+  return best ? abClone(best.data) : null;
+}

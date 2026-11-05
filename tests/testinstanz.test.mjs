@@ -255,9 +255,15 @@ test('Gegenprobe Sandbox: dieselbe Testinstanz mit einem anderen Repo erreicht i
   const fremd = JSON.stringify({ ...SPEICHER_TESTINSTANZ, repo: 'pahlborn/bis-school-app' });
   const S = appSandbox({ bauart: 'test', seite: true, speicher: { bqt_gh: TOKEN }, anpassen: (h) => testinstanzUmwandeln(h, ERSATZ, { speicher: fremd }), globale: { fetch: umleiten(anfragen) } });
   t.diagnostic('BQ_SEED=' + S.seed);
-  // im fremden Repo gibt es den Namen nicht -> die App haelt den Code fuer einen Startcode, findet ihn dort aber nicht
-  const msg = await kindAnmeldenSandbox(S, 'mia.c', CODES['mia.c'], { bisPasswort: true });
-  assert.match(msg, /start code does not work|Startcode gilt nicht/i, 'Meldung: ' + msg);
+  // im fremden Repo gibt es keine Konten -> die App sagt das gleich bei der Anmeldung (Aufgabe "Abgleich in der App",
+  // Befund #137: vorher erst "Passwort waehlen", dann "Startcode gilt nicht")
+  const im = (sel) => S.lauf(() => S.$('#loginBody').querySelector(sel));
+  S.lauf(() => { im('#roleStudent').click(); im('#loginUser').value = 'mia.c'; im('#loginPw').value = CODES['mia.c']; const k = im('#loginGo'); k.click(); const f = k.closest('form'); f.dispatchEvent({ type: 'submit', target: f, currentTarget: f, preventDefault() {}, stopPropagation() {} }); });
+  const t0 = Date.now();
+  while (!S.lauf(() => { const m = im('#loginMsg'); return m && m.textContent && !/moment/i.test(m.textContent); })) { if (Date.now() - t0 > 30000) throw new Error('keine Meldung'); await warte(15); }
+  const msg = im('#loginMsg').textContent;
+  assert.match(msg, /connected to a different storage/, 'Meldung: ' + msg);
+  assert.equal(S.lauf(() => !!S.$('#loginBody').querySelector('#setPwForm')), false, 'kein "Passwort waehlen"');
   assert.equal(S.lauf(() => !!S.$('#loginBody').querySelector('#welcomeGo')), false);
   assert.equal(S.ablage.get('bqt_session'), undefined, 'nicht angemeldet');
   assert.ok(anfragen.length >= 1 && anfragen.every((u) => u.startsWith(GITHUB + '/repos/pahlborn/bis-school-app/')), anfragen.join(' '));

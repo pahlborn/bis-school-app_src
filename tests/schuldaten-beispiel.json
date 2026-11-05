@@ -1,0 +1,78 @@
+{
+  "_info": "Testdaten (erfunden) mit der Struktur von werkzeug/schuldaten.json - fuer tests/schulimport.test.mjs. Standards und Quests sind die der App, alle Werte, Titel und Texte sind ausgedacht.",
+  "version": 1,
+  "kinder": {
+    "kathie": {
+      "asOf": "2026-10-25",
+      "tasks": [
+        {
+          "day": "2026-10-20",
+          "area": "math",
+          "title": "Pocket Money Plan - Milestone",
+          "std": { "M-N1": "M", "M-N2": "C", "M-N3": "C", "M-N4": "M", "M-N5": "C", "M-N6": "M" },
+          "quests": ["wordprob", "combos", "round"],
+          "focusNext": ["wordprob"],
+          "rubric": [
+            { "crit": "Plans the shopping list", "teacher": "M", "self": "E" },
+            { "crit": "Adds the prices", "teacher": "C", "self": "M" },
+            { "crit": "Checks the change", "teacher": "C", "self": "C" }
+          ],
+          "good": { "de": "Plant den Einkauf sorgfaeltig und erklaert ihre Schritte.", "en": "Plans the shopping carefully and explains her steps." },
+          "next": { "de": "Textaufgaben in Ruhe lesen und die Frage unterstreichen.", "en": "Read word problems slowly and underline the question." }
+        },
+        {
+          "day": "2026-10-08",
+          "area": "english",
+          "title": "Letter to the Mayor",
+          "std": { "E-S1": "M", "E-S2": "C" },
+          "atl": { "Caring": "Obs.", "Thinkers": "Ind.", "Connection": "ES" },
+          "quests": ["opinion", "examples", "sentences"],
+          "focusNext": ["sentences"],
+          "good": { "de": "Klare Meinung mit zwei Gruenden.", "en": "A clear opinion with two reasons." },
+          "next": { "de": "Saetze mit Bindewoertern verbinden.", "en": "Join sentences with linking words." }
+        },
+        {
+          "day": "2026-10-08",
+          "area": "math",
+          "title": "Lesson 2",
+          "std": {},
+          "quests": ["round"],
+          "focusNext": ["round"],
+          "good": { "de": "Rundet Zehner sicher.", "en": "Rounds to tens with confidence." },
+          "next": { "de": "Hunderter runden ueben.", "en": "Practise rounding to hundreds." }
+        },
+        {
+          "day": "2026-09-28",
+          "area": "science",
+          "title": "Ramp Race",
+          "std": { "E-W1": "M", "E-W2": "C", "M-D1": "C", "M-M1": "M", "S-F1": "C" },
+          "atl": { "Research skills": "Ind.", "Critical thinking: giving reasons": "Obs.", "Responsibility": "Ind." },
+          "quests": ["forces", "units", "graphs", "finish", "examples"],
+          "focusNext": ["graphs", "units"],
+          "good": { "de": "Misst genau und schreibt die Werte auf.", "en": "Measures carefully and records the values." },
+          "next": { "de": "Ergebnisse in einem Diagramm zeigen.", "en": "Show the results in a graph." }
+        },
+        {
+          "day": "2026-09-24",
+          "area": "math",
+          "title": "Number Check-in",
+          "std": { "M-N1": "C", "M-N3": "RS", "M-N4": "C" },
+          "quests": ["combos", "round", "detective"],
+          "focusNext": ["combos", "round"],
+          "good": { "de": "Kennt die Stellenwerte bis 1000.", "en": "Knows place value up to 1000." },
+          "next": { "de": "Zahlenpaare bis 100 schneller finden.", "en": "Find number pairs to 100 faster." }
+        },
+        {
+          "day": "2026-10-22",
+          "pending": true,
+          "area": "learner",
+          "title": "Goal Setting Reflection",
+          "std": {},
+          "quests": ["school"],
+          "good": { "de": "", "en": "" },
+          "next": { "de": "", "en": "" }
+        }
+      ]
+    }
+  }
+}

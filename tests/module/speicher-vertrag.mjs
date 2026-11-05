@@ -271,6 +271,54 @@ export function speicherVertrag(name, neu) {
     assert.equal(await e.exportFile(B), datei);
   });
 
+  test(`${name}: removeArea/removeDirectory (Export und Loeschen, E8) - Bereich ganz weg, andere Bereiche und Verzeichnis unberuehrt, zweimal loeschen schadet nicht`, async () => {
+    const { z: [a, b] } = await aufbau('d_a1', 'd_b1');
+    await schreibe(a, B, 1, 3);
+    await schreibe(b, B, 1, 2);
+    await schreibe(a, B2, 1, 2);
+    await a.putKey(B, 'p_e1', { v: 1, w: 'W1' });
+    await a.putKey(B, 'p_e2', { v: 1, w: 'W2' });
+    await a.putKey(B2, 'p_e1', { v: 1, w: 'bleibt' });
+    const merkerB = (await b.list(B)).merker, merkerB2 = (await b.list(B2)).merker;
+    await a.putDirectory({ lookup: 'h1', kennung: 'p_e1' });
+    await a.putDirectory({ lookup: 'h1-2', kennung: 'p_e1', stand: 2 });
+    await a.putDirectory({ lookup: 'h2', kennung: 'p_e2' });
+    await a.invite.put('i1', 'einladung');
+
+    assert.deepEqual(await b.removeArea(B), { buendel: 5, schluessel: 2 }, 'anderes Geraet loescht alles, auch fremde Buendel');
+    assert.deepEqual((await a.list(B)).kennungen, [], 'keine Buendel mehr');
+    assert.deepEqual(await a.keys(B), {}, 'keine Schluesseleintraege mehr');
+    await fehlt(a.get(B, 'd_a1/1'), 'unbekannt');
+    await fehlt(b.get(B, 'd_b1/2'), 'unbekannt');
+    assert.equal(JSON.parse(await a.exportFile(B)).buendel.length, 0);
+    await fehlt(b.list(B, merkerB), 'ungueltig', 'alter Merker passt nicht mehr - nichts wird still uebersprungen');
+    assert.deepEqual(await b.removeArea(B), { buendel: 0, schluessel: 0 }, 'zweimal loeschen');
+    assert.deepEqual(await b.removeArea('kid:p_k9'), { buendel: 0, schluessel: 0 }, 'nie dagewesen');
+    // der andere Bereich, das Verzeichnis und die Einladung bleiben
+    assert.deepEqual((await b.list(B2, merkerB2)).kennungen, []);
+    assert.deepEqual((await b.list(B2)).kennungen, ['d_a1/1', 'd_a1/2']);
+    assert.deepEqual(await b.keys(B2), { p_e1: { v: 1, w: 'bleibt' } });
+    // danach ist der Bereich wie neu: Nummer 1 beginnt wieder
+    await fehlt(a.put(B, 'd_a1', { nr: 4, inhalt: 1 }), 'luecke');
+    assert.equal(await a.put(B, 'd_a1', { nr: 1, inhalt: 'neu' }), 'd_a1/1');
+    assert.equal(await b.get(B, 'd_a1/1'), 'neu');
+
+    assert.equal(await b.removeDirectory('h1'), true);
+    assert.equal(await b.removeDirectory('h1-2'), true);
+    assert.equal(await a.directory('h1'), null);
+    assert.equal(await a.directory('h1-2'), null);
+    assert.equal(await a.removeDirectory('h1'), false, 'zweimal');
+    assert.deepEqual(await a.directory('h2'), { lookup: 'h2', kennung: 'p_e2' }, 'anderer Eintrag bleibt');
+    await a.putDirectory({ lookup: 'h1', kennung: 'p_x1' });
+    assert.equal((await b.directory('h1')).kennung, 'p_x1', 'Name wieder frei');
+    assert.equal(await b.invite.get('i1'), 'einladung', 'Einladungen unberuehrt');
+    for (const x of ['', 'a/b', '../x', '__proto__', null, 7]) {
+      await fehlt(a.removeArea(x), 'ungueltig', 'Bereich ' + x);
+      await fehlt(a.removeDirectory(x), 'ungueltig', 'Eintrag ' + x);
+    }
+    assert.deepEqual((await b.list(B2)).kennungen, ['d_a1/1', 'd_a1/2'], 'abgelehnt -> nichts geloescht');
+  });
+
   test(`${name}: drei Geraete schreiben abwechselnd - jedes sieht jedes fremde Buendel genau einmal`, async () => {
     const { z } = await aufbau('d_a1', 'd_b1', 'd_c1');
     const merker = new Map(z.map((g) => [g.geraet, null])), gesehen = new Map(z.map((g) => [g.geraet, []])), nr = new Map(z.map((g) => [g.geraet, 0]));

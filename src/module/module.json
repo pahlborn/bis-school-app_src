@@ -17,14 +17,15 @@
     { "name": "schreiber", "bau": "test", "browserTests": ["ableitung-vergleich", "schreibhaken-1b", "testbau"] },
     { "name": "speicher", "bau": "test", "browserTests": ["testbau"] },
     { "name": "abgleich", "bau": "test", "browserTests": ["testbau"] },
-    { "name": "github", "bau": "test", "browserTests": ["testbau"] },
+    { "name": "github", "bau": "test", "browserTests": ["testbau", "abgleich-app"] },
     { "name": "zulassung", "bau": "test", "browserTests": ["testbau"] },
     { "name": "lesen", "bau": "test", "browserTests": ["testbau-lesen", "ableitung-vergleich", "schreibhaken-1b"] },
-    { "name": "geraeteabgleich", "bau": "test", "browserTests": ["zwei-geraete", "lehrkraft-schueler"] },
+    { "name": "geraeteabgleich", "bau": "test", "browserTests": ["zwei-geraete", "lehrkraft-schueler", "abgleich-app"] },
     { "name": "konto", "bau": "test", "browserTests": ["testbau", "konto-anmeldung", "konto-anmeldung-browser"] },
-    { "name": "einladung", "bau": "test", "browserTests": ["testbau"] },
+    { "name": "einladung", "bau": "test", "browserTests": ["testbau", "abgleich-app"] },
     { "name": "geraete", "bau": "test", "browserTests": ["testbau", "konto-einladungen"] },
+    { "name": "kinddaten", "bau": "test", "browserTests": ["testbau"] },
     { "name": "qrcode", "bau": "test", "browserTests": ["konto-einladungen", "konto-einladungen-browser"] },
-    { "name": "anmeldung", "bau": "test", "browserTests": ["konto-anmeldung", "konto-anmeldung-browser", "konto-einladungen", "konto-einladungen-browser"] }
+    { "name": "anmeldung", "bau": "test", "browserTests": ["konto-anmeldung", "konto-anmeldung-browser", "konto-einladungen", "konto-einladungen-browser", "abgleich-app"] }
   ]
 }

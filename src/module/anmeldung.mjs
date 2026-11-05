@@ -190,8 +190,8 @@ export function anmWiederherstellen({ zugang, anmeldename, code, neuesPasswort }
 
 /* ---------- invitations, devices, new keys (task "Einladungen - Oberflaeche") ---------- */
 /* one sync of this device with everything its opened accounts are connected to (module einladung) */
-export function anmAbgleich({ ablage, zugang, konten, now, heute, geraetName }) {
-  return abgleichMitVerbindungen({ ablage, zugang, konten, now, heute, ...(geraetName ? { geraetName } : {}) });
+export function anmAbgleich({ ablage, zugang, konten, now, heute, geraetName, inDieApp = true }) {
+  return abgleichMitVerbindungen({ ablage, zugang, konten, now, heute, inDieApp, ...(geraetName ? { geraetName } : {}) });
 }
 /* families, children, other parents, open invitations of an opened account (from the logs on this device) */
 export const anmVerbindungen = ({ ablage, konto, now }) => verbindungen({ ablage, konto, now });
@@ -230,6 +230,32 @@ export async function anmKindBereit({ ablage, zugang, konto, now }) {
     if (err && typeof err.code === 'string') return false;
     throw err;
   }
+}
+
+/* ---------- the sync in the app (task "Abgleich in der App"; concept 9.1, 9.4) ---------- */
+const anmStaende = (ablage) => { try { const s = JSON.parse(ablage.getItem(GERAETEABGLEICH_SPEICHER.staende) || '{}'); return s && typeof s === 'object' && !Array.isArray(s) ? s : {}; } catch (e) { return {}; } };
+const anmEvents = (st) => (st && Array.isArray(st.log) ? st.log.map((x) => x && x.event).filter((e) => e && typeof e === 'object' && e.payload && typeof e.payload === 'object') : []);
+/* entries this device dropped while syncing (forgeries, missing rights; kept once, module geraeteabgleich) -> count */
+export function anmVerworfen(ablage) {
+  try { const l = JSON.parse(ablage.getItem(GERAETEABGLEICH_SPEICHER.verworfen) || '[]'); return Array.isArray(l) ? l.length : 0; } catch (e) { return 0; }
+}
+/* was this device removed (module geraete: device_removed with its id in an area it knows)? */
+export function anmGeraetEntfernt({ ablage }) {
+  let g = null;
+  try { g = JSON.parse(ablage.getItem(GERAETEABGLEICH_SPEICHER.geraet) || 'null'); } catch (e) { g = null; }
+  if (typeof g !== 'string') return false;
+  return Object.values(anmStaende(ablage)).some((st) => anmEvents(st).some((e) => e.type === 'device_removed' && e.payload.device === g));
+}
+/* a removed device where somebody logs in again starts as a new device: the states of the sync belonged to the old
+   device id (the app sets the new id itself) */
+export function anmGeraetNeu({ ablage }) {
+  ablage.setItem(GERAETEABGLEICH_SPEICHER.staende, '{}');
+}
+/* is the storage of this app version one with accounts at all? Only a storage that can tell (module github: verbunden)
+   is asked - one request; an error of the storage -> not "foreign" (the normal messages say what is wrong) */
+export async function anmSpeicherFremd(zugang) {
+  if (!zugang || typeof zugang.verbunden !== 'function') return false;
+  try { return !(await zugang.verbunden()); } catch (err) { if (err && typeof err.code === 'string') return false; throw err; }
 }
 
 /* ---------- guides ---------- */

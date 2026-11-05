@@ -97,8 +97,10 @@ const EV_SPEC = {
   // a parent: the family (its founding parent); a child: the parent who created it (anchor of its areas)
   anchor_set: ['kind:enum(family|child) person:pid pub:pub', ''],
   // a member of the family (area familie:<founding parent>), written by a parent who checked the keys: name = login name,
-  // stand = directory entry the keys come from (konto), anchor/anchorPub = the parent who created a child
-  family_set: ['person:pid role:enum(child|parent) pub:pub stand:pos', 'name:str anchor:pid anchorPub:pub'],
+  // stand = directory entry the keys come from (konto), anchor/anchorPub = the parent who created a child;
+  // removed = true (task "Export und Loeschen"): the child was deleted / the parent deleted his account - "last wins" per
+  // person, so every device of the family drops him and nobody hands him keys or creates his areas again
+  family_set: ['person:pid role:enum(child|parent) pub:pub stand:pos', 'name:str anchor:pid anchorPub:pub removed:bool'],
   // an invitation (start code) its issuer gave out, in his own area: check = key that tests the proof in the directory
   // entry of the invited person (konto.kontoBeweis), until = end of validity, display = display name of a new child
   invite_set: ['invite:str art:enum(child|parent|reset) person:pid name:str check:str until:utc state:enum(open|done|withdrawn|expired)', 'display:str'],

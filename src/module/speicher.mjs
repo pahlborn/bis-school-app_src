@@ -22,13 +22,20 @@
 //   exportFile(area)                 -> text of a file with all bundles of the area (format below, same for all implementations)
 //   importFile(text)                 stores only what is missing -> { neu, gleich, abweichend }; nothing is overwritten;
 //                                     a file that would leave a gap is refused as a whole ("ungueltig")
+//   removeArea(area)                 deletes the whole area: every bundle of every device and every key entry
+//                                     -> { buendel, schluessel } (counts; 0/0 when there was nothing). Task "Export und
+//                                     Loeschen" (EP12, US12.2, E8): deleting a child or an account. Afterwards the area
+//                                     is empty like one that never existed (a later put starts at number 1 again).
+//   removeDirectory(lookup)          deletes one account entry -> true, or false when there was none
+//   Deleting removes the current state only: a storage with a history (GitHub: git) keeps old, encrypted copies -
+//   without the keys they cannot be read (docs/endgueltig-loeschen.md: how to remove them for good).
 // Errors are Error objects with err.code (one of SPEICHER_FEHLER).
 // The simulation adds access.offline() / access.online(): offline every call fails with "offline" and changes nothing.
 //
 // Names: every helper starts with "spk"/"SPK_" because all modules and index.html share one scope in the app.
 
 /* the functions every implementation offers (dot = function of a group) */
-export const SPEICHER_FUNKTIONEN = Object.freeze(['put', 'list', 'get', 'keys', 'putKey', 'directory', 'putDirectory', 'invite.put', 'invite.get', 'invite.delete', 'exportFile', 'importFile']);
+export const SPEICHER_FUNKTIONEN = Object.freeze(['put', 'list', 'get', 'keys', 'putKey', 'directory', 'putDirectory', 'invite.put', 'invite.get', 'invite.delete', 'exportFile', 'importFile', 'removeArea', 'removeDirectory']);
 /* error codes ("zugang" and "limit" only come from a real storage: module github, stage 3a) */
 export const SPEICHER_FEHLER = Object.freeze(['offline', 'ungueltig', 'fremdes-geraet', 'vorhanden', 'luecke', 'unbekannt', 'abgelaufen', 'zugang', 'limit']);
 /* an invitation is valid this long (Peter, 04.11.: 7 days, once, can be withdrawn - task "Einladungen"; before 10 minutes) */
@@ -210,6 +217,20 @@ export function lokalerSpeicher({ now = () => Date.now() } = {}) {
     return { neu: n, gleich, abweichend };
   }
 
+  function removeArea(bereich) {
+    spkId(bereich);
+    let n = 0;
+    for (const reihe of geraeteVon(bereich).values()) n += reihe.length;
+    const k = schluessel.has(bereich) ? schluessel.get(bereich).size : 0;
+    buendel.delete(bereich);
+    schluessel.delete(bereich);
+    return { buendel: n, schluessel: k };
+  }
+  function removeDirectory(lookup) {
+    spkId(lookup);
+    return verzeichnis.delete(lookup);
+  }
+
   function geraet(name) {
     spkId(name);
     let online = true;
@@ -222,6 +243,7 @@ export function lokalerSpeicher({ now = () => Date.now() } = {}) {
       directory: z(directory), putDirectory: z(putDirectory),
       invite: { put: z(invite.put), get: z(invite.get), delete: z(invite.delete) },
       exportFile: z(exportFile), importFile: z(importFile),
+      removeArea: z(removeArea), removeDirectory: z(removeDirectory),
       offline() { online = false; },
       online() { online = true; },
     };
