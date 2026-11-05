@@ -256,7 +256,10 @@ export async function schluesselLesen(zugang, bereich, { ich, meineSchluessel, m
    device has not read his announcement yet): error with code "schluessel-ungeprueft", nothing is written - creating
    version 1 anew would cut everybody off from the history. Only a child's own person area is made anew then (after a
    new password the child cannot prove its old key; that area holds only where it belongs - task "Einladungen"). */
-export async function schluesselVerteilen(zugang, bereich, { soll, ich, meineSchluessel, mitglieder, alteSchluessel } = {}) {
+/* geraete (task "Meine Geraete"): devices removed just now - a new version even if no holder changed ("gewechselt"),
+   key_rotated names them (module abgleich then drops what they send later) */
+export async function schluesselVerteilen(zugang, bereich, { soll, ich, meineSchluessel, mitglieder, alteSchluessel, geraete = [] } = {}) {
+  if (!Array.isArray(geraete) || geraete.some((d) => typeof d !== 'string' || !/^d_[0-9A-Za-z]{1,40}$/.test(d))) throw berFehler('geraete ungueltig.');
   if (!bereichZerlegen(bereich) || !berObj(mitglieder) || !Array.isArray(soll)) throw berFehler('schluesselVerteilen braucht Bereich, soll und mitglieder.');
   if (!berVerteiler(bereich, mitglieder).includes(ich)) throw berFehler('nur Eltern verteilen Schluessel (person: nur die Person selbst).');
   const ids = soll.map((h) => (berObj(h) && berPid(h.id) && berObj(h.pub) ? h.id : null));
@@ -290,7 +293,7 @@ export async function schluesselVerteilen(zugang, bereich, { soll, ich, meineSch
       return v;
     };
     const frisch = (id) => neu.includes(id) || geaendert.includes(id);
-    if (entfernt.length || geaendert.length) {
+    if (entfernt.length || geaendert.length || geraete.length) {
       const r = await rotateKeyring(ring, soll);
       version = r.ring.current;
       for (const h of soll) {
@@ -315,7 +318,7 @@ export async function schluesselVerteilen(zugang, bereich, { soll, ich, meineSch
   const ereignisse = [...neu, ...geaendert].map(dazu);
   if (aktion === 'gewechselt') {
     for (const id of entfernt) ereignisse.push({ type: 'member_removed', payload: { person: id } });
-    ereignisse.push({ type: 'key_rotated', payload: { version, entfernt: entfernt.slice(), stand: { ...(await zugang.list(bereich, null)).merker.stand }, ...(geaendert.length ? { erneuert: geaendert.slice() } : {}) } });
+    ereignisse.push({ type: 'key_rotated', payload: { version, entfernt: entfernt.slice(), stand: { ...(await zugang.list(bereich, null)).merker.stand }, ...(geaendert.length ? { erneuert: geaendert.slice() } : {}), ...(geraete.length ? { geraete: [...new Set(geraete)].sort(berCmp) } : {}) } });
   }
   return { aktion, version, neu, geaendert, entfernt, ereignisse };
 }

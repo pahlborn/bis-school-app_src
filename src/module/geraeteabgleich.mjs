@@ -36,7 +36,7 @@ import { abgleichStand, vormerken, senden } from './abgleich.mjs';
 import { zulassungAus, aktiveMitglieder, bereichHolen } from './zulassung.mjs';
 
 /* keys in the device storage */
-export const GERAETEABGLEICH_SPEICHER = Object.freeze({ staende: 'bq_abgleich', verworfen: 'bq_abgleichVerworfen', geraet: 'bq2_evDevice', personen: 'bq2_personEvents', familien: 'bq2_familyEvents' });
+export const GERAETEABGLEICH_SPEICHER = Object.freeze({ staende: 'bq_abgleich', verworfen: 'bq_abgleichVerworfen', geraet: 'bq2_evDevice', personen: 'bq2_personEvents', familien: 'bq2_familyEvents', entfernen: 'bq_geraetEntfernen' });
 /* at most this many dropped entries are kept on the device (the newest) */
 export const GERAETEABGLEICH_VERWORFEN_MAX = 1000;
 
@@ -121,7 +121,7 @@ async function gabBereich(o, area, ziel, anker, stand) {
   const schl = (pid) => { const p = personen[pid]; if (!p.alt) return { meineSchluessel: p.keys }; return offen(pid) ? { meineSchluessel: p.alt.keys, alteSchluessel: [p.keys] } : { meineSchluessel: p.keys, alteSchluessel: [p.alt.keys] }; };
   const neuBilden = async () => { zul = await zulassungAus(stand.log, { area, anker, now }); };
   const eintragen = async (pid, type, payload, ab) => vormerken(stand, await signEvent(newEvent({ type, author: pid, device: geraet, at: zeit(ab), payload }), area, signier(pid)), { now });
-  const anmelden = async (pid) => { const a = gabAnmelden(zul, pid, geraet); if (a) await eintragen(pid, 'device_added', { device: geraet }, a.ab); return !!a; };
+  const anmelden = async (pid) => { const a = gabAnmelden(zul, pid, geraet); if (a) await eintragen(pid, 'device_added', { device: geraet, ...(o.geraetName ? { label: o.geraetName } : {}) }, a.ab); return !!a; };
   const reihe = Object.keys(personen).sort((a, b) => (GAB_ROLLEN.indexOf(personen[a].role) - GAB_ROLLEN.indexOf(personen[b].role)) || gabCmp(a, b));
   try {
     // 1. fetch with the key of a person here
@@ -184,7 +184,17 @@ async function gabBereich(o, area, ziel, anker, stand) {
           bericht.gesendet += (await senden(stand, { zugang, schluessel: { aktuell: s.aktuell, keys: s.keys } })).gesendet;
         }
       }
-      const r = await schluesselVerteilen(zugang, area, { soll: halter(area, mitglieder, freigaben, heute), ich: verteiler, ...schl(verteiler), mitglieder });
+      // task "Meine Geraete": devices to remove (module geraete notes them on this device) that are still registered here
+      // for a member - device_removed, then a new key version that names them
+      const weg = [];
+      for (const x of o.entfernen) {
+        const m = zul.members[x.person], l = m && gabObj(m.geraete) ? m.geraete[x.geraet] : null;
+        if (!Object.prototype.hasOwnProperty.call(aktiveMitglieder(zul), x.person) || !Array.isArray(l) || !l.length || l[l.length - 1].bis !== null || weg.includes(x.geraet)) continue;
+        await eintragen(verteiler, 'device_removed', { device: x.geraet });
+        weg.push(x.geraet);
+      }
+      if (weg.length) { await neuBilden(); bericht.entfernt = weg.slice(); }
+      const r = await schluesselVerteilen(zugang, area, { soll: halter(area, mitglieder, freigaben, heute), ich: verteiler, ...schl(verteiler), mitglieder, geraete: weg });
       bericht.aktion = r.aktion;
       // (a member_added the admission already has - a renewed person announced his new keys himself in step 1b - is not
       // written a second time)
@@ -253,14 +263,22 @@ async function gabBereich(o, area, ziel, anker, stand) {
    now (ms), heute ("YYYY-MM-DD", for the grants)
    personen[id] may carry (task "Neuer Schluessel", module konto kontoPersonen): ursprung (anchor of the own area), stand
                 (directory entry of the keys), alt = { keys, pub } right after renewing
+   geraetName:  name of this device (task "Meine Geraete"; label of device_added, shown in the list - optional)
+   Devices to remove (task "Meine Geraete", device storage bq_geraetEntfernen, noted by module geraete): in every area
+   where such a device is registered for a member, the distributor writes device_removed and changes the key
+   (key_rotated.geraete) - report: bereiche[area].entfernt
    -> { bereiche: { <area>: { ok, fehler, aktion, gesendet, neu, verworfen, ohneSchluessel, inDieApp, erneuert?, erneuerungOffen? } },
         inDieApp: events written into the app's logs (the app then calls evNeuLaden), verworfen: [{ bereich, kennung, id, grund, typ? }],
         erneuerungOffen: areas that do not have the new key of a person with alt yet } */
-export async function geraetAbgleichen({ ablage, zugang, personen, kinder = [], familien = [], verzeichnis = {}, now, heute } = {}) {
+export async function geraetAbgleichen({ ablage, zugang, personen, kinder = [], familien = [], verzeichnis = {}, now, heute, geraetName } = {}) {
   gabPruefen({ ablage, zugang, personen, kinder, familien, verzeichnis, now, heute });
   const geraet = gabJson(ablage, GERAETEABGLEICH_SPEICHER.geraet, null);
   if (typeof geraet !== 'string' || !/^d_[0-9A-Za-z]{1,40}$/.test(geraet)) throw gabFehler('Geraet ohne Kennung (bq2_evDevice).');
-  const o = { ablage, zugang, personen, geraet, now, heute, verzeichnis };
+  if (geraetName !== undefined && geraetName !== null && typeof geraetName !== 'string') throw gabFehler('geraetName: Text erwartet.');
+  const name = typeof geraetName === 'string' ? geraetName.trim().slice(0, 40) : '';
+  // task "Meine Geraete": devices to remove, noted by module geraete ([{ person, geraet, am }])
+  const entfernen = gabListe(gabJson(ablage, GERAETEABGLEICH_SPEICHER.entfernen, [])).filter((x) => gabObj(x) && gabPid(x.person) && typeof x.geraet === 'string' && /^d_[0-9A-Za-z]{1,40}$/.test(x.geraet) && x.geraet !== geraet);
+  const o = { ablage, zugang, personen, geraet, now, heute, verzeichnis, geraetName: name, entfernen };
   const plan = [];                                                      // [area, target, anchor]
   for (const f of familien) plan.push([bereichName('familie', f.id), { familie: f.id }, f.anker]);
   for (const c of kinder) {

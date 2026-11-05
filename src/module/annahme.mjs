@@ -49,9 +49,10 @@ export const ANNAHME_GRUENDE = ['format', 'autor-unbekannt', 'nicht-mitglied', '
 const ANN_RIGHTS = {
   child: ['answer', 'round_done', 'badge', 'review', 'practice_day', 'profile_set', 'rank_seen', 'sheet_created', 'sheet_result', 'checklist_set', 'day_flag', 'device_added', 'gap_state', 'advent_open', 'joke_seen', 'story_read', 'person_set', 'anchor_set'],
   parent: ['profile_set', 'sheet_created', 'sheet_discarded', 'setting_set', 'school_import', 'grant_set', 'grant_revoked', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated', 'snapshot', 'gap_state', 'gap_active', 'list_set', 'advent_open', 'joke_seen', 'story_read', 'person_set', 'glance_set', 'backup_made', 'anchor_set', 'family_set', 'invite_set'],
-  teacher: ['grant_opened', 'device_added', 'person_set', 'member_added', 'key_rotated'],
-  admin: ['grant_opened', 'device_added', 'person_set', 'member_added', 'key_rotated'],
+  teacher: ['grant_opened', 'device_added', 'person_set', 'member_added', 'key_rotated', 'device_removed'],
+  admin: ['grant_opened', 'device_added', 'person_set', 'member_added', 'key_rotated', 'device_removed'],
 };
+/* task "Meine Geraete": teacher and admin remove one of their devices in their own person area (and renew their key). */
 /* task "Neuer Schluessel" (US9.7): a grown-up renews his person key. He announces the new public keys himself with
    member_added about himself, signed with the OLD key (that is the continuity: only the old key may name the new one) -
    so teacher and admin may write member_added, but only about themselves and with their own role. A key change in their
@@ -66,6 +67,7 @@ const ANN_LIMITS = {
   anchor_set: (e, role) => (role === 'child' ? e.payload.kind === 'child' : e.payload.kind === 'family'),   // a child has a creating parent, a parent a family
   member_added: (e, role) => role === 'parent' || (e.payload.person === e.author && e.payload.role === role),   // teacher, admin: only their own new key
   key_rotated: (e, role, area) => role === 'parent' || area === 'person:' + e.author,                         // teacher, admin: only in their own area
+  device_removed: (e, role, area) => role === 'parent' || area === 'person:' + e.author,                      // task "Meine Geraete": the same
 };
 
 /* ---------- helpers ---------- */

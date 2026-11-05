@@ -356,7 +356,7 @@ const ELD_WARNEN = ['autor-unbekannt', 'nicht-mitglied', 'geraet-fremd', 'geraet
    "schluessel", grund = the reason).
    -> { runden, bericht (of the last geraetAbgleichen), inDieApp (sum), bestaetigt, warnungen, abgelaufen, erneuert,
         erneuerungOffen } */
-export async function abgleichMitVerbindungen({ ablage, zugang, konten, now, heute } = {}) {
+export async function abgleichMitVerbindungen({ ablage, zugang, konten, now, heute, geraetName } = {}) {
   if (!Array.isArray(konten) || !konten.length) throw eldFalsch('konten erwartet.');
   for (const k of konten) eldPruefen({ ablage, konto: k, now });
   const personen = kontoPersonen(...konten);
@@ -373,7 +373,7 @@ export async function abgleichMitVerbindungen({ ablage, zugang, konten, now, heu
   };
   let plan = sammeln();
   for (let i = 0; i < EINLADUNG_RUNDEN; i++) {
-    out.bericht = await geraetAbgleichen({ ablage, zugang, personen, kinder: plan.kinder, familien: plan.familien, verzeichnis: plan.verzeichnis, now, heute });
+    out.bericht = await geraetAbgleichen({ ablage, zugang, personen, kinder: plan.kinder, familien: plan.familien, verzeichnis: plan.verzeichnis, now, heute, geraetName });
     out.runden++;
     out.inDieApp += out.bericht.inDieApp;
     out.erneuerungOffen = out.bericht.erneuerungOffen.slice();

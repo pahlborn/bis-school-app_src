@@ -59,9 +59,9 @@ test('Umwandlung: alle Speicherstellen bqt_, Geraetedaten und Token geraeteweit,
   const testbau = appLesen('utf8', { bauart: 'test' });
   const roh = appZusammensetzen(testbau, VERSION, null, null).toString('utf8');
   assert.ok(roh.includes('bq2_') && /\bbq_/.test(roh) && roh.includes('bqUpdateTo'), 'Ausgangslage: der Testbau nutzt bq2_, bq_, bqUpdateTo');
-  assert.deepEqual(geraeteNamen(roh), ['abgleich', 'abgleichVerworfen', 'schluessel']);
+  assert.deepEqual(geraeteNamen(roh), ['abgleich', 'abgleichVerworfen', 'geraetEntfernen', 'schluessel']);   // geraetEntfernen: Meine Geraete (05.11.)
   // bq_schluessel (Familienschluessel) las nur publishedVersion - die Testinstanz liest die Version ohne Schluessel
-  assert.match(APP, /const GLOBAL_KEYS=\/\^\(abgleich\|abgleichVerworfen\|gh\|session\|/);
+  assert.match(APP, /const GLOBAL_KEYS=\/\^\(abgleich\|abgleichVerworfen\|geraetEntfernen\|gh\|session\|/);
   for (const k of ["'bqt_session'", "'bqt_abgleich'", "'bqt_abgleichVerworfen'", "'bqt_evDevice'", "'bqt_gh'", "'bqtUpdateTo'"]) assert.ok(APP.includes(k), k);
   assert.ok(!APP.includes('bqt_schluessel'), 'kein Familienschluessel');
   assert.ok(APP.includes(VERSION_AUS_KLARTEXT), 'Aktualisierung ohne Schluessel');
@@ -97,7 +97,7 @@ test('Gegenproben Suchlauf: jede Abweichung wird gefunden (Schuldaten, Konten, T
   }
   nurFund(APP + "<script>localStorage.getItem('fremd')</script>", 'feste Speicherstellen');
   nurFund(APP.replace("const GITHUB_TOKEN_SCHLUESSEL = 'bqt_gh';", "const GITHUB_TOKEN_SCHLUESSEL = 'bqt_token';"), 'Token-Eintrag');
-  nurFund(APP.replace('const GLOBAL_KEYS=/^(abgleich|abgleichVerworfen|gh|', 'const GLOBAL_KEYS=/^(abgleich|abgleichVerworfen|'), 'Geraetedaten und Token');
+  nurFund(APP.replace('const GLOBAL_KEYS=/^(abgleich|abgleichVerworfen|geraetEntfernen|gh|', 'const GLOBAL_KEYS=/^(abgleich|abgleichVerworfen|geraetEntfernen|'), 'Geraetedaten und Token');
   // Aktualisierung: alte publishedVersion (mit Schluessel und Tresor, Speicherstelle schon bqt_), doppelt, ohne Version
   const mitTresor = /async function publishedVersion\(\)\{[\s\S]*?\n\}/.exec(appLesen('utf8', { bauart: 'test' }))[0].replace(/\r/g, '').replace('bq_schluessel', 'bqt_schluessel');
   nurFund(APP.replace(VERSION_AUS_KLARTEXT, () => mitTresor), 'Aktualisierung ohne Schluessel');

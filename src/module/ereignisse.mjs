@@ -33,6 +33,8 @@ const evField = {
   pub: (x) => evObj(x) && Object.keys(x).length === 2 && ['ecdh', 'ecdsa'].every((k) => typeof x[k] === 'string' && /^[A-Za-z0-9+/]+=*$/.test(x[k])),
   // list of different person IDs (may be empty)
   pids: (x) => Array.isArray(x) && new Set(x).size === x.length && x.every((p) => typeof p === 'string' && /^p_[0-9A-Za-z]{1,40}$/.test(p)),
+  // list of different device IDs (task "Meine Geraete")
+  dids: (x) => Array.isArray(x) && new Set(x).size === x.length && x.every((d) => typeof d === 'string' && /^d_[0-9A-Za-z]{1,40}$/.test(d)),
   // bundles per device at a key change (speicher.list merker.stand): device ID -> count
   stand: (x) => evObj(x) && Object.entries(x).every(([d, n]) => /^d_[0-9A-Za-z]{1,40}$/.test(d) && Number.isInteger(n) && n >= 0),
 };
@@ -68,7 +70,9 @@ const EV_SPEC = {
   device_removed: ['device:did', ''],
   // erneuert (task "Neuer Schluessel"): persons with new keys since the last version (a grown-up renewed his key, a child
   // got a new password) - their bundles with an older version beyond "stand" no longer count, like those of the removed
-  key_rotated: ['version:pos entfernt:pids stand:stand', 'erneuert:pids'],
+  // geraete (task "Meine Geraete"): devices removed with this change - their bundles beyond "stand", and their events in
+  // any other device's bundle, no longer count
+  key_rotated: ['version:pos entfernt:pids stand:stand', 'erneuert:pids geraete:dids'],
   // snapshot (task 5, module schnappschuss): idsHash = checksum of the events it contains, so a late event is noticed
   snapshot: ['upTo:utc count:int idsHash:sha state:obj', ''],
   // gaps per school (index.html "gaps", task 3b-0): one standard per event; day = the app's day (index.html dayKey)
