@@ -187,7 +187,7 @@ test('grown-ups header: language flags, ? help, ⚙ settings and log out always 
   assert.match(await page.textContent('.phdr'), /Grown-ups area/);
   assert.match(await page.textContent('#parentClose'), /Log out/);
   assert.deepEqual(await page.$$eval('#aboutBody details.psec > summary', (s) => s.map((x) => x.textContent.trim())),
-    ['📖 How Big Quest works', '🤝 Supporting your child', '🏫 School evaluations – history', '📄 Practice sheets']);
+    ['📖 The Big Quest concept', '🤝 How to support your child', '🏫 School assessments', '📄 Practice sheets']);
   // guide and info pages are one reading chapter: reading keeps the grown-up logged in
   await page.locator('#aboutBody details.psec[data-psec="concept"] > summary').click();
   const ab = page.locator('#aboutBody details.psec[data-psec="concept"] details.about-sec').first();
@@ -440,7 +440,7 @@ test('teacher sees observations read-only: no focus, settings, profile or sheet 
   await page.waitForSelector('#parentClose');
   const t = await page.textContent('#aboutBody');
   assert.ok(t.includes('Lehrkraft-Ansicht') && t.includes('Einschätzung'));
-  assert.ok((await page.locator('.phdr #pHelp').count()) === 1 && t.includes('Ihr Kind unterstützen') && t.includes('So funktioniert Big Quest'), 'support, concept and the guide (?) in the grown-ups area');
+  assert.ok((await page.locator('.phdr #pHelp').count()) === 1 && t.includes('So unterstützen Sie Ihr Kind') && t.includes('Das Konzept von Big Quest'), 'support, concept and the guide (?) in the grown-ups area');
   for (const sel of ['#focusForm', '#storyCap', '#profileDelete', '#reminderForm', 'button[data-res]']) assert.equal(await page.locator(sel).count(), 0, sel);
   await page.locator('[data-psubj="maths"]').click();
   assert.ok(await page.locator('details.phelpq').count(), 'teacher sees the help');

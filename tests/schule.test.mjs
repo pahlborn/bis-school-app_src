@@ -60,7 +60,7 @@ test('school data in the grown-ups area (C1): per subject "From school" with sta
   // history chapter: only the assignments (evaluated and waiting), with rubric and next steps
   await page.locator('details.psec[data-psec="school"] > summary').click();
   const t = await page.locator('details.psec[data-psec="school"]').innerText();
-  assert.match(t, /Bewertungen der Schule – Verlauf/);
+  assert.match(t, /Schulische Einstufungen/);
   for (const w of ['Mastering Basic Numbers and Calculations – Milestone', 'Persuade for the Park!', 'Friction Frenzy', 'Lesson 4', 'Wartet auf Bewertung']) assert.ok(t.includes(w), w);
   assert.ok(!t.includes('Standards – zuletzt') && !t.includes('ES = mit Unterstützung'), 'standards table and learning skills moved to the subjects');
   assert.ok(!/Toddle|BIS\b|3B/.test(t), 'neutral wording');
@@ -123,7 +123,7 @@ test('another child has no school ratings: overview says so, no starting point',
   await page.locator('#adultBtn').click(); await login(page, 'adult', 'papa', 'langes-passwort');
   await page.waitForSelector('#parentClose');
   await page.locator('details.psec[data-psec="school"] > summary').click();
-  assert.match(await page.locator('details.psec[data-psec="school"]').innerText(), /noch keine Einstufungen/);
+  assert.match(await page.locator('details.psec[data-psec="school"]').innerText(), /noch keine schulischen Einstufungen/);
   await page.locator('[data-psubj="maths"]').click();
   assert.equal(await page.locator('.pquest', { hasText: '🏫 Schule' }).count(), 0);
   assert.deepEqual(fehler, []);
