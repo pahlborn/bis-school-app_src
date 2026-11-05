@@ -26,12 +26,14 @@
 
 import { KONTO_ARTEN, kontoName, kontoLookup, ersteAnmeldung, anmelden, wiederherstellen, schluesselErneuern, kontoFingerabdruck } from './konto.mjs';
 import { githubSpeicher, githubTokenLesen, githubTokenSpeichern } from './github.mjs';
-import { verbindungen, kindAnlegen, elternteilEinladen, kindPasswortNeu, einladungZurueckziehen, abgleichMitVerbindungen, anmeldenameVorschlag } from './einladung.mjs';
+import { verbindungen, kindAnlegen, elternteilEinladen, kindPasswortNeu, einladungZurueckziehen, abgleichMitVerbindungen, anmeldenameVorschlag, kindLokalEntfernen } from './einladung.mjs';
 import { meineGeraete, geraetEntfernen } from './geraete.mjs';
 import { GERAETEABGLEICH_SPEICHER } from './geraeteabgleich.mjs';
 import { bereichName, schluesselLesen } from './bereiche.mjs';
 import { zulassungAus, aktiveMitglieder } from './zulassung.mjs';
 import { qrSvg } from './qrcode.mjs';
+import { kindDatenExport, kindDatenLoeschen, kontoDatenLoeschen } from './kinddaten.mjs';
+import { deriveSchool } from './ableitung.mjs';
 
 /* a start code as module konto issues it: 16 random bytes, base64url */
 export const ANM_STARTCODE = /^[A-Za-z0-9_-]{22}$/;
@@ -143,7 +145,7 @@ export function anmGeraetKonten(liste) {
 /* ---------- storage and accounts (the only way of index.html to modules konto and github) ---------- */
 /* the access of this device to the storage of the accounts.
    speicher: KONTO_SPEICHER of the app - a storage with geraet() (tests: the simulation) or { art: 'github', repo, wurzel,
-   basis? } (test instance); ablage: the browser storage (access key bqt_gh); geraet: the device id; fetch: for GitHub.
+   basis? } (test instance); ablage: the browser storage (access key: GITHUB_TOKEN_SCHLUESSEL); geraet: the device id; fetch: for GitHub.
    -> the access, or null (no storage; test instance without access key) */
 export function anmZugang(speicher, { ablage, geraet, fetch } = {}) {
   if (speicher && typeof speicher.geraet === 'function') return speicher.geraet(geraet);
@@ -235,9 +237,26 @@ export async function anmKindBereit({ ablage, zugang, konto, now }) {
 /* ---------- the sync in the app (task "Abgleich in der App"; concept 9.1, 9.4) ---------- */
 const anmStaende = (ablage) => { try { const s = JSON.parse(ablage.getItem(GERAETEABGLEICH_SPEICHER.staende) || '{}'); return s && typeof s === 'object' && !Array.isArray(s) ? s : {}; } catch (e) { return {}; } };
 const anmEvents = (st) => (st && Array.isArray(st.log) ? st.log.map((x) => x && x.event).filter((e) => e && typeof e === 'object' && e.payload && typeof e.payload === 'object') : []);
-/* entries this device dropped while syncing (forgeries, missing rights; kept once, module geraeteabgleich) -> count */
+/* entries this device dropped while syncing (kept once, module geraeteabgleich) that the grown-ups are told of as a
+   number: only forgeries and entries without the right to write them (Peter, 05.11., from #139) - never the harmless
+   ones of the order of things (an author or device whose admission comes later, e.g. right after "Schluessel erneuern";
+   an older stand) or of a newer app version (a format this one does not know yet).
+     forged:          unterschrift, eintrag-passt-nicht, entschluesseln, geraet-fremd
+     without a right: nicht-mitglied, rolle-darf-nicht, bereich-falsch, nach-entfernung (a removed device, old keys),
+                      geraet-nicht-angemeldet from a device that was removed (the bundle "<device>/<n>" of a device with a
+                      device_removed this device knows - depending on the order the admission drops a removed device's
+                      entry with this reason before the check for nach-entfernung; found in the full test run, 05.11.)
+   -> count */
+export const ANM_VERWORFEN_ZAEHLT = Object.freeze(['unterschrift', 'eintrag-passt-nicht', 'entschluesseln', 'geraet-fremd', 'nicht-mitglied', 'rolle-darf-nicht', 'bereich-falsch', 'nach-entfernung']);
 export function anmVerworfen(ablage) {
-  try { const l = JSON.parse(ablage.getItem(GERAETEABGLEICH_SPEICHER.verworfen) || '[]'); return Array.isArray(l) ? l.length : 0; } catch (e) { return 0; }
+  try {
+    const l = JSON.parse(ablage.getItem(GERAETEABGLEICH_SPEICHER.verworfen) || '[]');
+    if (!Array.isArray(l)) return 0;
+    const entfernt = new Set();
+    for (const st of Object.values(anmStaende(ablage))) for (const e of anmEvents(st)) if (e.type === 'device_removed' && typeof e.payload.device === 'string') entfernt.add(e.payload.device);
+    const vomEntfernten = (v) => v.grund === 'geraet-nicht-angemeldet' && typeof v.kennung === 'string' && entfernt.has(v.kennung.split('/')[0]);
+    return l.filter((v) => v && typeof v === 'object' && (ANM_VERWORFEN_ZAEHLT.includes(v.grund) || vomEntfernten(v))).length;
+  } catch (e) { return 0; }
 }
 /* was this device removed (module geraete: device_removed with its id in an area it knows)? */
 export function anmGeraetEntfernt({ ablage }) {
@@ -257,6 +276,19 @@ export async function anmSpeicherFremd(zugang) {
   if (!zugang || typeof zugang.verbunden !== 'function') return false;
   try { return !(await zugang.verbunden()); } catch (err) { if (err && typeof err.code === 'string') return false; throw err; }
 }
+
+/* ---------- task "Familienfassung bauen" (preparation of stage 4): export, deletion, school ratings ---------- */
+/* all data of a child (module kinddaten, US12.1) -> { daten, json, html, dateiname: { json, html } } */
+export const anmKindExport = ({ ablage, konto, kind, now, heute, sprache }) => kindDatenExport({ ablage, konto, kind, now, heute, sprache });
+/* delete a child of the family (US12.2) - storage and this device; the app deletes its recordings itself */
+export const anmKindLoeschen = ({ ablage, zugang, konto, kind, now, heute, geraetName }) => kindDatenLoeschen({ ablage, zugang, konto, kind, now, heute, ...(geraetName ? { geraetName } : {}) });
+/* delete the own account of a parent, with his password (US12.2) */
+export const anmKontoLoeschen = ({ ablage, zugang, konto, passwort, now, heute, geraetName }) => kontoDatenLoeschen({ ablage, zugang, konto, passwort, now, heute, ...(geraetName ? { geraetName } : {}) });
+/* what this device holds of a child whose areas are gone from the storage (module einladung) */
+export const anmKindLokalEntfernen = ({ ablage, kind }) => kindLokalEntfernen({ ablage, kind });
+/* the school ratings of a child from its log (area schule, school_import; module ableitung) - or null. The family build
+   has no SCHOOL_DATA: a child's ratings come into its account (werkzeug/schulbewertungen-uebernehmen.mjs). */
+export const anmSchule = (events, now) => deriveSchool(events, { now });
 
 /* ---------- guides ---------- */
 /* replaces whole points "<li><b>Label</b> ...</li>" (or <p>) of a guide: ersatz = [[label, new text after the label]].
