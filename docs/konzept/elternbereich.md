@@ -142,7 +142,7 @@ FACHANSICHT (← Alle Fächer)
 2. **Auf einen Blick** (5.10).
 3. **Fächer-Kacheln** wie heute, zusätzlich ein kleiner 🏫-Punkt mit der schwächsten aktuellen Schul-Einstufung des Fachs (nur wenn Schuldaten da und sichtbar).
 4. **Einschätzung** wie heute; „So lesen Sie diese Seite“ entfällt; Farblegende als eine Zeile (Punkt + Wort), der Satz zu „vorläufig/bestätigt“ ins ⓘ.
-5. **Kapitel**, zugeklappt: 📖 Das Konzept von Big Quest · 🤝 So unterstützen Sie Ihr Kind · 🏫 Schulische Einstufungen (nur die bewerteten und wartenden Aufgaben chronologisch, je Aufgabe Einstufung, Raster, „Das gelingt“, „Nächste Schritte“) · 📄 Übungsblätter (nicht für Lehrkraft).
+5. **Kapitel**, zugeklappt: 📖 Das Konzept von Big Quest · 🤝 So unterstützen Sie Ihr Kind · 🏫 Schulische Einstufungen (seit 05.11. eine Tabelle: je bewerteter Aufgabe Datum · Fach · Aufgabe · Einstufungen in Worten · „Details“; Filter Fach, Zeitraum, nur „Braucht Unterstützung / Wird sicherer“; Sortierung Datum, Fach, Einstufung; Details fest gegliedert: Standards · Bewertungsraster · Stärken · Nächste Schritte; „Wartet auf Bewertung“ als kleiner Block; Stand aus den Daten; auf dem iPhone Karten) · 📄 Übungsblätter (nicht für Lehrkraft).
 
 ### 5.4 Fachansicht
 

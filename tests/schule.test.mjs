@@ -64,12 +64,13 @@ test('school data in the grown-ups area (C1): per subject "From school" with sta
   for (const w of ['Mastering Basic Numbers and Calculations – Milestone', 'Persuade for the Park!', 'Friction Frenzy', 'Lesson 4', 'Wartet auf Bewertung']) assert.ok(t.includes(w), w);
   assert.ok(!t.includes('Standards – zuletzt') && !t.includes('ES = mit Unterstützung'), 'standards table and learning skills moved to the subjects');
   assert.ok(!/Toddle|BIS\b|3B/.test(t), 'neutral wording');
-  // rubric: the teacher's rating and the child's own rating side by side (Peter 01.11.)
-  await page.locator('details.psec[data-psec="school"] details.about-sec', { hasText: 'Milestone' }).locator('summary').click();
-  const ms = await page.locator('details.psec[data-psec="school"] details.about-sec', { hasText: 'Milestone' }).innerText();
-  assert.match(ms, /Sticker combinations: Lehrkraft Wird sicherer \(Consolidating\) · selbst eingeschätzt Darüber hinaus \(Extending\)/);
-  assert.match(t, /Alle Einstufungen hier sind die der Lehrkraft/);
-  assert.match(ms, /Daraus im automatischen Fokus: Word Problems/);
+  // rubric: the teacher's rating and the child's own rating side by side (Peter 01.11.) - since 05.11. in the details row
+  const zeile = page.locator('details.psec[data-psec="school"] tr.psrow', { hasText: 'Milestone' });
+  await zeile.locator('[data-psdet]').click();
+  const ms = page.locator(`details.psec[data-psec="school"] tr.psdet[data-psdetrow="${await zeile.getAttribute('data-psrow')}"]`);
+  assert.deepEqual(await ms.locator('table.psrub tbody tr', { hasText: 'Sticker combinations' }).locator('td').allInnerTexts(), ['Sticker combinations', 'Wird sicherer', 'Darüber hinaus']);
+  assert.match(t, /Stand der Daten: 01\.11\.2026 · neueste Bewertung: 27\.10\.2026\. Einstufungen der Lehrkraft/);
+  assert.match(await ms.innerText(), /Daraus im automatischen Fokus: Word Problems/);
   // maths: "From school" with the standards of maths and the next steps
   await page.locator('[data-psubj="maths"]').click();
   const b = await page.locator('#pSchool').innerText();
