@@ -76,7 +76,9 @@ test('T13 "From school" per subject: only its standards, each standard in exactl
   await page.locator('details.psec[data-psec="school"] > summary').click();
   const h = await page.locator('details.psec[data-psec="school"]').innerText();
   for (const w of ['Schulische Einstufungen', 'Rounding check B', 'Forces lab', 'Wartet auf Bewertung', 'Persuasive letter']) assert.ok(h.includes(w), w);
-  assert.equal(await page.locator('details.psec[data-psec="school"] table').count(), 0, 'no standards table in the history');
+  // since 05.11. one table of the assignments (and rubrics in the details), still no standards table
+  assert.equal(await page.locator('details.psec[data-psec="school"] table:not(.pstab):not(.psrub)').count(), 0, 'no standards table in the history');
+  assert.ok(!h.includes('Standards – zuletzt'));
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
