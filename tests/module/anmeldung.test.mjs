@@ -6,7 +6,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ANM_STARTCODE, ANM_EINTRAG, anmIstStartcode, anmStartlinkLesen, anmStartlink, anmCodeEintrag, anmNameAusEintrag,
-  anmCodeDatei, anmEintragAus, anmListe, anmListeMit, anmGeraetKonten, anmPunkteErsetzen
+  anmCodeDatei, anmEintragAus, anmListe, anmListeMit, anmGeraetKonten, anmPunkteErsetzen,
+  anmVerworfen, anmGeraetEntfernt, anmGeraetNeu, anmSpeicherFremd
 } from '../../src/module/anmeldung.mjs';
 import { normAccounts } from '../../src/module/rechte.mjs';
 import { pwSuggest } from '../../src/module/passwort.mjs';
@@ -128,4 +129,24 @@ test('anmKindBereit: erst wenn ein Elterngeraet das Kind aufgenommen hat (aktuel
   assert.equal(await anmKindBereit({ ablage: aK, zugang: w.geraet('d_K'), konto: K, now: now() }), true, 'nach der Aufnahme: darf ueben');
   const off = w.geraet('d_K'); off.offline();
   assert.equal(await anmKindBereit({ ablage: aK, zugang: off, konto: K, now: now() }), false, 'Speicher weg: (noch) nicht');
+});
+
+test('Abgleich in der App: Zahl des nicht Uebernommenen; Geraet entfernt? (nur die eigene Kennung); neu beginnen; fremder Speicher', async () => {
+  const m = new Map(), ablage = { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => { m.set(k, String(v)); } };
+  assert.equal(anmVerworfen(ablage), 0);
+  m.set('bq_abgleichVerworfen', JSON.stringify([{ grund: 'unterschrift' }, { grund: 'nach-entfernung' }]));
+  assert.equal(anmVerworfen(ablage), 2);
+  m.set('bq_abgleichVerworfen', 'kaputt'); assert.equal(anmVerworfen(ablage), 0);
+  m.set('bq2_evDevice', JSON.stringify('d_A1'));
+  const st = (dev) => JSON.stringify({ 'kind:lern:p_k1': { log: [{ event: { type: 'device_added', payload: { device: 'd_A1' } } }, { event: { type: 'device_removed', payload: { device: dev } } }] } });
+  assert.equal(anmGeraetEntfernt({ ablage }), false, 'nichts bekannt');
+  m.set('bq_abgleich', st('d_B1')); assert.equal(anmGeraetEntfernt({ ablage }), false, 'ein anderes Geraet entfernt');
+  m.set('bq_abgleich', st('d_A1')); assert.equal(anmGeraetEntfernt({ ablage }), true, 'dieses Geraet entfernt');
+  anmGeraetNeu({ ablage });
+  assert.equal(m.get('bq_abgleich'), '{}'); assert.equal(anmGeraetEntfernt({ ablage }), false);
+  assert.equal(await anmSpeicherFremd({}), false, 'ein Speicher ohne verbunden(): nicht fremd');
+  assert.equal(await anmSpeicherFremd({ verbunden: async () => false }), true);
+  assert.equal(await anmSpeicherFremd({ verbunden: async () => true }), false);
+  assert.equal(await anmSpeicherFremd({ verbunden: async () => { const e = new Error('x'); e.code = 'offline'; throw e; } }), false, 'Speicherfehler: die normalen Meldungen');
+  await assert.rejects(anmSpeicherFremd({ verbunden: async () => { throw new Error('Programmfehler'); } }), /Programmfehler/);
 });

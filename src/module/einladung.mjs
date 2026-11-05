@@ -397,10 +397,13 @@ const ELD_WARNEN = ['autor-unbekannt', 'nicht-mitglied', 'geraet-fremd', 'geraet
    (erneuerungOffen: areas still to do; keep alt while it is not empty). erneuert: other parents who renewed their key
    (shown once, with the new fingerprint); a dropped key change (member_added a device refused) -> warning (art
    "schluessel", grund = the reason).
+   Task "Abgleich in der App": inDieApp false (a child in the middle of a round) -> one round only, nothing written into
+   the app's logs (geraetAbgleichen inDieApp); the hourly limit of the storage -> no further round, limit = wait time.
    -> { runden, bericht (of the last geraetAbgleichen), inDieApp (sum), bestaetigt, warnungen, abgelaufen, erneuert,
         erneuerungOffen, geloescht (children whose data this call removed from the device - task "Export und Loeschen"),
-        kontoGeloescht (accounts of "konten" that no longer exist in the directory: not synced, the app logs them out) } */
-export async function abgleichMitVerbindungen({ ablage, zugang, konten: alleKonten, now, heute, geraetName } = {}) {
+        kontoGeloescht (accounts of "konten" that no longer exist in the directory: not synced, the app logs them out),
+        limit? } */
+export async function abgleichMitVerbindungen({ ablage, zugang, konten: alleKonten, now, heute, geraetName, inDieApp = true } = {}) {
   if (!Array.isArray(alleKonten) || !alleKonten.length) throw eldFalsch('konten erwartet.');
   for (const k of alleKonten) eldPruefen({ ablage, konto: k, now });
   const out = { runden: 0, bericht: null, inDieApp: 0, bestaetigt: [], warnungen: [], abgelaufen: [], erneuert: [], erneuerungOffen: [], geloescht: [], kontoGeloescht: [] };
@@ -430,13 +433,15 @@ export async function abgleichMitVerbindungen({ ablage, zugang, konten: alleKont
   };
   let plan = sammeln();
   for (let i = 0; i < EINLADUNG_RUNDEN; i++) {
-    out.bericht = await geraetAbgleichen({ ablage, zugang, personen, kinder: plan.kinder, familien: plan.familien, verzeichnis: plan.verzeichnis, now, heute, geraetName });
+    out.bericht = await geraetAbgleichen({ ablage, zugang, personen, kinder: plan.kinder, familien: plan.familien, verzeichnis: plan.verzeichnis, now, heute, geraetName, inDieApp });
     out.runden++;
     out.inDieApp += out.bericht.inDieApp;
     out.erneuerungOffen = out.bericht.erneuerungOffen.slice();
     for (const v of out.bericht.verworfen) {
       if (v.typ === 'member_added' && ELD_WARNEN.includes(v.grund) && !out.warnungen.some((x) => x.id === v.id)) out.warnungen.push({ id: v.id, art: 'schluessel', person: null, grund: v.grund, bereich: v.bereich });
     }
+    if (out.bericht.limit !== undefined) { out.limit = out.bericht.limit; break; }
+    if (!inDieApp) break;
     let geschrieben = 0;
     for (const k of konten) {
       if (eldEinrichten(ablage, k, now)) geschrieben++;
@@ -454,8 +459,9 @@ export async function abgleichMitVerbindungen({ ablage, zugang, konten: alleKont
   }
   // task "Export und Loeschen": a child the family deleted (family_set removed) - its data leaves this device, too; a
   // child's own device whose areas are gone from the storage (bereich fehler "geloescht") the same. The app then drops
-  // the child from its lists (and logs a deleted child out).
-  for (const k of konten) {
+  // the child from its lists (and logs a deleted child out). Not in the middle of a child's round (inDieApp false): the
+  // next full sync does it.
+  for (const k of inDieApp ? konten : []) {
     const weg = verbindungen({ ablage, konto: k, now }).entfernt.filter((x) => x.role === 'child').map((x) => x.person);
     const b = out.bericht && out.bericht.bereiche[bereichName('kind:lern', k.kennung)];
     if (k.art === 'child' && b && b.fehler === 'geloescht') weg.push(k.kennung);
