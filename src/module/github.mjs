@@ -212,10 +212,13 @@ export function githubSpeicher({ repo, token, fetch: holer = globalThis.fetch, n
   const baeume = new Map();                 // tree sha -> Map(device -> count); a tree never changes
   let ordner = { etag: null, bereiche: new Map() };   // folder events: area -> tree sha
 
-  /* bundles per device in an area: Map(device -> count of 1..n without gap) */
-  async function standVon(bereich) {
-    const r = await ordnerHolen(pfad('events'), ordner.etag);
-    if (!r.unveraendert) ordner = { etag: r.etag, bereiche: new Map(r.eintraege.filter((e) => e.type === 'dir').map((e) => [e.name, e.sha])) };
+  /* bundles per device in an area: Map(device -> count of 1..n without gap). ohneNachfrage (a sitzung, see below): the
+     folder events was asked a moment ago - its list is taken as it is */
+  async function standVon(bereich, ohneNachfrage = false) {
+    if (!ohneNachfrage || !ordner.etag) {
+      const r = await ordnerHolen(pfad('events'), ordner.etag);
+      if (!r.unveraendert) ordner = { etag: r.etag, bereiche: new Map(r.eintraege.filter((e) => e.type === 'dir').map((e) => [e.name, e.sha])) };
+    }
     const sha = ordner.bereiche.get(bereich);
     if (!sha) return new Map();
     if (baeume.has(sha)) return baeume.get(sha);
@@ -252,10 +255,10 @@ export function githubSpeicher({ repo, token, fetch: holer = globalThis.fetch, n
     return g + '/' + b.nr;
   }
 
-  async function list(bereich, seit) {
+  async function list(bereich, seit, ohneNachfrage = false) {
     ghsId(bereich);
     if (seit !== null && seit !== undefined && (!ghsObj(seit) || seit.bereich !== bereich || !ghsObj(seit.stand))) throw ghsFehler('ungueltig');
-    const anzahl = await standVon(bereich);
+    const anzahl = await standVon(bereich, ohneNachfrage);
     const stand = {};
     if (seit !== null && seit !== undefined) {
       for (const [g, n] of Object.entries(seit.stand)) {
@@ -282,14 +285,30 @@ export function githubSpeicher({ repo, token, fetch: holer = globalThis.fetch, n
   }
 
   /* ---------- keys, directory ---------- */
+  // task "Abgleich in der App": the folder of an area's keys is asked with its ETag (unchanged -> 304, free), and a key
+  // file is fetched only when its sha is new (a file with the same sha has the same content) - so a sync without news
+  // costs no request against the hourly limit here either
+  const schluesselOrdner = new Map();       // area -> { etag, eintraege }
+  const schluesselTexte = new Map();        // blob sha -> text
   async function keys(bereich) {
     ghsId(bereich);
-    const { eintraege } = await ordnerHolen(pfad('keys', bereich));
-    const halter = ghsSortiert(eintraege.filter((e) => e.type === 'file' && /\.json$/.test(e.name)).map((e) => e.name.slice(0, -5)).filter((h) => GHS_ID.test(h)));
+    const alt = schluesselOrdner.get(bereich);
+    const r = await ordnerHolen(pfad('keys', bereich), alt && alt.etag);
+    const eintraege = r.unveraendert ? alt.eintraege : r.eintraege;
+    if (!r.unveraendert) { if (r.etag) schluesselOrdner.set(bereich, { etag: r.etag, eintraege }); else schluesselOrdner.delete(bereich); }
+    const dateien = eintraege.filter((e) => e.type === 'file' && /\.json$/.test(e.name) && GHS_ID.test(e.name.slice(0, -5)));
     const out = {};
-    for (const h of halter) {
-      const f = await dateiHolen(pfad('keys', bereich, h + '.json'));
-      if (f) out[h] = ghsJson(f.text);
+    for (const e of [...dateien].sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))) {
+      const h = e.name.slice(0, -5);
+      let text = schluesselTexte.get(e.sha);
+      if (text === undefined) {
+        const f = await dateiHolen(pfad('keys', bereich, h + '.json'));
+        if (!f) continue;
+        text = f.text;
+        if (schluesselTexte.size >= 2000) schluesselTexte.clear();
+        schluesselTexte.set(f.sha, text);
+      }
+      out[h] = ghsJson(text);
     }
     return out;
   }
@@ -298,6 +317,13 @@ export function githubSpeicher({ repo, token, fetch: holer = globalThis.fetch, n
     await dateiSchreiben(pfad('keys', bereich, halter + '.json'), ghsText(verpackt));
   }
 
+  /* task "Abgleich in der App": does this repo hold accounts at all (folder directory with entries)? A repo the token
+     cannot see answers 404 like an empty one - both are not this app's storage. One request; only asked when a login
+     finds nothing (so the app can say "connected to another storage" instead of asking for a password first). */
+  async function verbunden() {
+    const r = await ordnerHolen(pfad('directory'));
+    return r.eintraege.some((e) => e.type === 'file' && /\.json$/.test(e.name));
+  }
   async function directory(lookup) {
     ghsId(lookup);
     const f = await dateiHolen(pfad('directory', lookup + '.json'));
@@ -394,12 +420,40 @@ export function githubSpeicher({ repo, token, fetch: holer = globalThis.fetch, n
 
   function geraet(name) {
     ghsId(name);
-    return {
+    const zugang = {
       geraet: name,
       put: (bereich, g, b) => put(name, bereich, g, b),
-      list, get, keys, putKey, directory, putDirectory,
+      list: (bereich, seit) => list(bereich, seit),
+      get, keys, putKey, directory, putDirectory,
       invite: { put: invite.put, get: invite.get, delete: invite.delete },
-      exportFile, importFile,
+      exportFile, importFile, verbunden,
+      sitzung: () => sitzung(zugang),
+    };
+    return zugang;
+  }
+  /* task "Abgleich in der App": one sync of a device (module geraeteabgleich) works in a sitzung - the same functions, but
+     within it the folder events is asked once (again only after this device wrote into the area it lists), and the keys
+     of an area are read once (again after this device wrote a key there). That saves the same question asked many
+     times within seconds (each would be a 304: free, but ~0.3 s). Others' changes during the sync come with the next. */
+  function sitzung(z) {
+    let gefragt = false;
+    const geschrieben = new Set(), schl = new Map();
+    return {
+      ...z,
+      put: async (bereich, g, b) => { geschrieben.add(bereich); return z.put(bereich, g, b); },
+      list: async (bereich, seit) => {
+        const ohne = gefragt && !geschrieben.has(bereich);
+        const r = await list(bereich, seit, ohne);
+        gefragt = true;
+        if (!ohne) geschrieben.clear();
+        return r;
+      },
+      keys: async (bereich) => {
+        if (!schl.has(bereich)) schl.set(bereich, ghsText(await z.keys(bereich)));
+        return JSON.parse(schl.get(bereich));
+      },
+      putKey: async (bereich, halter, verpackt) => { schl.delete(bereich); return z.putKey(bereich, halter, verpackt); },
+      sitzung: () => sitzung(z),
     };
   }
 

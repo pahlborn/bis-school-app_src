@@ -354,9 +354,11 @@ const ELD_WARNEN = ['autor-unbekannt', 'nicht-mitglied', 'geraet-fremd', 'geraet
    (erneuerungOffen: areas still to do; keep alt while it is not empty). erneuert: other parents who renewed their key
    (shown once, with the new fingerprint); a dropped key change (member_added a device refused) -> warning (art
    "schluessel", grund = the reason).
+   Task "Abgleich in der App": inDieApp false (a child in the middle of a round) -> one round only, nothing written into
+   the app's logs (geraetAbgleichen inDieApp); the hourly limit of the storage -> no further round, limit = wait time.
    -> { runden, bericht (of the last geraetAbgleichen), inDieApp (sum), bestaetigt, warnungen, abgelaufen, erneuert,
-        erneuerungOffen } */
-export async function abgleichMitVerbindungen({ ablage, zugang, konten, now, heute, geraetName } = {}) {
+        erneuerungOffen, limit? } */
+export async function abgleichMitVerbindungen({ ablage, zugang, konten, now, heute, geraetName, inDieApp = true } = {}) {
   if (!Array.isArray(konten) || !konten.length) throw eldFalsch('konten erwartet.');
   for (const k of konten) eldPruefen({ ablage, konto: k, now });
   const personen = kontoPersonen(...konten);
@@ -373,13 +375,15 @@ export async function abgleichMitVerbindungen({ ablage, zugang, konten, now, heu
   };
   let plan = sammeln();
   for (let i = 0; i < EINLADUNG_RUNDEN; i++) {
-    out.bericht = await geraetAbgleichen({ ablage, zugang, personen, kinder: plan.kinder, familien: plan.familien, verzeichnis: plan.verzeichnis, now, heute, geraetName });
+    out.bericht = await geraetAbgleichen({ ablage, zugang, personen, kinder: plan.kinder, familien: plan.familien, verzeichnis: plan.verzeichnis, now, heute, geraetName, inDieApp });
     out.runden++;
     out.inDieApp += out.bericht.inDieApp;
     out.erneuerungOffen = out.bericht.erneuerungOffen.slice();
     for (const v of out.bericht.verworfen) {
       if (v.typ === 'member_added' && ELD_WARNEN.includes(v.grund) && !out.warnungen.some((x) => x.id === v.id)) out.warnungen.push({ id: v.id, art: 'schluessel', person: null, grund: v.grund, bereich: v.bereich });
     }
+    if (out.bericht.limit !== undefined) { out.limit = out.bericht.limit; break; }
+    if (!inDieApp) break;
     let geschrieben = 0;
     for (const k of konten) {
       if (eldEinrichten(ablage, k, now)) geschrieben++;
