@@ -70,6 +70,8 @@ jedeWelt('--anlegen: Admin und die beiden Peter legt das Werkzeug an, die andere
   for (const [i, p] of pw.entries()) assert.equal(pwWeak(p, ['admin', 'peter.a', 'peter.b'][i]), false, 'stark: ' + i);
   for (const x of g) { assert.ok(text.includes(x), 'in der Datei'); assert.equal(r.aus.includes(x), false, 'nie in der Ausgabe'); }
   assert.match(text, /kathie\.a .*Kathie Beispiel, Geburtsdatum 14\.05\.2017/);
+  // Startlink fuer die Anmeldung im Testbau (Aufgabe "Anmeldung im Testbau"): #start=<name>/<code>
+  for (const [n, s] of Object.entries(st.personen)) if (s.startcode) assert.ok(text.includes('Startlink: https://pahlborn.github.io/bis-school-app-test/#start=' + n + '/' + s.startcode.code), 'Startlink ' + n);
   assert.match(text, /kathie\.b .*Kathie Beispiel, Geburtsdatum 03\.09\.2017/);
   assert.match(r.aus, /testpersonen\.txt/);
   if (W.dateien) {

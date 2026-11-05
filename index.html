@@ -259,6 +259,7 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 .pgrants{margin:6px 0 10px;padding-left:18px}.pgrants li{margin:4px 0}.pgrantlog ul{font-size:.9rem}
 .whos-here{margin:4px 0 10px}.whos-here .row{flex-wrap:wrap;gap:8px}.pw-suggest{margin:6px 0 10px}.pw-suggest b{font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:.02em}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.rec-code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:1.3rem;letter-spacing:.06em;background:var(--soft);border-radius:12px;padding:10px 12px;text-align:center;user-select:all;margin:6px 0}
 .today{display:grid;grid-template-columns:48px 1fr;gap:12px;align-items:center;text-align:left;width:100%;padding:14px 16px;border-radius:20px;border:0;background:var(--w-mix);color:#172033;cursor:pointer;box-shadow:var(--shadow);font:inherit}
 .today:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.12)}
 .today .icon{width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,.45);display:grid;place-items:center}
@@ -626,7 +627,13 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 const APP_VERSION=/*BQ_VERSION*/null;
 /* Set by the build from werkzeug/konten.json (S3 login); null = no accounts, app runs without login. */
 /* Accounts v2 (S11 Stufe 1): normAccounts and the rules who sees which child are in module src/module/rechte.mjs. */
-const APP_ACCOUNTS=normAccounts(/*BQ_KONTEN*/null);
+/* Stage 3b, task "Anmeldung im Testbau": the storage of the accounts (module konto). Set only for the test build -
+   the test instance gets {art:'github', repo, wurzel} from its build, tests hand in a simulated storage (an object with
+   geraet()). null (always in Kathie's app): no accounts in a storage, the login works with konten.json as before. */
+const KONTO_SPEICHER=/*BQ_SPEICHER*/null;
+const APP_ACCOUNTS=normAccounts(/*BQ_KONTEN*/null) || kontoKontenStart();
+/* login with accounts in the storage: test build (module konto), a storage, no konten.json (kontoKontenStart) */
+const KONTO_UI=!!(APP_ACCOUNTS && APP_ACCOUNTS.konto);
 const $ = s => document.querySelector(s);
 const rnd = n => Math.floor(Math.random()*n);
 const pick = a => a[rnd(a.length)];
@@ -643,7 +650,7 @@ const TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4
    bq2_<id>__<key>; passwords under bq2_pw_<id>. Before (and as a fallback if the move on this device
    failed): the FIRST student account used bq2_<key>, every other one bq2_<user>__<key>. Device-wide keys
    stay shared. */
-const GLOBAL_KEYS=/^(session|sessionPrev|adultSession|pw_.+|parentPin|muted|parentLang|migr|kidsHere|lastSeen|conceptSeen|glance|evDevice|personEvents)$/;
+const GLOBAL_KEYS=/^(session|sessionPrev|adultSession|pw_.+|parentPin|muted|parentLang|migr|kidsHere|lastSeen|conceptSeen|glance|evDevice|personEvents|kontoListe)$/;
 let ID_STORAGE=false;
 /* account for a stored reference {id} or {user} (id first: login names may change, IDs never do) */
 function accByRef(r){
@@ -750,7 +757,7 @@ function evPersonLog(pid){
 }
 /* after a sync, or when the old values changed (cleaning): read and compute anew, once */
 function evNeuLaden(){ evLogs.forEach(p=>p.neuLaden()); }
-const evKonten = () => !!(APP_ACCOUNTS && APP_ACCOUNTS.users && APP_ACCOUNTS.users.length);   // = accountsOn (defined further down; the store is read earlier)
+const evKonten = () => !!(APP_ACCOUNTS && APP_ACCOUNTS.users && (APP_ACCOUNTS.users.length || KONTO_UI));   // = accountsOn (defined further down; the store is read earlier)
 /* changes with every change of the current child's log ('' in the live build) - for caches keyed on stored values */
 function evVersion(){ const q=EV_LESEN && evKindQuelle(); return q ? 'e'+q.log.version() : ''; }
 function evKindQuelle(){ return evKonten() && !childNs() ? null : {log:evKindLog(evPre()), art:'kind'}; }
@@ -854,7 +861,7 @@ function migrateCleanup(){
    focusOff - before "Automatic/Manual") in every child's area and, with accounts, the old parent PIN. Deleted at every
    start; nothing is taken over. Without accounts (unbuilt app, tests) the PIN still guards the grown-ups area. */
 function dropOldKeys(){
-  const old=['focus','focusOn','focusOff'], accounts=!!(APP_ACCOUNTS && APP_ACCOUNTS.users && APP_ACCOUNTS.users.length), keys=[];
+  const old=['focus','focusOn','focusOff'], accounts=!!(APP_ACCOUNTS && APP_ACCOUNTS.users && (APP_ACCOUNTS.users.length || KONTO_UI)), keys=[];
   try{ for(let i=0;i<localStorage.length;i++) keys.push(localStorage.key(i)); }catch(e){ return; }
   for(const k of keys){
     if(!k || !k.startsWith('bq2_')) continue;
@@ -4749,7 +4756,7 @@ function parentHeaderHTML(){
    Like the former PIN this is a UI guard on the device; the published file stays protected by the
    long family password, so short children's passwords never protect the app itself. */
 let adultUser=null, loginFails=0, loginBlockedUntil=0;
-const accountsOn = () => !!(APP_ACCOUNTS && APP_ACCOUNTS.users && APP_ACCOUNTS.users.length);
+const accountsOn = () => !!(APP_ACCOUNTS && APP_ACCOUNTS.users && (APP_ACCOUNTS.users.length || KONTO_UI));   /* with accounts in the storage also before the first login on this device */
 const studentSession = () => { const a=accByRef(store.get('session',null)); return a && a.role==='student' ? sessionOf(a) : null; };
 const accountOf = (name, adult) => APP_ACCOUNTS.users.find(u=>u.user===String(name||'').trim().toLowerCase() && (adult ? u.role!=='student' : u.role==='student'));
 async function pbkdf2Hex(text, salt){
@@ -4764,19 +4771,31 @@ const LOGIN_TXT={
   user:'User name', pw:'Password or start code', go:'Log in', back:'← Back',
   wrong:'User name or password is not right.', wait:'Please wait a moment and try again.',
   setTitle:'Choose your own password', setInfo:'You logged in with your start code. Choose a password you can remember. It works on this device.',
-  pw1:'New password', pw2:'Repeat password', save:'Save password', short:n=>`Please use at least ${n} characters.`, diff:'The two passwords are not the same.'
+  pw1:'New password', pw2:'Repeat password', save:'Save password', short:n=>`Please use at least ${n} characters.`, diff:'The two passwords are not the same.',
+  /* login with accounts in the storage (test build, KONTO_UI) */
+  setInfoKonto:'Choose a password you can remember. It works on every device you log in to.',
+  moment:'One moment …', noStore:'The app cannot reach its storage right now. Please try again later.',
+  codeBad:'This start code does not work (any more). Please ask for a new one.', codeOld:'This start code has expired. Please ask for a new one.',
+  codeFp:'This start code does not come from the person who gave you the QR code. Nothing was set up – please ask them again.',
+  forgot:'Forgot your password?', forgotKid:'Ask your grown-up for a new start code.'
 };
 /* Grown-ups log in in their language (Peter, 31.10.); the shared role choice and the child stay English. */
 const LOGIN_DE={...LOGIN_TXT, user:'Benutzername', pw:'Passwort oder Startcode', go:'Anmelden', back:'← Zurück',
   wrong:'Benutzername oder Passwort stimmt nicht.', wait:'Bitte kurz warten und erneut versuchen.',
   setTitle:'Eigenes Passwort wählen', setInfo:'Sie haben sich mit dem Startcode angemeldet. Wählen Sie ein Passwort, das Sie sich merken können. Es gilt auf diesem Gerät.',
-  pw1:'Neues Passwort', pw2:'Passwort wiederholen', save:'Passwort speichern', short:n=>`Bitte mindestens ${n} Zeichen verwenden.`, diff:'Die beiden Passwörter sind nicht gleich.'};
+  pw1:'Neues Passwort', pw2:'Passwort wiederholen', save:'Passwort speichern', short:n=>`Bitte mindestens ${n} Zeichen verwenden.`, diff:'Die beiden Passwörter sind nicht gleich.',
+  setInfoKonto:'Wählen Sie ein Passwort, das Sie sich merken können. Es gilt auf allen Geräten, auf denen Sie sich anmelden.',
+  moment:'Einen Moment …', noStore:'Die App erreicht ihren Speicher gerade nicht. Bitte später erneut versuchen.',
+  codeBad:'Dieser Startcode gilt nicht (mehr). Bitte einen neuen geben lassen.', codeOld:'Dieser Startcode ist abgelaufen. Bitte einen neuen geben lassen.',
+  codeFp:'Dieser Startcode stammt nicht von der Person, die Ihnen den QR-Code gegeben hat. Es wurde nichts eingerichtet – bitte dort noch einmal nachfragen.',
+  forgot:'Passwort vergessen?'};
 const loginTxt = adult => adult && store.get('parentLang','de')!=='en' ? LOGIN_DE : LOGIN_TXT;
 function showLogin(role){ $('#loginBody').innerHTML=''; renderLogin(role); show('login'); }
 /* Start link (S11 Stufe 1): ".../#start=<name>.<code>" fills in the login once; the code is removed from
    the address right away so it does not stay in the browser history. */
 let startPrefill=null;
 function startFromHash(){
+  if(KONTO_UI) return kontoStartAusHash();
   const m=/^#start=([^.]+)\.([A-Za-z0-9-]+)$/.exec(location.hash||'');
   if(!m || !accountsOn()) return false;
   try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){}
@@ -4848,6 +4867,12 @@ const LOGIN_HELP=`<details class="login-help"><summary>❓ Help</summary>
 <p><b>Parents and teachers:</b> Tap 👪 Parent / Teacher. The first time, enter your user name and start code (or open the start link or QR code). Then choose your own password: at least 12 characters, or take the app's suggestion of three words and a number. Save it in your password manager. For now, the password only works on this device. Parents see only their own children. Teachers see a child only with the parents' permission.</p>
 <p><b>Forgot your password?</b> Students: ask your parents. Grown-ups: your start code still works; if not, the admin can give you a new one. After 5 wrong tries, wait 30 seconds.</p>
 <p>After logging in, students tap “❓ Help”. Grown-ups find their guide in the grown-ups area.</p></details>`;
+/* the same help with accounts in the storage (test build, KONTO_UI): one password for all devices, recovery code */
+const LOGIN_HELP_KONTO=`<details class="login-help"><summary>❓ Help</summary>
+<p><b>Students:</b> Tap 🎒 Student. Tap your name under “Who's here?” or type it, then enter your password. The first time, open the link or QR code from your grown-up (or type your user name and the start code). Then choose a strong password: three words and a number work well. Let the iPad remember it. On another iPad, use the same user name and password.</p>
+<p><b>Parents and teachers:</b> Tap 👪 Parent / Teacher. The first time, open your start link or QR code (or type your user name and start code). Then choose your own password: at least 12 characters, or take the app's suggestion of three words and a number. Save it in your password manager. Next you get a recovery code: save it too – in your password manager and as a file. On another device, use the same user name and password.</p>
+<p><b>Forgot your password?</b> Students: ask your parents for a new start code. Grown-ups: tap “Forgot your password?” and enter your recovery code. A start code works only once and for 7 days. After 5 wrong tries, wait 30 seconds.</p>
+<p>After logging in, students tap “❓ Help”. Grown-ups find their guide in the grown-ups area.</p></details>`;
 /* "Who's here?" (S11 Stufe 1, P3): on a device where children have logged in before, they pick themselves
    instead of typing the name; the password is still asked (the password manager fills it in). */
 function whosHereHTML(){
@@ -4860,18 +4885,21 @@ function renderLogin(role){
   const b=$('#loginBody'), T=loginTxt(role==='adult');
   if(!role){
     // the version in short form on the login page (Peter, 01.11.)
-    b.innerHTML=`<h2>${T.who}</h2><div class="login-roles"><button class="btn primary" id="roleStudent" type="button">${T.student}</button><button class="btn" id="roleAdult" type="button">${T.adult}</button></div>${LOGIN_HELP}<p class="small app-version" id="loginVersion">${esc(versionLabel())}</p>`;
+    b.innerHTML=`<h2>${T.who}</h2><div class="login-roles"><button class="btn primary" id="roleStudent" type="button">${T.student}</button><button class="btn" id="roleAdult" type="button">${T.adult}</button></div>${KONTO_UI?kontoTokenHTML()+LOGIN_HELP_KONTO:LOGIN_HELP}<p class="small app-version" id="loginVersion">${esc(versionLabel())}</p>`;
     $('#roleStudent').addEventListener('click',()=>renderLogin('student'));
     $('#roleAdult').addEventListener('click',()=>renderLogin('adult'));
+    if(KONTO_UI) kontoTokenVerbinden();
     return;
   }
-  b.innerHTML=`<h2>${role==='student'?T.student:T.adult}</h2>${role==='student'?whosHereHTML():''}<form id="loginForm" class="login-form"><div class="field"><label for="loginUser">${T.user}</label><input id="loginUser" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><div class="field"><label for="loginPw">${T.pw}</label><input id="loginPw" type="password" autocomplete="current-password" required></div><button class="btn primary" id="loginGo" type="submit">${T.go}</button><p id="loginMsg" class="small" role="status"></p></form><button class="btn small" id="loginBack" type="button">${T.back}</button>${LOGIN_HELP}`;
+  b.innerHTML=`<h2>${role==='student'?T.student:T.adult}</h2>${role==='student'?whosHereHTML():''}<form id="loginForm" class="login-form"><div class="field"><label for="loginUser">${T.user}</label><input id="loginUser" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><div class="field"><label for="loginPw">${T.pw}</label><input id="loginPw" type="password" autocomplete="current-password" required></div><button class="btn primary" id="loginGo" type="submit">${T.go}</button><p id="loginMsg" class="small" role="status"></p></form>${KONTO_UI?`<button class="btn small" id="loginForgot" type="button">${T.forgot}</button>`:''}<button class="btn small" id="loginBack" type="button">${T.back}</button>${KONTO_UI?LOGIN_HELP_KONTO:LOGIN_HELP}`;
   b.querySelectorAll('[data-kidpick]').forEach(x=>x.addEventListener('click',()=>{ $('#loginUser').value=x.dataset.kidpick; $('#loginPw').value=''; $('#loginPw').focus(); }));
   $('#loginBack').addEventListener('click',()=>{ if(studentSession()){ $('#loginBody').innerHTML=''; renderHome(); show('home'); } else renderLogin(); });
+  if(KONTO_UI) $('#loginForgot').addEventListener('click',()=>{ if(role==='student') $('#loginMsg').textContent=T.forgotKid; else renderKontoVergessen(); });
   $('#loginForm').addEventListener('submit',async e=>{
     e.preventDefault();
     const msg=$('#loginMsg'), btn=$('#loginGo'), name=$('#loginUser').value, pw=$('#loginPw').value;
     if(Date.now()<loginBlockedUntil){ msg.textContent=T.wait; return; }
+    if(KONTO_UI) return kontoLoginAbsenden(role, name, pw);
     btn.disabled=true;
     try{
       const u=accountOf(name, role==='adult'); let ok=false, viaCode=false;
@@ -4892,16 +4920,19 @@ function renderLogin(role){
 }
 function renderSetPassword(u, renew){
   const adult=u.role!=='student', T=loginTxt(adult), de=adult && store.get('parentLang','de')!=='en';
-  const title=renew?(adult?(de?'Bitte ein stärkeres Passwort wählen':'Please choose a stronger password'):'Time for a stronger password!'):T.setTitle;
-  const info=renew?(adult?(de?'Ihr bisheriges Passwort ist kürzer als 12 Zeichen oder leicht zu erraten. Einmal neu wählen – danach geht es wie gewohnt weiter.':'Your current password is shorter than 12 characters or easy to guess. Choose a new one once – then everything works as before.'):'Your password should be longer so nobody can guess it. Take the suggestion – your iPad can remember it for you.'):T.setInfo;
+  const title=renew?(adult?(de?'Bitte ein stärkeres Passwort wählen':'Please choose a stronger password'):'Time for a stronger password!'):u.wieder?(de?'Neues Passwort wählen':'Choose a new password'):T.setTitle;
+  const info=renew?(adult?(de?'Ihr bisheriges Passwort ist kürzer als 12 Zeichen oder leicht zu erraten. Einmal neu wählen – danach geht es wie gewohnt weiter.':'Your current password is shorter than 12 characters or easy to guess. Choose a new one once – then everything works as before.'):'Your password should be longer so nobody can guess it. Take the suggestion – your iPad can remember it for you.'):u.wieder?(de?'Wählen Sie ein neues Passwort. Es gilt danach auf allen Ihren Geräten. Anschließend bekommen Sie einen neuen Wiederherstellungscode.':'Choose a new password. It then works on all your devices. Afterwards you get a new recovery code.'):u.konto?T.setInfoKonto:T.setInfo;
   const sugg=pwSuggest();
-  $('#loginBody').innerHTML=`<h2>${title}</h2><p class="small">${info}</p><form id="setPwForm" class="login-form"><input class="sr" type="text" name="username" autocomplete="username" value="${esc(u.user)}" readonly tabindex="-1" aria-hidden="true"><p class="pw-suggest">${adult?(de?'Vorschlag':'Suggestion'):'Idea'}: <b id="pwSugg">${esc(sugg)}</b> <button type="button" class="btn small" id="pwUse">${adult?(de?'Übernehmen':'Use it'):'Use it'}</button> <button type="button" class="btn small" id="pwAnother">${adult?(de?'Anderer Vorschlag':'Another one'):'Another one'}</button></p><div class="field"><label for="newPw1">${T.pw1}</label><input id="newPw1" type="password" autocomplete="new-password" required></div><div class="field"><label for="newPw2">${T.pw2}</label><input id="newPw2" type="password" autocomplete="new-password" required></div><button class="btn primary" id="setPwGo" type="submit">${T.save}</button><p id="setPwMsg" class="small" role="status"></p></form>`;
+  $('#loginBody').innerHTML=`<h2>${title}</h2><p class="small">${info}</p><form id="setPwForm" class="login-form"><input class="sr" type="text" name="username" autocomplete="username" value="${esc(u.user)}" readonly tabindex="-1" aria-hidden="true"><p class="pw-suggest">${adult?(de?'Vorschlag':'Suggestion'):'Idea'}: <b id="pwSugg">${esc(sugg)}</b> <button type="button" class="btn small" id="pwUse">${adult?(de?'Übernehmen':'Use it'):'Use it'}</button> <button type="button" class="btn small" id="pwAnother">${adult?(de?'Anderer Vorschlag':'Another one'):'Another one'}</button></p><div class="field"><label for="newPw1">${T.pw1}</label><input id="newPw1" type="password" autocomplete="new-password" required></div><div class="field"><label for="newPw2">${T.pw2}</label><input id="newPw2" type="password" autocomplete="new-password" required></div><button class="btn primary" id="setPwGo" type="submit">${T.save}</button><p id="setPwMsg" class="small" role="status"></p></form>${u.konto||u.wieder?`<button class="btn small" id="setPwBack" type="button">${T.back}</button>`:''}`;
+  if(u.konto||u.wieder) $('#setPwBack').addEventListener('click',()=>{ if(u.wieder) renderKontoVergessen(); else renderLogin(adult?'adult':'student'); });
   $('#pwUse').addEventListener('click',()=>{ const v=$('#pwSugg').textContent; $('#newPw1').value=v; $('#newPw2').value=v; $('#newPw1').type='text'; });
   $('#pwAnother').addEventListener('click',()=>{ $('#pwSugg').textContent=pwSuggest(); });
   $('#setPwForm').addEventListener('submit',async e=>{
     e.preventDefault(); const p1=$('#newPw1').value, p2=$('#newPw2').value, msg=$('#setPwMsg');
     if(pwWeak(p1, u.user)){ msg.textContent=pwStrongText(adult); return; }
     if(p1!==p2){ msg.textContent=T.diff; return; }
+    if(u.konto) return kontoErstesPasswort(u, p1);   // accounts in the storage: first login with the start code
+    if(u.wieder) return kontoWiederPasswort(u, p1);  // accounts in the storage: new password with the recovery code
     const salt=Array.from(crypto.getRandomValues(new Uint8Array(16)));
     store.set(pwKey(u),{salt, hash:await pbkdf2Hex(p1,salt)});
     if(renew) loginDone(u); else renderWelcome(u);
@@ -4914,8 +4945,8 @@ function renderWelcome(u){
   $('#loginBody').innerHTML=kid
     ? `<h2>Welcome to Big Quest! 🎉</h2><ul class="welcome"><li>🎯 <b>Practise Today</b> gives you 8 questions. Or pick a subject.</li><li>💡 <b>A mistake?</b> You get a tip and try again. “Show me how” gives you a tip any time.</li><li>⭐ Every solved task gives a star. Your <b>learning tree</b> grows on every practice day.</li><li>❓ <b>Help</b> is at the bottom of the start page. ⓘ explains things.</li><li>🔒 You stay logged in on this iPad. Tap <b>Log out</b> if someone else wants to use it.</li></ul><button class="btn primary" id="welcomeGo" type="button">Let’s go!</button>`
     : de
-    ? `<h2>Willkommen, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 <b>Daten nur auf diesem Gerät:</b> Den Lernstand des Kindes sehen Sie auf dem Gerät, auf dem es übt.</li><li>🔑 Ihr Passwort gilt nur auf diesem Gerät. Auf einem weiteren Gerät einmal mit dem Startcode anmelden.</li><li>🚪 Sie bleiben angemeldet, bis Sie <b>Abmelden</b> tippen. Auf dem Gerät des Kindes nach dem Nachsehen bitte abmelden.</li><li>📖 Die Hilfe finden Sie oben unter <b>?</b>, Sicherung und Freigaben unter <b>⚙️</b>. ⓘ erklärt einzelne Abschnitte.</li></ul><button class="btn primary" id="welcomeGo" type="button">Los geht’s</button>`
-    : `<h2>Welcome, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 <b>Data only on this device:</b> you see your child’s progress on the device where they practice.</li><li>🔑 Your password works only on this device. On another device, log in once with the start code.</li><li>🚪 You stay logged in until you tap <b>Log out</b>. On your child’s device, please log out when you are done.</li><li>📖 Help is at the top under <b>?</b>, backup and grants under <b>⚙️</b>. ⓘ explains each section.</li></ul><button class="btn primary" id="welcomeGo" type="button">Let’s go</button>`;
+    ? `<h2>Willkommen, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 <b>Daten nur auf diesem Gerät:</b> Den Lernstand des Kindes sehen Sie auf dem Gerät, auf dem es übt.</li><li>🔑 ${KONTO_UI?'Ihr Passwort gilt auf allen Ihren Geräten: dort mit Benutzername und Passwort anmelden. Passwort vergessen? Dann hilft Ihr Wiederherstellungscode.':'Ihr Passwort gilt nur auf diesem Gerät. Auf einem weiteren Gerät einmal mit dem Startcode anmelden.'}</li><li>🚪 Sie bleiben angemeldet, bis Sie <b>Abmelden</b> tippen. Auf dem Gerät des Kindes nach dem Nachsehen bitte abmelden.</li><li>📖 Die Hilfe finden Sie oben unter <b>?</b>, Sicherung und Freigaben unter <b>⚙️</b>. ⓘ erklärt einzelne Abschnitte.</li></ul><button class="btn primary" id="welcomeGo" type="button">Los geht’s</button>`
+    : `<h2>Welcome, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 <b>Data only on this device:</b> you see your child’s progress on the device where they practice.</li><li>🔑 ${KONTO_UI?'Your password works on all your devices: log in there with your user name and password. Forgot it? Your recovery code helps.':'Your password works only on this device. On another device, log in once with the start code.'}</li><li>🚪 You stay logged in until you tap <b>Log out</b>. On your child’s device, please log out when you are done.</li><li>📖 Help is at the top under <b>?</b>, backup and grants under <b>⚙️</b>. ⓘ explains each section.</li></ul><button class="btn primary" id="welcomeGo" type="button">Let’s go</button>`;
   $('#welcomeGo').addEventListener('click',()=>loginDone(u,true));
   $('#welcomeGo').focus();
 }
@@ -4925,6 +4956,162 @@ function loginDone(u, welcomed){
   if(u.role==='student'){ pendingRoute=null; store.set('session',sessionOf(u)); const here=store.get('kidsHere',[]); if(!here.includes(u.id)) store.set('kidsHere',here.concat([u.id])); adultUser=null; if(welcomed){ store.set('greetDay',dayKey()); eventHook('day_flag',{flag:'greetDay', day:dayKey()}); } renderHome(); show('home'); }
   else { store.set('adultSession',sessionOf(u)); adultUser={user:u.user, role:u.role, admin:!!u.admin}; parentAccess=true; state.psubj=null; state.popen=state.popenBy!==u.id ? [] : state.popen||[]; state.popenBy=u.id; const r=takePendingRoute();   /* another person starts with all chapters closed - an open chapter of the one before does not count as read (3b-2a; live since 04.11., Peter) */ openAbout('sheets'); scrollToRouteSec(r); }
 }
+/* ---------- login with accounts in the storage (stage 3b, task "Anmeldung im Testbau"; concept 10.2-10.6) ----------
+   Only in the test build with a storage and without konten.json (KONTO_UI); Kathie's app never gets here. The accounts
+   are in the storage (module konto): the start code works once and for 7 days, the own password on every device, grown-
+   ups have a recovery code. The device keeps: the list of accounts that logged in here (bq2_kontoListe: id, login name, kind
+   of account - no password, no key) and a copy of the person keys that cannot be exported (IndexedDB bq2_konto) until
+   "Log out". Children, partners and grants come with task "Einladungen"; syncing with the storage is a task of its own. */
+const kontoOffen=new Map(), kontoFehlerListe=[];
+let kontoZug=null, kontoLinkFp=null;
+function kontoListe(){ try{ return anmListe(JSON.parse(localStorage.getItem('bq2_kontoListe')||'[]')); }catch(e){ return []; } }
+/* the accounts of this device in the form of konten.json (called once at the start, for APP_ACCOUNTS) */
+function kontoKontenStart(){
+  if(typeof anmZugang!=='function' || !KONTO_SPEICHER) return null;   // (module anmeldung: test build only)
+  return Object.assign(normAccounts(anmGeraetKonten(kontoListe())), {konto:true});
+}
+function kontoGeraet(){ let d=store.get('evDevice',null); if(!d){ d=newDeviceId(); store.set('evDevice',d); } return d; }
+/* the access of this device to the storage (module anmeldung); null = no access (test instance without access key) */
+function kontoZugang(){
+  if(!kontoZug) kontoZug=anmZugang(KONTO_SPEICHER, {ablage:localStorage, geraet:kontoGeraet(), fetch:(a,o)=>fetch(a,o)});
+  return kontoZug;
+}
+/* test instance: the access key of the test storage, once per device (concept 12; shared login page, US English) */
+function kontoTokenHTML(){
+  if(!anmTokenNoetig(KONTO_SPEICHER, localStorage)) return '';
+  return `<details class="login-help" id="kontoTokenBox" open><summary>🔑 Test storage</summary><p>This test version keeps its data in a private test storage. Enter the access key from the admin once on this device.</p><form id="kontoTokenForm" class="login-form"><div class="field"><label for="kontoToken">Access key</label><input id="kontoToken" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><button class="btn" id="kontoTokenGo" type="submit">Save</button><p id="kontoTokenMsg" class="small" role="status"></p></form></details>`;
+}
+function kontoTokenVerbinden(){
+  const f=$('#loginBody').querySelector('#kontoTokenForm'); if(!f) return;
+  f.addEventListener('submit',e=>{ e.preventDefault(); try{ anmTokenSpeichern(localStorage, $('#kontoToken').value); kontoZug=null; renderLogin(); }catch(err){ $('#kontoTokenMsg').textContent='This key does not look right. Please check it.'; } });
+}
+/* start link "#start=<name>/<code>[/<fingerprint>]": read once, removed from the address; the role comes first
+   (Peter, 30.10.), then the form is filled in */
+function kontoStartAusHash(){
+  const s=anmStartlinkLesen(location.hash||''); if(!s) return false;
+  try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){}
+  startPrefill={name:s.anmeldename, code:s.code}; kontoLinkFp={code:s.code, fp:s.fingerabdruck};
+  showLogin();
+  return true;
+}
+function kontoFehlerText(err, T, adult){
+  const c=err && err.code;
+  if(c==='startcode-abgelaufen') return T.codeOld;
+  if(c==='startcode-ungueltig' || c==='name-vergeben') return T.codeBad;
+  if(c==='fingerabdruck') return T.codeFp;
+  if(c==='passwort-schwach') return pwStrongText(adult);
+  if(c==='anmeldung') return T.wrong;
+  return T.noStore;   // offline, no access, limit - and anything unexpected
+}
+function kontoFalsch(T, msg, btn){ loginFails++; if(loginFails>=5){ loginBlockedUntil=Date.now()+30000; loginFails=0; } msg.textContent=T.wrong; btn.disabled=false; }
+/* login form: user name + password (any device) - or + start code for a name without an account (first login) */
+async function kontoLoginAbsenden(role, name, pw){
+  const T=loginTxt(role==='adult'), msg=$('#loginMsg'), btn=$('#loginGo'), z=kontoZugang();
+  if(!z){ msg.textContent=T.noStore; return; }
+  btn.disabled=true; msg.textContent=T.moment;
+  try{
+    const v=await anmVersuch({zugang:z, anmeldename:name, text:pw});
+    if(v.erstesMal){
+      const {anmeldename, code}=v.erstesMal; msg.textContent='';
+      return renderSetPassword({user:anmeldename, role:role==='student'?'student':'parent', konto:{code, fp:kontoLinkFp && kontoLinkFp.code===code ? kontoLinkFp.fp : null}});
+    }
+    const k=v.konto;
+    if((k.art==='child')!==(role==='student')) return kontoFalsch(T, msg, btn);   // the other role's account: like a wrong password
+    loginFails=0;
+    loginDone(await kontoAngemeldet(k));
+  }catch(err){
+    if(err && err.code==='anmeldung') return kontoFalsch(T, msg, btn);
+    msg.textContent=kontoFehlerText(err, T, role==='adult'); btn.disabled=false;
+  }
+}
+/* first login: start code + own password -> account in the storage; grown-ups then see their recovery code */
+async function kontoErstesPasswort(u, pw){
+  const adult=u.role!=='student', T=loginTxt(adult), msg=$('#setPwMsg'), btn=$('#setPwGo'), z=kontoZugang();
+  if(!z){ msg.textContent=T.noStore; return; }
+  btn.disabled=true; msg.textContent=T.moment;
+  try{
+    const k=await anmErstesMal({zugang:z, code:u.konto.code, passwort:pw, fingerabdruck:u.konto.fp, now:Date.now()});
+    kontoLinkFp=null; loginFails=0;
+    const a=await kontoAngemeldet(k);
+    if(k.wiederherstellungscode) renderKontoCode(a, k.wiederherstellungscode, ()=>renderWelcome(a));
+    else renderWelcome(a);
+  }catch(err){ msg.textContent=kontoFehlerText(err, T, adult); btn.disabled=false; }
+}
+/* an opened account (module konto) is logged in on this device: device list, accounts of the app, key copy */
+async function kontoAngemeldet(k){
+  const e=anmEintragAus(k);
+  try{ localStorage.setItem('bq2_kontoListe', JSON.stringify(anmListeMit(kontoListe(), e))); }catch(err){ kontoFehlerListe.push('liste: '+String(err&&err.message||err)); }
+  const u=normAccounts(anmGeraetKonten([e])).users[0], i=APP_ACCOUNTS.users.findIndex(x=>x.id===u.id || x.user===u.user);
+  if(i<0) APP_ACCOUNTS.users.push(u); else APP_ACCOUNTS.users.splice(i,1,u);
+  // siblings on one device: only the child logged in keeps its key here (concept 10.4)
+  if(k.art==='child') for(const [id,o] of [...kontoOffen]) if(o.art==='child' && id!==k.kennung) kontoAbmelden(id);
+  kontoOffen.set(k.kennung,{art:k.art, pub:k.pub, schluessel:k.schluessel});
+  try{ await kontoIdbTun('readwrite', s=>s.put({kennung:k.kennung, art:k.art, pub:k.pub, schluessel:k.schluessel})); }catch(err){ kontoFehlerListe.push('sichern: '+String(err&&err.message||err)); }
+  return u;
+}
+/* the recovery code (grown-ups): shown once, saved as an own entry in the password manager and as a file (concept 10.6) */
+function renderKontoCode(a, code, weiter){
+  const de=store.get('parentLang','de')!=='en';
+  $('#loginBody').innerHTML=`<h2>${de?'Ihr Wiederherstellungscode':'Your recovery code'}</h2><p class="small">${de?'Mit diesem Code wählen Sie ein neues Passwort, falls Sie Ihres vergessen. Er wird nur jetzt angezeigt. Bitte sichern Sie ihn – im Passwortspeicher und zusätzlich als Datei.':'With this code you choose a new password if you forget yours. It is shown only now. Please save it – in your password manager and also as a file.'}</p><p class="rec-code" id="recCode">${esc(code)}</p><form id="recForm" class="login-form"><div class="field"><label for="recUser">${de?'Eintrag im Passwortspeicher':'Entry in the password manager'}</label><input id="recUser" name="username" autocomplete="username" value="${esc(anmCodeEintrag(a.user, de?'de':'en'))}" readonly></div><div class="field"><label for="recPw">${de?'Wiederherstellungscode':'Recovery code'}</label><input id="recPw" name="password" type="password" autocomplete="new-password" value="${esc(code)}" readonly></div><button class="btn primary" id="recSave" type="submit">🔑 ${de?'Im Passwortspeicher sichern':'Save in the password manager'}</button></form><button class="btn" id="recFile" type="button">📄 ${de?'Als Datei sichern':'Save as a file'}</button><p id="recMsg" class="small" role="status"></p><button class="btn" id="recGo" type="button">${de?'Weiter':'Continue'}</button>`;
+  // the form leaves the page after "submit": that is when the password manager offers to save the entry
+  $('#recForm').addEventListener('submit',e=>{ e.preventDefault(); const f=$('#loginBody').querySelector('#recForm'); if(!f) return; f.insertAdjacentHTML('afterend',`<p class="small" id="recSaved">✓ ${de?'Ihr Passwortspeicher bietet jetzt an, den Eintrag zu sichern. Falls nicht: den Code als Datei sichern.':'Your password manager now offers to save the entry. If it does not, save the code as a file.'}</p>`); f.remove(); });
+  $('#recFile').addEventListener('click',()=>kontoCodeTeilen(a, code, de));
+  $('#recGo').addEventListener('click',weiter);
+  $('#recSave').focus();
+}
+async function kontoCodeTeilen(a, code, de){
+  const msg=$('#recMsg'), d=anmCodeDatei({anmeldename:a.user, code, datum:dayKey(), sprache:de?'de':'en'}), file=new File([d.text], d.name, {type:'text/plain'});
+  if(navigator.canShare && navigator.share && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file], title:d.name}); msg.textContent=de?'Datei geteilt.':'File shared.'; return; }catch(e){ if(e && e.name==='AbortError'){ msg.textContent=''; return; } }
+  }
+  const x=document.createElement('a'); x.href=URL.createObjectURL(file); x.download=d.name; document.body.appendChild(x); x.click(); x.remove(); setTimeout(()=>URL.revokeObjectURL(x.href),5000);
+  msg.textContent=de?'Datei gespeichert (Downloads).':'File saved (downloads).';
+}
+/* "Forgot your password?" (grown-ups, US9.4): recovery code -> new password -> new recovery code */
+function renderKontoVergessen(meldung){
+  const de=store.get('parentLang','de')!=='en', T=loginTxt(true), falsch=de?'Benutzername oder Wiederherstellungscode stimmt nicht.':'User name or recovery code is not right.';
+  $('#loginBody').innerHTML=`<h2>${T.forgot}</h2><p class="small">${de?'Geben Sie Ihren Benutzernamen und Ihren Wiederherstellungscode ein. Danach wählen Sie ein neues Passwort und bekommen einen neuen Code.':'Enter your user name and your recovery code. Then you choose a new password and get a new code.'}</p><form id="forgotForm" class="login-form"><div class="field"><label for="forgotUser">${T.user}</label><input id="forgotUser" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><div class="field"><label for="forgotCode">${de?'Wiederherstellungscode':'Recovery code'}</label><input id="forgotCode" type="password" autocomplete="current-password" autocapitalize="characters" autocorrect="off" spellcheck="false" required></div><button class="btn primary" id="forgotGo" type="submit">${de?'Weiter':'Continue'}</button><p id="forgotMsg" class="small" role="status">${meldung?esc(meldung):''}</p></form><button class="btn small" id="forgotBack" type="button">${T.back}</button>`;
+  // the password manager fills in the code's own entry "<name> (Wiederherstellungscode)": back to the login name
+  const nf=$('#forgotUser'); nf.addEventListener('change',()=>{ nf.value=anmNameAusEintrag(nf.value); });
+  $('#forgotBack').addEventListener('click',()=>renderLogin('adult'));
+  $('#forgotForm').addEventListener('submit',e=>{
+    e.preventDefault();
+    const n=anmName(anmNameAusEintrag($('#forgotUser').value)), c=$('#forgotCode').value.trim(), m=$('#forgotMsg');
+    if(Date.now()<loginBlockedUntil){ m.textContent=T.wait; return; }
+    if(!n || !c){ m.textContent=falsch; return; }
+    renderSetPassword({user:n, role:'parent', wieder:{code:c}});
+  });
+  nf.focus();
+}
+async function kontoWiederPasswort(u, pw){
+  const T=loginTxt(true), de=store.get('parentLang','de')!=='en', msg=$('#setPwMsg'), btn=$('#setPwGo'), z=kontoZugang();
+  if(!z){ msg.textContent=T.noStore; return; }
+  btn.disabled=true; msg.textContent=T.moment;
+  try{
+    const k=await anmWiederherstellen({zugang:z, anmeldename:u.user, code:u.wieder.code, neuesPasswort:pw});
+    loginFails=0;
+    const a=await kontoAngemeldet(k);
+    renderKontoCode(a, k.wiederherstellungscode, ()=>loginDone(a));
+  }catch(err){
+    if(err && err.code==='anmeldung'){ loginFails++; if(loginFails>=5){ loginBlockedUntil=Date.now()+30000; loginFails=0; } return renderKontoVergessen(de?'Benutzername oder Wiederherstellungscode stimmt nicht.':'User name or recovery code is not right.'); }
+    msg.textContent=kontoFehlerText(err, T, true); btn.disabled=false;
+  }
+}
+/* copies of the person keys on this device (not exportable; concept 8.2, 10.4) - IndexedDB, since a key that cannot be
+   exported cannot be written as text. Without IndexedDB (tests without a browser) they stay in memory only. */
+function kontoIdb(){ return new Promise((res,rej)=>{ const r=indexedDB.open('bq2_konto',1); r.onupgradeneeded=()=>r.result.createObjectStore('schluessel',{keyPath:'kennung'}); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+async function kontoIdbTun(modus, tun){
+  if(typeof indexedDB==='undefined') return null;
+  const db=await kontoIdb();
+  try{ return await new Promise((res,rej)=>{ const t=db.transaction('schluessel',modus), r=tun(t.objectStore('schluessel')); t.oncomplete=()=>res(r?r.result:null); t.onerror=()=>rej(t.error); t.onabort=()=>rej(t.error); }); }
+  finally{ db.close(); }
+}
+async function kontoSchluesselLaden(){
+  try{ for(const x of (await kontoIdbTun('readonly', s=>s.getAll()))||[]) if(x && x.kennung && !kontoOffen.has(x.kennung)) kontoOffen.set(x.kennung,{art:x.art, pub:x.pub, schluessel:x.schluessel}); }
+  catch(e){ kontoFehlerListe.push('laden: '+String(e&&e.message||e)); }
+}
+function kontoAbmelden(id){ if(!id) return; kontoOffen.delete(id); kontoIdbTun('readwrite', s=>s.delete(id)).catch(e=>kontoFehlerListe.push('loeschen: '+String(e&&e.message||e))); }
+function kontoAlleAbmelden(){ kontoOffen.clear(); kontoIdbTun('readwrite', s=>s.clear()).catch(e=>kontoFehlerListe.push('loeschen: '+String(e&&e.message||e))); }
 /* Test account bar (for grown-ups, in their language): clearly marked, separate data, jump ahead one
    day, reset everything, and – while a grown-up is logged in – back to the grown-ups area. */
 function renderTestBar(){
@@ -4944,6 +5131,7 @@ function renderTestBar(){
   const b=$('#testBack'); if(b) b.addEventListener('click',backFromTest);
 }
 function logout(){
+  if(KONTO_UI) kontoAlleAbmelden();   // log out = the copies of the person keys leave this device (concept 10.4)
   store.del('adultSession');
   if(adultUser){ adultUser=null; parentLock(); }
   try{ localStorage.removeItem('bq2_session'); }catch(e){}
@@ -5146,7 +5334,7 @@ function bindParentSettings(){
   const de=PL()==='de';
   bindStoryCap(); bindProfileAdmin(); bindVersionAdmin(); addAdultInfo($('#aboutBody'));
   // "Log out" is the only way out (Peter, 31.10.): no timer, no log-out in the background.
-  ['#parentClose','#parentClose2'].forEach(sel=>{ const pc=$(sel); if(pc) pc.addEventListener('click',()=>{ pendingRoute=null; if(accountsOn()){ store.del('adultSession'); restoreRealChild(); } parentLock(); renderParentGate(); }); });
+  ['#parentClose','#parentClose2'].forEach(sel=>{ const pc=$(sel); if(pc) pc.addEventListener('click',()=>{ pendingRoute=null; if(accountsOn()){ if(KONTO_UI && adultUser) kontoAbmelden((accByRef({user:adultUser.user})||{}).id); store.del('adultSession'); restoreRealChild(); } parentLock(); renderParentGate(); }); });
   if($('#reminderForm')) $('#reminderForm').addEventListener('submit',e=>{
     e.preventDefault();if(!parentAccess) return;
     try{
@@ -5263,7 +5451,27 @@ const sourcesHTML=(lang='en')=>{ const de=lang==='de', G=SOURCE_GROUPS[de?'de':'
 /* Guides by role (Peter, 31.10./02.11.): child (English), parents, teachers, admin (DE/EN). Each starts
    with a quick guide; the full user documentation is in the vault ("Big Quest – Anwenderdokumentation").
    No separate info buttons elsewhere; the login screen has a short help because the app is not open yet. */
-const GUIDE_KID=`<div class="quick"><b>Quick guide</b><ol>
+/* With accounts in the storage (test build, KONTO_UI) single points of the guides read differently: one password for
+   all devices, start code once and 7 days, recovery code. Kathie's app keeps its guides unchanged (KONTO_UI false). */
+const KONTO_GUIDE={
+  kid:[['The very first time:','your grown-up gives you a start code – as a link or a QR code to scan. Then you choose your own password. Take the idea with three words and a number, like <i>Tiger-Lamp-River-4271</i>. Let the iPad remember it – then Face ID fills it in for you. A short password does not work: a strong one keeps your things safe. On another iPad, use the same user name and password.']],
+  adultDe:[['Einmal einrichten:','Seite in Safari öffnen. Fragt die App nach dem Zugang zum Testspeicher, ihn einmal eingeben (vom Admin). Dann Teilen → „Zum Home-Bildschirm“. Künftig nur über das Symbol öffnen.'],
+    ['Anmelden:','„👪 Parent / Teacher“. Beim ersten Mal den Startlink bzw. QR-Code öffnen (oder Benutzername und Startcode eingeben; er gilt einmal und 7 Tage). Dann ein eigenes Passwort wählen – am einfachsten den Vorschlag – und im Passwortspeicher sichern. Danach den Wiederherstellungscode sichern: im Passwortspeicher und als Datei. Auf weiteren Geräten: Benutzername und Passwort.'],
+    ['Kind anmelden:','„🎒 Student“ mit dem Startlink bzw. QR-Code des Kindes. Zusammen ein Merkpasswort wählen und im Passwortspeicher sichern. Auf weiteren Geräten: Benutzername und Passwort. Geschwister am selben Gerät wählen sich unter „Who\'s here?“ aus.'],
+    ['Passwort vergessen:','Auf der Anmeldeseite „Passwort vergessen?“ tippen, den Wiederherstellungscode eingeben und ein neues Passwort wählen – danach den neuen Code wieder sichern. Ohne Code hilft der Admin. Nach 5 Fehlversuchen 30 Sekunden warten. Startcodes, Startlinks und den Wiederherstellungscode nicht weitergeben.']],
+  adultEn:[['Set up once:','open the page in Safari. If the app asks for access to the test storage, enter it once (from the admin). Then Share → “Add to Home Screen”. From then on, open it with the icon.'],
+    ['Log in:','“👪 Parent / Teacher”. The first time, open the start link or QR code (or enter username and start code; it works once and for 7 days). Then choose your own password – easiest is the suggestion – and save it in the password manager. Next, save the recovery code: in the password manager and as a file. On other devices: username and password.'],
+    ['Log in your child:','“🎒 Student” with your child’s start link or QR code. Choose a memorable password together and save it in the password manager. On other devices: username and password. Siblings on the same device pick themselves under “Who\'s here?”.'],
+    ['Forgot your password?','On the login page tap “Forgot your password?”, enter your recovery code and choose a new password – then save the new code again. Without the code, the admin can help. After 5 wrong tries, wait 30 seconds. Keep start codes, start links and the recovery code private.']],
+  teacherDe:[['Anmelden:','„👪 Parent / Teacher“. Beim ersten Mal den Startlink bzw. QR-Code vom Admin öffnen (oder Benutzername und Startcode eingeben). Dann ein eigenes Passwort wählen und den Wiederherstellungscode sichern – im Passwortspeicher und als Datei. Auf weiteren Geräten: Benutzername und Passwort.'],
+    ['Passwort vergessen:','Auf der Anmeldeseite „Passwort vergessen?“ tippen und den Wiederherstellungscode eingeben; danach den neuen Code wieder sichern. Ohne Code hilft der Admin. Nach 5 Fehlversuchen 30 Sekunden warten.']],
+  teacherEn:[['Log in:','“👪 Parent / Teacher”. The first time, open the start link or QR code from the admin (or enter username and start code). Then choose your own password and save the recovery code – in the password manager and as a file. On other devices: username and password.'],
+    ['Forgot your password?','On the login page tap “Forgot your password?” and enter your recovery code; then save the new code again. Without the code, the admin can help. After 5 wrong tries, wait 30 seconds.']],
+  adminDe:[['Konten und Startcodes','für Erwachsene stellen Sie aus, vorerst mit dem Werkzeug auf Ihrem Rechner. Ein Startcode gilt einmal und 7 Tage. Startlink oder QR-Code nur persönlich übergeben.']],
+  adminEn:[['Accounts and start codes','for grown-ups are issued by you, for now with the tool on your computer. A start code works once and for 7 days. Hand over the start link or QR code in person only.']]
+};
+const kontoTexte = (text, ersatz) => KONTO_UI ? anmPunkteErsetzen(text, ersatz) : text;
+const GUIDE_KID=kontoTexte(`<div class="quick"><b>Quick guide</b><ol>
 <li>Tap <b>🎒 Student</b>. Tap your name under “Who's here?” – or type it. Then your password.</li>
 <li>Tap <b>Practise Today</b> – or a subject.</li>
 <li>Stuck? Tap <b>“Show me how”</b>. That is never a mistake.</li>
@@ -5282,11 +5490,11 @@ const GUIDE_KID=`<div class="quick"><b>Quick guide</b><ol>
 <li><b>My profile:</b> tap your name at the top to change your name, last name, birthday or emoji.</li>
 <li><b>Your grown-ups</b> can see what you have worked on. There are no grades in Big Quest – only learning. Other grown-ups, like a teacher, can only look if your parents allow it.</li>
 <li><b>Log out</b> when someone else wants to use this iPad. Your brother or sister then taps their own name and types their own password.</li>
-</ol>`;
+</ol>`, KONTO_GUIDE.kid);
 /* ? Help (concept 7.3, F1): one version per role, short; settings are linked by route (⚙), not described. */
 const GO = (sec, label) => `<a class="pgo" href="#eltern/einstellungen/${sec}" data-pgoto="${sec}">⚙️ → „${label}“</a>`;
 const GO_EN = (sec, label) => `<a class="pgo" href="#eltern/einstellungen/${sec}" data-pgoto="${sec}">⚙️ → “${label}”</a>`;
-const GUIDE_ADULT_DE=`<h3 class="pguide-h">Hilfe für Eltern</h3><ol class="steps">
+const GUIDE_ADULT_DE=kontoTexte(`<h3 class="pguide-h">Hilfe für Eltern</h3><ol class="steps">
 <li><b>Einmal einrichten:</b> Seite in Safari öffnen, Familienpasswort eingeben. Dann Teilen → „Zum Home-Bildschirm“. Künftig nur über das Symbol öffnen.</li>
 <li><b>Anmelden:</b> „👪 Parent / Teacher“, Benutzername und Startcode – oder Startlink bzw. QR-Code öffnen. Dann ein eigenes Passwort wählen: am einfachsten den Vorschlag übernehmen und im Passwortspeicher sichern. Es gilt nur auf diesem Gerät.</li>
 <li><b>Kind anmelden:</b> „🎒 Student“ mit dem Startcode des Kindes. Zusammen ein Merkpasswort wählen und im Passwortspeicher sichern. Geschwister am selben Gerät wählen sich unter „Who's here?“ aus.</li>
@@ -5294,8 +5502,8 @@ const GUIDE_ADULT_DE=`<h3 class="pguide-h">Hilfe für Eltern</h3><ol class="step
 <li><b>Sichern:</b> einmal im Monat, auf dem Gerät des Kindes: ${GO('sicherung','💾 Sicherung & Daten')}.</li>
 <li><b>Freigaben:</b> Eine Lehrkraft oder der Admin sieht Ihr Kind nur mit Ihrer Freigabe – dann mit Vor- und Nachnamen und Geburtsdatum, aber ohne Emoji und Einstellungen: ${GO('freigaben','🔐 Zugriff & Freigaben')}.</li>
 <li><b>Passwort vergessen:</b> Der Startcode gilt weiter; sonst gibt der Admin einen neuen. Nach 5 Fehlversuchen 30 Sekunden warten. Familienpasswort, Startcodes und Startlinks nicht weitergeben.</li>
-</ol>`;
-const GUIDE_ADULT_EN=`<h3 class="pguide-h">Help for parents</h3><ol class="steps">
+</ol>`, KONTO_GUIDE.adultDe);
+const GUIDE_ADULT_EN=kontoTexte(`<h3 class="pguide-h">Help for parents</h3><ol class="steps">
 <li><b>Set up once:</b> open the page in Safari and enter the family password. Then Share → “Add to Home Screen”. From then on, open it with the icon.</li>
 <li><b>Log in:</b> “👪 Parent / Teacher”, username and start code – or open the start link or QR code. Then choose your own password: easiest is to take the suggestion and save it in the password manager. It works only on this device.</li>
 <li><b>Log in your child:</b> “🎒 Student” with your child’s start code. Choose a memorable password together and save it in the password manager. Siblings on the same device pick themselves under “Who's here?”.</li>
@@ -5303,35 +5511,35 @@ const GUIDE_ADULT_EN=`<h3 class="pguide-h">Help for parents</h3><ol class="steps
 <li><b>Back up:</b> once a month, on your child’s device: ${GO_EN('sicherung','💾 Backup & data')}.</li>
 <li><b>Grants:</b> a teacher or the admin sees your child only with your grant – then with first and last name and date of birth, but without emoji and settings: ${GO_EN('freigaben','🔐 Access & grants')}.</li>
 <li><b>Forgot your password?</b> The start code keeps working; otherwise the admin gives you a new one. After 5 wrong tries, wait 30 seconds. Keep the family password, start codes and start links private.</li>
-</ol>`;
-const GUIDE_TEACHER_DE=`<h3 class="pguide-h">Hilfe für Lehrkräfte</h3><ol class="steps">
+</ol>`, KONTO_GUIDE.adultEn);
+const GUIDE_TEACHER_DE=kontoTexte(`<h3 class="pguide-h">Hilfe für Lehrkräfte</h3><ol class="steps">
 <li><b>Anmelden:</b> „👪 Parent / Teacher“, Benutzername und Startcode vom Admin – oder Startlink bzw. QR-Code. Dann ein eigenes Passwort wählen.</li>
 <li><b>Einblick nur mit Freigabe:</b> Nennen Sie den Eltern Ihren Anmeldenamen. Sie geben Einblick, befristet und im gewählten Umfang. Schuldaten sehen Sie nur, wenn die Eltern sie freigeben.</li>
 <li><b>Ansehen:</b> auf dem Gerät, auf dem das Kind übt. Sie können nur lesen, nichts ändern. Oben stehen Vor- und Nachname des Kindes, damit Sie wissen, mit wem Sie arbeiten; heißen zwei Kinder gleich, auch das Geburtsdatum. Emoji und Einstellungen sehen Sie nicht.</li>
 <li><b>Protokoll:</b> Die Eltern sehen, wann Sie die Übersicht angesehen haben.</li>
 <li><b>Wofür:</b> eine private Übungs-App der Familie, nicht für den dienstlichen Einsatz in der Schule. Bitte keine Bildschirmfotos weitergeben; Fragen direkt mit den Eltern klären.</li>
 <li><b>Passwort vergessen:</b> Der Startcode gilt weiter; sonst gibt der Admin einen neuen. Nach 5 Fehlversuchen 30 Sekunden warten.</li>
-</ol>`;
-const GUIDE_TEACHER_EN=`<h3 class="pguide-h">Help for teachers</h3><ol class="steps">
+</ol>`, KONTO_GUIDE.teacherDe);
+const GUIDE_TEACHER_EN=kontoTexte(`<h3 class="pguide-h">Help for teachers</h3><ol class="steps">
 <li><b>Log in:</b> “👪 Parent / Teacher”, username and start code from the admin – or the start link or QR code. Then choose your own password.</li>
 <li><b>Access only with a grant:</b> tell the parents your login name. They give you access, for a limited time and to the extent they choose. You see school ratings only if the parents allow it.</li>
 <li><b>Look:</b> on the device where the child practices. You can only look; nothing can be changed. The child’s first and last name are shown at the top, so you know whom you are working with; if two children have the same name, the date of birth too. You do not see the emoji or settings.</li>
 <li><b>Log:</b> the parents see when you looked at the overview.</li>
 <li><b>Purpose:</b> the family’s private practice app, not for official use at school. Please do not pass on screenshots; talk to the parents directly.</li>
 <li><b>Forgot your password?</b> The start code keeps working; otherwise the admin gives you a new one. After 5 wrong tries, wait 30 seconds.</li>
-</ol>`;
-const GUIDE_ADMIN_DE=`<h3 class="pguide-h">Für den Admin</h3><ol class="steps">
+</ol>`, KONTO_GUIDE.teacherEn);
+const GUIDE_ADMIN_DE=kontoTexte(`<h3 class="pguide-h">Für den Admin</h3><ol class="steps">
 <li><b>Konten und Startcodes</b> pflegen Sie mit dem Konten-Werkzeug auf Ihrem Rechner. Neue Startcodes als Startlink oder QR-Code nur persönlich übergeben.</li>
 <li><b>Übersicht der Konten:</b> ${GO('konten','🛠 Konten')} – nur Verwaltungsangaben, keine Inhalte.</li>
 <li><b>Lernstand eines Kindes:</b> nur mit Freigabe der Eltern, wie bei einer Lehrkraft – mit Vor- und Nachnamen und Geburtsdatum, ohne Emoji und Einstellungen. Ihr eigenes Kind sehen Sie über Ihr Elternkonto.</li>
 <li><b>Testkinder:</b> oben in der Kinderauswahl unter „🧪 Testkinder“; „▶ Als Testkind spielen“ öffnet die Kinderseite mit Testdaten.</li>
-</ol>`;
-const GUIDE_ADMIN_EN=`<h3 class="pguide-h">For the admin</h3><ol class="steps">
+</ol>`, KONTO_GUIDE.adminDe);
+const GUIDE_ADMIN_EN=kontoTexte(`<h3 class="pguide-h">For the admin</h3><ol class="steps">
 <li><b>Accounts and start codes</b> are maintained with the account tool on your computer. Hand over new start codes as a start link or QR code in person only.</li>
 <li><b>Account overview:</b> ${GO_EN('konten','🛠 Accounts')} – administrative details only, no contents.</li>
 <li><b>A child’s progress:</b> only with a grant from the parents, like a teacher – with first and last name and date of birth, without emoji and settings. You see your own child through your parent account.</li>
 <li><b>Test children:</b> at the top in the child list under “🧪 Test children”; “▶ Play as test child” opens the child’s pages with test data.</li>
-</ol>`;
+</ol>`, KONTO_GUIDE.adminEn);
 /* the grown-ups guide that fits the person who is logged in */
 const guideAdultFor = de => {
   if(accountsOn() && adultUser && adultUser.role==='teacher') return de?GUIDE_TEACHER_DE:GUIDE_TEACHER_EN;
@@ -5805,6 +6013,7 @@ window.addEventListener('hashchange',()=>{
 
 function boot(data){
   cleanStoredPrivate();
+  if(KONTO_UI) kontoSchluesselLaden();   // the person keys kept on this device (IndexedDB) back into memory
   renderHome();
   if(data && data.screen==='play' && Array.isArray(data.round) && data.round.length && WORLDS[data.world]){
     Object.assign(state, data); state.answered=false; state.typed=''; state.picked=[];
