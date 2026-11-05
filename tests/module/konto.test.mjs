@@ -311,7 +311,8 @@ jedeWelt('US9.1 + E5 - im Speicher stehen weder Anmeldenamen noch Passwoerter, C
   assert.deepEqual(Object.keys(ep).sort(), ['art', 'beweis', 'gesperrt', 'kennung', 'lookup', 'pub', 'v']);
   assert.equal(ep.gesperrt.locks.length, 2, 'Erwachsene: Passwort und Wiederherstellungscode');
   const e2 = await z.directory((await kontoLookup('peter')) + '-2');
-  assert.deepEqual(Object.keys(e2).sort(), ['gesperrt', 'kennung', 'lookup', 'pub', 'sig', 'stand', 'v']);
+  // Wiederherstellen = neue Schluessel (Aufgabe "Neuer Schluessel"): mit dem alten Schluessel angekuendigt (wechsel)
+  assert.deepEqual(Object.keys(e2).sort(), ['gesperrt', 'kennung', 'lookup', 'pub', 'sig', 'stand', 'v', 'wechsel']);
   assert.equal(await z.directory((await kontoLookup('peter')) + '-3'), null);
 });
 
@@ -389,7 +390,7 @@ jedeWelt('US9.3 - ein Schloss, das andere Schluessel enthaelt als die oeffentlic
 });
 
 /* ---------- US9.4 Wiederherstellungscode ---------- */
-jedeWelt('US9.4 - Wiederherstellungscode: neues Passwort, sofort neuer Code; alter Code und altes Passwort gelten nicht mehr; gleiche Person und Schluessel', async (W) => {
+jedeWelt('US9.4 - Wiederherstellungscode: neues Passwort, sofort neuer Code; alter Code und altes Passwort gelten nicht mehr; gleiche Person, NEUE Schluessel (Aufgabe "Neuer Schluessel")', async (W) => {
   const { p, k } = await familie(W);
   const alt = p.wiederherstellungscode;
   // Code beliebig getippt: klein, ohne Striche, mit Leerzeichen
@@ -397,7 +398,9 @@ jedeWelt('US9.4 - Wiederherstellungscode: neues Passwort, sofort neuer Code; alt
   await fehlt(wiederherstellen({ zugang: W.geraet('d_P3'), anmeldename: 'peter', code: getippt, neuesPasswort: 'peter1234567', runden: R }), 'passwort-schwach', 'schwaches neues Passwort');
   assert.equal((await anmelden({ zugang: W.geraet('d_P3'), anmeldename: 'peter', passwort: PW.peter, runden: R })).stand, 1, 'nichts geschrieben');
   const r = await wiederherstellen({ zugang: W.geraet('d_P3'), anmeldename: 'Peter', code: getippt, neuesPasswort: 'Walrus-Taco-Pine-1357', runden: R });
-  assert.deepEqual([r.kennung, r.art, r.pub, r.stand], [p.kennung, 'parent', p.pub, 2]);
+  assert.deepEqual([r.kennung, r.art, r.stand, r.ursprung, r.alt.pub], [p.kennung, 'parent', 2, p.pub, p.pub]);
+  assert.notDeepEqual(r.pub, p.pub, 'neue Schluessel');
+  assert.equal(r.fingerabdruck, await keyFingerprint(r.pub));
   assert.notEqual(r.wiederherstellungscode, alt);
   assert.equal(r.schluessel.ecdsa.privateKey.extractable, false);
   await fehlt(wiederherstellen({ zugang: W.geraet('d_P3'), anmeldename: 'peter', code: alt, neuesPasswort: 'Noch-Ein-Passwort-99', runden: R }), 'anmeldung', 'alter Code');
@@ -465,7 +468,8 @@ test('Eingaben: Zugang, Uhr, Runden; kontoPersonen fuer geraeteabgleich', async 
   await assert.rejects(startcodeAusstellen({ zugang: z, aussteller: { art: 'admin' }, anmeldename: 'abc', art: 'parent', now: T0 }), /aussteller/);
   const s = await startcodeAusstellen({ zugang: z, aussteller: null, anmeldename: 'verwalter', art: 'admin', now: T0 });
   const a = await ersteAnmeldung({ zugang: z, code: s.code, passwort: PW.verwalter, now: T0, runden: R });
-  assert.deepEqual(Object.keys(a).sort(), ['anker', 'anmeldename', 'art', 'aussteller', 'familie', 'kennung', 'neu', 'pub', 'schluessel', 'stand', 'wiederherstellungscode']);
+  assert.deepEqual(Object.keys(a).sort(), ['anker', 'anmeldename', 'art', 'aussteller', 'familie', 'kennung', 'neu', 'pub', 'schluessel', 'stand', 'ursprung', 'wiederherstellungscode']);
+  assert.deepEqual(a.ursprung, a.pub, 'Anker des eigenen Bereichs: die ersten Schluessel');
   assert.deepEqual([a.anker, a.familie, a.neu], [null, null, false]);
   const pers = kontoPersonen(a);
   assert.deepEqual(Object.keys(pers), [a.kennung]);

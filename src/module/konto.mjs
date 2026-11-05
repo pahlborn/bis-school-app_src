@@ -32,6 +32,20 @@
 //       { v: 1, lookup: "<lookup>-<n>", stand: n, kennung, pub (new), gesperrt, beweis, vollmacht: { inhalt, sig }, sig }
 //     It counts only if the vollmacht is signed by the child's anker - or by another parent with a buergschaft: the
 //     family_set about him signed by the anker (module einladung) - and if its start code was not used before.
+//     ankerKette (task "Neuer Schluessel"): when the anker renewed his key, the vollmacht carries his announcements
+//     (member_added about himself, each signed with the key before - module einladung takes them from the family area);
+//     the anker's newest key along that chain may sign, and a buergschaft signed with any key of the chain counts.
+//
+//   Task "Neuer Schluessel" (US9.7, concept 8.4; grown-ups only): schluesselErneuern - and wiederherstellen, always -
+//   make a NEW key pair, locked with the new password and a new recovery code. The entry "<lookup>-<n>" carries the new
+//   keys, the announcement signed with the OLD keys (wechsel) and is signed with the new keys:
+//       { v: 1, lookup: "<lookup>-<n>", stand: n, kennung, pub (new), gesperrt, wechsel, sig }
+//   It counts only if "wechsel" verifies with the keys that counted up to there - nobody without the old keys can put
+//   his own in. The old locks stay in the storage (write once): the old password still opens the OLD keys, but they
+//   only open key versions from before (module bereiche wraps every new version for the new keys only).
+//   The account carries "ursprung" (the keys of entry 1 - the anchor of the person's own area, whose later keys are
+//   announced in the area itself) and, right after renewing, "alt" (the old keys: the device needs them until every
+//   area has the new key - module geraeteabgleich).
 //
 // Errors: Error with err.code - one of KONTO_FEHLER, or a storage error passed on (offline, zugang, limit, ...).
 // Wrong use (missing access, clock, ...) throws a plain Error without code.
@@ -47,7 +61,7 @@ export const KONTO_ARTEN = Object.freeze(['child', 'parent', 'teacher', 'admin']
    "Einladungen" - for the second parent of its family */
 export const KONTO_AUSSTELLER = Object.freeze({ admin: Object.freeze(['parent', 'teacher', 'admin']), parent: Object.freeze(['child', 'parent']) });
 /* error codes of this module (storage errors keep their own code) */
-export const KONTO_FEHLER = Object.freeze(['anmeldung', 'name-ungueltig', 'name-vergeben', 'passwort-schwach', 'startcode-ungueltig', 'startcode-abgelaufen', 'nicht-erlaubt', 'konflikt', 'fingerabdruck']);
+export const KONTO_FEHLER = Object.freeze(['anmeldung', 'name-ungueltig', 'name-vergeben', 'passwort-schwach', 'startcode-ungueltig', 'startcode-abgelaufen', 'nicht-erlaubt', 'konflikt', 'fingerabdruck', 'passwort-gleich']);
 /* a start code is valid this long (concept 10.6) */
 export const KONTO_STARTCODE_MS = 7 * 24 * 3600 * 1000;
 /* fixed app salt of the directory hash (not secret; it only keeps the hashes apart from any other use) */
@@ -170,15 +184,45 @@ async function ktoNachtragOk(e, basis, n, pub) {
   return verifyBytes(pub, ktoNachtragText(e), e.sig);
 }
 
+/* ---------- new keys of a grown-up (task "Neuer Schluessel") ---------- */
+const ktoWechselText = (e) => 'bq-konto-wechsel|' + ktoKanon({ lookup: e.lookup, stand: e.stand, kennung: e.kennung, pub: e.pub });
+const ktoErneuertText = (e) => 'bq-konto-erneuert|' + ktoKanon({ ...e, sig: undefined });
+/* an entry with new keys of a grown-up, announced with the keys that counted up to here ("alt") */
+async function ktoErneuertOk(e, basis, n, alt) {
+  if (basis.art === 'child' || !ktoObj(e) || e.v !== 1 || e.lookup !== basis.lookup + '-' + n || e.stand !== n || e.kennung !== basis.kennung || !ktoPub(e.pub) || ktoGleichePub(e.pub, alt)) return false;
+  if (!ktoStr(e.wechsel) || !ktoStr(e.sig) || e.vollmacht !== undefined || e.beweis !== undefined || !ktoGesperrtOk(e.gesperrt, basis.kennung, e.pub, basis.art)) return false;
+  return (await verifyBytes(alt, ktoWechselText(e), e.wechsel)) && (await verifyBytes(e.pub, ktoErneuertText(e), e.sig));
+}
+
 /* ---------- new keys of a child (task "Einladungen") ---------- */
 const ktoNeuText = (e) => 'bq-konto-neu|' + ktoKanon({ ...e, sig: undefined });
+/* the keys of a child's anchor along his announcements (task "Neuer Schluessel"): kette = [{ area, event, sig }] with
+   event = member_added about himself, signed with his key before. A link that does not follow from the keys so far is
+   skipped. -> [pub of the anchor, later pubs ...] (the last one is his newest key), or null if kette is malformed */
+async function ktoAnkerKette(kette, anker) {
+  const pubs = [{ ...anker.pub }];
+  if (kette === undefined) return pubs;
+  if (!Array.isArray(kette) || kette.length > KONTO_STAENDE_MAX) return null;
+  for (const g of kette) {
+    if (!ktoObj(g) || typeof g.area !== 'string' || !g.area || !ktoObj(g.event) || !ktoStr(g.sig)) return null;
+    const e = g.event, p = ktoObj(e.payload) ? e.payload : {}, vorher = pubs[pubs.length - 1];
+    if (e.type !== 'member_added' || e.author !== anker.kennung || p.person !== anker.kennung || p.role !== 'parent' || !ktoPub(p.pub) || ktoGleichePub(p.pub, vorher)) continue;
+    let ok = false;
+    try { ok = await verifyBytes(vorher, canonicalBytes(e, g.area), g.sig); } catch (err) { ok = false; }
+    if (ok) pubs.push({ ...p.pub });
+  }
+  return pubs;
+}
 /* is "b" the anchor's word for this parent? b = { area, event, sig }: the family_set about him (module einladung),
-   signed by the anchor in the area of the family */
-async function ktoBuergschaftOk(b, anker, aussteller) {
+   signed by the anchor in the area of the family (with one of his keys - ankerPubs, task "Neuer Schluessel") */
+async function ktoBuergschaftOk(b, anker, aussteller, ankerPubs = [anker.pub]) {
   if (!ktoObj(b) || typeof b.area !== 'string' || !b.area.startsWith('familie:') || !ktoObj(b.event) || !ktoStr(b.sig)) return false;
   const e = b.event, p = ktoObj(e.payload) ? e.payload : {};
   if (e.type !== 'family_set' || e.author !== anker.kennung || p.person !== aussteller.kennung || p.role !== 'parent' || !ktoGleichePub(p.pub, aussteller.pub)) return false;
-  try { return await verifyBytes(anker.pub, canonicalBytes(e, b.area), b.sig); } catch (err) { return false; }
+  for (const pub of ankerPubs) {
+    try { if (await verifyBytes(pub, canonicalBytes(e, b.area), b.sig)) return true; } catch (err) { /* next key */ }
+  }
+  return false;
 }
 /* the signed start code of a "new password" for this child account -> its id, or null (wrong, foreign, not trusted) */
 async function ktoVollmachtOk(v, basis) {
@@ -188,7 +232,9 @@ async function ktoVollmachtOk(v, basis) {
   if (!ktoObj(a) || a.art !== 'parent' || !ktoPid(a.kennung) || !ktoPub(a.pub) || !ktoAnker(i.anker) || i.anker.kennung !== basis.anker.kennung || !ktoGleichePub(i.anker.pub, basis.anker.pub)) return null;
   if (kontoName(i.anmeldename) !== i.anmeldename || (await kontoLookup(i.anmeldename)) !== basis.lookup) return null;
   if (!(await verifyBytes(a.pub, 'bq-start|' + ktoKanon(i), v.sig))) return null;
-  const vertraut = (a.kennung === basis.anker.kennung && ktoGleichePub(a.pub, basis.anker.pub)) || (await ktoBuergschaftOk(i.buergschaft, basis.anker, a));
+  const pubs = await ktoAnkerKette(i.ankerKette, basis.anker);
+  if (!pubs) return null;
+  const vertraut = (a.kennung === basis.anker.kennung && ktoGleichePub(a.pub, pubs[pubs.length - 1])) || (await ktoBuergschaftOk(i.buergschaft, basis.anker, a, pubs));
   return vertraut ? i.id : null;
 }
 /* an entry with new keys: vollmacht trusted, proof present, signed with the new keys -> the vollmacht's id or null */
@@ -207,6 +253,7 @@ async function ktoAktuell(zugang, basis) {
     const e = await zugang.directory(basis.lookup + '-' + n);
     if (e === null) break;
     if (await ktoNachtragOk(e, basis, n, aktuell.pub)) { aktuell = { stand: n, gesperrt: e.gesperrt, pub: aktuell.pub }; continue; }
+    if (await ktoErneuertOk(e, basis, n, aktuell.pub)) { aktuell = { stand: n, gesperrt: e.gesperrt, pub: { ...e.pub } }; continue; }
     const id = basis.art === 'child' ? await ktoNeuOk(e, basis, n) : null;
     if (id && !Object.prototype.hasOwnProperty.call(neu, id)) { neu[id] = n; aktuell = { stand: n, gesperrt: e.gesperrt, pub: { ...e.pub } }; }   // a start code counts once
   }
@@ -244,7 +291,24 @@ async function ktoNeuerStand(zugang, basis, naechster, gesperrt, keys, pub) {
   try { await zugang.putDirectory(e); } catch (err) { throw err && err.code === 'vorhanden' ? ktoFehler('konflikt') : err; }
   return naechster;
 }
-const ktoKonto = (e, n, schluessel, stand, pub = e.pub) => ({ kennung: e.kennung, art: e.art, anmeldename: n, pub: { ...pub }, schluessel, stand });
+/* ursprung: the keys the person's own area is anchored at - a grown-up's first keys (later ones are announced in the area,
+   task "Neuer Schluessel"); a child's current keys (after a new password its own area starts anew - task "Einladungen") */
+const ktoKonto = (e, n, schluessel, stand, pub = e.pub) => ({ kennung: e.kennung, art: e.art, anmeldename: n, pub: { ...pub }, schluessel, stand, ursprung: { ...(e.art === 'child' ? pub : e.pub) } });
+/* new keys for a grown-up: locked with the new password and a new recovery code, announced with the old keys (opened,
+   "alteSchluessel"; akt = ktoAktuell) -> { schluessel (new, not extractable), pub, stand, wcode } */
+async function ktoErneuern(zugang, basis, akt, alteSchluessel, neuesPasswort, runden, rand) {
+  if (akt.naechster === null) throw ktoFehler('konflikt');
+  const keys = await newPersonKeys(), pub = await publicKeysOf(keys), n = akt.naechster, wcode = ktoNeuerCode(rand);
+  const gesperrt = await lockPersonKeys(keys, basis.kennung, [neuesPasswort, wcode], { rounds: runden, rand });
+  const e = { v: 1, lookup: basis.lookup + '-' + n, stand: n, kennung: basis.kennung, pub, gesperrt };
+  e.wechsel = await signBytes(alteSchluessel, ktoWechselText(e));
+  e.sig = await signBytes(keys, ktoErneuertText(e));
+  try { await zugang.putDirectory(e); } catch (err) { throw err && err.code === 'vorhanden' ? ktoFehler('konflikt') : err; }
+  // the device keeps a copy that cannot be exported: open the lock just written (this also proves it opens)
+  const schluessel = await ktoOeffnen(gesperrt, basis.kennung, pub, 0, neuesPasswort, runden);
+  if (!schluessel) throw ktoFalsch('Schloss laesst sich nicht oeffnen.');
+  return { schluessel, pub, stand: n, wcode };
+}
 
 /* ---------- start code (US9.2) ---------- */
 function ktoAussteller(aussteller) {
@@ -285,9 +349,10 @@ export async function startcodeAusstellen({ zugang, aussteller = null, anmeldena
    makes new keys with it; the parents give it every area key again (module bereiche), nothing is lost.
    aussteller: an opened parent account; kennung, anker ({ kennung, pub }): what the parent knows of the child (family) -
    they must match the child's directory entry. buergschaft: needed when the issuer is not the child's anker (the family_set
-   about the issuer, signed by the anker: { area, event, sig }).
+   about the issuer, signed by the anker: { area, event, sig }). ankerKette: the anker's announcements of new keys, when
+   he renewed his key (task "Neuer Schluessel"; [{ area, event, sig }], module einladung).
    -> like startcodeAusstellen */
-export async function neustartAusstellen({ zugang, aussteller, anmeldename, kennung, anker, buergschaft, now, rand = ktoRand } = {}) {
+export async function neustartAusstellen({ zugang, aussteller, anmeldename, kennung, anker, buergschaft, ankerKette, now, rand = ktoRand } = {}) {
   ktoZugang(zugang);
   if (!Number.isFinite(now)) throw ktoFalsch('"now" fehlt.');
   if (!ktoObj(aussteller) || aussteller.art !== 'parent') throw ktoFehler('nicht-erlaubt');
@@ -299,6 +364,7 @@ export async function neustartAusstellen({ zugang, aussteller, anmeldename, kenn
   const code = ktoB64url(rand(16)), s = await ktoStart(code), gueltigBis = now + KONTO_STARTCODE_MS;
   const inhalt = { v: 1, anmeldename: n, kennung, art: 'child', ausgestellt: now, gueltigBis, aussteller: { kennung: aussteller.kennung, art: 'parent', pub: { ...aussteller.pub } }, neu: true, id: s.id, anker: { kennung: anker.kennung, pub: { ...anker.pub } } };
   if (buergschaft !== undefined) inhalt.buergschaft = buergschaft;
+  if (ankerKette !== undefined) inhalt.ankerKette = ankerKette;
   // the child's next device would refuse an entry made with it: do not hand out such a code
   if (!(await ktoVollmachtOk({ inhalt, sig: await signBytes(aussteller.schluessel, 'bq-start|' + ktoKanon(inhalt)) }, basis))) throw ktoFehler('nicht-erlaubt');
   return ktoAusgeben(zugang, aussteller, inhalt, code, s, rand);
@@ -315,7 +381,7 @@ async function ktoStartLesen(s, gespeichert) {
   if (!ktoObj(a) || !ktoPid(a.kennung) || !ktoPub(a.pub) || !(KONTO_AUSSTELLER[a.art] || []).includes(i.art) || !ktoStr(x.sig)) return null;
   const zweiterElternteil = a.art === 'parent' && i.art === 'parent';
   if (zweiterElternteil ? !(ktoObj(i.familie) && ktoPid(i.familie.person) && ktoPub(i.familie.pub)) : i.familie !== undefined) return null;
-  if (i.neu === undefined ? i.id !== undefined || i.anker !== undefined || i.buergschaft !== undefined : !(i.neu === true && i.art === 'child' && a.art === 'parent' && i.id === s.id && ktoAnker(i.anker))) return null;
+  if (i.neu === undefined ? i.id !== undefined || i.anker !== undefined || i.buergschaft !== undefined || i.ankerKette !== undefined : !(i.neu === true && i.art === 'child' && a.art === 'parent' && i.id === s.id && ktoAnker(i.anker))) return null;
   return (await verifyBytes(a.pub, 'bq-start|' + ktoKanon(i), x.sig)) ? { inhalt: i, sig: x.sig } : null;
 }
 
@@ -445,6 +511,8 @@ export async function anmelden({ zugang, anmeldename, passwort, runden = PBKDF2_
 
 /* ---------- recovery code (US9.4) ---------- */
 /* grown-ups: login name + recovery code + new password -> the account with a NEW recovery code (show it at once).
+   Task "Neuer Schluessel" (Peter's proposal, 04.11.): always with NEW keys - whoever had the old password and a copy of
+   the storage then reads nothing new. -> like schluesselErneuern.
    A child has no recovery code (its parent gives a new start code - task "Einladungen"). */
 export async function wiederherstellen({ zugang, anmeldename, code, neuesPasswort, runden = PBKDF2_ROUNDS, rand = ktoRand } = {}) {
   ktoZugang(zugang); ktoRunden(runden);
@@ -455,13 +523,36 @@ export async function wiederherstellen({ zugang, anmeldename, code, neuesPasswor
   const e = await zugang.directory(lookup);
   if (!ktoEintragOk(e, lookup) || e.art === 'child') { await zugang.directory(lookup + '-2'); await ktoBlind(form, runden); throw ktoFehler('anmeldung'); }
   const akt = await ktoAktuell(zugang, e);
-  const offen = await ktoOeffnen(akt.gesperrt, e.kennung, akt.pub, 1, form, runden, true);
+  const offen = await ktoOeffnen(akt.gesperrt, e.kennung, akt.pub, 1, form, runden);
   if (!offen) throw ktoFehler('anmeldung');
-  const wcode = ktoNeuerCode(rand);
-  const gesperrt = await lockPersonKeys(offen, e.kennung, [neuesPasswort, wcode], { rounds: runden, rand });
-  const stand = await ktoNeuerStand(zugang, e, akt.naechster, gesperrt, offen, akt.pub);
-  const schluessel = await ktoOeffnen(gesperrt, e.kennung, akt.pub, 0, neuesPasswort, runden);
-  return { ...ktoKonto(e, n, schluessel, stand, akt.pub), wiederherstellungscode: wcode };
+  const neu = await ktoErneuern(zugang, e, akt, offen, neuesPasswort, runden, rand);
+  return { ...ktoKonto(e, n, neu.schluessel, neu.stand, neu.pub), wiederherstellungscode: neu.wcode, fingerabdruck: await keyFingerprint(neu.pub), alt: { pub: { ...akt.pub }, schluessel: offen } };
+}
+
+/* ---------- new person key (task "Neuer Schluessel", US9.7, concept 8.4) ---------- */
+/* grown-ups ("Schluessel erneuern" - after a suspicion, and when one of their devices is removed): login name + the
+   current password + a new password -> NEW keys, locked with the new password and a new recovery code (show it at once),
+   announced with the old keys. The current password is asked again, so a stolen device that is still logged in cannot
+   renew the key and lock its owner out. The new password must differ from the current one ("passwort-gleich").
+   -> { kennung, art, anmeldename, pub (new), schluessel (new, not extractable), stand, ursprung, wiederherstellungscode,
+        fingerabdruck (of the new keys), alt: { pub, schluessel } } - alt goes with the account into the next sync
+   (module einladung abgleichMitVerbindungen / geraeteabgleich): every area gets the announcement and a new key version;
+   the app keeps alt only until the sync reports nothing open (erneuerungOffen), never stores it. */
+export async function schluesselErneuern({ zugang, anmeldename, passwort, neuesPasswort, runden = PBKDF2_ROUNDS, rand = ktoRand } = {}) {
+  ktoZugang(zugang); ktoRunden(runden);
+  const n = kontoName(anmeldename);
+  if (!n || typeof passwort !== 'string' || !passwort) throw ktoFehler('anmeldung');
+  if (typeof neuesPasswort !== 'string' || pwWeak(neuesPasswort, n)) throw ktoFehler('passwort-schwach');
+  const lookup = await kontoLookup(n);
+  const e = await zugang.directory(lookup);
+  if (!ktoEintragOk(e, lookup)) { await zugang.directory(lookup + '-2'); await ktoBlind(passwort, runden); throw ktoFehler('anmeldung'); }
+  const akt = await ktoAktuell(zugang, e);
+  const alt = await ktoOeffnen(akt.gesperrt, e.kennung, akt.pub, 0, passwort, runden);
+  if (!alt) throw ktoFehler('anmeldung');
+  if (e.art === 'child') throw ktoFehler('nicht-erlaubt');              // a child gets new keys from its parents (new password)
+  if (neuesPasswort.normalize('NFC') === passwort.normalize('NFC')) throw ktoFehler('passwort-gleich');
+  const neu = await ktoErneuern(zugang, e, akt, alt, neuesPasswort, runden, rand);
+  return { ...ktoKonto(e, n, neu.schluessel, neu.stand, neu.pub), wiederherstellungscode: neu.wcode, fingerabdruck: await keyFingerprint(neu.pub), alt: { pub: { ...akt.pub }, schluessel: alt } };
 }
 
 /* ---------- for module einladung ---------- */
@@ -477,14 +568,27 @@ export async function kontoStand({ zugang, anmeldename } = {}) {
   return { kennung: e.kennung, art: e.art, pub: { ...akt.pub }, stand: akt.stand, neu: { ...akt.neu } };
 }
 
+/* the fingerprint of public keys (6 words; module einladung shows it when a parent renewed his key) */
+export async function kontoFingerabdruck(pub) {
+  if (!ktoPub(pub)) throw ktoFalsch('pub erwartet.');
+  return keyFingerprint(pub);
+}
+
 /* ---------- for module geraeteabgleich ---------- */
-/* an opened account -> the "personen" entry of geraetAbgleichen: { <kennung>: { role, keys, pub } } (pub = the keys of
-   the entry that counts now - for a child after "new password" the new ones) */
+/* an opened account -> the "personen" entry of geraetAbgleichen: { <kennung>: { role, keys, pub, ursprung?, alt? } } (pub =
+   the keys of the entry that counts now - for a child after "new password" the new ones; task "Neuer Schluessel":
+   ursprung = anchor of the own area when it differs from pub, alt = { keys, pub } right after renewing) */
 export function kontoPersonen(...konten) {
   const out = {};
   for (const k of konten) {
     if (!ktoObj(k) || !ktoPid(k.kennung) || !KONTO_ARTEN.includes(k.art) || !ktoObj(k.schluessel) || !ktoPub(k.pub)) throw ktoFalsch('geoeffnetes Konto erwartet.');
-    out[k.kennung] = { role: k.art, keys: k.schluessel, pub: { ...k.pub } };
+    if ((k.ursprung !== undefined && !ktoPub(k.ursprung)) || (k.alt !== undefined && k.alt !== null && !(ktoObj(k.alt) && ktoObj(k.alt.schluessel) && ktoPub(k.alt.pub)))) throw ktoFalsch('ursprung/alt ungueltig.');
+    out[k.kennung] = {
+      role: k.art, keys: k.schluessel, pub: { ...k.pub },
+      ...(Number.isInteger(k.stand) && k.stand > 1 ? { stand: k.stand } : {}),
+      ...(k.ursprung && !ktoGleichePub(k.ursprung, k.pub) ? { ursprung: { ...k.ursprung } } : {}),
+      ...(k.alt ? { alt: { keys: k.alt.schluessel, pub: { ...k.alt.pub } } } : {}),
+    };
   }
   return out;
 }

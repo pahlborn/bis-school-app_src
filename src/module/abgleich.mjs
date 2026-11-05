@@ -182,16 +182,21 @@ export async function holen(stand, { zugang, schluessel, zulassung, now } = {}) 
   const z = typeof zulassung === 'function' ? await zulassung([...stand.log, ...[...kandidaten.keys()].filter((x) => abgEintragOk(x))]) : zulassung;
   const pruefung = await acceptAll([...kandidaten.keys()], z);
   const ohneKv = (m) => ({ kennung: m.kennung, id: m.id });
-  for (const v of pruefung.verworfen) verworfen.push({ ...ohneKv(kandidaten.get(v.item)), grund: v.grund });
+  // typ (task "Neuer Schluessel"): the type of a dropped, readable event - a forged key change (member_added) is shown
+  // to the parents as a warning
+  const typ = (item) => (abgObj(item) && abgObj(item.event) && typeof item.event.type === 'string' ? { typ: item.event.type } : {});
+  for (const v of pruefung.verworfen) verworfen.push({ ...ohneKv(kandidaten.get(v.item)), grund: v.grund, ...typ(v.item) });
   // task P3b-2b: after a key change, a bundle of a person removed by it, with an older key version and a number beyond
   // the stand of the change (bundles per device when the key changed), is dropped - whatever time its events carry,
   // because a removed holder could backdate them. Later bundles with the new version (he was admitted again) count.
+  // Task "Neuer Schluessel": the same for a person whose keys were renewed (erneuert) - his old keys may be in other hands.
   const wechsel = [...stand.log, ...pruefung.angenommen].filter((x) => abgObj(x) && abgObj(x.event) && x.event.type === 'key_rotated').map((x) => x.event.payload);
   const angenommen = [];
   for (const x of pruefung.angenommen) {
     const m = kandidaten.get(x), [dev, nrText] = m.kennung.split('/'), nr = Number(nrText);
-    const zuSpaet = wechsel.some((w) => m.kv < w.version && w.entfernt.includes(x.event.author) && nr > (Object.prototype.hasOwnProperty.call(w.stand, dev) ? w.stand[dev] : 0));
-    if (zuSpaet) verworfen.push({ ...ohneKv(m), grund: 'nach-entfernung' });
+    const betroffen = (w) => w.entfernt.includes(x.event.author) || (Array.isArray(w.erneuert) && w.erneuert.includes(x.event.author));
+    const zuSpaet = wechsel.some((w) => m.kv < w.version && betroffen(w) && nr > (Object.prototype.hasOwnProperty.call(w.stand, dev) ? w.stand[dev] : 0));
+    if (zuSpaet) verworfen.push({ ...ohneKv(m), grund: 'nach-entfernung', ...typ(x) });
     else if (abgEintragOk(x)) angenommen.push({ event: x.event, sig: x.sig });
   }
 

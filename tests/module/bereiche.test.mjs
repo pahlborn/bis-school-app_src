@@ -451,19 +451,30 @@ test('Einladungen: Kind mit neuen Schluesseln ("Passwort neu") bekommt jede Vers
   delete M1.p_l1;
   const w = await schluesselVerteilen(g, L, mit(M1));                      // Freigabe p_l1 endet: Version 2
   assert.deepEqual([w.aktion, w.version, w.geaendert], ['gewechselt', 2, []]);
-  // Kathie hat neue Schluessel (stand 2): beide Versionen neu verpackt, sonst aendert sich nichts
+  // Kathie hat neue Schluessel (stand 2): beide Versionen neu verpackt - und (Aufgabe "Neuer Schluessel") eine neue
+  // Version 3 fuer alle Halter, damit die alten Schluessel (altes Geraet, alte Speicherkopie) nichts Neues oeffnen
   const M2 = { ...M1, p_k1: { role: 'child', pub: neuPub, stand: 2 } };
   const vorher = await g.keys(L), r = await schluesselVerteilen(g, L, mit(M2));
-  assert.deepEqual([r.aktion, r.version, r.neu, r.geaendert, r.entfernt], ['ergaenzt', 2, [], ['p_k1'], []]);
-  assert.deepEqual(r.ereignisse, [{ type: 'member_added', payload: { person: 'p_k1', role: 'child', pub: neuPub, stand: 2 } }]);
+  assert.deepEqual([r.aktion, r.version, r.neu, r.geaendert, r.entfernt], ['gewechselt', 3, [], ['p_k1'], []]);
+  assert.deepEqual(r.ereignisse.map((e) => e.type), ['member_added', 'key_rotated']);
+  assert.deepEqual(r.ereignisse[0], { type: 'member_added', payload: { person: 'p_k1', role: 'child', pub: neuPub, stand: 2 } });
+  assert.deepEqual([r.ereignisse[1].payload.version, r.ereignisse[1].payload.entfernt, r.ereignisse[1].payload.erneuert], [3, [], ['p_k1']]);
   const nachher = await g.keys(L);
   assert.equal(nachher.p_k1.fuer, await schluesselFuer(neuPub));
-  for (const h of Object.keys(nachher).filter((x) => x !== 'p_k1')) assert.deepEqual(nachher[h], vorher[h], 'unveraendert: ' + h);
+  assert.deepEqual(Object.keys(nachher.p_k1.versionen).sort(), ['1', '2', '3'], 'Kathie: ganze Geschichte, nur fuer die neuen Schluessel');
+  for (const h of Object.keys(nachher).filter((x) => x !== 'p_k1' && vorher[x].versionen['2'])) {
+    assert.deepEqual(Object.keys(nachher[h].versionen).sort(), [...Object.keys(vorher[h].versionen), '3'].sort(), 'die anderen: alte Versionen + 3: ' + h);
+    for (const v of Object.keys(vorher[h].versionen)) assert.deepEqual(nachher[h].versionen[v], vorher[h].versionen[v], 'alte Version unveraendert: ' + h + ' ' + v);
+  }
   const jetzt = await schluesselLesen(g, L, { ich: 'p_k1', meineSchluessel: neu, mitglieder: M2 });
-  assert.deepEqual([jetzt.aktuell, [...jetzt.keys.keys()].sort()], [2, [1, 2]], 'mit den neuen Schluesseln: ganze Geschichte');
+  assert.deepEqual([jetzt.aktuell, [...jetzt.keys.keys()].sort()], [3, [1, 2, 3]], 'mit den neuen Schluesseln: ganze Geschichte');
   const alt = await schluesselLesen(g, L, { ich: 'p_k1', meineSchluessel: KEYS.p_k1, mitglieder: M2 });
   assert.equal(alt.keys.size, 0, 'mit den alten nichts mehr');
-  assert.deepEqual(kurz(await schluesselVerteilen(g, L, mit(M2))), { aktion: 'unveraendert', version: 2, neu: [], entfernt: [] }, 'einmal reicht');
+  // auch mit Kathies altem Eintrag (alte Speicherkopie) nur Version 1 und 2
+  const kopie = lokalerSpeicher().geraet('d_x');
+  for (const [h, e] of Object.entries(vorher)) await kopie.putKey(L, h, e);
+  assert.deepEqual([...(await schluesselLesen(kopie, L, { ich: 'p_k1', meineSchluessel: KEYS.p_k1, mitglieder: M1 })).keys.keys()].sort(), [1, 2], 'alte Kopie: nichts Neues');
+  assert.deepEqual(kurz(await schluesselVerteilen(g, L, mit(M2))), { aktion: 'unveraendert', version: 3, neu: [], entfernt: [] }, 'einmal reicht');
   // ein Eintrag ohne "fuer" (vor dieser Aufgabe) gilt als passend - nichts wird neu verpackt
   const ohne = { v: 1, von: 'p_e1', versionen: nachher.p_e2.versionen };
   await g.putKey(L, 'p_e2', { ...ohne, sig: await signBytes(KEYS.p_e1, keyBytes(L, 'p_e2', ohne)) });

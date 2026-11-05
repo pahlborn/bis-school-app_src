@@ -17,6 +17,12 @@
 //   In the area of a grant (freigabe:<id>) the distributor also writes a copy of the grant (grant_set without the consent
 //   text; grant_revoked once it was ended - sent BEFORE the key changes, with the key the recipient still holds), so the
 //   recipient's app knows its grant, finds the child and learns that it ended (task "Lehrkraft sieht ihre Schueler").
+//   Task "Neuer Schluessel" (US9.7): a person here who just renewed his key comes with alt = { keys, pub } (module konto).
+//   In every area where the admission still has his old keys, this device first announces the new ones - member_added
+//   about himself, signed with the OLD keys - and sends it at once (with the key version he holds); only then the keys
+//   change (bereiche: new version for the holders, his entry wrapped for the new keys). The report says which areas are
+//   still open (erneuerungOffen) - the app keeps alt until none is. His own area person:<id> is anchored at his first keys
+//   (ursprung), so it keeps its history across renewals.
 //   Device storage (plain JSON, technical, never synced): bq_abgleich = { <area>: device state of module abgleich },
 //   bq_abgleichVerworfen = everything dropped, with reason (module abgleich reports it once, so it is kept here).
 //   A storage error (err.code, e.g. "offline") ends only that area; its state stays as it was, nothing is lost.
@@ -48,6 +54,7 @@ function gabJson(ablage, k, d) {
 }
 const gabListe = (x) => (Array.isArray(x) ? x : []);
 const gabPub = (p) => gabObj(p) && typeof p.ecdh === 'string' && typeof p.ecdsa === 'string';
+const gabGleichePub = (a, b) => gabPub(a) && gabPub(b) && a.ecdh === b.ecdh && a.ecdsa === b.ecdsa;
 /* must this device be registered for this member now? -> null or { ab: earliest time } - when it never was, or when its
    registration ended with an earlier membership (after being added again a device registers anew). Not when it was
    removed during the current membership (device_removed): a removed device does not register itself again. The time is
@@ -66,6 +73,7 @@ function gabPruefen({ ablage, zugang, personen, kinder, familien, verzeichnis, n
   if (!gabObj(personen) || !Object.keys(personen).length) throw gabFehler('personen fehlen.');
   for (const [pid, p] of Object.entries(personen)) {
     if (!gabPid(pid) || !gabObj(p) || !GAB_ROLLEN.includes(p.role) || !gabObj(p.keys) || !gabPub(p.pub)) throw gabFehler('Person ' + pid + ' braucht role, keys und pub.');
+    if ((p.ursprung !== undefined && !gabPub(p.ursprung)) || (p.alt !== undefined && !(gabObj(p.alt) && gabObj(p.alt.keys) && gabPub(p.alt.pub))) || (p.stand !== undefined && !(Number.isInteger(p.stand) && p.stand >= 1))) throw gabFehler('Person ' + pid + ': ursprung, alt oder stand ungueltig.');
   }
   if (!Array.isArray(kinder) || kinder.some((c) => !gabObj(c) || !gabPid(c.id) || typeof c.pre !== 'string' || !c.pre.startsWith('bq2_') || !gabObj(c.anker))) throw gabFehler('kinder: [{ id, pre, anker }] erwartet.');
   if (kinder.some((c) => c.freigaben !== undefined && (!Array.isArray(c.freigaben) || c.freigaben.some((g) => typeof g !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(g))))) throw gabFehler('kinder[].freigaben: Liste von Freigabe-Kennungen erwartet.');
@@ -106,31 +114,58 @@ async function gabBereich(o, area, ziel, anker, stand) {
   const bericht = { ok: true, fehler: null, aktion: null, gesendet: 0, neu: 0, verworfen: [], ohneSchluessel: 0, inDieApp: 0 };
   let t = now;                                                          // own new events: one millisecond apart, in order
   const zeit = (ab) => { t = Math.max(t, ab || 0); return new Date(t++).toISOString(); };
-  const eintragen = async (pid, type, payload, ab) => vormerken(stand, await signEvent(newEvent({ type, author: pid, device: geraet, at: zeit(ab), payload }), area, personen[pid].keys), { now });
-  const anmelden = async (zul, pid) => { const a = gabAnmelden(zul, pid, geraet); if (a) await eintragen(pid, 'device_added', { device: geraet }, a.ab); return !!a; };
+  // task "Neuer Schluessel": while the admission of this area still has a person's old keys (offen), he signs with them
+  let zul = null;
+  const offen = (pid) => { const p = personen[pid], m = p.alt && zul ? aktiveMitglieder(zul)[pid] : null; return !!(m && gabGleichePub(m.pub, p.alt.pub)); };
+  const signier = (pid) => (offen(pid) ? personen[pid].alt.keys : personen[pid].keys);
+  const schl = (pid) => { const p = personen[pid]; if (!p.alt) return { meineSchluessel: p.keys }; return offen(pid) ? { meineSchluessel: p.alt.keys, alteSchluessel: [p.keys] } : { meineSchluessel: p.keys, alteSchluessel: [p.alt.keys] }; };
+  const neuBilden = async () => { zul = await zulassungAus(stand.log, { area, anker, now }); };
+  const eintragen = async (pid, type, payload, ab) => vormerken(stand, await signEvent(newEvent({ type, author: pid, device: geraet, at: zeit(ab), payload }), area, signier(pid)), { now });
+  const anmelden = async (pid) => { const a = gabAnmelden(zul, pid, geraet); if (a) await eintragen(pid, 'device_added', { device: geraet }, a.ab); return !!a; };
   const reihe = Object.keys(personen).sort((a, b) => (GAB_ROLLEN.indexOf(personen[a].role) - GAB_ROLLEN.indexOf(personen[b].role)) || gabCmp(a, b));
   try {
     // 1. fetch with the key of a person here
     const eintraege = await zugang.keys(area);
     const leser = reihe.find((pid) => gabObj(eintraege) && Object.prototype.hasOwnProperty.call(eintraege, pid));
     if (leser) {
-      const h = await bereichHolen(stand, { zugang, ich: leser, meineSchluessel: personen[leser].keys, anker, now });
+      const h = await bereichHolen(stand, { zugang, ich: leser, ...schl(leser), anker, now });
       bericht.neu = h.neu;
       bericht.verworfen = h.verworfen.map((v) => ({ bereich: area, ...v }));
     }
-    let zul = await zulassungAus(stand.log, { area, anker, now });
+    await neuBilden();
     const art = area.split(':').slice(0, -1).join(':');
+    // 1b. task "Neuer Schluessel": announce the new keys of a person here with his old ones and send that at once - before
+    //     any key changes, so every device that meets the new version can also learn whose keys sign it
+    for (const pid of reihe) {
+      const p = personen[pid];
+      if (!p.alt) continue;
+      const ausstehend = stand.ausgang.some((x) => x.event.type === 'member_added' && x.event.author === pid && x.event.payload.person === pid);
+      if (!offen(pid) && !ausstehend) continue;
+      const s = await schluesselLesen(zugang, area, { ich: pid, ...schl(pid), mitglieder: aktiveMitglieder(zul) });
+      if (!s.aktuell || !s.keys.has(s.aktuell)) continue;             // no key of this area here: nothing to announce it with
+      if (offen(pid)) {
+        if (await anmelden(pid)) await neuBilden();
+        await eintragen(pid, 'member_added', { person: pid, role: p.role, pub: { ...p.pub }, ...(p.stand > 1 ? { stand: p.stand } : {}) });
+        await neuBilden();
+        bericht.erneuert = true;
+      }
+      bericht.gesendet += (await senden(stand, { zugang, schluessel: { aktuell: s.aktuell, keys: s.keys } })).gesendet;
+    }
     // 2. hand out the keys
     const verteiler = reihe.find((pid) => (art === 'person' ? area === 'person:' + pid : personen[pid].role === 'parent' && Object.prototype.hasOwnProperty.call(aktiveMitglieder(zul), pid)));
     if (verteiler) {
       // his device first: what he writes counts only from a registered device (also for the anchor)
-      if (await anmelden(zul, verteiler)) zul = await zulassungAus(stand.log, { area, anker, now });
+      if (await anmelden(verteiler)) await neuBilden();
       const mitglieder = {}, gabStand = (m) => (Number.isInteger(m.stand) && m.stand > 1 ? m.stand : 1);
       for (const [pid, m] of Object.entries(verzeichnis)) if (gabObj(m) && GAB_ROLLEN.includes(m.role) && gabPub(m.pub)) mitglieder[pid] = { role: m.role, pub: m.pub, ...(gabStand(m) > 1 ? { stand: gabStand(m) } : {}) };
       for (const [pid, p] of Object.entries(personen)) mitglieder[pid] = { role: p.role, pub: p.pub };
       // the area's own admission counts - except for keys from a newer directory entry (task "Einladungen": a child's new
-      // keys after "new password", known from the family; an older device keeps the newer keys, see zulassung "stand")
-      for (const [pid, m] of Object.entries(aktiveMitglieder(zul))) if (!(mitglieder[pid] && gabStand(mitglieder[pid]) > gabStand(m))) mitglieder[pid] = m;
+      // keys after "new password", known from the family; an older device keeps the newer keys, see zulassung "stand").
+      // Task "Neuer Schluessel": the keys the admission knows stay as "frueher" - the key entries signed with them count.
+      for (const [pid, m] of Object.entries(aktiveMitglieder(zul))) {
+        if (mitglieder[pid] && gabStand(mitglieder[pid]) > gabStand(m)) mitglieder[pid] = { ...mitglieder[pid], frueher: [m.pub, ...(m.frueher || [])] };
+        else mitglieder[pid] = m;
+      }
       const freigaben = ziel.pre ? gabFreigaben(gabZiel(o.ablage, ziel).lesen()) : [];
       // the area of a grant carries the grant itself, for its recipient (task "Lehrkraft sieht ihre Schueler"): a copy
       // by the distributor, without the consent text - the app's own grant_set was written before this area existed
@@ -143,16 +178,19 @@ async function gabBereich(o, area, ziel, anker, stand) {
         if (g.widerrufen && !da('grant_revoked')) await eintragen(verteiler, 'grant_revoked', { grant: g.grant, grantee: g.grantee });
       };
       if (g && g.widerrufen) {
-        const s = await schluesselLesen(zugang, area, { ich: verteiler, meineSchluessel: personen[verteiler].keys, mitglieder: aktiveMitglieder(zul) });
+        const s = await schluesselLesen(zugang, area, { ich: verteiler, ...schl(verteiler), mitglieder: aktiveMitglieder(zul) });
         if (s.aktuell && s.keys.has(s.aktuell)) {
           await kopien();
           bericht.gesendet += (await senden(stand, { zugang, schluessel: { aktuell: s.aktuell, keys: s.keys } })).gesendet;
         }
       }
-      const r = await schluesselVerteilen(zugang, area, { soll: halter(area, mitglieder, freigaben, heute), ich: verteiler, meineSchluessel: personen[verteiler].keys, mitglieder });
+      const r = await schluesselVerteilen(zugang, area, { soll: halter(area, mitglieder, freigaben, heute), ich: verteiler, ...schl(verteiler), mitglieder });
       bericht.aktion = r.aktion;
-      for (const e of r.ereignisse) await eintragen(verteiler, e.type, e.payload);
-      if (r.ereignisse.length) zul = await zulassungAus(stand.log, { area, anker, now });
+      // (a member_added the admission already has - a renewed person announced his new keys himself in step 1b - is not
+      // written a second time)
+      const schonDa = (e) => { const m = e.type === 'member_added' ? aktiveMitglieder(zul)[e.payload.person] : null; return !!(m && m.role === e.payload.role && gabGleichePub(m.pub, e.payload.pub) && (m.stand || 1) === (e.payload.stand || 1)); };
+      for (const e of r.ereignisse) if (!schonDa(e)) await eintragen(verteiler, e.type, e.payload);
+      if (r.ereignisse.length) await neuBilden();
       if (g) await kopien();
     }
     // 3. register this device for everybody here who belongs and holds the current key
@@ -160,10 +198,10 @@ async function gabBereich(o, area, ziel, anker, stand) {
     let schreiber = null;
     for (const pid of reihe) {
       if (!Object.prototype.hasOwnProperty.call(aktiv, pid)) continue;
-      const s = await schluesselLesen(zugang, area, { ich: pid, meineSchluessel: personen[pid].keys, mitglieder: aktiv });
+      const s = await schluesselLesen(zugang, area, { ich: pid, ...schl(pid), mitglieder: aktiv });
       if (!s.aktuell || !s.keys.has(s.aktuell)) continue;
       if (!schreiber) schreiber = { aktuell: s.aktuell, keys: s.keys };
-      await anmelden(zul, pid);
+      await anmelden(pid);
     }
     // 4. the app's own new events of this area
     const bekannt = new Set([...stand.log, ...stand.ausgang].map((x) => x.event.id));
@@ -173,7 +211,7 @@ async function gabBereich(o, area, ziel, anker, stand) {
       if (!gabObj(e) || e.device !== geraet || bekannt.has(e.id) || bereichVonEreignis(e) === '*' || !passtZumBereich(e, area)) continue;
       if (art === 'freigabe' && BEREICH_AUCH[e.type] === 'freigabe') continue;
       if (!Object.prototype.hasOwnProperty.call(personen, e.author)) { bericht.ohneSchluessel++; continue; }
-      vormerken(stand, await signEvent(e, area, personen[e.author].keys), { now });
+      vormerken(stand, await signEvent(e, area, signier(e.author)), { now });
     }
     // 5. send
     if (stand.ausgang.length || stand.unterwegs) {
@@ -192,6 +230,10 @@ async function gabBereich(o, area, ziel, anker, stand) {
     if (!err || typeof err.code !== 'string') throw err;
     bericht.ok = false; bericht.fehler = err.code;
   }
+  // task "Neuer Schluessel": the admission of this area still has the old keys of a person here (or the area could not be
+  // read) - the app must keep alt
+  const angekuendigt = (pid) => !stand.ausgang.some((x) => x.event.type === 'member_added' && x.event.author === pid && x.event.payload.person === pid);
+  if (Object.keys(personen).some((pid) => personen[pid].alt && (offen(pid) || !angekuendigt(pid) || (!bericht.ok && zul === null)))) bericht.erneuerungOffen = true;
   return bericht;
 }
 
@@ -209,8 +251,11 @@ async function gabBereich(o, area, ziel, anker, stand) {
    verzeichnis: { <personId>: { role, pub, stand? } } - public keys a parent knows (family, grant recipients; task
                 "Einladungen": module einladung builds it from the family); stand above the admission's -> these keys count
    now (ms), heute ("YYYY-MM-DD", for the grants)
-   -> { bereiche: { <area>: { ok, fehler, aktion, gesendet, neu, verworfen, ohneSchluessel, inDieApp } },
-        inDieApp: events written into the app's logs (the app then calls evNeuLaden), verworfen: [{ bereich, kennung, id, grund }] } */
+   personen[id] may carry (task "Neuer Schluessel", module konto kontoPersonen): ursprung (anchor of the own area), stand
+                (directory entry of the keys), alt = { keys, pub } right after renewing
+   -> { bereiche: { <area>: { ok, fehler, aktion, gesendet, neu, verworfen, ohneSchluessel, inDieApp, erneuert?, erneuerungOffen? } },
+        inDieApp: events written into the app's logs (the app then calls evNeuLaden), verworfen: [{ bereich, kennung, id, grund, typ? }],
+        erneuerungOffen: areas that do not have the new key of a person with alt yet } */
 export async function geraetAbgleichen({ ablage, zugang, personen, kinder = [], familien = [], verzeichnis = {}, now, heute } = {}) {
   gabPruefen({ ablage, zugang, personen, kinder, familien, verzeichnis, now, heute });
   const geraet = gabJson(ablage, GERAETEABGLEICH_SPEICHER.geraet, null);
@@ -226,10 +271,11 @@ export async function geraetAbgleichen({ ablage, zugang, personen, kinder = [], 
     for (const g of c.freigaben || []) grants.add(g);
     for (const g of [...grants].sort(gabCmp)) plan.push([bereichName('freigabe', g), { pre: c.pre }, c.anker]);
   }
-  for (const pid of Object.keys(personen).sort(gabCmp)) plan.push([bereichName('person', pid), { person: pid }, { person: pid, role: personen[pid].role, pub: personen[pid].pub }]);
+  // the own area is anchored at the person's first keys (task "Neuer Schluessel": later ones are announced in it)
+  for (const pid of Object.keys(personen).sort(gabCmp)) plan.push([bereichName('person', pid), { person: pid }, { person: pid, role: personen[pid].role, pub: personen[pid].ursprung || personen[pid].pub }]);
 
   const staende = gabJson(ablage, GERAETEABGLEICH_SPEICHER.staende, {});
-  const out = { bereiche: {}, inDieApp: 0, verworfen: [] };
+  const out = { bereiche: {}, inDieApp: 0, verworfen: [], erneuerungOffen: [] };
   for (const [area, ziel, anker] of plan) {
     if (out.bereiche[area]) continue;
     // the state is kept also after a storage error: holen changes it in one step only, and what was queued (own
@@ -241,6 +287,7 @@ export async function geraetAbgleichen({ ablage, zugang, personen, kinder = [], 
     out.bereiche[area] = b;
     out.inDieApp += b.inDieApp;
     out.verworfen.push(...b.verworfen);
+    if (b.erneuerungOffen) out.erneuerungOffen.push(area);
   }
   if (out.verworfen.length) {
     const alt = gabListe(gabJson(ablage, GERAETEABGLEICH_SPEICHER.verworfen, []));

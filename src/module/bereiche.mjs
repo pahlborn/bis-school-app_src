@@ -25,7 +25,8 @@
 //            keys after "new password" gets every version again; an entry without fuer counts as wrapped for today's keys)
 //     sig = signature of the distributor over "bq-key1|" + area + "|" + holder + "|" + entry without sig.
 //     Only parents distribute (person areas: the person). An entry with another or a broken signature is ignored -
-//     so nobody with write access to the storage can slip in a key version he knows.
+//     so nobody with write access to the storage can slip in a key version he knows. Task "Neuer Schluessel": an entry
+//     signed with an earlier key of the distributor (mitglieder[...].frueher, from the admission) counts, too.
 //
 // Names: every helper starts with "ber"/"BER_" because all modules and index.html share one scope in the app.
 
@@ -179,7 +180,12 @@ async function berGueltige(zugang, bereich, mitglieder) {
     const form = berObj(e) && e.v === 1 && typeof e.sig === 'string' && berObj(e.versionen) && Object.keys(e.versionen).length > 0 && (e.fuer === undefined || (typeof e.fuer === 'string' && /^[0-9a-f]{64}$/.test(e.fuer))) &&
       Object.entries(e.versionen).every(([v, w]) => /^[1-9][0-9]{0,8}$/.test(v) && berObj(w));
     const m = form && erlaubt.includes(e.von) ? mitglieder[e.von] : null;
-    if (m && berObj(m.pub) && await verifyBytes(m.pub, berSignTeil(bereich, h, e), e.sig)) gueltig.set(h, e);
+    // task "Neuer Schluessel": an entry the distributor signed before he renewed his key (m.frueher, from the admission)
+    // still counts - otherwise every entry he wrote would be lost the moment his new key is known
+    const pubs = m && berObj(m.pub) ? [m.pub, ...(Array.isArray(m.frueher) ? m.frueher.filter(berObj) : [])] : [];
+    let ok = false;
+    for (const p of pubs) if (!ok && await verifyBytes(p, berSignTeil(bereich, h, e), e.sig)) ok = true;
+    if (ok) gueltig.set(h, e);
     else ungueltig.push(h);
   }
   return { gueltig, ungueltig, alle };
@@ -192,23 +198,30 @@ function berRing(bereich, gueltig) {
   }
   return ring;
 }
-/* all versions this person can open: Map version -> key (a version that does not open is left out) */
-async function berMeine(ring, ich, meineSchluessel) {
+/* all versions this person can open: Map version -> key (a version that does not open is left out).
+   alte: earlier private keys of this person (task "Neuer Schluessel": right after renewing, his entry is still wrapped
+   for the old key - the renewing device holds both until every area has the new version) */
+async function berMeine(ring, ich, meineSchluessel, alte = []) {
   const out = new Map();
   for (const [v, hs] of Object.entries(ring.versions)) {
     if (!berOwn(hs, ich)) continue;
-    try { out.set(Number(v), await unwrapKey(hs[ich], meineSchluessel, ich, ring.area, Number(v))); } catch (e) { /* not for these keys */ }
+    for (const k of [meineSchluessel, ...alte]) {
+      if (out.has(Number(v)) || !berObj(k)) continue;
+      try { out.set(Number(v), await unwrapKey(hs[ich], k, ich, ring.area, Number(v))); } catch (e) { /* not for these keys */ }
+    }
   }
   return out;
 }
+const berAlte = (x) => (Array.isArray(x) ? x.filter(berObj) : []);
 
 /* the keys of one person for one area, ready for module abgleich -> { aktuell, keys: Map version -> key, lesbar, ungueltig }
    aktuell = the newest version any valid entry knows (0 = no key yet). A person without the current version can
    still read what was written before, but cannot write (abgleich: "aktueller Schluessel fehlt"). */
-export async function schluesselLesen(zugang, bereich, { ich, meineSchluessel, mitglieder } = {}) {
+export async function schluesselLesen(zugang, bereich, { ich, meineSchluessel, mitglieder, alteSchluessel } = {}) {
   if (!bereichZerlegen(bereich) || !berPid(ich) || !berObj(mitglieder)) throw berFehler('schluesselLesen braucht Bereich, ich und mitglieder.');
+  const alte = berAlte(alteSchluessel);
   const { gueltig, ungueltig, alle } = await berGueltige(zugang, bereich, mitglieder);
-  const ring = berRing(bereich, gueltig), keys = await berMeine(ring, ich, meineSchluessel);
+  const ring = berRing(bereich, gueltig), keys = await berMeine(ring, ich, meineSchluessel, alte);
   // lesbar (task P3b-2): also the versions of my own entry whose distributor I do not know yet (a new device knows
   // only the anchor; the second parent who changed the key becomes known by reading). Reading with them is safe -
   // module annahme checks every event against the admission anchored at the founding parent. Writing: keys only.
@@ -216,7 +229,7 @@ export async function schluesselLesen(zugang, bereich, { ich, meineSchluessel, m
   if (!gueltig.has(ich) && berObj(eigen) && berObj(eigen.versionen)) {
     const roh = { area: bereich, current: 0, versions: {} };
     for (const [v, w] of Object.entries(eigen.versionen)) if (/^[1-9][0-9]{0,8}$/.test(v) && berObj(w)) roh.versions[v] = { [ich]: w };
-    for (const [v, k] of await berMeine(roh, ich, meineSchluessel)) if (!lesbar.has(v)) lesbar.set(v, k);
+    for (const [v, k] of await berMeine(roh, ich, meineSchluessel, alte)) if (!lesbar.has(v)) lesbar.set(v, k);
   }
   return { aktuell: ring.current, keys, lesbar, ungueltig };
 }
@@ -227,30 +240,43 @@ export async function schluesselLesen(zugang, bereich, { ich, meineSchluessel, m
                                        earlier versions stay, so everybody keeps reading what he could read before
    - somebody in soll lacks the current version -> he gets every version the distributor has ("ergaenzt"), so a
                                        second parent or a new grant reads the history, too
-   - somebody in soll has new public keys (task "Einladungen": a child after "new password"; his entry carries another
-                                       "fuer") -> every version again, wrapped for the new keys ("ergaenzt"; geaendert),
-                                       so nothing is lost; nobody else's key changes
+   - somebody in soll has new public keys (task "Einladungen": a child after "new password"; task "Neuer Schluessel": a
+                                       grown-up who renewed his key; his entry carries another "fuer") -> a NEW version
+                                       for soll, and every earlier version again, wrapped for the new keys ("gewechselt";
+                                       geaendert): nothing is lost, but whoever still has the old keys (an old copy of
+                                       the storage plus the old password, a device with a copy) reads nothing new
    -> { aktion: 'angelegt' | 'gewechselt' | 'ergaenzt' | 'unveraendert', version, neu: [id], geaendert: [id], entfernt: [id], ereignisse }
    ereignisse (task P3b-2): what the distributor must write into this area now, as [{ type, payload }] - member_added
    for everybody new or with new keys (role, public keys and - above 1 - stand from mitglieder), member_removed and
-   key_rotated (with the bundles per device at the change, speicher.list) for everybody removed. The app signs and sends
-   them like any other event. */
-export async function schluesselVerteilen(zugang, bereich, { soll, ich, meineSchluessel, mitglieder } = {}) {
+   key_rotated (with the bundles per device at the change, speicher.list; erneuert = geaendert) for everybody removed.
+   The app signs and sends them like any other event.
+   alteSchluessel: earlier private keys of "ich" (task "Neuer Schluessel": the renewing device opens the versions with
+   them; it signs with meineSchluessel, the new ones).
+   Key entries exist, but none can be checked (signed by keys nobody here knows - e.g. a parent renewed his key and this
+   device has not read his announcement yet): error with code "schluessel-ungeprueft", nothing is written - creating
+   version 1 anew would cut everybody off from the history. Only a child's own person area is made anew then (after a
+   new password the child cannot prove its old key; that area holds only where it belongs - task "Einladungen"). */
+export async function schluesselVerteilen(zugang, bereich, { soll, ich, meineSchluessel, mitglieder, alteSchluessel } = {}) {
   if (!bereichZerlegen(bereich) || !berObj(mitglieder) || !Array.isArray(soll)) throw berFehler('schluesselVerteilen braucht Bereich, soll und mitglieder.');
   if (!berVerteiler(bereich, mitglieder).includes(ich)) throw berFehler('nur Eltern verteilen Schluessel (person: nur die Person selbst).');
   const ids = soll.map((h) => (berObj(h) && berPid(h.id) && berObj(h.pub) ? h.id : null));
   if (ids.includes(null) || new Set(ids).size !== ids.length) throw berFehler('soll ungueltig.');
   const fuer = new Map();
   for (const h of soll) fuer.set(h.id, await schluesselFuer(h.pub));
-  const { gueltig } = await berGueltige(zugang, bereich, mitglieder);
+  const { gueltig, alle } = await berGueltige(zugang, bereich, mitglieder);
   const schreiben = new Map();                       // holder -> versionen
   let aktion, version, neu, entfernt = [], geaendert = [];
+  if (gueltig.size === 0 && Object.keys(alle).length && !(bereichZerlegen(bereich).art === 'person' && berObj(mitglieder[ich]) && mitglieder[ich].role === 'child')) {
+    const e = berFehler('Schluesseleintraege nicht pruefbar - nichts verteilt.');
+    e.code = 'schluessel-ungeprueft';
+    throw e;
+  }
   if (gueltig.size === 0) {
     const { ring } = await createKeyring(bereich, soll);
     for (const h of soll) schreiben.set(h.id, { 1: ring.versions[1][h.id] });
     [aktion, version, neu] = ['angelegt', 1, ids.slice().sort(berCmp)];
   } else {
-    const ring = berRing(bereich, gueltig), meine = await berMeine(ring, ich, meineSchluessel);
+    const ring = berRing(bereich, gueltig), meine = await berMeine(ring, ich, meineSchluessel, berAlte(alteSchluessel));
     if (!meine.has(ring.current)) throw berFehler('aktueller Schluessel fehlt - nichts verteilt.');
     const jetzt = Object.keys(ring.versions[ring.current]);
     entfernt = jetzt.filter((id) => !ids.includes(id)).sort(berCmp);
@@ -264,7 +290,7 @@ export async function schluesselVerteilen(zugang, bereich, { soll, ich, meineSch
       return v;
     };
     const frisch = (id) => neu.includes(id) || geaendert.includes(id);
-    if (entfernt.length) {
+    if (entfernt.length || geaendert.length) {
       const r = await rotateKeyring(ring, soll);
       version = r.ring.current;
       for (const h of soll) {
@@ -275,7 +301,7 @@ export async function schluesselVerteilen(zugang, bereich, { soll, ich, meineSch
       aktion = 'gewechselt';
     } else {
       for (const h of soll) if (frisch(h.id)) schreiben.set(h.id, await alleVersionen(h));
-      aktion = neu.length || geaendert.length ? 'ergaenzt' : 'unveraendert';
+      aktion = neu.length ? 'ergaenzt' : 'unveraendert';
     }
   }
   for (const [h, versionen] of [...schreiben].sort((a, b) => berCmp(a[0], b[0]))) {
@@ -289,7 +315,7 @@ export async function schluesselVerteilen(zugang, bereich, { soll, ich, meineSch
   const ereignisse = [...neu, ...geaendert].map(dazu);
   if (aktion === 'gewechselt') {
     for (const id of entfernt) ereignisse.push({ type: 'member_removed', payload: { person: id } });
-    ereignisse.push({ type: 'key_rotated', payload: { version, entfernt: entfernt.slice(), stand: { ...(await zugang.list(bereich, null)).merker.stand } } });
+    ereignisse.push({ type: 'key_rotated', payload: { version, entfernt: entfernt.slice(), stand: { ...(await zugang.list(bereich, null)).merker.stand }, ...(geaendert.length ? { erneuert: geaendert.slice() } : {}) } });
   }
   return { aktion, version, neu, geaendert, entfernt, ereignisse };
 }

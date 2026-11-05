@@ -324,10 +324,14 @@ test('E1 mit der echten App: zwei Familien mit gleichen Namen (zweimal kathie, z
   const vorAngriff = { A1: stand(A1), B1: stand(B1), fokus: fokus(A1) };
   vor.set(falscherAnker.pre + 'events', JSON.stringify([newEvent({ type: 'list_set', author: P2.id, device: dX, at: new Date(Date.now() + 5).toISOString(), payload: { list: 'focusManual', item: 'units', on: true } })]));
   const rx = await geraetAbgleichen({ ablage: mapAblage(vor), zugang: welt.geraet(dX), personen: { [P2.id]: { role: 'parent', keys: P2.keys, pub: P2.pub } }, kinder: [falscherAnker], verzeichnis: f2.verzeichnis, now: Date.now(), heute: tag() });
-  assert.ok(rx.bereiche[bereichName('kind:privat', K1)].gesendet >= 1, 'er legt Eintraege ab');
+  // Aufgabe "Neuer Schluessel": er kann keine eigene Version 1 ueber die (fuer ihn nicht pruefbaren) Eintraege legen -
+  // vorher legte er so verschluesselte Eintraege ab, die alle mit "entschluesseln" verworfen wurden
+  for (const a of ['kind:lern', 'kind:privat', 'schule', 'eltern:allg']) {
+    assert.deepEqual([rx.bereiche[bereichName(a, K1)].fehler, rx.bereiche[bereichName(a, K1)].gesendet], ['schluessel-ungeprueft', 0], 'er legt nichts ab: ' + a);
+  }
   for (const G of [A1, B1]) {
     const r = await G.abgleichen();
-    assert.ok(r.verworfen.length > 0 && r.verworfen.every((v) => v.kennung.startsWith(dX + '/') && v.grund === 'entschluesseln'), G.name + ': ' + JSON.stringify(r.verworfen));
+    assert.ok(r.verworfen.every((v) => v.kennung.startsWith(dX + '/') && v.grund === 'entschluesseln'), G.name + ': ' + JSON.stringify(r.verworfen));
     assert.equal(r.inDieApp, 0);
   }
   assert.deepEqual(stand(A1), vorAngriff.A1, 'Kathies iPad unveraendert'); assert.deepEqual(stand(B1), vorAngriff.B1, 'Peters Laptop unveraendert');
