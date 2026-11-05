@@ -1,4 +1,4 @@
-// "So funktioniert Big Quest" (Peter, 30./31.10.): intro on top, every topic opens in place
+// "Das Konzept von Big Quest" (Peter, 30./31.10.; title 05.11.): intro on top, every topic opens in place
 // (accordion), language via flags. Real clicks and visibility checks.
 //   node --test tests/about.test.mjs
 
@@ -42,13 +42,13 @@ for (const [flagge, liste] of Object.entries(MENUE)) {
 test('the info pages have one clear title, not several "About the app"', async () => {
   const { ctx, page } = await appOeffnen(browser, server.url);
   await page.locator('#aboutBtn').click();
-  assert.equal((await page.textContent('#aboutChip')).trim(), '📖 So funktioniert Big Quest');
+  assert.equal((await page.textContent('#aboutChip')).trim(), '📖 Das Konzept von Big Quest');
   const alles = await page.textContent('#about');
   assert.ok(!/About the app|Über die App/.test(alles), 'no "About the app" left');
   assert.equal((await page.locator('#aboutChip').isVisible()) && (await page.locator('#tabInfo').isVisible()), false, 'title shown once, not as chip and tab');
   assert.equal(await page.locator('#tabDe svg').count(), 1, 'flag as a picture (emoji flags are letters on Windows)');
   await page.locator('#tabEn').click();
-  assert.equal((await page.textContent('#aboutChip')).trim(), '📖 How Big Quest works');
+  assert.equal((await page.textContent('#aboutChip')).trim(), '📖 The Big Quest concept');
   await ctx.close();
 });
 

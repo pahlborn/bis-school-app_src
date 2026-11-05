@@ -307,6 +307,33 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 .dt th,.dt td{border:2px solid var(--line);padding:8px 10px;text-align:left}
 .dt th{background:var(--soft);font-family:var(--display);font-weight:600}
 .dt td.num{text-align:right;font-variant-numeric:tabular-nums;font-family:var(--display);font-size:1.1rem}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+/* School assessments (Peter, 05.11.): filters, table; on narrow screens every row becomes a card */
+.psfilters{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:flex-end;margin:10px 0 6px}
+.psfilters label{display:flex;flex-direction:column;gap:2px;font-size:.85rem;font-weight:600}
+.psfilters select{min-height:40px;font:inherit;font-weight:400;border:2px solid var(--line);border-radius:10px;padding:4px 8px;background:var(--surface);color:inherit;max-width:100%}
+.psfilters label.pscheck{flex-direction:row;align-items:center;gap:6px;min-height:40px}
+.pstab{font-size:.95rem}
+.pstab>tbody>tr>td{vertical-align:top}
+.pslv{display:flex;flex-wrap:wrap;gap:4px}
+.pstab>tbody>tr.psdet>td{background:var(--soft)}
+.psdet h4{margin:10px 0 2px;font-size:.95rem}
+.psdet h4:first-child{margin-top:2px}
+.psdet ul{margin:0 0 4px 20px;padding:0}
+.psrub{font-size:.9rem;margin:2px 0 4px}
+.psrub th,.psrub td{padding:4px 6px}
+.pspend ul{margin:0 0 4px 20px;padding:0}
+@media (max-width:600px){
+  .pstab,.pstab>tbody,.pstab>tbody>tr,.pstab>tbody>tr>td{display:block;width:100%;box-sizing:border-box}
+  .pstab>thead{display:none}
+  .pstab{background:none}
+  .pstab>tbody>tr.psrow{border:2px solid var(--line);border-radius:12px;margin-top:10px;padding:6px 10px;background:var(--surface)}
+  .pstab>tbody>tr.psrow>td{border:0;padding:2px 0}
+  .pstab>tbody>tr.psrow>td[data-l]::before{content:attr(data-l) ": ";font-weight:600;color:var(--muted)}
+  .pstab>tbody>tr.psdet{border:2px solid var(--line);border-top:0;border-radius:0 0 12px 12px;margin-top:-6px}
+  .pstab>tbody>tr.psdet>td{border:0;padding:6px 10px}
+  .psrub{width:100%}
+}
 .answers{display:flex;flex-direction:column;gap:10px}
 .answers.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .answers.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
@@ -476,7 +503,7 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
     <button class="btn" id="sheetBtn" type="button">📄 Practice sheet (PDF / print)</button>
     <div id="mySheets" class="mysheets" hidden></div>
     <div class="foot">
-      <span>Topics from class, updated 30 October.</span>
+      <span>Topics from class.</span>
       <span class="row foot-buttons">
         <button class="btn small" id="aboutBtn" type="button">📖 How it works &amp; grown-ups</button>
         <button class="btn small" id="guideBtn" type="button">❓ Help</button>
@@ -551,11 +578,11 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
   <section id="about" class="screen" hidden>
     <div class="topbar" id="aboutTop">
       <button class="iconbtn" id="aboutBack" type="button" aria-label="Back to home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
-      <span class="chip" id="aboutChip">📖 So funktioniert Big Quest</span>
+      <span class="chip" id="aboutChip">📖 Das Konzept von Big Quest</span>
       <span class="flags" role="group" aria-label="Sprache / Language"><button class="flag" id="tabDe" type="button" aria-label="Deutsch"><svg class="flagsvg" viewBox="0 0 30 18" aria-hidden="true"><rect width="30" height="6" fill="#000"/><rect y="6" width="30" height="6" fill="#DD0000"/><rect y="12" width="30" height="6" fill="#FFCE00"/></svg></button><button class="flag" id="tabEn" type="button" aria-label="English"><svg class="flagsvg" viewBox="0 0 38 20" aria-hidden="true"><rect width="38" height="20" fill="#fff"/><rect y="0.00" width="38" height="1.54" fill="#B22234"/><rect y="3.08" width="38" height="1.54" fill="#B22234"/><rect y="6.15" width="38" height="1.54" fill="#B22234"/><rect y="9.23" width="38" height="1.54" fill="#B22234"/><rect y="12.31" width="38" height="1.54" fill="#B22234"/><rect y="15.38" width="38" height="1.54" fill="#B22234"/><rect y="18.46" width="38" height="1.54" fill="#B22234"/><rect width="15.2" height="10.77" fill="#3C3B6E"/><circle cx="1.6" cy="1.5" r=".6" fill="#fff"/><circle cx="4.6" cy="1.5" r=".6" fill="#fff"/><circle cx="7.6" cy="1.5" r=".6" fill="#fff"/><circle cx="10.6" cy="1.5" r=".6" fill="#fff"/><circle cx="13.6" cy="1.5" r=".6" fill="#fff"/><circle cx="1.6" cy="4.1" r=".6" fill="#fff"/><circle cx="4.6" cy="4.1" r=".6" fill="#fff"/><circle cx="7.6" cy="4.1" r=".6" fill="#fff"/><circle cx="10.6" cy="4.1" r=".6" fill="#fff"/><circle cx="13.6" cy="4.1" r=".6" fill="#fff"/><circle cx="1.6" cy="6.7" r=".6" fill="#fff"/><circle cx="4.6" cy="6.7" r=".6" fill="#fff"/><circle cx="7.6" cy="6.7" r=".6" fill="#fff"/><circle cx="10.6" cy="6.7" r=".6" fill="#fff"/><circle cx="13.6" cy="6.7" r=".6" fill="#fff"/><circle cx="1.6" cy="9.3" r=".6" fill="#fff"/><circle cx="4.6" cy="9.3" r=".6" fill="#fff"/><circle cx="7.6" cy="9.3" r=".6" fill="#fff"/><circle cx="10.6" cy="9.3" r=".6" fill="#fff"/><circle cx="13.6" cy="9.3" r=".6" fill="#fff"/></svg></button></span>
     </div>
     <div class="row" role="tablist" id="aboutTabs">
-      <button class="btn small" id="tabInfo" type="button" role="tab">📖 So funktioniert Big Quest</button>
+      <button class="btn small" id="tabInfo" type="button" role="tab">📖 Das Konzept von Big Quest</button>
       <button class="btn small" id="tabSheets" type="button" role="tab">Elternbereich</button>
     </div>
     <article class="about" id="aboutBody"></article>
@@ -4426,7 +4453,7 @@ function backupLine(){
   if(!p || (last && (p<=last || daysBetween(last,dayKey())<=30))) return '';
   return `<p class="phow pbackup-note">💾 ${last?(de?'Neue Übungen seit der letzten Sicherung':'New practice since the last backup'):(de?'Noch nie gesichert':'Not backed up yet')} <button type="button" class="btn small" data-backup>${de?'Jetzt sichern':'Back up now'}</button></p>`;
 }
-/* "New here?" (concept 5.3, B4): until the grown-up has opened "How Big Quest works" once on this device. */
+/* "New here?" (concept 5.3, B4): until the grown-up has opened "The Big Quest concept" once on this device. */
 const conceptSeenId = () => accountsOn() && adultUser ? ((APP_ACCOUNTS.users.find(u=>u.user===adultUser.user)||{}).id || adultUser.user) : 'pin';
 const conceptSeen = () => !!(store.get('conceptSeen',{})||{})[conceptSeenId()];
 function markConceptSeen(){ const s=store.get('conceptSeen',{})||{}; if(s[conceptSeenId()]) return; s[conceptSeenId()]=dayKey(); store.set('conceptSeen',s); eventHook('person_set',{field:'conceptSeen', value:dayKey()}); }
@@ -4605,12 +4632,12 @@ function renderSheets(){
     html+=state.psubj ? parentSubjectHTML(state.psubj) : parentHomeHTML();
     // the chapters only on the overview, not again inside a subject (Peter, 01.11.)
     const onOverview=!state.psubj || (accountsOn() && !viewedKid());
-    // Concept 5.3 (B4): How Big Quest works · Supporting your child · School ratings · Practice sheets.
+    // Concept 5.3 (B4): The Big Quest concept · How to support your child · School assessments · Practice sheets (titles: Peter, 05.11.).
     // Settings, backup, grants, accounts and the version live in ⚙ (B1), the guide in ? (B2).
     const secs=[];
     secs.push(['concept', ABOUT_UI[lang].title, `<div class="about-menu">${aboutSectionsHTML(lang,null,true)}</div>`]);
-    secs.push(['support', de?'🤝 Ihr Kind unterstützen':'🤝 Supporting your child', supportGuideHTML()]);
-    if(accountsOn() && kidOk && !(viewerGrant() && !viewerGrant().scope.includes('school'))) secs.push(['school', de?'🏫 Bewertungen der Schule – Verlauf':'🏫 School evaluations – history', schoolHTML()]);
+    secs.push(['support', de?'🤝 So unterstützen Sie Ihr Kind':'🤝 How to support your child', supportGuideHTML()]);
+    if(accountsOn() && kidOk && !(viewerGrant() && !viewerGrant().scope.includes('school'))) secs.push(['school', de?'🏫 Schulische Einstufungen':'🏫 School assessments', schoolHTML()]);
     if(!teacher && kidOk) secs.push(['sheets', T.sheets, sheetsPageHTML()]);
     if(onOverview) html+=secHTML(secs);
   }
@@ -4622,7 +4649,7 @@ function renderSheets(){
   [['#pSettings','settings'],['#pHelp','help']].forEach(([sel,view])=>{ const b=$(sel); if(b) b.addEventListener('click',()=>{ if(!parentAccess) return; if(state.pview===view) closeParentView(); else openParentView(view); }); });
   ['#pSetBack','#pHelpBack'].forEach(sel=>{ const b=$(sel); if(b) b.addEventListener('click',closeParentView); });
   const real=$('#pRealData'); if(real) real.addEventListener('click',()=>{ if(!parentAccess) return; restoreRealChild(); renderSheets(); });
-  const kidSel=$('#pKidSel'); if(kidSel) kidSel.addEventListener('change',()=>{ const k=kidSel.value; if(!parentAccess || !kidChoices().includes(k)) return; const s=studentSession(); viewUser=(s && s.user===k)?null:k; state.psubj=null; renderSheets(); });
+  const kidSel=$('#pKidSel'); if(kidSel) kidSel.addEventListener('change',()=>{ const k=kidSel.value; if(!parentAccess || !kidChoices().includes(k)) return; const s=studentSession(); viewUser=(s && s.user===k)?null:k; state.psubj=null; state.sopen=[]; renderSheets(); });
   const play=$('#pPlayTest'); if(play) play.addEventListener('click',playTest);
   body.querySelectorAll('[data-psubj],[data-pmore]').forEach(b=>b.addEventListener('click',()=>{ state.psubj=b.dataset.psubj||b.dataset.pmore; renderSheets(); window.scrollTo(0,0); }));
   const back=$('#pBack'); if(back) back.addEventListener('click',()=>{ state.psubj=null; renderSheets(); window.scrollTo(0,0); });
@@ -4639,6 +4666,7 @@ function renderSheets(){
   body.querySelectorAll('[data-restoreundo]').forEach(b=>b.addEventListener('click',undoRestore));
   body.querySelectorAll('[data-migrretry]').forEach(b=>b.addEventListener('click',()=>{ try{ localStorage.removeItem('bq2_migr'); }catch(e){} location.reload(); }));
   bindGrants(body);
+  bindSchoolList(body);
   bindParentSettings();
   if(KONTO_UI) kontoBinden(body);
 }
@@ -4845,35 +4873,35 @@ const HELP={
   sheet:{kid:true,title:'Practice sheet',text:'<p>A sheet with 6 tasks and a writing task, plus an answer page for grown-ups.</p><p>Share it as a PDF (by mail, message or into Files) or print it. When you are done on paper, tap your sheet under “My sheets” and type in your answers.</p>'},
   gaps:{title:'Lücken laut Schule',text:'<p>Hat die Schule einen Standard mit „Requires support“ oder „Consolidating“ eingestuft, übt die App ihn als <b>Lücke</b>. Immer eine zur Zeit, höchstens 2 von 8 Aufgaben pro Runde. Lücken, die ohnehin aktuelles Thema sind, werden übersprungen.</p><p>Geschlossen ist eine Lücke, wenn eine ihrer Quests in der App <b>bestätigt sicher</b> ist. Das heißt: sicher bei den Antworten in der App. Wer geantwortet hat und mit welchen Hilfsmitteln, weiß die App nicht; ob die Aufgaben den Standard so abdecken, wie die Schule ihn prüft, ist je Thema verschieden.</p><p>Sie entscheiden: <b>Jetzt angehen</b>, <b>Als geschlossen markieren</b> oder – nach dem Schließen durch die App – <b>Weiter üben</b>.</p>'},
   overview:{title:'Wie entsteht die Einschätzung?',text:'<p>Gezählt wird nur der <b>erste Versuch</b> jeder Aufgabe: selbst gelöst, mit Hinweis oder Lösungsweg angesehen. Eine Einschätzung gibt es erst ab <b>8 Aufgaben an 3 Tagen</b> – vorher „Noch nicht einschätzbar“, das sagt nichts Schlechtes.</p><ul><li><b>Vorläufig:</b> eine erste Einschätzung.</li><li><b>Bestätigt:</b> nach etwa 20 Aufgaben an 5 Übungstagen.</li><li><b>Tendenz:</b> nur, wenn zwei Zeiträume genug Aufgaben haben.</li><li><b>Ältere Belege:</b> nach mehr als 3 Wochen Pause – Ferien sind kein Leistungsabfall.</li></ul><p>Das ist <b>keine schulische Bewertung</b> und wird dem Kind nie gezeigt.</p><p>Die App weiß nicht, wer eine Aufgabe gelöst hat und mit welchen Hilfsmitteln. Die Einschätzung ist ein Hinweis; die Verantwortung liegt bei den Eltern.</p>'},
-  focusmode:{title:'Fokus: Automatisch oder Manuell',text:'<p><b>Automatisch:</b> Die App wählt selbst und passt sich von selbst an:</p><ul><li>die nächsten Schritte, die die Lehrkraft nennt,</li><li>was laut Einschätzung Unterstützung braucht,</li><li>die aktive Lücke laut Schule.</li></ul><p>Tippen Sie bei einer Quest auf „Im Fokus“, wechselt die Wahl auf „Manuell“.</p><p><b>Manuell:</b> Sie legen selbst fest, woraus „Practise Today“ und das Übungsblatt Aufgaben nehmen – zum Beispiel vor einem Test. Mit „Automatisch“ übernimmt wieder die App.</p><p>Alle Quests bleiben für das Kind spielbar; der Fokus bestimmt nur, was „Practise Today“ und das Übungsblatt bevorzugen. Mehr dazu in „📖 So funktioniert Big Quest → Wie die App einstuft“.</p>'},
+  focusmode:{title:'Fokus: Automatisch oder Manuell',text:'<p><b>Automatisch:</b> Die App wählt selbst und passt sich von selbst an:</p><ul><li>die nächsten Schritte, die die Lehrkraft nennt,</li><li>was laut Einschätzung Unterstützung braucht,</li><li>die aktive Lücke laut Schule.</li></ul><p>Tippen Sie bei einer Quest auf „Im Fokus“, wechselt die Wahl auf „Manuell“.</p><p><b>Manuell:</b> Sie legen selbst fest, woraus „Practise Today“ und das Übungsblatt Aufgaben nehmen – zum Beispiel vor einem Test. Mit „Automatisch“ übernimmt wieder die App.</p><p>Alle Quests bleiben für das Kind spielbar; der Fokus bestimmt nur, was „Practise Today“ und das Übungsblatt bevorzugen. Mehr dazu in „📖 Das Konzept von Big Quest → Wie die App einstuft“.</p>'},
   focus:{title:'Fokus-Themen',text:'<p>Aus diesen Themen stellt „Practise Today“ die 8 Aufgaben zusammen; auch die Übungsblätter nutzen sie. Auf der Startseite tragen sie das Zeichen „Focus“.</p><p>Die App wählt sie selbst: die nächsten Schritte der Lehrkraft, Quests, bei denen Übung hilft, und die aktive Lücke. Unter „🎯 Fokus“ können Sie auf „Manuell“ umstellen und selbst wählen.</p>'},
-  school:{title:'Einstufungen der Schule',text:'<p>Die Einstufungen stammen aus den bewerteten Aufgaben auf der Lernplattform der Schule. Am Anfang richtet die App die Schwierigkeit der Aufgaben danach aus. Ab 6 Antworten an 2 Tagen zählt die eigene Übung.</p><p>Die Einschätzung im Elternbereich beruht nur auf der Übung in der App. Neue Bewertungen der Schule werden bei Gelegenheit übernommen.</p>'},
+  school:{title:'Schulische Einstufungen',text:'<p>Eine Zeile je bewerteter Aufgabe. Filtern Sie nach Fach, Zeitraum oder nur „Braucht Unterstützung“ und „Wird sicherer“; sortieren Sie nach Datum, Fach oder Einstufung. „Details“ zeigt immer gleich gegliedert: Standards, Bewertungsraster (Lehrkraft und Selbsteinschätzung Ihres Kindes), Stärken und nächste Schritte.</p><p>„Stand der Daten“ ist der Tag, an dem die Bewertungen von der Lernplattform übernommen wurden.</p><p>Die Einstufungen stammen aus den bewerteten Aufgaben auf der Lernplattform der Schule. Am Anfang richtet die App die Schwierigkeit der Aufgaben danach aus. Ab 6 Antworten an 2 Tagen zählt die eigene Übung.</p><p>Die Einschätzung im Elternbereich beruht nur auf der Übung in der App. Neue Bewertungen der Schule werden bei Gelegenheit übernommen.</p>'},
   calendar:{title:'Kalender-Erinnerung',text:'<p>Freiwillig: erzeugt eine Kalenderdatei mit einer wiederkehrenden, freundlichen Einladung zum Üben. Die App selbst schickt keine Nachrichten.</p>'},
   storycap:{title:'Pisolala-Geschichten',text:'<p>Hier legen Sie fest, wie spannend eine Geschichte höchstens sein darf. Das Kind wählt selbst bis zu dieser Grenze. Jede Stufe bleibt freundlich.</p>'},
   profile:{title:'Profilangaben',text:'<p>Vorname, Nachname, Geburtstag (Jahr freiwillig) und Emoji. Das Kind trägt sie unter „My profile“ ein, Sie können Name und Geburtstag hier ergänzen oder ändern. Name und Geburtsdatum sieht eine Lehrkraft nur mit Ihrer Freigabe – so kann sie Kinder mit gleichem Vornamen unterscheiden. Die Angaben liegen nur auf diesem Gerät. Löschen entfernt nur diese Angaben, keine Lerndaten.</p>'},
   version:{title:'App-Version',text:'<p>Zeigt den Stand der App auf diesem Gerät. Die App aktualisiert sich beim Start und beim Zurückkehren selbst. „Nach neuer Version suchen“ vergleicht mit der veröffentlichten Seite.</p>'},
     sheets:{title:'Übungsblätter',text:'<p>Ihr Kind trägt seine Antworten vom Papier selbst ein: Startseite → „My sheets“. Die App prüft wie gewohnt, mit Tipp und zweitem Versuch.</p><p>Hier sehen Sie je Aufgabe „Richtig“, „Mit Hilfe“ oder „Noch nicht“. „Mit Hilfe“ und „Noch nicht“ sind gut so: Die App bietet dann leichtere Schritte an und wiederholt die Aufgabe später. Ein Blatt, das nicht eingetragen wird, zählt einfach nicht.</p>'},
   testday:{noGuide:true,title:'Testkonto: +1 Tag',text:'<p><b>+1 Tag</b> stellt die Uhr der App nur für dieses Testkonto einen Tag vor. So sehen Sie sofort, was sonst erst morgen passiert:</p><ul><li>Fehler kommen als Wiederholung zurück.</li><li>Der Lernbaum wächst.</li><li>Die Einschätzung im Elternbereich sammelt Übungstage.</li></ul><p>Die Daten des Kindes bleiben unberührt. <b>Testdaten löschen</b> setzt das Testkonto ganz zurück (auch den Tag).</p>'},
-  guidance:{title:'Ihr Kind unterstützen',text:'<p>Ein Vorschlag, wie oft geübt wird, und die wichtigsten Regeln. Konkretes zu jedem Thema steht bei jeder Quest unter „💡 So helfen Sie“.</p>'},
+  guidance:{title:'So unterstützen Sie Ihr Kind',text:'<p>Ein Vorschlag, wie oft geübt wird, und die wichtigsten Regeln. Konkretes zu jedem Thema steht bei jeder Quest unter „💡 So helfen Sie“.</p>'},
   abgleich:{noGuide:true,title:'Abgleich',text:'<p>Die App gleicht von selbst ab – Sie müssen nichts tippen: beim Öffnen, beim Zurückkehren, alle 30 Sekunden, solange sie offen ist, und kurz nach neuen Einträgen. Beim Wechsel in eine andere App schickt sie noch, was offen ist.</p><ul><li><b>Kein Netz:</b> Alles bleibt auf dem Gerät und wird später nachgeholt. Es geht nichts verloren.</li><li><b>Mitten in einer Runde</b> ändert sich beim Kind nichts; Neues erscheint nach der Runde.</li><li><b>Nicht übernommen:</b> Einträge, die die App abgelehnt hat, weil sie gefälscht waren oder ohne Berechtigung kamen – etwa von einem entfernten Gerät. Harmloses aus der Reihenfolge der Geräte zählt nicht mit. Ihre Daten bleiben davon unberührt. Steigt die Zahl unerwartet, bitte den Admin fragen.</li></ul><p>Das Kind sieht vom Abgleich nichts.</p>'}
 };
 /* Grown-ups help in English: meaning-based, American English (Peter, 31.10.). */
 const HELP_EN={
   gaps:{title:'Gaps per school',text:'<p>When the school rated a standard “requires support” or “consolidating”, the app practices it as a <b>gap</b>. One at a time, at most 2 of 8 tasks per round. Gaps that are a current topic anyway are skipped.</p><p>A gap is closed when one of its quests is <b>confirmed secure</b> in the app. That means: secure in the answers in the app. The app does not know who answered or with what help; whether the tasks cover the standard the way the school tests it differs from topic to topic.</p><p>You decide: <b>Work on it now</b>, <b>Mark as closed</b> or – after the app closed it – <b>Keep practicing</b>.</p>'},
   overview:{title:'How is the summary made?',text:'<p>Only the <b>first try</b> at each task counts: solved on their own, with a hint, or after viewing the solution. A judgment appears only after <b>8 tasks on 3 days</b>. Until then it says “not yet possible to judge” – that says nothing bad.</p><ul><li><b>Provisional:</b> a first judgment.</li><li><b>Confirmed:</b> after about 20 tasks on 5 practice days.</li><li><b>Trend:</b> only when two periods have enough tasks.</li><li><b>Older evidence:</b> after a break of more than 3 weeks – vacations are not a drop in ability.</li></ul><p>This is <b>not a school assessment</b> and is never shown to your child.</p><p>The app does not know who solved a task or with what help. The summary is a hint; responsibility lies with the parents.</p>'},
-  focusmode:{title:'Focus: automatic or manual',text:'<p><b>Automatic:</b> the app chooses by itself and adapts by itself:</p><ul><li>the next steps the teacher names,</li><li>what needs support according to the summary,</li><li>the active gap per school.</li></ul><p>Tapping “In focus” at a quest switches to “Manual”.</p><p><b>Manual:</b> you decide where “Practise Today” and the practice sheet take their tasks from – for example before a test. Choose “Automatic” to let the app take over again.</p><p>All quests stay playable for your child; the focus only decides what “Practise Today” and the practice sheet prefer. More in “📖 How Big Quest works → How the app judges”.</p>'},
+  focusmode:{title:'Focus: automatic or manual',text:'<p><b>Automatic:</b> the app chooses by itself and adapts by itself:</p><ul><li>the next steps the teacher names,</li><li>what needs support according to the summary,</li><li>the active gap per school.</li></ul><p>Tapping “In focus” at a quest switches to “Manual”.</p><p><b>Manual:</b> you decide where “Practise Today” and the practice sheet take their tasks from – for example before a test. Choose “Automatic” to let the app take over again.</p><p>All quests stay playable for your child; the focus only decides what “Practise Today” and the practice sheet prefer. More in “📖 The Big Quest concept → How the app judges”.</p>'},
   focus:{title:'Focus topics',text:'<p>“Practise Today” builds its 8 tasks from these topics; practice sheets use them too. On the start page they carry the “Focus” sign.</p><p>The app picks them by itself: the teacher’s next steps, quests where practice helps, and the active gap. Under “🎯 Focus” you can switch to “Manual” and choose yourself.</p>'},
-  school:{title:'School ratings',text:'<p>The ratings come from the evaluated assignments on the school’s learning platform. At first, the app sets the difficulty of the tasks by them. From 6 answers on 2 days, your child’s own practice counts.</p><p>The summary in the grown-ups area is based only on practice in the app. New school evaluations are added from time to time.</p>'},
+  school:{title:'School assessments',text:'<p>One row per evaluated assignment. Filter by subject, period or only “Needs support” and “Getting there”; sort by date, subject or rating. “Details” always has the same outline: standards, rubric (the teacher’s and your child’s own rating), strengths and next steps.</p><p>“Data as of” is the day the evaluations were taken from the learning platform.</p><p>The assessments come from the evaluated assignments on the school’s learning platform. At first, the app sets the difficulty of the tasks by them. From 6 answers on 2 days, your child’s own practice counts.</p><p>The summary in the grown-ups area is based only on practice in the app. New school evaluations are added from time to time.</p>'},
   calendar:{title:'Calendar reminder',text:'<p>Optional: creates a calendar file with a recurring, friendly invitation to practice. The app itself never sends messages.</p>'},
   storycap:{title:'Pisolala stories',text:'<p>Set how exciting a story may be at most. Your child chooses up to this limit. Every level stays kind.</p>'},
   profile:{title:'Profile details',text:'<p>First name, last name, birthday (year optional) and emoji. Your child enters them under “My profile”; you can add or change the name and birthday here. A teacher sees the name and date of birth only with your grant – so she can tell children with the same first name apart. Stored only on this device. Deleting removes only these details, no learning data.</p>'},
   version:{title:'App version',text:'<p>Shows the version on this device. The app updates itself when it starts and when you come back to it. “Check for a new version” compares it with the published page.</p>'},
     sheets:{title:'Practice sheets',text:'<p>Your child types in the answers from the paper: start page → “My sheets”. The app checks them as usual, with a tip and a second try.</p><p>Here you see “Correct”, “With help” or “Not yet” for each task. “With help” and “Not yet” are fine: the app then offers easier steps and brings the task back later. A sheet that isn’t entered simply doesn’t count.</p>'},
   testday:{title:'Test account: +1 day',text:'<p><b>+1 day</b> moves the app’s clock one day ahead, for this test account only. You see right away what would otherwise happen tomorrow:</p><ul><li>Mistakes come back as reviews.</li><li>The learning tree grows.</li><li>The summary in the grown-ups area collects practice days.</li></ul><p>Your child’s data is not touched. <b>Delete test data</b> resets the test account completely (including the day).</p>'},
-  guidance:{title:'Supporting your child',text:'<p>A suggestion for how often to practice, and the key rules. Concrete help for each topic is at every quest under “💡 How you can help”.</p>'},
+  guidance:{title:'How to support your child',text:'<p>A suggestion for how often to practice, and the key rules. Concrete help for each topic is at every quest under “💡 How you can help”.</p>'},
   abgleich:{title:'Sync',text:'<p>The app syncs by itself – you don’t need to tap anything: when it opens, when you come back, every 30 seconds while it is open, and shortly after new entries. When you switch to another app, it sends whatever is still open.</p><ul><li><b>No connection:</b> everything stays on the device and is caught up later. Nothing gets lost.</li><li><b>In the middle of a round</b> nothing changes for your child; new things appear after the round.</li><li><b>Not taken over:</b> entries the app refused because they were forged or came without permission – for example from a removed device. Harmless things from the order of the devices do not count. Your data is not affected. If the number grows unexpectedly, please ask the admin.</li></ul><p>Your child sees nothing of the sync.</p>'}
 };
-const ADULT_H2=[['Einstufungen der Schule','school'],['School ratings','school'],['Einschätzung','overview'],['Summary','overview'],['Pisolala','storycap'],['Freiwillige Kalender','calendar'],['Optional calendar','calendar'],['Profilangaben','profile'],['Profile details','profile'],['App-Version','version'],['App version','version'],['Übungsblätter','sheets'],['Practice sheets','sheets'],['So unterstützen','guidance'],['Supporting','guidance']];
+const ADULT_H2=[['Schulische Einstufungen','school'],['School assessments','school'],['Einschätzung','overview'],['Summary','overview'],['Pisolala','storycap'],['Freiwillige Kalender','calendar'],['Optional calendar','calendar'],['Profilangaben','profile'],['Profile details','profile'],['App-Version','version'],['App version','version'],['Übungsblätter','sheets'],['Practice sheets','sheets'],['So unterstützen','guidance'],['How to support','guidance']];
 function addAdultInfo(root){ root.querySelectorAll('h2').forEach(h=>{ const m=ADULT_H2.find(([t])=>h.textContent.trim().startsWith(t)); if(m && !h.querySelector('.info-btn')) h.insertAdjacentHTML('beforeend',` <button type="button" class="info-btn" data-help="${m[1]}" aria-label="Info">ⓘ</button>`); }); }
 function openHelp(key){
   const base=HELP[key]; if(!base) return;
@@ -5833,8 +5861,8 @@ function schoolStandFor(k){
 const fmtDay = d => PL()==='de' ? d.split('-').reverse().join('.') : new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
 /* School data (concept 5.3/5.4, C1): texts shared by the block in the subject view and the history chapter. */
 function schoolTexts(de){
-  return de?{h:'Einstufungen der Schule',intro:'Von der Lernplattform übernommen (Stand {d}). Alle Einstufungen hier sind die der Lehrkraft; wo sich das Kind selbst eingeschätzt hat, steht das daneben. Die App nutzt sie als <b>Startwert für die Aufgabenwahl</b>, solange in der App noch zu wenig geübt wurde; danach zählt die eigene Übung. Das Kind sieht davon nichts.',std:'Standards – zuletzt',area:'Bereich',now:'Einstufung',before:'vorher',quests:'Übt in der App',atl:'Lernkompetenzen und Learner Profile',atlKey:'ES = mit Unterstützung, Obs. = beobachtet, Ind. = selbstständig',tasks:'Bewertete Aufgaben',good:'Das gelingt',next:'Nächste Schritte',pend:'Wartet auf Bewertung',none:'Für dieses Kind liegen noch keine Einstufungen der Schule vor.',areas:{math:'Mathe',english:'Englisch',science:'Science',learner:'Lernen'}}
-                :{h:'School ratings',intro:'Taken from the learning platform (as of {d}). All ratings here are the teacher’s; where your child rated themselves, that is shown next to it. The app uses them as a <b>starting point for choosing tasks</b> while there is too little practice in the app; after that the app’s own practice counts. Your child never sees them.',std:'Standards – latest',area:'Area',now:'Rating',before:'before',quests:'Practiced in the app',atl:'Learning skills and learner profile',atlKey:'ES = emerging with support, Obs. = observed, Ind. = independent',tasks:'Evaluated assignments',good:'Going well',next:'Next steps',pend:'Awaiting evaluation',none:'There are no school ratings for this child yet.',areas:{math:'Math',english:'English',science:'Science',learner:'Learning'}};
+  return de?{h:'Schulische Einstufungen',std:'Standards – zuletzt',area:'Bereich',now:'Einstufung',before:'vorher',quests:'Übt in der App',atl:'Lernkompetenzen und Learner Profile',atlKey:'ES = mit Unterstützung, Obs. = beobachtet, Ind. = selbstständig',tasks:'Bewertete Aufgaben',good:'Das gelingt',next:'Nächste Schritte',pend:'Wartet auf Bewertung',none:'Für dieses Kind liegen noch keine schulischen Einstufungen vor.',areas:{math:'Mathe',english:'Englisch',deutsch:'Deutsch',science:'Science',learner:'Lernen'}}
+                :{h:'School assessments',std:'Standards – latest',area:'Area',now:'Rating',before:'before',quests:'Practiced in the app',atl:'Learning skills and learner profile',atlKey:'ES = emerging with support, Obs. = observed, Ind. = independent',tasks:'Evaluated assignments',good:'Going well',next:'Next steps',pend:'Awaiting evaluation',none:'There are no school assessments for this child yet.',areas:{math:'Math',english:'English',deutsch:'Deutsch',science:'Science',learner:'Learning'}};
 }
 /* the subject a standard is shown in: where all its quests are practised, otherwise the subject of its code
    (M- maths, E- English, S- science, otherwise German) - every standard in exactly one subject (R1) */
@@ -5875,17 +5903,91 @@ function schoolSubjectLevel(key){
   const ls=Object.keys(per).filter(s=>stdSubject(s)===key).map(s=>SL[per[s][0].r]).filter(Boolean);
   return ls.length ? ls.sort((a,b)=>order.indexOf(a)-order.indexOf(b))[0] : null;
 }
-/* 🏫 School evaluations – history (concept 5.3, C1): only the evaluated and the waiting assignments, newest first */
+/* 🏫 School assessments (Peter, 05.11., point 4): a lean overview with the same outline for every assignment instead
+   of a long list of folded texts. One row per evaluated assignment: date · subject · assignment · ratings in words ·
+   "Details". Filter by subject, period and "only needs support / getting there"; sort by date (newest first), subject
+   or rating (weakest first). Details in a fixed outline: standards · rubric (teacher / self side by side) · strengths ·
+   next steps, as short points. "Awaiting evaluation" is a small block of its own. Every date comes from the data
+   (asOf, day), none is written into the app. Narrow screens show cards instead of the table (CSS .pstab). */
+const SCHOOL_ORDER=['rs','c','m','e'], SCHOOL_AREAS=['math','science','english','deutsch','learner'];   // subjects in the school's order
+const SCHOOL_FILTER0={area:'', period:'all', weak:false, sort:'date'};
+const SCHOOL_UI={de:{asOf:'Stand der Daten',latest:'neueste Bewertung',who:'Einstufungen der Lehrkraft; Ihr Kind sieht sie nicht.',subject:'Fach',all:'Alle',period:'Zeitraum',p:{all:'Alles','8w':'Letzte 8 Wochen',year:'Dieses Schuljahr'},weak:'Nur „Braucht Unterstützung“ / „Wird sicherer“',sort:'Sortieren',s:{date:'Datum (neueste zuerst)',subject:'Fach',level:'Einstufung (schwächste zuerst)'},count:'{n} von {m} Aufgaben',empty:'Keine Aufgabe passt zu diesem Filter.',reset:'Filter zurücksetzen',date:'Datum',task:'Aufgabe',rating:'Einstufung',details:'Details',close:'Schließen',standards:'Standards',rubric:'Bewertungsraster',crit:'Kriterium',teacher:'Lehrkraft',self:'Selbst',strengths:'Stärken',none:'keine Angabe',atl:{ES:'mit Unterstützung','Obs.':'beobachtet','Ind.':'selbstständig'},turnedIn:'abgegeben'},
+                 en:{asOf:'Data as of',latest:'latest evaluation',who:'The teacher’s assessments; your child never sees them.',subject:'Subject',all:'All',period:'Period',p:{all:'All','8w':'Last 8 weeks',year:'This school year'},weak:'Only “Needs support” / “Getting there”',sort:'Sort by',s:{date:'Date (newest first)',subject:'Subject',level:'Rating (weakest first)'},count:'{n} of {m} assignments',empty:'No assignment matches this filter.',reset:'Reset filters',date:'Date',task:'Assignment',rating:'Rating',details:'Details',close:'Close',standards:'Standards',rubric:'Rubric',crit:'Criterion',teacher:'Teacher',self:'Self',strengths:'Strengths',none:'none given',atl:{ES:'emerging with support','Obs.':'observed','Ind.':'independent'},turnedIn:'turned in'}};
+/* the ratings of an assignment, weakest first, with how many standards got each: [['c',4],['m',2]] */
+function schoolTaskLevels(t){ const n={}; Object.values(t.std||{}).forEach(r=>{ const k=SL[r]; if(k) n[k]=(n[k]||0)+1; }); return SCHOOL_ORDER.filter(k=>n[k]).map(k=>[k,n[k]]); }
+const schoolWeakest = t => { const l=schoolTaskLevels(t); return l.length?SCHOOL_ORDER.indexOf(l[0][0]):SCHOOL_ORDER.length; };
+const schoolAreaIdx = a => { const i=SCHOOL_AREAS.indexOf(a); return i<0?SCHOOL_AREAS.length:i; };
+/* the school year starts on 1 August (the school calendar of the platform starts in August) */
+const schoolYearStart = today => { const [y,m]=today.split('-').map(Number); return (m>=8?y:y-1)+'-08-01'; };
+function schoolFiltered(d, f, today){
+  let l=d.tasks.map((t,i)=>({t,i})).filter(x=>!x.t.pending);
+  if(f.area) l=l.filter(x=>x.t.area===f.area);
+  if(f.period==='8w') l=l.filter(x=>daysBetween(x.t.day,today)<=56);
+  if(f.period==='year') l=l.filter(x=>x.t.day>=schoolYearStart(today));
+  if(f.weak) l=l.filter(x=>schoolTaskLevels(x.t).some(([k])=>k==='rs'||k==='c'));
+  const byDate=(a,b)=>a.t.day<b.t.day?1:a.t.day>b.t.day?-1:a.i-b.i;
+  const cmp={subject:(a,b)=>(schoolAreaIdx(a.t.area)-schoolAreaIdx(b.t.area))||byDate(a,b), level:(a,b)=>(schoolWeakest(a.t)-schoolWeakest(b.t))||byDate(a,b)}[f.sort]||byDate;
+  return l.sort(cmp);
+}
+/* a teacher's text as short points: split at ";" and at the end of a sentence (not after "z. B.", "e.g.") */
+const schoolPoints = s => String(s||'').replace(/([A-Za-zÄÖÜäöüß]{2})\.\s+(?=[A-ZÄÖÜ])/g,'$1\u0001').split(/;\s+|\u0001/).map(x=>x.trim().replace(/\.$/,'')).filter(Boolean);
+const schoolArea = (a, T) => T.areas[a] || a;
+const schoolWord = k => `<span class="pst ${k}">${PSTAND[PL()][k]}</span>`;
+function schoolDetailHTML(t, U, T, de){
+  const L=de?'de':'en', none=`<p class="small">${U.none}</p>`, names=qs=>(qs||[]).filter(q=>WORLDS[q]).map(q=>esc(WORLDS[q].name)).join(', ');
+  const std=Object.entries(t.std||{}).map(([s,r])=>`<li>${esc((de?STANDARD_TEXT:STANDARD_TEXT_EN)[s]||s)} ${SL[r]?schoolWord(SL[r]):esc(r)}</li>`)
+    .concat(Object.entries(t.atl||{}).map(([a,v])=>`<li>${esc(a)}: <b>${esc(U.atl[v]||v)}</b></li>`)).join('');
+  const rub=(t.rubric||[]).map(x=>`<tr><td>${esc(x.crit)}</td><td>${SL[x.teacher]?schoolWord(SL[x.teacher]):'–'}</td><td>${SL[x.self]?schoolWord(SL[x.self]):'–'}</td></tr>`).join('');
+  const list=s=>{ const p=schoolPoints(s); return p.length?`<ul>${p.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:none; };
+  const fq=names(t.focusNext), pq=names(t.quests);
+  return `<h4>${U.standards}</h4>${std?`<ul>${std}</ul>`:none}`
+    +`<h4>${U.rubric}</h4>${rub?`<table class="dt psrub"><thead><tr><th>${U.crit}</th><th>${U.teacher}</th><th>${U.self}</th></tr></thead><tbody>${rub}</tbody></table>`:none}`
+    +`<h4>${U.strengths}</h4>${list(t.good&&t.good[L])}`
+    +`<h4>${T.next}</h4>${list(t.next&&t.next[L])}`
+    +(fq?`<p class="small">${de?'Daraus im automatischen Fokus':'In the automatic focus because of this'}: ${fq}</p>`:'')
+    +(pq?`<p class="small">${T.quests}: ${pq}</p>`:'');
+}
+function schoolListHTML(d){
+  const de=PL()==='de', U=SCHOOL_UI[de?'de':'en'], T=schoolTexts(de), f=state.sfilt||SCHOOL_FILTER0, open=state.sopen||[];
+  const all=d.tasks.filter(t=>!t.pending).length, l=schoolFiltered(d, f, dayKey());
+  const rows=l.map(({t,i})=>{ const lv=schoolTaskLevels(t), op=open.includes(i);
+    return `<tr class="psrow" data-psrow="${i}"><td data-l="${U.date}">${fmtDay(t.day)}</td><td data-l="${U.subject}">${esc(schoolArea(t.area,T))}</td><td data-l="${U.task}">${esc(t.title)}</td>`
+      +`<td data-l="${U.rating}"><span class="pslv">${lv.length?lv.map(([k,n])=>`<span class="pst ${k}">${n>1?n+'× ':''}${PSTAND[PL()][k]}</span>`).join(''):'–'}</span></td>`
+      +`<td><button type="button" class="btn small" data-psdet="${i}" aria-expanded="${op}">${op?U.close:U.details}</button></td></tr>`
+      +`<tr class="psdet" data-psdetrow="${i}"${op?'':' hidden'}><td colspan="5">${schoolDetailHTML(t,U,T,de)}</td></tr>`; }).join('');
+  return `<p class="small pscount" role="status">${U.count.replace('{n}',l.length).replace('{m}',all)}</p>`
+    +(l.length?`<table class="dt pstab"><thead><tr><th>${U.date}</th><th>${U.subject}</th><th>${U.task}</th><th>${U.rating}</th><th><span class="sr-only">${U.details}</span></th></tr></thead><tbody>${rows}</tbody></table>`
+      :`<p>${U.empty} <button type="button" class="btn small" data-psreset>${U.reset}</button></p>`);
+}
 function schoolHTML(){
-  const d=schoolData(), de=PL()==='de', L=de?'de':'en', T=schoolTexts(de);
-  const h=de?'Bewertungen der Schule – Verlauf':'School evaluations – history';
+  const d=schoolData(), de=PL()==='de', T=schoolTexts(de), U=SCHOOL_UI[de?'de':'en'], f=state.sfilt||SCHOOL_FILTER0;
+  const h=de?'Schulische Einstufungen':'School assessments';
   if(!d) return `<h2>${h}</h2><p>${T.none}</p>`;
-  const rub=t=>t.rubric?`<p><b>${de?'Bewertungsraster':'Rubric'}:</b></p><ul>${t.rubric.map(x=>`<li>${esc(x.crit)}: ${de?'Lehrkraft':'teacher'} ${pChip(SL[x.teacher])} · ${de?'selbst eingeschätzt':'self-rating'} ${pChip(SL[x.self])}</li>`).join('')}</ul>`:'';
-  const task=t=>`<details class="about-sec"><summary>${fmtDay(t.day)} · ${esc(t.title)}</summary><div class="about-sec-body">${Object.keys(t.std).length?`<p>${Object.entries(t.std).map(([s,r])=>`${esc((de?STANDARD_TEXT:STANDARD_TEXT_EN)[s]||s)}: ${pChip(SL[r])}`).join('<br>')}</p>`:''}${rub(t)}<p><b>${T.good}:</b> ${esc(t.good[L])}</p>${t.next[L]?`<p><b>${T.next}:</b> ${esc(t.next[L])}</p>`:''}${(t.focusNext||[]).length?`<p class="small">${de?'Daraus im automatischen Fokus':'In the automatic focus because of this'}: ${t.focusNext.filter(q=>WORLDS[q]).map(q=>esc(WORLDS[q].name)).join(', ')}</p>`:''}<p class="small">${T.quests}: ${t.quests.filter(q=>WORLDS[q]).map(q=>esc(WORLDS[q].name)).join(', ')}</p></div></details>`;
-  const done=d.tasks.filter(t=>!t.pending).sort((a,b)=>a.day<b.day?1:-1), pend=d.tasks.filter(t=>t.pending);
-  return `<h2>${h}</h2><p class="small">${T.intro.replace('{d}',fmtDay(d.asOf))}</p>`
-    +`<h3 class="psub">${T.tasks}</h3><div class="about-menu">${done.map(task).join('')}</div>`
-    +(pend.length?`<h3 class="psub">${T.pend}</h3><div class="about-menu">${pend.map(task).join('')}</div>`:'');
+  const done=d.tasks.filter(t=>!t.pending), pend=d.tasks.filter(t=>t.pending).sort((a,b)=>a.day<b.day?1:-1);
+  const latest=done.reduce((m,t)=>t.day>m?t.day:m,''), stand=d.asOf||latest;
+  const areas=SCHOOL_AREAS.concat(uniq(done.map(t=>t.area)).filter(a=>!SCHOOL_AREAS.includes(a))).filter(a=>done.some(t=>t.area===a));
+  const opt=(v,txt,cur)=>`<option value="${esc(v)}"${v===cur?' selected':''}>${esc(txt)}</option>`;
+  return `<h2>${h}</h2><p class="small psstand">${stand?`${U.asOf}: ${fmtDay(stand)}`:''}${latest?` · ${U.latest}: ${fmtDay(latest)}`:''}. ${U.who}</p>`
+    +(pend.length?`<div class="pspend"><h3 class="psub">⏳ ${T.pend}</h3><ul class="small">${pend.map(t=>`<li>${fmtDay(t.day)} · ${esc(schoolArea(t.area,T))} · ${esc(t.title)}</li>`).join('')}</ul></div>`:'')
+    +`<div id="pSchoolAll"><div class="psfilters">`
+    +`<label>${U.subject}<select data-psf="area">${opt('',U.all,f.area)}${areas.map(a=>opt(a,schoolArea(a,T),f.area)).join('')}</select></label>`
+    +`<label>${U.period}<select data-psf="period">${['all','8w','year'].map(p=>opt(p,U.p[p],f.period)).join('')}</select></label>`
+    +`<label>${U.sort}<select data-psf="sort">${['date','subject','level'].map(s=>opt(s,U.s[s],f.sort)).join('')}</select></label>`
+    +`<label class="pscheck"><input type="checkbox" data-psf="weak"${f.weak?' checked':''}> ${U.weak}</label></div>`
+    +`<div id="psList">${schoolListHTML(d)}</div></div>`;
+}
+/* filters and details change the list in place (no new rendering of the whole area, the page does not jump) */
+function bindSchoolList(body){
+  const box=body.querySelector('#pSchoolAll'); if(!box) return;
+  const redraw=()=>{ const d=schoolData(), el=box.querySelector('#psList'); if(d && el) el.innerHTML=schoolListHTML(d); };
+  box.addEventListener('change',e=>{ const k=e.target.dataset.psf; if(!k || !parentAccess) return;
+    state.sfilt={...(state.sfilt||SCHOOL_FILTER0), [k]: k==='weak'?e.target.checked:e.target.value}; redraw(); });
+  box.addEventListener('click',e=>{ if(!parentAccess) return;
+    const r=e.target.closest('[data-psreset]'); if(r){ state.sfilt={...SCHOOL_FILTER0}; box.querySelectorAll('[data-psf]').forEach(x=>{ if(x.type==='checkbox') x.checked=false; else x.value=SCHOOL_FILTER0[x.dataset.psf]; }); redraw(); return; }
+    const b=e.target.closest('[data-psdet]'); if(!b) return;
+    const i=Number(b.dataset.psdet), open=state.sopen||(state.sopen=[]), row=box.querySelector(`[data-psdetrow="${i}"]`), U=SCHOOL_UI[PL()==='de'?'de':'en'];
+    const now=!open.includes(i); if(now) open.push(i); else open.splice(open.indexOf(i),1);
+    if(row) row.hidden=!now; b.setAttribute('aria-expanded',String(now)); b.textContent=now?U.close:U.details; });
 }
 function parentOverviewHTML(){
   const ev=store.get('ev',{}), attempts=store.get('attempts',[]);
@@ -5962,7 +6064,7 @@ const SCHOOL_WAY={
              en:{text:'Complete steps, fitting sentence starters, the impersonal “man” form, and the separable verb prefix at the end of the sentence.',questions:['Which step comes first?','Could someone follow your instructions without asking?','Where does the verb prefix go?'],source:'Class assignment “Anleitung schreiben” (learning platform).'}}
 };
 SCHOOL_WAY.combos=SCHOOL_WAY.wordprob;
-/* "Supporting your child": the general rules in one short chapter (practical, not concept). */
+/* "How to support your child": the general rules in one short chapter (practical, not concept). */
 /* concept 7.1 (F5): "Our suggestion" on top (spaced practice, IES Practice Guide in the sources; never measured, not in
    "At a glance"), then the five rules. A time per round would need time stamps - the answers keep only the day. */
 function supportGuideHTML(){
@@ -5970,7 +6072,7 @@ function supportGuideHTML(){
   const cal=isTeacher()?'':` ${de?'Eine Erinnerung im Kalender richten Sie unter':'You can set up a calendar reminder under'} ${(de?GO:GO_EN)('kind',esc(set))}${de?' ein':''}.`;
   return de
     ? `<h2>So unterstützen Sie Ihr Kind</h2><p class="phow psuggest">🗓️ <b>Unser Vorschlag:</b> Lieber oft kurz als selten lang: zum Beispiel 2–3 Runden pro Woche, je etwa 10 Minuten. Verteiltes Üben wirkt besser als viel auf einmal (Beleg: IES Practice Guide, siehe Quellen).${cal}</p><ol class="steps"><li><b>Erst fragen, dann helfen:</b> „Wie habt ihr das in der Klasse gemacht?“ Dann genau dort helfen, wo Ihr Kind stockt – mit dem Weg der Klasse.</li><li><b>Fragen statt erklären:</b> „Zeig mir deinen ersten Schritt.“ – „Woher weißt du das?“ – „Was fehlt noch?“</li><li><b>Fehler sind normal:</b> ruhig bleiben, Dranbleiben loben statt „schlau sein“. Ein kleiner Tipp, dann selbst weiterprobieren lassen.</li><li><b>Mit Freude:</b> Die App ist ein Zusatz zu den Hausaufgaben, keine Pflicht.</li><li><b>Konkretes zu jedem Thema</b> steht bei jeder Quest unter „💡 So helfen Sie“.</li></ol>`
-    : `<h2>Supporting your child</h2><p class="phow psuggest">🗓️ <b>Our suggestion:</b> often and short rather than rarely and long – for example 2–3 rounds a week, about 10 minutes each. Spaced practice works better than a lot at once (evidence: IES Practice Guide, see Sources).${cal}</p><ol class="steps"><li><b>Ask first, then help:</b> “How did you do this in class?” Then help exactly where your child gets stuck – the way the class does it.</li><li><b>Ask instead of explaining:</b> “Show me your first step.” – “How do you know?” – “What is still missing?”</li><li><b>Mistakes are normal:</b> stay calm and praise sticking with it rather than “being smart”. Give a small tip, then let your child try again.</li><li><b>With joy:</b> the app is an extra to homework, not a must.</li><li><b>Concrete help for each topic</b> is at every quest under “💡 How you can help”.</li></ol>`;
+    : `<h2>How to support your child</h2><p class="phow psuggest">🗓️ <b>Our suggestion:</b> often and short rather than rarely and long – for example 2–3 rounds a week, about 10 minutes each. Spaced practice works better than a lot at once (evidence: IES Practice Guide, see Sources).${cal}</p><ol class="steps"><li><b>Ask first, then help:</b> “How did you do this in class?” Then help exactly where your child gets stuck – the way the class does it.</li><li><b>Ask instead of explaining:</b> “Show me your first step.” – “How do you know?” – “What is still missing?”</li><li><b>Mistakes are normal:</b> stay calm and praise sticking with it rather than “being smart”. Give a small tip, then let your child try again.</li><li><b>With joy:</b> the app is an extra to homework, not a must.</li><li><b>Concrete help for each topic</b> is at every quest under “💡 How you can help”.</li></ol>`;
 }
 /* School website links: adults only (grown-ups area), neutral labels. The child-facing info pages
    never name or link the school. (The planning list of later topics was removed, Peter 31.10.:
@@ -6338,9 +6440,11 @@ const ABOUT_EN=()=>`
 <p><b>Reading recordings:</b> the microphone opens only after tapping “Aufnahme starten” and is released after “Stopp”. The last three recordings stay only in this device's storage; the app never sends them. They leave the device only if someone shares or saves them via “Teilen / Sichern”. Every recording can be deleted.</p>
 <h3>Sources</h3>${sourcesHTML('en')}
 `;
-/* "So funktioniert Big Quest" (Peter, 30./31.10.): intro and important note, then every topic as an
+/* "Das Konzept von Big Quest" (Peter, 30./31.10.; title 05.11.): intro and important note, then every topic as an
    accordion that opens in place (no clicking from page to page). Language via the flags 🇩🇪/🇺🇸. */
-const ABOUT_UI={de:{title:'📖 So funktioniert Big Quest',stand:'Stand: 30. Oktober 2026.'},en:{title:'📖 How Big Quest works',stand:'Last updated: 30 October 2026.'}};
+const ABOUT_UI={de:{title:'📖 Das Konzept von Big Quest',stand:'Stand'},en:{title:'📖 The Big Quest concept',stand:'Last updated'}};
+/* No date written into the app (Peter, 05.11.): the page is as of the build of this version (APP_VERSION.date, "DD.MM.YYYY HH:MM"). */
+const aboutStandLine = lang => { const v=APP_VERSION, m=v && /^(\d\d)\.(\d\d)\.(\d{4})/.exec(v.date||''); return m ? `<p class="small about-stand">${ABOUT_UI[lang].stand}: ${fmtDay(m[3]+'-'+m[2]+'-'+m[1])}.</p>` : ''; };
 /* The user guide depends on the login (Peter, 31.10.): a logged-in child sees the child guide, not the
    grown-ups guide; grown-ups find theirs in the grown-ups area. Without accounts: both. */
 const ADULT_GUIDE_TITLES=['Anleitung für Erwachsene','Guide for grown-ups'], KID_GUIDE_TITLES=['How to use Big Quest','How to use Big Quest (für Kinder)'];
@@ -6363,8 +6467,8 @@ function renderAboutPage(open){
     $('#aboutBody').innerHTML=`<h2>${g.title}</h2>${g.body}${appVersionLine()}`;
     window.scrollTo(0,0); return;
   }
-  const lang=PL(), ui=ABOUT_UI[lang], {main}=aboutParts(lang), body=$('#aboutBody');
-  body.innerHTML=main+`<div class="about-menu">${aboutSectionsHTML(lang, open)}</div><p class="small">${ui.stand}</p>${appVersionLine()}`;
+  const lang=PL(), {main}=aboutParts(lang), body=$('#aboutBody');
+  body.innerHTML=main+`<div class="about-menu">${aboutSectionsHTML(lang, open)}</div>${aboutStandLine(lang)}${appVersionLine()}`;
   if(open){ const d=[...body.querySelectorAll('details.about-sec')].find(x=>x.open); if(d) setTimeout(()=>d.scrollIntoView({block:'start'}),0); }
   else window.scrollTo(0,0);
 }

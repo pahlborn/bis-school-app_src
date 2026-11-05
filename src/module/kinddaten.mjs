@@ -136,7 +136,7 @@ function kdtBereiche(ablage, kind) {
 const KDT_TEXT = {
   de: {
     titel: 'Alle Daten von', erstellt: 'Erstellt am', von: 'von', stand: 'Stand: letzter Abgleich dieses Geräts. Die vollständige, maschinenlesbare Fassung steht in der JSON-Datei.',
-    profil: 'Profil', lernstand: 'Lernstand', blaetter: 'Übungsblätter', einstellungen: 'Einstellungen', schule: 'Einstufungen der Schule',
+    profil: 'Profil', lernstand: 'Lernstand', blaetter: 'Übungsblätter', einstellungen: 'Einstellungen', schule: 'Schulische Einstufungen',
     luecken: 'Lücken laut Schule', freigaben: 'Freigaben', protokoll: 'Protokoll der Freigaben', geraete: 'Geräte', zugriff: 'Wer hat einen Schlüssel',
     stellen: 'Jede Speicherstelle der App', hinweise: 'Gut zu wissen', ereignisse: 'Alle Einträge',
     feld: 'Feld', wert: 'Wert', bereich: 'Bereich', imExport: 'Im Export', grund: 'Hinweis', ja: 'ja', nein: 'nein', leer: '–',

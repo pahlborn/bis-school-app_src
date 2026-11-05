@@ -51,14 +51,14 @@ KOPF (immer sichtbar)
 │   ├─ ⚠️ Datenumzug nicht abgeschlossen → [Ansehen] (⚙)
 │   ├─ 💾 Neue Übungen seit der letzten Sicherung → [Jetzt sichern]
 │   ├─ 📄 Übungsblatt wartet → [Jetzt eintragen]
-│   └─ Neu hier? → 📖 So funktioniert Big Quest
+│   └─ Neu hier? → 📖 Das Konzept von Big Quest
 ├─ Auf einen Blick (4 Zeilen)
 ├─ Fächer-Kacheln (App-Einschätzung + 🏫-Punkt) → Fachansicht
 ├─ Einschätzung (ⓘ) + Farblegende in einer Zeile
 └─ Kapitel (zugeklappt)
-    ├─ 📖 So funktioniert Big Quest
-    ├─ 🤝 Ihr Kind unterstützen
-    ├─ 🏫 Bewertungen der Schule – Verlauf
+    ├─ 📖 Das Konzept von Big Quest
+    ├─ 🤝 So unterstützen Sie Ihr Kind
+    ├─ 🏫 Schulische Einstufungen
     └─ 📄 Übungsblätter
 
 FACHANSICHT (← Alle Fächer)
@@ -138,11 +138,11 @@ FACHANSICHT (← Alle Fächer)
    - ⚠️ **Datenumzug nicht abgeschlossen** (heute `migrNote()`): eine Zeile + „Ansehen“ → ⚙ Sicherung & Daten; Text und „Erneut versuchen“ ziehen dorthin.
    - 💾 **Neue Übungen seit der letzten Sicherung** + [Jetzt sichern]: nur wenn seit der letzten Sicherung geübt wurde **und** die letzte Sicherung fehlt oder älter als 30 Tage ist. Die Dauerzeile „Letzte Sicherung …“ entfällt.
    - 📄 **Übungsblatt wartet** (wie heute).
-   - **Neu hier? 📖 So funktioniert Big Quest**: öffnet das Kapitel; erscheint, bis der angemeldete Erwachsene es auf diesem Gerät einmal geöffnet hat.
+   - **Neu hier? 📖 Das Konzept von Big Quest**: öffnet das Kapitel; erscheint, bis der angemeldete Erwachsene es auf diesem Gerät einmal geöffnet hat.
 2. **Auf einen Blick** (5.10).
 3. **Fächer-Kacheln** wie heute, zusätzlich ein kleiner 🏫-Punkt mit der schwächsten aktuellen Schul-Einstufung des Fachs (nur wenn Schuldaten da und sichtbar).
 4. **Einschätzung** wie heute; „So lesen Sie diese Seite“ entfällt; Farblegende als eine Zeile (Punkt + Wort), der Satz zu „vorläufig/bestätigt“ ins ⓘ.
-5. **Kapitel**, zugeklappt: 📖 So funktioniert Big Quest · 🤝 Ihr Kind unterstützen · 🏫 Bewertungen der Schule – Verlauf (nur die bewerteten und wartenden Aufgaben chronologisch, je Aufgabe Einstufung, Raster, „Das gelingt“, „Nächste Schritte“) · 📄 Übungsblätter (nicht für Lehrkraft).
+5. **Kapitel**, zugeklappt: 📖 Das Konzept von Big Quest · 🤝 So unterstützen Sie Ihr Kind · 🏫 Schulische Einstufungen (seit 05.11. eine Tabelle: je bewerteter Aufgabe Datum · Fach · Aufgabe · Einstufungen in Worten · „Details“; Filter Fach, Zeitraum, nur „Braucht Unterstützung / Wird sicherer“; Sortierung Datum, Fach, Einstufung; Details fest gegliedert: Standards · Bewertungsraster · Stärken · Nächste Schritte; „Wartet auf Bewertung“ als kleiner Block; Stand aus den Daten; auf dem iPhone Karten) · 📄 Übungsblätter (nicht für Lehrkraft).
 
 ### 5.4 Fachansicht
 
@@ -154,7 +154,7 @@ FACHANSICHT (← Alle Fächer)
 - Ein Satz Herkunft: „Von der Lernplattform übernommen, Stand …“.
 - Zuordnung Standard → Fach über das Kürzel wie heute (M- Mathe, E- Englisch, S- Science, sonst Deutsch). Jeder Standard in genau einem Fach.
 
-**Fokus:** ein Satz („Automatisch: die App wählt. Manuell: Sie wählen.“), Einzelheiten hinter ⓘ mit Verweis auf „So funktioniert Big Quest → Wie die App einstuft“.
+**Fokus:** ein Satz („Automatisch: die App wählt. Manuell: Sie wählen.“), Einzelheiten hinter ⓘ mit Verweis auf „Das Konzept von Big Quest → Wie die App einstuft“.
 
 **Quest-Karten:** 5.11. „Was kann ich hier tun? …“ entfällt.
 
@@ -201,7 +201,7 @@ Eigene Ansicht mit „← Zurück“, ersetzt „📱 Bedienung & Technik“. Ei
 | Lücken-Knöpfe (6.6) | ✔ | – | Testkind ✔ |
 | Übungsblätter | ✔ | – | Testkind ✔ |
 | Auf einen Blick | ✔ | ohne „Seit Ihrem letzten Besuch“ | ✔ |
-| So funktioniert, Ihr Kind unterstützen | ✔ | ✔ | ✔ |
+| Das Konzept von Big Quest, So unterstützen Sie Ihr Kind | ✔ | ✔ | ✔ |
 | ⚙ Für <Kind>, Sicherung & Daten, Freigaben | ✔ | – | Testkind ✔ |
 | ⚙ Konten | – | – | ✔ |
 | ⚙ Über die App, ? Hilfe | ✔ | ✔ | ✔ |
@@ -325,11 +325,11 @@ Lokal mit den echten Schuldaten prüfen, im Prüfbericht nur Zahlen nennen: Anza
 | S7 | Feste Begriffe (7.9). |
 | S8 | Gleiche Symbole bedeuten überall dasselbe: 🎯 ⚠️ 🏫 💬 💡 ⓘ. |
 
-### 7.1 🤝 Ihr Kind unterstützen
+### 7.1 🤝 So unterstützen Sie Ihr Kind
 - Oben **„Unser Vorschlag“**: „Lieber oft kurz als selten lang: zum Beispiel 2–3 Runden pro Woche, je etwa 10 Minuten. Verteiltes Üben wirkt besser als viel auf einmal.“ (Beleg: IES Practice Guide, steht in den Quellen.) Falls Antworten Zeitstempel haben: „Eine Runde dauert bei Ihrem Kind zurzeit etwa X Minuten.“ Verweis auf die Kalender-Erinnerung in ⚙. Nicht in „Auf einen Blick“, nie gemessen.
 - Die fünf Regeln bleiben; die erste nimmt den Kernsatz aus „Helfen wie die Schule“ auf; der letzte Punkt verweist auf „💡 So helfen Sie“.
 
-### 7.2 📖 So funktioniert Big Quest
+### 7.2 📖 Das Konzept von Big Quest
 Höchstens 7 000 Zeichen ohne Quellen. Gliederung:
 1. **Grundidee** (mit Leitgedanken, gekürzt; Fokus aus nächsten Schritten **und** Lücken).
 2. **Aufbau** (Fächer, Practise Today, Übungsblätter; Fokus korrekt, B2).
