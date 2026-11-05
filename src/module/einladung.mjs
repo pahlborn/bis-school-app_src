@@ -85,11 +85,13 @@ function eldGewinner(log, type, now) {
 /* ---------- connections ---------- */
 /* what this account is connected to, from its own log and the log of its family:
    -> { familien: [{ id, anker }], kinder: [{ id, pre, anker, name }], verzeichnis: { <pid>: { role, pub, stand? } },
-        eltern: [pid], offen: [invite_set payload], familie: id | null } - familien, kinder and verzeichnis go into
-   geraetAbgleichen as they are */
+        eltern: [pid], offen: [invite_set payload], familie: id | null, entfernt: [{ person, role }] } - familien, kinder
+   and verzeichnis go into geraetAbgleichen as they are. Task "Export und Loeschen": a member whose newest family_set
+   says removed (a deleted child, a parent who deleted his account) is left out everywhere and listed in "entfernt" -
+   also the founding parent (the family keeps his id and his anchor: the history stays signed by him). */
 export function verbindungen({ ablage, konto, now } = {}) {
   eldPruefen({ ablage, konto, now });
-  const out = { familien: [], kinder: [], verzeichnis: {}, eltern: [], offen: [], familie: null };
+  const out = { familien: [], kinder: [], verzeichnis: {}, eltern: [], offen: [], familie: null, entfernt: [] };
   const eigen = eldLog(ablage, { person: konto.kennung }).lesen();
   const anker = Object.fromEntries(eldGewinner(eigen, 'anchor_set', now).filter((e) => e.author === konto.kennung).map((e) => [e.payload.kind, e.payload]));
   out.offen = eldGewinner(eigen, 'invite_set', now).filter((e) => e.author === konto.kennung && e.payload.state === 'open').map((e) => ({ ...e.payload }));
@@ -100,17 +102,58 @@ export function verbindungen({ ablage, konto, now } = {}) {
     const f = anker.family;
     out.familie = f.person;
     out.familien.push({ id: f.person, anker: { person: f.person, role: 'parent', pub: { ...f.pub } } });
-    out.verzeichnis[f.person] = { role: 'parent', pub: { ...f.pub } };
-    for (const e of eldGewinner(eldLog(ablage, { familie: f.person }).lesen(), 'family_set', now)) {
+    const gewinner = eldGewinner(eldLog(ablage, { familie: f.person }).lesen(), 'family_set', now);
+    for (const e of gewinner) if (e.payload.removed === true) out.entfernt.push({ person: e.payload.person, role: e.payload.role });
+    const weg = new Set(out.entfernt.map((x) => x.person));
+    if (!weg.has(f.person)) out.verzeichnis[f.person] = { role: 'parent', pub: { ...f.pub } };
+    for (const e of gewinner) {
       const p = e.payload;
-      if (p.person === f.person) continue;                              // the founding parent: his keys come with the anchor
+      if (p.person === f.person || weg.has(p.person)) continue;          // the founding parent: his keys come with the anchor
       out.verzeichnis[p.person] = { role: p.role, pub: { ...p.pub }, ...(p.stand > 1 ? { stand: p.stand } : {}) };
       if (p.role === 'child' && eldPid(p.anchor) && eldObj(p.anchorPub)) out.kinder.push({ id: p.person, pre: eldPre(p.person), anker: { person: p.anchor, role: 'parent', pub: { ...p.anchorPub } }, name: p.name || null });
     }
     out.eltern = Object.keys(out.verzeichnis).filter((pid) => out.verzeichnis[pid].role === 'parent').sort();
     out.kinder.sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    out.entfernt.sort((a, b) => (a.person < b.person ? -1 : a.person > b.person ? 1 : 0));
   }
   return out;
+}
+
+/* ---------- a deleted child on this device (task "Export und Loeschen", US12.2) ---------- */
+/* removes what this device holds of a child: the device state of its areas (bq_abgleich: kind:*, schule, eltern:allg,
+   the areas of its grants, person:<child>), what was dropped there (bq_abgleichVerworfen), devices noted for removal,
+   and the app's data of the child (every key "bq2_<child>__..."; the storage handed in must offer key(i)/length and
+   removeItem, like the browser storage - otherwise only the log is emptied).
+   -> { bereiche: [area], schluessel: number of app keys removed } */
+export function kindLokalEntfernen({ ablage, kind } = {}) {
+  if (!eldObj(ablage) || typeof ablage.getItem !== 'function' || typeof ablage.setItem !== 'function') throw eldFalsch('ablage (getItem/setItem) fehlt.');
+  if (!eldPid(kind)) throw eldFalsch('kind fehlt.');
+  const pre = eldPre(kind);
+  const log = eldLog(ablage, { kind });
+  const grants = new Set(log.lesen().filter((e) => eldObj(e) && eldObj(e.payload) && /^grant_/.test(e.type) && typeof e.payload.grant === 'string').map((e) => e.payload.grant));
+  const staende = eldJson(ablage, GERAETEABGLEICH_SPEICHER.staende, {});
+  const st = eldObj(staende) ? staende : {};
+  // the grants this device was told of, also from the device state (a parent's log may have lost them already)
+  for (const [area, s] of Object.entries(st)) {
+    if (!/^kind:lern:|^eltern:allg:/.test(area) || !area.endsWith(':' + kind) || !eldObj(s) || !Array.isArray(s.log)) continue;
+    for (const x of s.log) if (eldObj(x) && eldObj(x.event) && eldObj(x.event.payload) && /^grant_/.test(x.event.type)) grants.add(x.event.payload.grant);
+  }
+  const bereiche = ['kind:lern', 'kind:privat', 'schule', 'eltern:allg', 'person'].map((a) => bereichName(a, kind));
+  for (const g of grants) { try { bereiche.push(bereichName('freigabe', g)); } catch (e) { /* not a grant id */ } }
+  const weg = bereiche.filter((a) => Object.prototype.hasOwnProperty.call(st, a));
+  for (const a of weg) delete st[a];
+  if (weg.length) ablage.setItem(GERAETEABGLEICH_SPEICHER.staende, JSON.stringify(st));
+  const verworfen = eldJson(ablage, GERAETEABGLEICH_SPEICHER.verworfen, null);
+  if (Array.isArray(verworfen)) ablage.setItem(GERAETEABGLEICH_SPEICHER.verworfen, JSON.stringify(verworfen.filter((v) => !(eldObj(v) && bereiche.includes(v.bereich)))));
+  const entfernen = eldJson(ablage, GERAETEABGLEICH_SPEICHER.entfernen, null);
+  if (Array.isArray(entfernen)) ablage.setItem(GERAETEABGLEICH_SPEICHER.entfernen, JSON.stringify(entfernen.filter((x) => !(eldObj(x) && x.person === kind))));
+  let schluessel = 0;
+  if (typeof ablage.removeItem === 'function' && typeof ablage.key === 'function' && Number.isInteger(ablage.length)) {
+    const k = [];
+    for (let i = 0; i < ablage.length; i++) { const n = ablage.key(i); if (typeof n === 'string' && n.startsWith(pre)) k.push(n); }
+    for (const n of k) { ablage.removeItem(n); schluessel++; }
+  } else if (ablage.getItem(pre + 'events') !== null) { log.schreiben([]); schluessel++; }
+  return { bereiche: weg, schluessel };
 }
 
 /* ---------- after the first login ---------- */
@@ -357,12 +400,27 @@ const ELD_WARNEN = ['autor-unbekannt', 'nicht-mitglied', 'geraet-fremd', 'geraet
    Task "Abgleich in der App": inDieApp false (a child in the middle of a round) -> one round only, nothing written into
    the app's logs (geraetAbgleichen inDieApp); the hourly limit of the storage -> no further round, limit = wait time.
    -> { runden, bericht (of the last geraetAbgleichen), inDieApp (sum), bestaetigt, warnungen, abgelaufen, erneuert,
-        erneuerungOffen, limit? } */
-export async function abgleichMitVerbindungen({ ablage, zugang, konten, now, heute, geraetName, inDieApp = true } = {}) {
-  if (!Array.isArray(konten) || !konten.length) throw eldFalsch('konten erwartet.');
-  for (const k of konten) eldPruefen({ ablage, konto: k, now });
+        erneuerungOffen, geloescht (children whose data this call removed from the device - task "Export und Loeschen"),
+        kontoGeloescht (accounts of "konten" that no longer exist in the directory: not synced, the app logs them out),
+        limit? } */
+export async function abgleichMitVerbindungen({ ablage, zugang, konten: alleKonten, now, heute, geraetName, inDieApp = true } = {}) {
+  if (!Array.isArray(alleKonten) || !alleKonten.length) throw eldFalsch('konten erwartet.');
+  for (const k of alleKonten) eldPruefen({ ablage, konto: k, now });
+  const out = { runden: 0, bericht: null, inDieApp: 0, bestaetigt: [], warnungen: [], abgelaufen: [], erneuert: [], erneuerungOffen: [], geloescht: [], kontoGeloescht: [] };
+  // task "Export und Loeschen": a device that does not know the own area of an account yet (a new device - or one that
+  // removed a deleted child's data) asks the directory first: a deleted account is not synced (its own area would be
+  // made anew); the app logs it out. Costs one or two reads, only until the device knows the area.
+  const bekannt = eldJson(ablage, GERAETEABGLEICH_SPEICHER.staende, {});
+  const konten = [];
+  for (const k of alleKonten) {
+    if (!(eldObj(bekannt) && eldObj(bekannt[bereichName('person', k.kennung)])) && typeof k.anmeldename === 'string' && kontoName(k.anmeldename)) {
+      const s = await kontoStand({ zugang, anmeldename: k.anmeldename });
+      if (s === null || s.kennung !== k.kennung) { out.kontoGeloescht.push(k.kennung); continue; }
+    }
+    konten.push(k);
+  }
+  if (!konten.length) return out;
   const personen = kontoPersonen(...konten);
-  const out = { runden: 0, bericht: null, inDieApp: 0, bestaetigt: [], warnungen: [], abgelaufen: [], erneuert: [], erneuerungOffen: [] };
   const sammeln = () => {
     const g = { familien: new Map(), kinder: new Map(), verzeichnis: {} };
     for (const k of konten) {
@@ -398,6 +456,20 @@ export async function abgleichMitVerbindungen({ ablage, zugang, konten, now, heu
     const neuIn = out.bericht.inDieApp > 0 || Object.values(out.bericht.bereiche).some((b) => b.aktion === 'angelegt' || b.aktion === 'ergaenzt' || b.aktion === 'gewechselt');
     if (!geschrieben && !neuIn && JSON.stringify(neu) === JSON.stringify(plan)) break;
     plan = neu;
+  }
+  // task "Export und Loeschen": a child the family deleted (family_set removed) - its data leaves this device, too; a
+  // child's own device whose areas are gone from the storage (bereich fehler "geloescht") the same. The app then drops
+  // the child from its lists (and logs a deleted child out). Not in the middle of a child's round (inDieApp false): the
+  // next full sync does it.
+  for (const k of inDieApp ? konten : []) {
+    const weg = verbindungen({ ablage, konto: k, now }).entfernt.filter((x) => x.role === 'child').map((x) => x.person);
+    const b = out.bericht && out.bericht.bereiche[bereichName('kind:lern', k.kennung)];
+    if (k.art === 'child' && b && b.fehler === 'geloescht') weg.push(k.kennung);
+    for (const kind of weg) {
+      if (out.geloescht.includes(kind)) continue;
+      const r = kindLokalEntfernen({ ablage, kind });
+      if (r.bereiche.length || r.schluessel) out.geloescht.push(kind);
+    }
   }
   return out;
 }

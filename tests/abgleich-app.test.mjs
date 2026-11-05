@@ -595,7 +595,8 @@ test('7 App mit einem anderen Speicher: gleich bei der Anmeldung eine klare Meld
   assert.equal(X.im('#loginMsg').textContent, 'Diese Fassung ist mit einem anderen Speicher verbunden – dort gibt es keine Konten. Bitte beim Admin nachfragen.');
   // der richtige Speicher: falsches Passwort bleibt "stimmt nicht"
   const Y = geraet(t, W, { name: 'iPad richtig' });
-  Y.klick('#roleAdult'); Y.tippe('#loginUser', 'peter.a'); Y.tippe('#loginPw', P.pw + 'x'); Y.absenden('#loginGo');
+  // ("!" statt eines Buchstabens: ein 21 Zeichen langer Vorschlag plus Buchstabe saehe aus wie ein Startcode - Zufallsrot)
+  Y.klick('#roleAdult'); Y.tippe('#loginUser', 'peter.a'); Y.tippe('#loginPw', P.pw + '!'); Y.absenden('#loginGo');
   await Y.warten(() => { const m = Y.im('#loginMsg'); return m && m.textContent && !/moment/i.test(m.textContent); }, 'Meldung');
   assert.equal(Y.im('#loginMsg').textContent, 'Benutzername oder Passwort stimmt nicht.');
 });
