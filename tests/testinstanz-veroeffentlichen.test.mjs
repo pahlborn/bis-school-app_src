@@ -109,6 +109,8 @@ test('Suchlauf vor dem Kopieren: Schuldaten, Konten, Familienpasswort, Kathies S
     'verbotenes Wort (App)': [distMit((h) => h.replace('</body>', `<!-- ${wort} --></body>`)), /keine verbotenen Woerter/],
     'verbotenes Wort (Manifest)': [distMit((m) => JSON.stringify({ ...JSON.parse(m), description: wort }), { datei: 'manifest.webmanifest' }), /keine verbotenen Woerter/],
     'Aktualisierung mit Schluessel': [distMit((h) => h.replace(VERSION_AUS_KLARTEXT, () => altePV)), /Aktualisierung ohne Schluessel/],
+    'nicht mit dem Test-Repo verbunden': [distMit((h) => h.replace(/const KONTO_SPEICHER=[^;]*;/, () => 'const KONTO_SPEICHER=/*BQ_SPEICHER*/null;')), /mit dem Test-Repo verbunden/],
+    'anderes Repo': [distMit((h) => h.replace('"repo":"pahlborn/bis-school-app-testdaten"', () => '"repo":"pahlborn/bis-school-app"')), /mit dem Test-Repo verbunden[^\n]*anderer Speicher/],
     'Live-Bau / Huelle statt Testinstanz': [distMit(() => lies('werkzeug/huelle.html')), /Suchlauf Testinstanz/]
   };
   for (const [name, [dist, grund]] of Object.entries(faelle)) {
@@ -201,13 +203,14 @@ test('Browser: die veroeffentlichte Testfassung aktualisiert sich selbst, ohne S
     const fehler = [], anfragen = [];
     page.on('pageerror', (e) => fehler.push(e.message));
     page.on('request', (q) => anfragen.push(q.url()));
+    // die Testinstanz startet mit der Anmeldung (mit dem Test-Repo verbunden) - auch dort aktualisiert sie sich
     await page.goto(s.url + '/bis-school-app-test/', { waitUntil: 'domcontentloaded', timeout: LADEZEIT_MS });
-    await page.waitForSelector('#home h1');
+    await page.waitForSelector('#login:not([hidden])');
     assert.ok((await page.content()).includes('const APP_VERSION={"n":7,'), 'geoeffnet: v7');
     await page.waitForURL(/\/bis-school-app-test\/\?v=8$/, { timeout: 20000 });
-    await page.waitForSelector('#home h1');
-    await page.locator('#aboutBtn').click();
-    assert.equal(await page.textContent('#aboutBody .app-version'), 'v8');
+    await page.waitForSelector('#login:not([hidden])');
+    assert.ok(await page.evaluate(() => [...document.scripts].some((x) => x.textContent.includes('const APP_VERSION={"n":8,'))), 'jetzt v8');
+    assert.ok(await page.locator('#kontoTokenForm').isVisible(), 'Anmeldeseite der Testinstanz (Zugang zum Test-Repo)');
     const r = await page.evaluate(() => ({ gelesen: [...new Set(window.__gelesen || [])], schluessel: Object.keys(localStorage).filter((k) => /schluessel/i.test(k)) }));
     assert.deepEqual(r.schluessel, [], 'kein Schluessel auf dem Geraet');
     assert.deepEqual(r.gelesen.filter((k) => /schluessel/i.test(k) || !k.startsWith('bqt')), [], 'nur bqt gelesen, kein Schluessel');
