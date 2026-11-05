@@ -131,12 +131,14 @@ test('GitHub: offline bei jeder Funktion - nichts geschrieben, Einladung nicht v
   const s = neu(), w = 'lauf-' + lauf, a = s.geraet('d_a1'), b = s.geraet('d_b1');
   await b.put(B, 'd_b1', { nr: 1, inhalt: 'da' });
   await b.invite.put('i1', 'Einladung');
+  await b.putDirectory({ lookup: 'h1', kennung: 'p_e1' });
   const vorher = new Map(N.dateien());
   const aufrufe = {
     put: () => a.put(B, 'd_a1', { nr: 1, inhalt: 'x' }), list: () => a.list(B), get: () => a.get(B, 'd_b1/1'), keys: () => a.keys(B),
     putKey: () => a.putKey(B, 'p_e1', { w: 1 }), directory: () => a.directory('h1'), putDirectory: () => a.putDirectory({ lookup: 'h2' }),
     'invite.put': () => a.invite.put('i2', 1), 'invite.get': () => a.invite.get('i1'), 'invite.delete': () => a.invite.delete('i1'),
     exportFile: () => a.exportFile(B), importFile: () => a.importFile(JSON.stringify({ format: 'bq-buendel-datei', v: 1, bereich: B, buendel: [{ geraet: 'd_x1', nr: 1, inhalt: 1 }] })),
+    removeArea: () => a.removeArea(B), removeDirectory: () => a.removeDirectory('h1'),
   };
   assert.deepEqual(Object.keys(aufrufe), [...SPEICHER_FUNKTIONEN]);
   for (const [name, f] of Object.entries(aufrufe)) {
@@ -147,6 +149,36 @@ test('GitHub: offline bei jeder Funktion - nichts geschrieben, Einladung nicht v
   assert.deepEqual(new Map(N.dateien()), vorher, 'nichts geschrieben, nichts geloescht');
   assert.equal(await a.invite.get('i1'), 'Einladung', 'nicht verbraucht');
   assert.equal(N.dateien().has(w + '/invites/i1.json'), false, 'nach Gebrauch geloescht');
+});
+
+test('GitHub: removeArea loescht genau die Dateien des Bereichs (je Datei ein DELETE); bricht es ab, holt ein zweiter Aufruf den Rest nach', async () => {
+  const s = neu(), w = 'lauf-' + lauf, a = s.geraet('d_a1'), b = s.geraet('d_b1'), B2 = 'kind:privat:p_k1';
+  for (let nr = 1; nr <= 3; nr++) await a.put(B, 'd_a1', { nr, inhalt: nr });
+  await b.put(B, 'd_b1', { nr: 1, inhalt: 'b' });
+  await a.put(B2, 'd_a1', { nr: 1, inhalt: 'bleibt' });
+  await a.putKey(B, 'p_e1', { w: 1 }); await a.putKey(B2, 'p_e1', { w: 2 });
+  await a.putDirectory({ lookup: 'h1', kennung: 'p_e1' });
+  const unter = (p) => [...N.dateien().keys()].filter((k) => k.startsWith(w + '/' + p)).sort();
+  const vorher = N.zaehler.je.DELETE || 0;
+  N.stoerung({ abbruch: true, methode: 'DELETE', anzahl: 1 });
+  await fehlt(a.removeArea(B), 'offline', 'Abbruch mitten im Loeschen');
+  N.stoerungenLeeren();
+  assert.deepEqual(await b.removeArea(B), { buendel: 4, schluessel: 1 }, 'zweiter Aufruf holt den Rest nach');
+  assert.deepEqual(unter('events/' + B + '/'), []);
+  assert.deepEqual(unter('keys/' + B + '/'), []);
+  assert.deepEqual(unter('events/' + B2 + '/'), [w + '/events/' + B2 + '/d_a1/1.json'], 'anderer Bereich bleibt');
+  assert.deepEqual(unter('keys/' + B2 + '/'), [w + '/keys/' + B2 + '/p_e1.json']);
+  assert.deepEqual(unter('directory/'), [w + '/directory/h1.json']);
+  assert.ok((N.zaehler.je.DELETE || 0) - vorher >= 5, 'je Datei ein DELETE');
+  // eine Datei aendert sich immer wieder (409 beim Loeschen): nach GITHUB_VERSUCHE Runden -> offline, nichts still uebergangen
+  await a.put(B2, 'd_a1', { nr: 2, inhalt: 'zwei' });
+  N.stoerung({ status: 409, methode: 'DELETE', anzahl: 100 });
+  await fehlt(a.removeArea(B2), 'offline', 'Datei laesst sich nicht loeschen');
+  N.stoerungenLeeren();
+  assert.equal(unter('events/' + B2 + '/').length, 2, '409 hat nichts geloescht');
+  assert.deepEqual(await a.removeArea(B2), { buendel: 2, schluessel: 1 });
+  assert.deepEqual((await a.list(B)).kennungen, []);
+  assert.equal(await a.put(B, 'd_a1', { nr: 1, inhalt: 'neu' }), 'd_a1/1', 'danach wie neu (der Zugang vergisst, was er kannte)');
 });
 
 test('GitHub: ETag - unveraenderter Ordner kostet nichts (304), Baum nur bei Aenderung im eigenen Bereich', async () => {
@@ -178,6 +210,44 @@ test('GitHub: ETag - unveraenderter Ordner kostet nichts (304), Baum nur bei Aen
   const z4 = { ...N.zaehler };
   await a.put(B, 'd_a1', { nr: 5, inhalt: 5 });
   assert.equal(N.zaehler.anfragen - z4.anfragen, 1, 'ein PUT, sonst nichts');
+});
+
+test('GitHub (Aufgabe "Abgleich in der App"): Schluessel mit ETag (unveraendert: eine 304, keine Datei); Sitzung fragt je Abgleich einmal; verbunden', async () => {
+  const s = neu(), a = s.geraet('d_a1'), c = s.geraet('d_c1');
+  await a.putKey(B, 'p_e1', { w: 1 }); await a.putKey(B, 'p_k1', { w: 2 });
+  assert.deepEqual(await c.keys(B), { p_e1: { w: 1 }, p_k1: { w: 2 } });
+  // unveraendert: eine Anfrage (304), keine Datei geholt
+  const z0 = { ...N.zaehler };
+  assert.deepEqual(await c.keys(B), { p_e1: { w: 1 }, p_k1: { w: 2 } });
+  assert.equal(N.zaehler.anfragen - z0.anfragen, 1); assert.equal(N.zaehler.unveraendert - z0.unveraendert, 1);
+  // eine Datei geaendert: Ordner (200) + nur diese Datei
+  await a.putKey(B, 'p_k1', { w: 3 });
+  const z1 = { ...N.zaehler };
+  assert.deepEqual(await c.keys(B), { p_e1: { w: 1 }, p_k1: { w: 3 } });
+  assert.equal(N.zaehler.anfragen - z1.anfragen, 2, 'Ordner + eine Datei');
+  // Sitzung: keys je Bereich einmal (Kopie - aendern schadet nicht), nach eigenem putKey neu
+  const t = c.sitzung(), z2 = { ...N.zaehler };
+  const k1 = await t.keys(B); k1.p_e1.w = 99;
+  assert.deepEqual(await t.keys(B), { p_e1: { w: 1 }, p_k1: { w: 3 } });
+  assert.equal(N.zaehler.anfragen - z2.anfragen, 1, 'einmal gefragt');
+  await t.putKey(B, 'p_e1', { w: 4 });
+  assert.deepEqual((await t.keys(B)).p_e1, { w: 4 }, 'nach eigenem Schreiben neu gelesen');
+  // Sitzung: der Ordner events einmal fuer alle Bereiche; nach eigenem Buendel im selben Bereich neu
+  await a.put(B, 'd_a1', { nr: 1, inhalt: 1 }); await a.put('kind:privat:p_k1', 'd_a1', { nr: 1, inhalt: 1 });
+  const u = c.sitzung(), z3 = { ...N.zaehler };
+  assert.deepEqual((await u.list(B)).kennungen, ['d_a1/1']);
+  assert.deepEqual((await u.list('kind:privat:p_k1')).kennungen, ['d_a1/1']);
+  const ordner = N.log.slice(-(N.zaehler.anfragen - z3.anfragen)).filter((x) => /\/contents\/lauf-\d+\/events\?/.test(x.url)).length;
+  assert.equal(ordner, 1, 'Ordner events einmal');
+  await u.put(B, 'd_c1', { nr: 1, inhalt: 'c' });
+  assert.deepEqual((await u.list(B)).kennungen, ['d_a1/1', 'd_c1/1'], 'nach eigenem Buendel neu gefragt');
+  // ohne Sitzung wie bisher; der Zugang der Simulation hat keine Sitzung (geraeteabgleich nimmt dann den Zugang selbst)
+  assert.equal(typeof a.sitzung, 'function');
+  // verbunden: nur ein Repo mit Konten (Ordner directory) - ein leeres oder nicht erreichbares nicht
+  assert.equal(await neu().geraet('d_x1').verbunden(), false, 'leer');
+  assert.equal(await githubSpeicher({ repo: 'pahlborn/gibt-es-nicht', token: TOKEN, basis: N.basis }).geraet('d_x1').verbunden(), false, 'nicht erreichbar (404)');
+  await a.putDirectory({ lookup: 'h1', kennung: 'p_e1' });
+  assert.equal(await a.verbunden(), true);
 });
 
 test('GitHub: Token-Schutz - nie in Meldungen, Fehlern, Ergebnissen, Adressen oder Inhalten; nur im Authorization-Kopf', async () => {

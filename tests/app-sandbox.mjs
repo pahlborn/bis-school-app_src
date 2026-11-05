@@ -48,7 +48,54 @@ function teilPasst(el, teil) {
 
 //  - globale: weitere Namen fuer window (z. B. ein simulierter Speicher, File, navigator.share; Aufgabe "Anmeldung im
 //    Testbau") - sie stehen vor dem Start der App bereit.
-export function appSandbox({ anpassen, seed = Number(process.env.BQ_SEED) || Date.now() % 1e9, speicher = {}, bauart = process.env.BQ_BAUART || 'live', seite = false, globale = {} } = {}) {
+//  - uhr: eine stellbare Uhr (stellbareUhr(), Aufgabe "Abgleich in der App"), auch fuer mehrere App-Instanzen gemeinsam.
+//    Dann gehen Date/Date.now der App nach dieser Uhr, und Zeitgeber (setTimeout/setInterval) laufen - aber erst, wenn
+//    der Test die Uhr mit uhr.vor(ms) weiterstellt. Ohne uhr bleibt alles wie bisher (Zeitgeber laufen nie).
+
+/** Stellbare Uhr fuer eine oder mehrere App-Instanzen: { jetzt(), vor(ms), still(), ruhe(fn) }.
+ *  vor(ms) stellt die Uhr weiter und fuehrt jeden faelligen Zeitgeber in Zeitreihenfolge aus; nach jedem wartet sie, bis
+ *  alle mit ruhe(fn) angemeldeten Arbeiten fertig sind (fn liefert ein Promise, solange etwas laeuft - z. B. ein Abgleich
+ *  mit echten Anfragen an den GitHub-Nachbau). Waehrend solcher Arbeit steht die Uhr. */
+export function stellbareUhr(start = Date.now()) {
+  let jetzt = start, nr = 0;
+  const timer = [], wartende = [];
+  const u = {
+    jetzt: () => jetzt,
+    timer,
+    /* intern (appSandbox): Zeitgeber anlegen/loeschen */
+    _neu(lauf, ms, alle) { const id = ++nr; timer.push({ id, nr: id, at: jetzt + Math.max(0, Number(ms) || 0), lauf, alle }); return id; },
+    _weg(id) { const i = timer.findIndex((t) => t.id === id); if (i >= 0) timer.splice(i, 1); },
+    ruhe(fn) { wartende.push(fn); },
+    async still() {
+      for (let i = 0; i < 10000; i++) {
+        await new Promise((r) => setImmediate(r));
+        const p = wartende.map((f) => f()).filter(Boolean);
+        if (!p.length) return;
+        await Promise.all(p);
+      }
+      throw new Error('stellbareUhr: die Arbeit wird nicht fertig');
+    },
+    async vor(ms) {
+      const ziel = jetzt + ms;
+      await u.still();
+      for (let n = 0; ; n++) {
+        if (n > 100000) throw new Error('stellbareUhr: zu viele Zeitgeber');
+        const t = timer.filter((x) => x.at <= ziel).sort((a, b) => a.at - b.at || a.nr - b.nr)[0];
+        if (!t) break;
+        timer.splice(timer.indexOf(t), 1);
+        jetzt = Math.max(jetzt, t.at);
+        if (t.alle) timer.push({ ...t, at: t.at + Math.max(1, t.alle), nr: ++nr });
+        t.lauf();
+        await u.still();
+      }
+      jetzt = ziel;
+      await u.still();
+    }
+  };
+  return u;
+}
+
+export function appSandbox({ anpassen, seed = Number(process.env.BQ_SEED) || Date.now() % 1e9, speicher = {}, bauart = process.env.BQ_BAUART || 'live', seite = false, globale = {}, uhr = null } = {}) {
   /* ---------- Elemente ---------- */
   const reg = new Map();                                                     // id -> Element (wie getElementById)
   class Knoten {
@@ -214,6 +261,13 @@ export function appSandbox({ anpassen, seed = Number(process.env.BQ_SEED) || Dat
   const stumm = new Proxy(function () {}, { get: (_, k) => (k === Symbol.toPrimitive ? () => 0 : k === 'then' ? undefined : stumm), apply: () => stumm, construct: () => stumm, set: () => true });
   let zeitgeber = 0;
   const nichtAusfuehren = () => ++zeitgeber;
+  // mit stellbarer Uhr: Zeitgeber laufen, wenn der Test die Uhr weiterstellt (in lauf(), also mit Zeitlimit)
+  let ausfuehren = (f) => f();
+  const zg = uhr ? {
+    setTimeout: (f, ms, ...a) => uhr._neu(() => ausfuehren(() => f(...a)), ms),
+    setInterval: (f, ms, ...a) => uhr._neu(() => ausfuehren(() => f(...a)), ms, Math.max(1, Number(ms) || 0)),
+    clearTimeout: (id) => uhr._weg(id), clearInterval: (id) => uhr._weg(id)
+  } : { setTimeout: nichtAusfuehren, setInterval: nichtAusfuehren, clearTimeout() {}, clearInterval() {} };
   const ctx = {
     console, document, localStorage, sessionStorage: { getItem: () => null, setItem() {}, removeItem() {} },
     location: { href: 'http://127.0.0.1/', origin: 'http://127.0.0.1', protocol: 'http:', host: '127.0.0.1', hostname: '127.0.0.1', pathname: '/', search: '', hash: '', replace() {}, reload() {}, assign() {} },
@@ -223,7 +277,7 @@ export function appSandbox({ anpassen, seed = Number(process.env.BQ_SEED) || Dat
     getComputedStyle: () => new Proxy({}, { get: () => '' }),
     scrollTo() {}, scrollBy() {}, print() {}, alert() {}, confirm: () => false, prompt: () => null, open: () => null, focus() {},
     innerWidth: 1024, innerHeight: 768, devicePixelRatio: 1, scrollY: 0, pageYOffset: 0,
-    setTimeout: nichtAusfuehren, setInterval: nichtAusfuehren, clearTimeout() {}, clearInterval() {}, requestAnimationFrame: nichtAusfuehren, cancelAnimationFrame() {}, queueMicrotask,
+    ...zg, requestAnimationFrame: nichtAusfuehren, cancelAnimationFrame() {}, queueMicrotask,
     performance: { now: () => performance.now() },
     crypto: webcrypto, TextEncoder, TextDecoder, URL, URLSearchParams, Blob, structuredClone, atob, btoa,
     fetch: () => Promise.reject(new Error('kein Netz in der Sandbox')),
@@ -232,10 +286,15 @@ export function appSandbox({ anpassen, seed = Number(process.env.BQ_SEED) || Dat
     AudioContext: function AudioContext() { return stumm; }                 // Ton: alles nimmt alles an, nichts klingt
   };
   ctx.window = ctx; ctx.self = ctx; ctx.top = ctx;
-  ctx.addEventListener = () => {}; ctx.removeEventListener = () => {};
+  // Ereignisse am Fenster werden gemerkt (z. B. "online"), ausgeloest nur vom Test (fenster(typ))
+  const fensterOn = {};
+  ctx.addEventListener = (t, f) => { (fensterOn[t] ||= []).push(f); }; ctx.removeEventListener = (t, f) => { fensterOn[t] = (fensterOn[t] || []).filter((x) => x !== f); };
   ctx.claude = { hot: { snapshot() {}, ready: (boot) => boot({}) } };    // wie im Browser-Test: Start ohne Vorgaben
   Object.assign(ctx, globale);
+  if (uhr) ctx.__bqUhr = () => uhr.jetzt();
   vm.createContext(ctx);
+  // stellbare Uhr: Date der App (ohne Angabe = jetzt der Uhr; Date.now) - Date mit Angabe bleibt wie es ist
+  if (uhr) vm.runInContext(`((R) => { const u = globalThis.__bqUhr; class D extends R { constructor(...a) { if (a.length) super(...a); else super(u()); } static now() { return u(); } } globalThis.Date = D; })(Date);`, ctx);
 
   // Zufall mit Startwert (mulberry32) - die App nutzt Math.random
   vm.runInContext(`((M) => { const imul = M.imul; let s = ${seed >>> 0}; M.random = () => { s = (s + 0x6D2B79F5) | 0; let t = imul(s ^ (s >>> 15), 1 | s);
@@ -269,6 +328,15 @@ export function appSandbox({ anpassen, seed = Number(process.env.BQ_SEED) || Dat
     innen = true; ctx.__bqJob = fn;
     try { return job.runInContext(ctx, { timeout: ms }); } finally { ctx.__bqJob = null; innen = false; }
   }
+  ausfuehren = (f) => lauf(f, 20000);
+
+  /** Seite sichtbar/unsichtbar wie im Browser (App wechseln, Bildschirm aus): document.hidden + "visibilitychange" */
+  function sichtbarkeit(sichtbar) {
+    document.hidden = !sichtbar; document.visibilityState = sichtbar ? 'visible' : 'hidden';
+    lauf(() => { for (const f of [...(document._on.visibilitychange || [])]) f.call(document, { type: 'visibilitychange', target: document }); });
+  }
+  /** ein Ereignis am Fenster ausloesen (z. B. "online") */
+  const fenster = (typ) => lauf(() => { for (const f of [...(fensterOn[typ] || [])]) f({ type: typ }); });
 
   const $ = (sel) => document.querySelector(sel);
   /** sichtbar wie im Browser-Test: weder das Element noch ein Vorfahr ist hidden */
@@ -312,5 +380,5 @@ export function appSandbox({ anpassen, seed = Number(process.env.BQ_SEED) || Dat
    *  feste Ausgangsstand der Protokolle (3b-2a): danach einmal neu rechnen lassen - wie nach einem Abgleich. */
   function setzen(k, v) { ablage.set(String(k), typeof v === 'string' ? v : JSON.stringify(v)); if (bauart === 'test') holen('evNeuLaden')(); }
 
-  return { ctx, holen, lauf, $, sichtbar, zustand, alleKarten, karteOeffnen, klick, frageBeantworten, seed, ablage, setzen, bauart };
+  return { ctx, holen, lauf, $, sichtbar, zustand, alleKarten, karteOeffnen, klick, frageBeantworten, seed, ablage, setzen, bauart, sichtbarkeit, fenster, uhr };
 }
