@@ -20,8 +20,18 @@
 //
 // Names: every helper starts with "anm"/"ANM_" because all modules and index.html share one scope in the app.
 
-import { KONTO_ARTEN, kontoName, kontoLookup, ersteAnmeldung, anmelden, wiederherstellen } from './konto.mjs';
+//   Task "Einladungen - Oberflaeche" (05.11.): the screens for invitations, devices and new keys call these helpers too
+//     (anmAbgleich, anmKindAnlegen, anmElternEinladen, anmKindNeu, anmZurueckziehen, anmGeraete, anmGeraetEntfernen,
+//     anmErneuern, anmKindBereit, anmQr ...) - thin wrappers of modules einladung, geraete, konto and qrcode.
+
+import { KONTO_ARTEN, kontoName, kontoLookup, ersteAnmeldung, anmelden, wiederherstellen, schluesselErneuern, kontoFingerabdruck } from './konto.mjs';
 import { githubSpeicher, githubTokenLesen, githubTokenSpeichern } from './github.mjs';
+import { verbindungen, kindAnlegen, elternteilEinladen, kindPasswortNeu, einladungZurueckziehen, abgleichMitVerbindungen, anmeldenameVorschlag } from './einladung.mjs';
+import { meineGeraete, geraetEntfernen } from './geraete.mjs';
+import { GERAETEABGLEICH_SPEICHER } from './geraeteabgleich.mjs';
+import { bereichName, schluesselLesen } from './bereiche.mjs';
+import { zulassungAus, aktiveMitglieder } from './zulassung.mjs';
+import { qrSvg } from './qrcode.mjs';
 
 /* a start code as module konto issues it: 16 random bytes, base64url */
 export const ANM_STARTCODE = /^[A-Za-z0-9_-]{22}$/;
@@ -160,7 +170,14 @@ export const anmName = (text) => kontoName(text);
 export async function anmVersuch({ zugang, anmeldename, text }) {
   const n = kontoName(anmeldename), code = String(text === undefined || text === null ? '' : text).trim();
   if (n && anmIstStartcode(code) && (await zugang.directory(await kontoLookup(n))) === null) return { erstesMal: { anmeldename: n, code } };
-  return { konto: await anmelden({ zugang, anmeldename, passwort: text }) };
+  try {
+    return { konto: await anmelden({ zugang, anmeldename, passwort: text }) };
+  } catch (err) {
+    // a child's "new password" (task "Einladungen"): its account exists, the start code is not its password - the start
+    // code itself decides next (konto.ersteAnmeldung: a wrong one -> "startcode-ungueltig")
+    if (err && err.code === 'anmeldung' && n && anmIstStartcode(code)) return { erstesMal: { anmeldename: n, code } };
+    throw err;
+  }
 }
 /* first login with the start code (module konto: ersteAnmeldung); fingerabdruck only if the QR code / link had one */
 export function anmErstesMal({ zugang, code, passwort, fingerabdruck = null, now }) {
@@ -169,6 +186,50 @@ export function anmErstesMal({ zugang, code, passwort, fingerabdruck = null, now
 /* "Forgot your password?" (module konto: wiederherstellen) */
 export function anmWiederherstellen({ zugang, anmeldename, code, neuesPasswort }) {
   return wiederherstellen({ zugang, anmeldename, code, neuesPasswort });
+}
+
+/* ---------- invitations, devices, new keys (task "Einladungen - Oberflaeche") ---------- */
+/* one sync of this device with everything its opened accounts are connected to (module einladung) */
+export function anmAbgleich({ ablage, zugang, konten, now, heute, geraetName }) {
+  return abgleichMitVerbindungen({ ablage, zugang, konten, now, heute, ...(geraetName ? { geraetName } : {}) });
+}
+/* families, children, other parents, open invitations of an opened account (from the logs on this device) */
+export const anmVerbindungen = ({ ablage, konto, now }) => verbindungen({ ablage, konto, now });
+/* a free login name for a child's first name */
+export const anmNameVorschlag = ({ zugang, anzeigename }) => anmeldenameVorschlag({ zugang, anzeigename });
+/* start QR code for a new child / invitation of the second parent / new password of a child / withdraw */
+export const anmKindAnlegen = ({ zugang, ablage, konto, anmeldename, anzeigename, now }) => kindAnlegen({ zugang, ablage, konto, anmeldename, anzeigename, now });
+export const anmElternEinladen = ({ zugang, ablage, konto, anmeldename, now }) => elternteilEinladen({ zugang, ablage, konto, anmeldename, now });
+export const anmKindNeu = ({ zugang, ablage, konto, kind, now }) => kindPasswortNeu({ zugang, ablage, konto, kind, now });
+export const anmZurueckziehen = ({ zugang, ablage, konto, id, now }) => einladungZurueckziehen({ zugang, ablage, konto, id, now });
+/* "Meine Geraete" and "Geraet entfernen" (module geraete) */
+export const anmGeraete = ({ ablage, person, now }) => meineGeraete({ ablage, person, now });
+export const anmGeraetEntfernen = (o) => geraetEntfernen(o);
+/* "Schluessel erneuern" (grown-ups: current and a new password) */
+export const anmErneuern = ({ zugang, anmeldename, passwort, neuesPasswort }) => schluesselErneuern({ zugang, anmeldename, passwort, neuesPasswort });
+/* the 6 words of public keys (shown next to a QR code: the other side compares them) */
+export const anmFingerabdruck = (pub) => kontoFingerabdruck(pub);
+/* the QR code of a start link as SVG */
+export const anmQr = (text, titel) => qrSvg(text, { ecc: 'M', rand: 4, titel });
+/* may a child practise on this device? Only once a parent's device took it in: the child holds the current key of its
+   learning area (concept 10.3; before that its events would come before the device is registered there). Reads the key
+   entries of that area once (one request). -> true / false; a storage error -> false (try again later) */
+export async function anmKindBereit({ ablage, zugang, konto, now }) {
+  if (!konto || konto.art !== 'child') return true;
+  const k = verbindungen({ ablage, konto, now }).kinder.find((c) => c.id === konto.kennung);
+  if (!k) return false;
+  const area = bereichName('kind:lern', konto.kennung);
+  let st = null;
+  try { st = JSON.parse(ablage.getItem(GERAETEABGLEICH_SPEICHER.staende) || '{}')[area]; } catch (e) { st = null; }
+  const log = st && Array.isArray(st.log) ? st.log : [];
+  try {
+    const zul = await zulassungAus(log, { area, anker: k.anker, now });
+    const s = await schluesselLesen(zugang, area, { ich: konto.kennung, meineSchluessel: konto.schluessel, mitglieder: aktiveMitglieder(zul) });
+    return !!(s.aktuell && s.keys.has(s.aktuell));
+  } catch (err) {
+    if (err && typeof err.code === 'string') return false;
+    throw err;
+  }
 }
 
 /* ---------- guides ---------- */

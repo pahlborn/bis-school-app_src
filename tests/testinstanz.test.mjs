@@ -20,6 +20,7 @@ import { woerterLesen } from '../werkzeug/kern.mjs';
 import { appLesen } from '../werkzeug/module.mjs';
 import { GITHUB_TOKEN_SCHLUESSEL, githubSpeicher } from '../src/module/github.mjs';
 import { startcodeAusstellen, ersteAnmeldung, kontoLookup } from '../src/module/konto.mjs';
+import { kindAnlegen, abgleichMitVerbindungen } from '../src/module/einladung.mjs';
 import { appSandbox } from './app-sandbox.mjs';
 import { browserStarten, LADEZEIT_MS } from './app-hilfen.mjs';
 import { githubNachbau } from './module/github-nachbau.mjs';
@@ -34,7 +35,7 @@ let ERSATZ, ZIEL, GEBAUT, APP, MANIFEST, KONTEXT;
 const TOKEN = 'github_pat_TESTINSTANZ_' + 'x7'.repeat(20);       // nur im Nachbau gueltig
 const REPO = TESTINSTANZ.repoDaten, GITHUB = 'https://api.github.com';
 const SPEICHER_ZEILE = 'const KONTO_SPEICHER=' + JSON.stringify(SPEICHER_TESTINSTANZ) + ';';
-let N, CODES;                                                    // GitHub-Nachbau; Startcodes der Testkinder
+let N, CODES, ELTERN;                                            // GitHub-Nachbau; Startcodes der Testkinder; Elterngeraet (ohne App)
 
 before(async () => {
   ERSATZ = await ersatzLesen();
@@ -49,8 +50,16 @@ before(async () => {
   const jetzt = Date.now();
   const admin = await ersteAnmeldung({ zugang: z, code: (await startcodeAusstellen({ zugang: z, aussteller: null, anmeldename: 'admin', art: 'admin', now: jetzt })).code, passwort: 'Werkzeug-Admin-Passwort-1', now: jetzt, runden: 1000 });
   const peter = await ersteAnmeldung({ zugang: z, code: (await startcodeAusstellen({ zugang: z, aussteller: admin, anmeldename: 'peter.a', art: 'parent', now: jetzt })).code, passwort: 'Werkzeug-Eltern-Passwort-1', now: jetzt, runden: 1000 });
+  // Aufgabe "Einladungen - Oberflaeche": ein Kind uebt erst, wenn ein Elterngeraet es aufgenommen hat - die Kinder legt
+  // Peters Geraet (ohne App, Modul einladung) an; ELTERN.sync() nimmt sie auf, waehrend sie warten
+  const m = new Map(), a = { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => { m.set(k, String(v)); } };
+  a.setItem('bq2_evDevice', JSON.stringify('d_Werkzeug2'));
+  const zP = githubSpeicher({ repo: REPO, token: TOKEN, basis: N.basis }).geraet('d_Werkzeug2');
+  ELTERN = { sync: () => abgleichMitVerbindungen({ ablage: a, zugang: zP, konten: [peter], now: Date.now(), heute: new Date().toISOString().slice(0, 10) }) };
+  await ELTERN.sync();
   CODES = {};
-  for (const n of ['mia.a', 'mia.b', 'mia.c']) CODES[n] = (await startcodeAusstellen({ zugang: z, aussteller: peter, anmeldename: n, art: 'child', now: jetzt })).code;
+  for (const n of ['mia.a', 'mia.b', 'mia.c']) CODES[n] = (await kindAnlegen({ zugang: zP, ablage: a, konto: peter, anmeldename: n, anzeigename: '', now: Date.now() })).code;
+  await ELTERN.sync();
 });
 after(async () => { fs.rmSync(ZIEL, { recursive: true, force: true }); await N?.schliessen(); });
 
@@ -194,6 +203,9 @@ async function kindAnmeldenSandbox(S, name, code, { bisPasswort = false } = {}) 
   await warten(() => im('#setPwForm'), '#setPwForm');
   klick('#pwUse'); absenden('#setPwGo');
   if (bisPasswort) { await warten(() => { const m = im('#setPwMsg'); return m && m.textContent && !/moment/i.test(m.textContent); }, 'Meldung'); return im('#setPwMsg').textContent; }
+  // das Kind wartet, bis Peters Geraet es aufgenommen hat (Konzept 10.3)
+  await warten(() => im('#kidWait') || im('#welcomeGo'), '#kidWait');
+  if (S.lauf(() => !!im('#kidWait'))) { await ELTERN.sync(); klick('#kidWaitAgain'); }
   await warten(() => im('#welcomeGo'), '#welcomeGo');
   klick('#welcomeGo');
   return null;
@@ -306,6 +318,9 @@ test('Browser: die gebaute Testinstanz startet mit der Anmeldung, Zugang einmal 
     await page.waitForSelector('#setPwForm', { timeout: 30000 });
     await page.locator('#pwUse').click();
     await page.locator('#setPwGo').click();
+    // das Kind wartet, bis Peters Geraet es aufgenommen hat; danach geht es von selbst weiter (Takt der App)
+    await page.waitForSelector('#kidWait', { timeout: 30000 });
+    await ELTERN.sync();
     await page.locator('#welcomeGo').click({ timeout: 30000 });
     await page.waitForSelector('#home h1');
     await page.locator('#subjects button.subject').first().click();
