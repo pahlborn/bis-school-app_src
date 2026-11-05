@@ -5316,8 +5316,16 @@ function kontoNachAbgleich(r, vorher){
   // task "Familienfassung bauen": a child deleted by a parent (its data already left this device - module einladung) and
   // accounts no longer in the storage: off this device too (list, key copy, session, recordings); whoever of them is
   // logged in here now is logged out
-  const weg=[...new Set([...(r.geloescht||[]), ...(r.kontoGeloescht||[])])];
-  for(const id of weg){ const a=accByRef({id}); if(a && a.role==='student' && (r.geloescht||[]).includes(id)) melde('d:'+id, 'info', de?`ℹ️ ${kontoKindName(id, a.user)} wurde gelöscht.`:`ℹ️ ${kontoKindName(id, a.user)} was deleted.`); kontoLokalWeg(id); }
+  // An account deleted on another device that this device already knew: the module reports its areas as gone (fehler
+  // "geloescht") - a grown-up's own area, a child's learning area, the family area (the last parent deleted his account
+  // before this device read that the children were taken out). Their data leave this device as well.
+  const b=(r.bericht && r.bericht.bereiche)||{}, gone=a=>!!(b[a] && b[a].fehler==='geloescht'), still=!kontoInRunde();
+  const kontoWeg=still ? [...kontoOffen.keys()].filter(id=>kontoOffen.get(id).art!=='child' && gone('person:'+id)) : [];
+  const kindWeg=still ? Object.keys(b).filter(a=>a.startsWith('kind:lern:') && gone(a)).map(a=>a.slice(10)) : [];
+  for(const kid of kindWeg) try{ anmKindLokalEntfernen({ablage:localStorage, kind:kid}); }catch(e){ kontoFehlerListe.push('entfernen: '+String(e&&e.message||e)); }
+  for(const f of still ? Object.keys(b).filter(a=>a.startsWith('familie:') && gone(a)).map(a=>a.slice(8)) : []) kontoFamilieWeg(f);
+  const weg=[...new Set([...(r.geloescht||[]), ...(r.kontoGeloescht||[]), ...kindWeg, ...kontoWeg])];
+  for(const id of weg){ const a=accByRef({id}); if(a && a.role==='student' && !kontoWeg.includes(id) && !(r.kontoGeloescht||[]).includes(id)) melde('d:'+id, 'info', de?`ℹ️ ${kontoKindName(id, a.user)} wurde gelöscht.`:`ℹ️ ${kontoKindName(id, a.user)} was deleted.`); kontoLokalWeg(id); }
   const vorherKinder=kontoKinderText();
   kontoKontenAuffrischen();
   if(weg.length){
@@ -5594,14 +5602,24 @@ function kontoLokalWeg(id, familie){
   const sp=store.get('sessionPrev',null); if(sp && sp.id===id) store.del('sessionPrev');
   const as=store.get('adultSession',null); if(as && as.id===id) store.del('adultSession');
   const here=store.get('kidsHere',[]); if(Array.isArray(here) && here.includes(id)) store.set('kidsHere', here.filter(x=>x!==id));
+  const seen=store.get('lastSeen',{}); if(seen && typeof seen==='object' && Object.prototype.hasOwnProperty.call(seen,id)){ delete seen[id]; store.set('lastSeen',seen); }
   const keys=[]; try{ for(let i=0;i<localStorage.length;i++) keys.push(localStorage.key(i)); }catch(e){}
   for(const k of keys) if(k && (k.startsWith('bq2_'+id+'__') || k==='bq2_pw_'+id)) try{ localStorage.removeItem(k); }catch(e){}
-  const ohne=(lk, f)=>{ try{ const o=JSON.parse(localStorage.getItem(lk)||'null'); if(o && typeof o==='object' && !Array.isArray(o)){ const n=Object.keys(o).length; f(o); if(Object.keys(o).length!==n) localStorage.setItem(lk, JSON.stringify(o)); } }catch(e){} };
-  ohne('bq2_personEvents', o=>{ delete o[id]; });
-  ohne('bq_abgleich', o=>{ delete o['person:'+id]; if(familie) delete o['familie:'+familie]; });
-  if(familie) ohne('bq2_familyEvents', o=>{ delete o[familie]; });
+  kontoOhne('bq2_personEvents', o=>{ delete o[id]; });
+  kontoOhne('bq_abgleich', o=>{ delete o['person:'+id]; });
+  kontoOhneEintraege('bq_abgleichVerworfen', v=>v.bereich==='person:'+id);
+  if(familie) kontoFamilieWeg(familie);
   if(typeof indexedDB!=='undefined') try{ indexedDB.deleteDatabase('bq2_audio__'+id); }catch(e){}
 }
+/* a family area gone (the last parent deleted his account): its device state and log leave this device */
+function kontoFamilieWeg(f){
+  kontoOhne('bq_abgleich', o=>{ delete o['familie:'+f]; });
+  kontoOhne('bq2_familyEvents', o=>{ delete o[f]; });
+  kontoOhneEintraege('bq_abgleichVerworfen', v=>v.bereich==='familie:'+f);
+}
+/* device storage helpers: an object without some keys / a list without some entries (written only if something went) */
+function kontoOhne(lk, f){ try{ const o=JSON.parse(localStorage.getItem(lk)||'null'); if(o && typeof o==='object' && !Array.isArray(o)){ const n=Object.keys(o).length; f(o); if(Object.keys(o).length!==n) localStorage.setItem(lk, JSON.stringify(o)); } }catch(e){} }
+function kontoOhneEintraege(lk, weg){ try{ const l=JSON.parse(localStorage.getItem(lk)||'null'); if(Array.isArray(l)){ const n=l.filter(v=>!(v && typeof v==='object' && weg(v))); if(n.length!==l.length) localStorage.setItem(lk, JSON.stringify(n)); } }catch(e){} }
 function kontoBinden(body){
   const de=PL()==='de', q=s=>body.querySelector(s), an=(s,f)=>{ const e=q(s); if(e) e.addEventListener('click',f); }, form=(s,f)=>{ const e=q(s); if(e) e.addEventListener('submit',ev=>{ ev.preventDefault(); if(parentAccess) f(); }); };
   an('#parentLeave',()=>{ if(parentAccess) kontoBereichVerlassen(); });

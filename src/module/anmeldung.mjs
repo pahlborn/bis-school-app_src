@@ -26,7 +26,7 @@
 
 import { KONTO_ARTEN, kontoName, kontoLookup, ersteAnmeldung, anmelden, wiederherstellen, schluesselErneuern, kontoFingerabdruck } from './konto.mjs';
 import { githubSpeicher, githubTokenLesen, githubTokenSpeichern } from './github.mjs';
-import { verbindungen, kindAnlegen, elternteilEinladen, kindPasswortNeu, einladungZurueckziehen, abgleichMitVerbindungen, anmeldenameVorschlag } from './einladung.mjs';
+import { verbindungen, kindAnlegen, elternteilEinladen, kindPasswortNeu, einladungZurueckziehen, abgleichMitVerbindungen, anmeldenameVorschlag, kindLokalEntfernen } from './einladung.mjs';
 import { meineGeraete, geraetEntfernen } from './geraete.mjs';
 import { GERAETEABGLEICH_SPEICHER } from './geraeteabgleich.mjs';
 import { bereichName, schluesselLesen } from './bereiche.mjs';
@@ -242,13 +242,20 @@ const anmEvents = (st) => (st && Array.isArray(st.log) ? st.log.map((x) => x && 
    ones of the order of things (an author or device whose admission comes later, e.g. right after "Schluessel erneuern";
    an older stand) or of a newer app version (a format this one does not know yet).
      forged:          unterschrift, eintrag-passt-nicht, entschluesseln, geraet-fremd
-     without a right: nicht-mitglied, rolle-darf-nicht, bereich-falsch, nach-entfernung (a removed device, old keys)
+     without a right: nicht-mitglied, rolle-darf-nicht, bereich-falsch, nach-entfernung (a removed device, old keys),
+                      geraet-nicht-angemeldet from a device that was removed (the bundle "<device>/<n>" of a device with a
+                      device_removed this device knows - depending on the order the admission drops a removed device's
+                      entry with this reason before the check for nach-entfernung; found in the full test run, 05.11.)
    -> count */
 export const ANM_VERWORFEN_ZAEHLT = Object.freeze(['unterschrift', 'eintrag-passt-nicht', 'entschluesseln', 'geraet-fremd', 'nicht-mitglied', 'rolle-darf-nicht', 'bereich-falsch', 'nach-entfernung']);
 export function anmVerworfen(ablage) {
   try {
     const l = JSON.parse(ablage.getItem(GERAETEABGLEICH_SPEICHER.verworfen) || '[]');
-    return Array.isArray(l) ? l.filter((v) => v && typeof v === 'object' && ANM_VERWORFEN_ZAEHLT.includes(v.grund)).length : 0;
+    if (!Array.isArray(l)) return 0;
+    const entfernt = new Set();
+    for (const st of Object.values(anmStaende(ablage))) for (const e of anmEvents(st)) if (e.type === 'device_removed' && typeof e.payload.device === 'string') entfernt.add(e.payload.device);
+    const vomEntfernten = (v) => v.grund === 'geraet-nicht-angemeldet' && typeof v.kennung === 'string' && entfernt.has(v.kennung.split('/')[0]);
+    return l.filter((v) => v && typeof v === 'object' && (ANM_VERWORFEN_ZAEHLT.includes(v.grund) || vomEntfernten(v))).length;
   } catch (e) { return 0; }
 }
 /* was this device removed (module geraete: device_removed with its id in an area it knows)? */
@@ -277,6 +284,8 @@ export const anmKindExport = ({ ablage, konto, kind, now, heute, sprache }) => k
 export const anmKindLoeschen = ({ ablage, zugang, konto, kind, now, heute, geraetName }) => kindDatenLoeschen({ ablage, zugang, konto, kind, now, heute, ...(geraetName ? { geraetName } : {}) });
 /* delete the own account of a parent, with his password (US12.2) */
 export const anmKontoLoeschen = ({ ablage, zugang, konto, passwort, now, heute, geraetName }) => kontoDatenLoeschen({ ablage, zugang, konto, passwort, now, heute, ...(geraetName ? { geraetName } : {}) });
+/* what this device holds of a child whose areas are gone from the storage (module einladung) */
+export const anmKindLokalEntfernen = ({ ablage, kind }) => kindLokalEntfernen({ ablage, kind });
 /* the school ratings of a child from its log (area schule, school_import; module ableitung) - or null. The family build
    has no SCHOOL_DATA: a child's ratings come into its account (werkzeug/schulbewertungen-uebernehmen.mjs). */
 export const anmSchule = (events, now) => deriveSchool(events, { now });

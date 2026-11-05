@@ -370,6 +370,27 @@ test('Sandbox: gebaute Familienfassung - anmelden, Kind anlegen, ueben, Schulbew
   assert.match(P.S.lauf(() => ueber.innerHTML), /href="https:\/\/github\.com\/pahlborn\/bis-school-app_src\/blob\/main\/docs\/endgueltig-loeschen\.md"/);
   assert.ok(fs.existsSync(path.join(WURZEL, 'docs', 'endgueltig-loeschen.md')), 'die verlinkte Anleitung gibt es');
 
+  // zweites Kind Ben (eigenes Geraet, uebt) und Peters zweites Geraet (Name + Passwort), das Bens Stand kennt
+  P.einstellungen('familie');
+  P.klick('#kKindAnlegen'); await P.wartenAuf('#kKindForm');
+  P.tippe('#kKindName', 'Ben'); P.absenden('#kKindWeiter');
+  await P.wartenAuf('#kKind2Form'); P.tippe('#kKindLogin', 'ben'); P.absenden('#kKindGo');
+  await P.wartenAuf('#kQr');
+  const B = geraet(t, W, { name: 'Bens Tablet', hash: link(anmStartlink('http://127.0.0.1/', { anmeldename: 'ben', code: P.im('#kCode').textContent, fingerabdruck: fp })) });
+  B.klick('#roleStudent'); B.absenden('#loginGo');
+  await passwortWaehlen(B);
+  await B.wartenAuf('#kidWait');
+  await W.uhr.vor(1000); await P.sync(); await W.uhr.vor(1000);
+  B.klick('#kidWaitAgain'); await B.wartenAuf('#welcomeGo'); await W.uhr.vor(1000); B.klick('#welcomeGo');
+  P.klick('#kQrFertig');
+  const ben = B.sitzung().id;
+  await runde(B, W); await B.sync(); await W.uhr.vor(1000);
+  const P2 = geraet(t, W, { name: 'Peters iPhone' });
+  P2.klick('#roleAdult'); P2.tippe('#loginUser', 'peter'); P2.tippe('#loginPw', P.pw); P2.absenden('#loginGo');
+  await P2.warten(() => !!P2.S.holen('adultUser'), 'Peter auf dem iPhone');
+  await P2.sync(); await W.uhr.vor(1000); await P2.sync();
+  assert.ok(JSON.parse(P2.S.ablage.get('bqf_' + ben + '__events') || '[]').some((e) => e.type === 'answer'), 'Peters iPhone kennt Bens Stand');
+
   // Mein Konto loeschen (einziger Elternteil): falsches Passwort -> nichts; richtiges -> Familie weg, abgemeldet
   P.einstellungen('familie');
   P.klick('#kKontoLoeschen'); await P.wartenAuf('#kKlForm');
@@ -384,10 +405,25 @@ test('Sandbox: gebaute Familienfassung - anmelden, Kind anlegen, ueben, Schulbew
   assert.equal(await W.speicher.geraet('d_Pruefer').directory(await kontoLookup('peter')), null);
   assert.deepEqual(P.liste(), [], 'Geraeteliste leer');
   assert.deepEqual([...P.S.ablage.keys()].filter((k) => k.includes(P.kennung)), [], 'auf Peters Geraet nichts mehr von ihm');
+  assert.deepEqual(dateienMit(W, ben), [], 'auch Ben ist weg');
+  // Peters iPhone (kannte Familie und Ben, hat das Austragen nie gelesen - der Familienbereich ist schon weg): beim
+  // naechsten Abgleich abgemeldet, nichts mehr von Peter oder Ben auf dem Geraet
+  await W.uhr.vor(MIN); await P2.sync();
+  await P2.warten(() => !P2.S.holen('adultUser') && P2.S.sichtbar('#login'), 'Peters iPhone abgemeldet');
+  const reste = (G, id) => [...G.S.ablage.entries()].filter(([k, v]) => k.includes(id) || String(v).includes(id)).map(([k]) => k);
+  assert.deepEqual(reste(P2, P.kennung), [], 'Peters iPhone: nichts mehr von Peter');
+  assert.deepEqual(reste(P2, ben), [], 'Peters iPhone: nichts mehr von Ben');
+  assert.deepEqual(reste(P, P.kennung).concat(reste(P, kind), reste(P, ben)), [], 'Peters Laptop: nichts mehr');
+  assert.deepEqual(reste(K, kind), [], 'Kathies iPad: nichts mehr von ihr');
+  // Bens Tablet: abgemeldet, Daten und Aufnahmen weg
+  await B.sync();
+  await B.warten(() => B.sitzung() === null && B.S.sichtbar('#login'), 'Ben abgemeldet');
+  assert.deepEqual(reste(B, ben), [], 'Bens Tablet: nichts mehr von ihm');
+  assert.ok(B.idb.geloescht.includes('bqf_audio__' + ben));
 
   // nur bqf_, die alten Eintraege unveraendert; nur GitHub (umgelenkt) und die eigene Seite gefragt
-  nurFamilie(P); nurFamilie(K);
-  for (const G of [P, K]) {
+  nurFamilie(P); nurFamilie(K); nurFamilie(P2); nurFamilie(B);
+  for (const G of [P, K, P2, B]) {
     assert.deepEqual(G.anfragen.filter((u) => !u.startsWith(GITHUB + '/repos/' + REPO + '/') && !u.startsWith('http://127.0.0.1/')), [], G.name + ': nur das Familien-Repo');
     assert.deepEqual(roh(G.S.holen('eventErrors')), [], G.name + ': eventErrors');
     assert.deepEqual(roh(G.S.holen('kontoFehlerListe')), [], G.name + ': kontoFehlerListe');

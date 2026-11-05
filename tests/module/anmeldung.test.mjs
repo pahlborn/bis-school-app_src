@@ -146,6 +146,12 @@ test('Abgleich in der App: Zahl des nicht Uebernommenen; Geraet entfernt? (nur d
   assert.ok(ANM_VERWORFEN_ZAEHLT.every((g) => ABGLEICH_GRUENDE.includes(g)), 'nur Gruende, die es gibt');
   m.set('bq_abgleichVerworfen', JSON.stringify([{ grund: 'autor-unbekannt', typ: 'family_set' }, null, 'x']));
   assert.equal(anmVerworfen(ablage), 0, 'nach "Schluessel erneuern": ein Familien-Eintrag mit autor-unbekannt -> keine Zahl');
+  // geraet-nicht-angemeldet: harmlos (Reihenfolge) - ausser das Buendel kommt von einem entfernten Geraet
+  m.set('bq_abgleichVerworfen', JSON.stringify([{ kennung: 'd_K2/3', grund: 'geraet-nicht-angemeldet' }, { kennung: 'd_K1/1', grund: 'geraet-nicht-angemeldet' }, { grund: 'geraet-nicht-angemeldet' }]));
+  assert.equal(anmVerworfen(ablage), 0, 'kein Geraet entfernt');
+  m.set('bq_abgleich', JSON.stringify({ 'kind:lern:p_k1': { log: [{ event: { type: 'device_removed', payload: { device: 'd_K2' } } }] } }));
+  assert.equal(anmVerworfen(ablage), 1, 'nur das vom entfernten Geraet d_K2');
+  m.delete('bq_abgleich');
   m.set('bq_abgleichVerworfen', 'kaputt'); assert.equal(anmVerworfen(ablage), 0);
   m.set('bq2_evDevice', JSON.stringify('d_A1'));
   const st = (dev) => JSON.stringify({ 'kind:lern:p_k1': { log: [{ event: { type: 'device_added', payload: { device: 'd_A1' } } }, { event: { type: 'device_removed', payload: { device: dev } } }] } });
