@@ -66,6 +66,6 @@
   ],
   "indexedDB": [
     { "key": "bq2_audio", "praefix": true, "bereich": "kind", "abgleich": "lokal", "sicherung": true, "hinweis": "Sprachaufnahmen: nie abgeglichen, aber in der Sicherungsdatei" },
-    { "key": "bq2_konto", "bereich": "geraet", "abgleich": "lokal", "sicherung": false, "hinweis": "Stufe 3b (Anmeldung im Testbau): nicht exportierbare Kopie der Personenschluessel der angemeldeten Personen; weg bei Abmelden; nur Konto-Modus" }
+    { "key": "bq2_konto", "bereich": "geraet", "abgleich": "lokal", "sicherung": false, "hinweis": "Stufe 3b (Anmeldung im Testbau): nicht exportierbare Kopie der Personenschluessel der angemeldeten Personen, dazu Anmeldename, Stand, oeffentliche Schluessel des Ursprungs und - nach der ersten Anmeldung - wohin das Konto gehoert (oeffentliche Schluessel von Familie/Anker); weg bei Abmelden (Schliessen des Elternbereichs laesst sie liegen, Konzept 10.4); nur Konto-Modus" }
   ]
 }

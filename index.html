@@ -260,6 +260,9 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 .whos-here{margin:4px 0 10px}.whos-here .row{flex-wrap:wrap;gap:8px}.pw-suggest{margin:6px 0 10px}.pw-suggest b{font-family:ui-monospace,Menlo,Consolas,monospace;letter-spacing:.02em}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .rec-code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:1.3rem;letter-spacing:.06em;background:var(--soft);border-radius:12px;padding:10px 12px;text-align:center;user-select:all;margin:6px 0}
+/* family, devices, start QR code (test build with accounts; task "Einladungen - Oberflaeche") */
+.kqr svg{display:block;width:min(280px,72vw);height:auto;margin:10px auto;border-radius:8px}.kqr-status{font-weight:700}
+.klist{list-style:none;padding:0;margin:6px 0}.klist li{padding:6px 0;border-bottom:1px solid var(--soft)}.kmeld{margin:6px 0;padding:8px 10px;border-radius:10px;background:var(--soft)}.kmeld-warn{background:#fde8e8}
 .today{display:grid;grid-template-columns:48px 1fr;gap:12px;align-items:center;text-align:left;width:100%;padding:14px 16px;border-radius:20px;border:0;background:var(--w-mix);color:#172033;cursor:pointer;box-shadow:var(--shadow);font:inherit}
 .today:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.12)}
 .today .icon{width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,.45);display:grid;place-items:center}
@@ -4500,6 +4503,11 @@ function settingsSecs(){
   if(canBackup()) s.push(['backup', de?'💾 Sicherung & Daten':'💾 Backup & data', backupHTML()]);
   if(canBackup()) s.push(['grants', de?'🔐 Zugriff & Freigaben':'🔐 Access & grants', grantsHTML()]);
   if(accountsOn() && adultUser && adultUser.admin) s.push(['accounts', de?'🛠 Konten':'🛠 Accounts', accountsAdminHTML()]);
+  // accounts in the storage (test build): family and devices (task "Einladungen - Oberflaeche")
+  if(KONTO_UI && kontoIch()){
+    if(kontoIch().art==='parent') s.push(['family', de?'👪 Familie':'👪 Family', kontoFamilieHTML()]);
+    s.push(['devices', de?'📱 Meine Geräte':'📱 My devices', kontoGeraeteHTML()]);
+  }
   s.push(['aboutapp', de?'ℹ️ Über die App':'ℹ️ About the app', aboutAppHTML()]);
   return s;
 }
@@ -4519,7 +4527,7 @@ function settingsViewHTML(secHTML){
     +secHTML(settingsSecs())+`<p class="pset-end"><button class="btn" id="parentClose2" type="button">${close}</button></p>`;
 }
 /* Routes (concept 5.7): #eltern, #eltern/einstellungen[/<section>], #eltern/hilfe. Browser back leaves ⚙ and ?. */
-const SET_ROUTES={kind:'settings', sicherung:'backup', freigaben:'grants', konten:'accounts', ueber:'aboutapp'};
+const SET_ROUTES={kind:'settings', sicherung:'backup', freigaben:'grants', konten:'accounts', ueber:'aboutapp', familie:'family', geraete:'devices'};
 const VIEW_HASH={settings:'#eltern/einstellungen', help:'#eltern/hilfe'};
 let pviewPushed=false, pendingRoute=null;   // pendingRoute: a route that needs the login first (kept through parentLock)
 function parentRoute(){
@@ -4576,7 +4584,8 @@ function renderSheets(){
   const body=$('#aboutBody'), lang=PL(), T=PT[lang], de=lang==='de', teacher=isTeacher(), open=state.popen||(state.popen=[]), kidOk=!accountsOn() || !!viewedKid();
   const secHTML = list => '<div class="psecs">'+list.map(([id,title,b])=>`<details class="psec" data-psec="${id}"${open.includes(id)?' open':''}><summary>${title}</summary><div class="psec-body">${b}</div></details>`).join('')+'</div>';
   let html=parentHeaderHTML();
-  if(state.pview==='settings') html+=settingsViewHTML(secHTML);
+  if(KONTO_UI && kontoBlatt) html+=kontoBlattHTML();   // a step of family/devices (task "Einladungen - Oberflaeche")
+  else if(state.pview==='settings') html+=settingsViewHTML(secHTML);
   else if(state.pview==='help') html+=helpViewHTML();
   else {
     html+=state.psubj ? parentSubjectHTML(state.psubj) : parentHomeHTML();
@@ -4617,6 +4626,7 @@ function renderSheets(){
   body.querySelectorAll('[data-migrretry]').forEach(b=>b.addEventListener('click',()=>{ try{ localStorage.removeItem('bq2_migr'); }catch(e){} location.reload(); }));
   bindGrants(body);
   bindParentSettings();
+  if(KONTO_UI) kontoBinden(body);
 }
 
 /* ---------- about ---------- */
@@ -4743,7 +4753,7 @@ function parentHeaderHTML(){
   // Concept "Elternbereich" 5.1 (B1): child, flags, ? help, ⚙ settings, log out. The version is in ⚙ "About the app",
   // test children are chosen in the child list (B5).
   const onSet=state.pview==='settings', onHelp=state.pview==='help';
-  let h=`<header class="phdr"><div class="phdr-row"><span class="phdr-who">👪 ${who}</span>${kidChip}<span class="phdr-act">${flagsHTML()}<button type="button" class="btn small phdr-icon${onHelp?' primary':''}" id="pHelp" aria-label="${de?'Hilfe':'Help'}" title="${de?'Hilfe':'Help'}" aria-pressed="${onHelp}">?</button><button type="button" class="btn small phdr-icon${onSet?' primary':''}" id="pSettings" aria-label="${de?'Einstellungen':'Settings'}" title="${de?'Einstellungen':'Settings'}" aria-pressed="${onSet}">⚙️</button><button class="btn small" id="parentClose" type="button">${close}</button></span></div>`;
+  let h=`<header class="phdr"><div class="phdr-row"><span class="phdr-who">👪 ${who}</span>${kidChip}<span class="phdr-act">${flagsHTML()}<button type="button" class="btn small phdr-icon${onHelp?' primary':''}" id="pHelp" aria-label="${de?'Hilfe':'Help'}" title="${de?'Hilfe':'Help'}" aria-pressed="${onHelp}">?</button><button type="button" class="btn small phdr-icon${onSet?' primary':''}" id="pSettings" aria-label="${de?'Einstellungen':'Settings'}" title="${de?'Einstellungen':'Settings'}" aria-pressed="${onSet}">⚙️</button>${KONTO_UI?`<button class="btn small" id="parentLeave" type="button">${de?'Schließen':'Close'}</button>`:''}<button class="btn small" id="parentClose" type="button">${close}</button></span></div>`;
   if(accountsOn() && kid && isTestUser(kid)) h+=`<div class="phdr-row phdr-test">🧪 <b>${de?'Hier stehen Testdaten.':'You are looking at test data.'}</b><button type="button" class="btn small primary" id="pPlayTest">▶ ${de?'Als Testkind spielen':'Play as test child'}</button>${store.get('sessionPrev',null)?`<button type="button" class="btn small" id="pRealData">${de?'Zurück zu echten Daten':'Back to real data'}</button>`:''}</div>`;
   return h+'</header>';
 }
@@ -4887,7 +4897,8 @@ function renderLogin(role){
     // the version in short form on the login page (Peter, 01.11.)
     b.innerHTML=`<h2>${T.who}</h2><div class="login-roles"><button class="btn primary" id="roleStudent" type="button">${T.student}</button><button class="btn" id="roleAdult" type="button">${T.adult}</button></div>${KONTO_UI?kontoTokenHTML()+LOGIN_HELP_KONTO:LOGIN_HELP}<p class="small app-version" id="loginVersion">${esc(versionLabel())}</p>`;
     $('#roleStudent').addEventListener('click',()=>renderLogin('student'));
-    $('#roleAdult').addEventListener('click',()=>renderLogin('adult'));
+    // accounts in the storage: a grown-up who only closed the grown-ups area is still logged in (concept 10.4)
+    $('#roleAdult').addEventListener('click',()=>{ if(KONTO_UI && adultResume()) return; renderLogin('adult'); });
     if(KONTO_UI) kontoTokenVerbinden();
     return;
   }
@@ -4945,8 +4956,8 @@ function renderWelcome(u){
   $('#loginBody').innerHTML=kid
     ? `<h2>Welcome to Big Quest! 🎉</h2><ul class="welcome"><li>🎯 <b>Practise Today</b> gives you 8 questions. Or pick a subject.</li><li>💡 <b>A mistake?</b> You get a tip and try again. “Show me how” gives you a tip any time.</li><li>⭐ Every solved task gives a star. Your <b>learning tree</b> grows on every practice day.</li><li>❓ <b>Help</b> is at the bottom of the start page. ⓘ explains things.</li><li>🔒 You stay logged in on this iPad. Tap <b>Log out</b> if someone else wants to use it.</li></ul><button class="btn primary" id="welcomeGo" type="button">Let’s go!</button>`
     : de
-    ? `<h2>Willkommen, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 <b>Daten nur auf diesem Gerät:</b> Den Lernstand des Kindes sehen Sie auf dem Gerät, auf dem es übt.</li><li>🔑 ${KONTO_UI?'Ihr Passwort gilt auf allen Ihren Geräten: dort mit Benutzername und Passwort anmelden. Passwort vergessen? Dann hilft Ihr Wiederherstellungscode.':'Ihr Passwort gilt nur auf diesem Gerät. Auf einem weiteren Gerät einmal mit dem Startcode anmelden.'}</li><li>🚪 Sie bleiben angemeldet, bis Sie <b>Abmelden</b> tippen. Auf dem Gerät des Kindes nach dem Nachsehen bitte abmelden.</li><li>📖 Die Hilfe finden Sie oben unter <b>?</b>, Sicherung und Freigaben unter <b>⚙️</b>. ⓘ erklärt einzelne Abschnitte.</li></ul><button class="btn primary" id="welcomeGo" type="button">Los geht’s</button>`
-    : `<h2>Welcome, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 <b>Data only on this device:</b> you see your child’s progress on the device where they practice.</li><li>🔑 ${KONTO_UI?'Your password works on all your devices: log in there with your user name and password. Forgot it? Your recovery code helps.':'Your password works only on this device. On another device, log in once with the start code.'}</li><li>🚪 You stay logged in until you tap <b>Log out</b>. On your child’s device, please log out when you are done.</li><li>📖 Help is at the top under <b>?</b>, backup and grants under <b>⚙️</b>. ⓘ explains each section.</li></ul><button class="btn primary" id="welcomeGo" type="button">Let’s go</button>`;
+    ? `<h2>Willkommen, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 ${KONTO_UI?'<b>Auf allen Ihren Geräten:</b> Der Lernstand Ihrer Kinder kommt nach dem Abgleich auf jedes Gerät, auf dem Sie angemeldet sind.'+(u.role==='parent' && !u.admin?' Kinder legen Sie unter <b>⚙️ → „👪 Familie“</b> an.':''):'<b>Daten nur auf diesem Gerät:</b> Den Lernstand des Kindes sehen Sie auf dem Gerät, auf dem es übt.'}</li><li>🔑 ${KONTO_UI?'Ihr Passwort gilt auf allen Ihren Geräten: dort mit Benutzername und Passwort anmelden. Passwort vergessen? Dann hilft Ihr Wiederherstellungscode.':'Ihr Passwort gilt nur auf diesem Gerät. Auf einem weiteren Gerät einmal mit dem Startcode anmelden.'}</li><li>🚪 Sie bleiben angemeldet, bis Sie <b>Abmelden</b> tippen. Auf dem Gerät des Kindes nach dem Nachsehen bitte abmelden.</li><li>📖 Die Hilfe finden Sie oben unter <b>?</b>, Sicherung und Freigaben unter <b>⚙️</b>. ⓘ erklärt einzelne Abschnitte.</li></ul><button class="btn primary" id="welcomeGo" type="button">Los geht’s</button>`
+    : `<h2>Welcome, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 ${KONTO_UI?'<b>On all your devices:</b> after the sync your children’s progress is on every device where you are logged in.'+(u.role==='parent' && !u.admin?' Add children under <b>⚙️ → “👪 Family”</b>.':''):'<b>Data only on this device:</b> you see your child’s progress on the device where they practice.'}</li><li>🔑 ${KONTO_UI?'Your password works on all your devices: log in there with your user name and password. Forgot it? Your recovery code helps.':'Your password works only on this device. On another device, log in once with the start code.'}</li><li>🚪 You stay logged in until you tap <b>Log out</b>. On your child’s device, please log out when you are done.</li><li>📖 Help is at the top under <b>?</b>, backup and grants under <b>⚙️</b>. ⓘ explains each section.</li></ul><button class="btn primary" id="welcomeGo" type="button">Let’s go</button>`;
   $('#welcomeGo').addEventListener('click',()=>loginDone(u,true));
   $('#welcomeGo').focus();
 }
@@ -4962,8 +4973,8 @@ function loginDone(u, welcomed){
    ups have a recovery code. The device keeps: the list of accounts that logged in here (bq2_kontoListe: id, login name, kind
    of account - no password, no key) and a copy of the person keys that cannot be exported (IndexedDB bq2_konto) until
    "Log out". Children, partners and grants come with task "Einladungen"; syncing with the storage is a task of its own. */
-const kontoOffen=new Map(), kontoFehlerListe=[];
-let kontoZug=null, kontoLinkFp=null;
+const kontoOffen=new Map(), kontoFehlerListe=[], kontoAlt=new Map(), kontoErinnert=new Set();
+let kontoZug=null, kontoLinkFp=null, kontoBlatt=null;
 function kontoListe(){ try{ return anmListe(JSON.parse(localStorage.getItem('bq2_kontoListe')||'[]')); }catch(e){ return []; } }
 /* the accounts of this device in the form of konten.json (called once at the start, for APP_ACCOUNTS) */
 function kontoKontenStart(){
@@ -5018,7 +5029,10 @@ async function kontoLoginAbsenden(role, name, pw){
     const k=v.konto;
     if((k.art==='child')!==(role==='student')) return kontoFalsch(T, msg, btn);   // the other role's account: like a wrong password
     loginFails=0;
-    loginDone(await kontoAngemeldet(k));
+    const a=await kontoAngemeldet(k);
+    // a child practises only once a parent's device took it in (task "Einladungen"); grown-ups sync in the background
+    if(k.art==='child') return kontoKindStart(a, k.kennung, ()=>loginDone(a));
+    loginDone(a); kontoAbgleich();
   }catch(err){
     if(err && err.code==='anmeldung') return kontoFalsch(T, msg, btn);
     msg.textContent=kontoFehlerText(err, T, role==='adult'); btn.disabled=false;
@@ -5033,8 +5047,10 @@ async function kontoErstesPasswort(u, pw){
     const k=await anmErstesMal({zugang:z, code:u.konto.code, passwort:pw, fingerabdruck:u.konto.fp, now:Date.now()});
     kontoLinkFp=null; loginFails=0;
     const a=await kontoAngemeldet(k);
+    if(k.art==='child') return kontoKindStart(a, k.kennung, ()=>renderWelcome(a));
     if(k.wiederherstellungscode) renderKontoCode(a, k.wiederherstellungscode, ()=>renderWelcome(a));
     else renderWelcome(a);
+    kontoAbgleich();   // a new grown-up: the first sync notes his family (module einladung) - in the background
   }catch(err){ msg.textContent=kontoFehlerText(err, T, adult); btn.disabled=false; }
 }
 /* an opened account (module konto) is logged in on this device: device list, accounts of the app, key copy */
@@ -5045,22 +5061,35 @@ async function kontoAngemeldet(k){
   if(i<0) APP_ACCOUNTS.users.push(u); else APP_ACCOUNTS.users.splice(i,1,u);
   // siblings on one device: only the child logged in keeps its key here (concept 10.4)
   if(k.art==='child') for(const [id,o] of [...kontoOffen]) if(o.art==='child' && id!==k.kennung) kontoAbmelden(id);
-  kontoOffen.set(k.kennung,{art:k.art, pub:k.pub, schluessel:k.schluessel});
-  try{ await kontoIdbTun('readwrite', s=>s.put({kennung:k.kennung, art:k.art, pub:k.pub, schluessel:k.schluessel})); }catch(err){ kontoFehlerListe.push('sichern: '+String(err&&err.message||err)); }
+  await kontoMerken(k);
   return u;
 }
-/* the recovery code (grown-ups): shown once, saved as an own entry in the password manager and as a file (concept 10.6) */
-function renderKontoCode(a, code, weiter){
-  const de=store.get('parentLang','de')!=='en';
-  $('#loginBody').innerHTML=`<h2>${de?'Ihr Wiederherstellungscode':'Your recovery code'}</h2><p class="small">${de?'Mit diesem Code wählen Sie ein neues Passwort, falls Sie Ihres vergessen. Er wird nur jetzt angezeigt. Bitte sichern Sie ihn – im Passwortspeicher und zusätzlich als Datei.':'With this code you choose a new password if you forget yours. It is shown only now. Please save it – in your password manager and also as a file.'}</p><p class="rec-code" id="recCode">${esc(code)}</p><form id="recForm" class="login-form"><div class="field"><label for="recUser">${de?'Eintrag im Passwortspeicher':'Entry in the password manager'}</label><input id="recUser" name="username" autocomplete="username" value="${esc(anmCodeEintrag(a.user, de?'de':'en'))}" readonly></div><div class="field"><label for="recPw">${de?'Wiederherstellungscode':'Recovery code'}</label><input id="recPw" name="password" type="password" autocomplete="new-password" value="${esc(code)}" readonly></div><button class="btn primary" id="recSave" type="submit">🔑 ${de?'Im Passwortspeicher sichern':'Save in the password manager'}</button></form><button class="btn" id="recFile" type="button">📄 ${de?'Als Datei sichern':'Save as a file'}</button><p id="recMsg" class="small" role="status"></p><button class="btn" id="recGo" type="button">${de?'Weiter':'Continue'}</button>`;
-  // the form leaves the page after "submit": that is when the password manager offers to save the entry
-  $('#recForm').addEventListener('submit',e=>{ e.preventDefault(); const f=$('#loginBody').querySelector('#recForm'); if(!f) return; f.insertAdjacentHTML('afterend',`<p class="small" id="recSaved">✓ ${de?'Ihr Passwortspeicher bietet jetzt an, den Eintrag zu sichern. Falls nicht: den Code als Datei sichern.':'Your password manager now offers to save the entry. If it does not, save the code as a file.'}</p>`); f.remove(); });
-  $('#recFile').addEventListener('click',()=>kontoCodeTeilen(a, code, de));
-  $('#recGo').addEventListener('click',weiter);
-  $('#recSave').focus();
+/* the key copy of an opened account, in memory and in IndexedDB (task "Einladungen - Oberflaeche": with login name, stand
+   and ursprung for the sync; after the first login also where the account belongs - public keys only). alt (right after
+   new keys) stays in memory only, until every area has the new key. */
+async function kontoMerken(k){
+  const vorher=kontoOffen.get(k.kennung)||{};
+  const o={art:k.art, pub:k.pub, schluessel:k.schluessel, anmeldename:k.anmeldename, stand:k.stand, ursprung:k.ursprung||vorher.ursprung||k.pub};
+  if(Object.prototype.hasOwnProperty.call(k,'familie') && Object.prototype.hasOwnProperty.call(k,'anker')) o.einrichten={familie:k.familie||null, anker:k.anker||null};
+  else if(vorher.einrichten) o.einrichten=vorher.einrichten;
+  kontoOffen.set(k.kennung,o);
+  if(k.alt) kontoAlt.set(k.kennung,k.alt); else kontoAlt.delete(k.kennung);
+  try{ await kontoIdbTun('readwrite', s=>s.put({kennung:k.kennung, ...o})); }catch(err){ kontoFehlerListe.push('sichern: '+String(err&&err.message||err)); }
 }
-async function kontoCodeTeilen(a, code, de){
-  const msg=$('#recMsg'), d=anmCodeDatei({anmeldename:a.user, code, datum:dayKey(), sprache:de?'de':'en'}), file=new File([d.text], d.name, {type:'text/plain'});
+/* the recovery code (grown-ups): shown once, saved as an own entry in the password manager and as a file (concept 10.6) */
+/* ziel: where it is shown (the login page; after new keys the grown-ups area, task "Einladungen - Oberflaeche");
+   vorab: a line above the code (e.g. the new fingerprint) */
+function renderKontoCode(a, code, weiter, ziel, vorab){
+  const de=store.get('parentLang','de')!=='en', Z=ziel||$('#loginBody'), q=s=>Z.querySelector(s);
+  Z.innerHTML=`<h2>${de?'Ihr Wiederherstellungscode':'Your recovery code'}</h2>${vorab||''}<p class="small">${de?'Mit diesem Code wählen Sie ein neues Passwort, falls Sie Ihres vergessen. Er wird nur jetzt angezeigt. Bitte sichern Sie ihn – im Passwortspeicher und zusätzlich als Datei.':'With this code you choose a new password if you forget yours. It is shown only now. Please save it – in your password manager and also as a file.'}</p><p class="rec-code" id="recCode">${esc(code)}</p><form id="recForm" class="login-form"><div class="field"><label for="recUser">${de?'Eintrag im Passwortspeicher':'Entry in the password manager'}</label><input id="recUser" name="username" autocomplete="username" value="${esc(anmCodeEintrag(a.user, de?'de':'en'))}" readonly></div><div class="field"><label for="recPw">${de?'Wiederherstellungscode':'Recovery code'}</label><input id="recPw" name="password" type="password" autocomplete="new-password" value="${esc(code)}" readonly></div><button class="btn primary" id="recSave" type="submit">🔑 ${de?'Im Passwortspeicher sichern':'Save in the password manager'}</button></form><button class="btn" id="recFile" type="button">📄 ${de?'Als Datei sichern':'Save as a file'}</button><p id="recMsg" class="small" role="status"></p><button class="btn" id="recGo" type="button">${de?'Weiter':'Continue'}</button>`;
+  // the form leaves the page after "submit": that is when the password manager offers to save the entry
+  q('#recForm').addEventListener('submit',e=>{ e.preventDefault(); const f=q('#recForm'); if(!f) return; f.insertAdjacentHTML('afterend',`<p class="small" id="recSaved">✓ ${de?'Ihr Passwortspeicher bietet jetzt an, den Eintrag zu sichern. Falls nicht: den Code als Datei sichern.':'Your password manager now offers to save the entry. If it does not, save the code as a file.'}</p>`); f.remove(); });
+  q('#recFile').addEventListener('click',()=>kontoCodeTeilen(a, code, de, q('#recMsg')));
+  q('#recGo').addEventListener('click',weiter);
+  q('#recSave').focus();
+}
+async function kontoCodeTeilen(a, code, de, msgEl){
+  const msg=msgEl||$('#recMsg'), d=anmCodeDatei({anmeldename:a.user, code, datum:dayKey(), sprache:de?'de':'en'}), file=new File([d.text], d.name, {type:'text/plain'});
   if(navigator.canShare && navigator.share && navigator.canShare({files:[file]})){
     try{ await navigator.share({files:[file], title:d.name}); msg.textContent=de?'Datei geteilt.':'File shared.'; return; }catch(e){ if(e && e.name==='AbortError'){ msg.textContent=''; return; } }
   }
@@ -5107,11 +5136,331 @@ async function kontoIdbTun(modus, tun){
   finally{ db.close(); }
 }
 async function kontoSchluesselLaden(){
-  try{ for(const x of (await kontoIdbTun('readonly', s=>s.getAll()))||[]) if(x && x.kennung && !kontoOffen.has(x.kennung)) kontoOffen.set(x.kennung,{art:x.art, pub:x.pub, schluessel:x.schluessel}); }
+  try{
+    for(const x of (await kontoIdbTun('readonly', s=>s.getAll()))||[]) if(x && x.kennung && !kontoOffen.has(x.kennung)){
+      const {kennung, ...o}=x; kontoOffen.set(kennung, o);
+    }
+  }
   catch(e){ kontoFehlerListe.push('laden: '+String(e&&e.message||e)); }
 }
-function kontoAbmelden(id){ if(!id) return; kontoOffen.delete(id); kontoIdbTun('readwrite', s=>s.delete(id)).catch(e=>kontoFehlerListe.push('loeschen: '+String(e&&e.message||e))); }
-function kontoAlleAbmelden(){ kontoOffen.clear(); kontoIdbTun('readwrite', s=>s.clear()).catch(e=>kontoFehlerListe.push('loeschen: '+String(e&&e.message||e))); }
+function kontoAbmelden(id){ if(!id) return; kontoOffen.delete(id); kontoAlt.delete(id); kontoIdbTun('readwrite', s=>s.delete(id)).catch(e=>kontoFehlerListe.push('loeschen: '+String(e&&e.message||e))); }
+function kontoAlleAbmelden(){ kontoOffen.clear(); kontoAlt.clear(); kontoBlatt=null; kontoIdbTun('readwrite', s=>s.clear()).catch(e=>kontoFehlerListe.push('loeschen: '+String(e&&e.message||e))); }
+/* ---------- task "Einladungen - Oberflaeche" (05.11.; concept 10.2-10.4, US9.5-US9.7) ----------
+   Test build with accounts only (KONTO_UI). Grown-ups area, ⚙: "👪 Familie" (parents: add a child with a start QR code,
+   invite the second parent, a child's new password, withdraw open invitations) and "📱 Meine Geräte" (devices of the
+   grown-up and - for parents - of each child, remove a device, renew the key). Panels of these steps replace the view
+   (kontoBlatt) until "Back"/"Done". The device syncs with the storage (module anmeldung -> einladung): after the login,
+   when the app starts or comes back, every minute while it is visible, before and after each invitation, and every few
+   seconds while a start QR code is shown. A new child practises only once a parent's device took it in. */
+const KONTO_TAKT_MS=60000, KONTO_QR_MS=4000, KONTO_WARTEN_MS=5000;
+const kontoGesehen=new Set(), kontoMeldungen=[];
+let kontoLauf=null, kontoNochmal=false, kontoBericht=null, kontoTaktAn=false;
+/* an opened account as the modules want it (login name, stand, ursprung; after the first login where it belongs; alt) */
+function kontoKonto(id){
+  const o=kontoOffen.get(id); if(!o) return null;
+  const e=kontoListe().find(x=>x.id===id);
+  const k={kennung:id, art:o.art, anmeldename:o.anmeldename||(e&&e.user)||'', pub:o.pub, schluessel:o.schluessel};
+  if(Number.isInteger(o.stand)) k.stand=o.stand;
+  if(o.ursprung) k.ursprung=o.ursprung;
+  if(o.einrichten){ k.familie=o.einrichten.familie||null; k.anker=o.einrichten.anker||null; }
+  if(kontoAlt.has(id)) k.alt=kontoAlt.get(id);
+  return k;
+}
+/* the grown-up logged in now (with his key on this device), or null */
+function kontoIch(){ const a=adultUser && accByRef({user:adultUser.user}); return a && kontoOffen.has(a.id) ? kontoKonto(a.id) : null; }
+/* a name for this device in "Meine Geräte" ("iPad · Safari") */
+function kontoGeraetName(){
+  const ua=String((navigator && navigator.userAgent)||''), touch=(navigator && navigator.maxTouchPoints)>1;
+  const os=/iPad/.test(ua)||(/Macintosh/.test(ua) && touch)?'iPad':/iPhone/.test(ua)?'iPhone':/Android/.test(ua)?'Android':/Macintosh|Mac OS X/.test(ua)?'Mac':/Windows/.test(ua)?'Windows':/CrOS/.test(ua)?'Chromebook':/Linux/.test(ua)?'Linux':'';
+  const br=/Edg\//.test(ua)?'Edge':/CriOS|Chrome\//.test(ua)?'Chrome':/FxiOS|Firefox\//.test(ua)?'Firefox':/Safari\//.test(ua)?'Safari':'';
+  return [os,br].filter(Boolean).join(' · ');
+}
+/* one sync at a time; a call during a running one asks for one more round and gets the running one */
+function kontoAbgleich(){
+  if(!KONTO_UI || !kontoOffen.size || !kontoZugang()) return Promise.resolve(null);
+  if(kontoLauf){ kontoNochmal=true; return kontoLauf; }
+  const p=kontoAbgleichLauf(); kontoLauf=p;
+  p.then(()=>{ if(kontoLauf===p) kontoLauf=null; });
+  return p;
+}
+async function kontoAbgleichLauf(){
+  let r=null;
+  do{
+    kontoNochmal=false;
+    const z=kontoZugang(), ids=[...kontoOffen.keys()];
+    if(!z || !ids.length) break;
+    try{
+      const vorher=kontoEinladungen();
+      r=await anmAbgleich({ablage:localStorage, zugang:z, konten:ids.map(kontoKonto), now:Date.now(), heute:dayKey(), geraetName:kontoGeraetName()});
+      kontoNachAbgleich(r, vorher);
+    }catch(err){ kontoFehlerListe.push('abgleich: '+String(err&&err.message||err)); r=null; }
+  }while(kontoNochmal);
+  return r;
+}
+/* open invitations of the parents on this device: invitation id -> { name, display, art } */
+function kontoEinladungen(){
+  const m=new Map();
+  for(const id of kontoOffen.keys()){
+    if(kontoOffen.get(id).art!=='parent') continue;
+    try{ for(const o of anmVerbindungen({ablage:localStorage, konto:kontoKonto(id), now:Date.now()}).offen) m.set(o.invite, o); }catch(e){ /* not yet in a family */ }
+  }
+  return m;
+}
+const kontoKinderText = () => JSON.stringify(((APP_ACCOUNTS && APP_ACCOUNTS.users)||[]).map(u=>u.id+':'+(u.kinder||[]).join(',')));
+function kontoNachAbgleich(r, vorher){
+  kontoBericht=r;
+  if(r.inDieApp) evNeuLaden();
+  if(!r.erneuerungOffen.length) kontoAlt.clear();                        // every area has the new keys: alt goes
+  const de=PL()==='de', nameVon=id=>{ const x=vorher.get(id); return x ? (x.display||x.name) : ''; };
+  let neu=0;
+  const melde=(key, art, text)=>{ if(kontoGesehen.has(key)) return; kontoGesehen.add(key); kontoMeldungen.push({art, text}); neu++; };
+  for(const b of r.bestaetigt){
+    const n=nameVon(b.id);
+    melde('ok:'+b.id, 'ok', b.art==='parent' ? (de?`✓ ${n} gehört jetzt zur Familie.`:`✓ ${n} is now part of the family.`) : b.art==='reset' ? (de?`✓ ${n} hat ein neues Passwort.`:`✓ ${n} has a new password.`) : (de?`✓ ${n} ist angemeldet und gehört zur Familie.`:`✓ ${n} is logged in and part of the family.`));
+    if(kontoBlatt && kontoBlatt.art==='qr' && kontoBlatt.id===b.id) kontoBlatt.fertig=true;
+  }
+  for(const w of r.warnungen) melde('w:'+w.id+':'+w.grund, 'warn', w.art==='schluessel'
+    ? (de?'⚠️ Ein Gerät wollte einen fremden Schlüssel eintragen. Er wurde abgelehnt – es wurde nichts übernommen.':'⚠️ A device tried to add a foreign key. It was refused – nothing was taken over.')
+    : (de?`⚠️ Die Einladung für ${nameVon(w.id)} wurde nicht mit dem richtigen Schlüssel eingelöst. Es wurde nichts übernommen. Bitte die Einladung zurückziehen und neu einladen.`:`⚠️ The invitation for ${nameVon(w.id)} was not used with the right key. Nothing was taken over. Please withdraw it and invite again.`));
+  for(const id of r.abgelaufen) melde('x:'+id, 'info', de?`Die Einladung für ${nameVon(id)} ist abgelaufen.`:`The invitation for ${nameVon(id)} has expired.`);
+  for(const x of r.erneuert) melde('e:'+x.person+':'+x.fingerabdruck, 'info', de?`ℹ️ ${x.name||'Der andere Elternteil'} hat einen neuen Schlüssel. Prüfwörter: ${x.fingerabdruck}`:`ℹ️ ${x.name||'The other parent'} has a new key. Check words: ${x.fingerabdruck}`);
+  const vorherKinder=kontoKinderText();
+  kontoKontenAuffrischen();
+  kontoNeuZeichnen(neu>0 || r.inDieApp>0 || vorherKinder!==kontoKinderText());
+}
+/* the accounts of the app: those that logged in here, and the children of the parents logged in here (from the family's
+   log on this device) - so "Meine Kinder" shows them on every device of a parent */
+function kontoKontenAuffrischen(){
+  if(!KONTO_UI) return;
+  const raw=anmGeraetKonten(kontoListe()), now=Date.now();
+  for(const id of kontoOffen.keys()){
+    if(kontoOffen.get(id).art!=='parent') continue;
+    let v; try{ v=anmVerbindungen({ablage:localStorage, konto:kontoKonto(id), now}); }catch(e){ continue; }
+    for(const c of v.kinder){
+      if(!c.name || !anmName(c.name)) continue;
+      if(!raw.users.some(u=>u.id===c.id)) raw.users.push({id:c.id, user:c.name, kind:'child'});
+      raw.guardians.push({adult:id, child:c.id});
+    }
+  }
+  const n=normAccounts(raw);
+  APP_ACCOUNTS.users.splice(0, APP_ACCOUNTS.users.length, ...n.users);
+  APP_ACCOUNTS.guardians=n.guardians;
+}
+/* after a sync in the background: show what is new - but never under the hands of someone filling in a form */
+function kontoNeuZeichnen(geaendert){
+  if(state.screen==='about' && state.aboutTab==='sheets' && parentAccess){
+    if(kontoBlatt && kontoBlatt.art==='qr') return kontoQrStatus();
+    if(kontoBlatt) return;
+    if(geaendert) renderSheets();
+    return;
+  }
+  if(state.screen==='home' && geaendert && studentSession()) renderHome();
+}
+function kontoTaktStarten(){
+  if(kontoTaktAn || !KONTO_UI) return; kontoTaktAn=true;
+  const tick=()=>{ if(!document.hidden && kontoOffen.size) kontoAbgleich(); setTimeout(tick, KONTO_TAKT_MS); };
+  setTimeout(tick, KONTO_TAKT_MS);
+}
+/* ---------- a child after its login: practise only once a parent's device took it in ---------- */
+async function kontoKindIstBereit(id){
+  const z=kontoZugang(), k=kontoKonto(id); if(!z || !k) return false;
+  try{ return await anmKindBereit({ablage:localStorage, zugang:z, konto:k, now:Date.now()}); }
+  catch(e){ kontoFehlerListe.push('bereit: '+String(e&&e.message||e)); return false; }
+}
+async function kontoKindStart(a, id, weiter){
+  $('#loginBody').innerHTML=`<h2>One moment …</h2><p class="small" role="status">Getting your things ready.</p>`;
+  await kontoAbgleich();
+  if(await kontoKindIstBereit(id)) return weiter();
+  renderKontoWarten(id, weiter);
+}
+function renderKontoWarten(id, weiter){
+  const lb=$('#loginBody'), da=()=>!!lb.querySelector('#kidWait');
+  lb.innerHTML=`<div id="kidWait"><h2>Almost ready! ⏳</h2><p>Your grown-up’s device has to let you in first. Ask them to open Big Quest – then it goes on by itself.</p><button class="btn primary" id="kidWaitAgain" type="button">Try again</button><p id="kidWaitMsg" class="small" role="status"></p><button class="btn small" id="kidWaitBack" type="button">← Back</button></div>`;
+  let aus=false;
+  const pruefen=async()=>{
+    if(aus || !da()) return;
+    const m=lb.querySelector('#kidWaitMsg'); if(m) m.textContent='Checking …';
+    await kontoAbgleich();
+    if(aus || !da()) return;
+    if(await kontoKindIstBereit(id)){ if(aus || !da()) return; aus=true; return weiter(); }
+    const m2=lb.querySelector('#kidWaitMsg'); if(m2) m2.textContent='Not yet – your grown-up’s device has not let you in yet.';
+  };
+  const takt=()=>{ if(aus || !da()) return; pruefen().then(()=>setTimeout(takt, KONTO_WARTEN_MS)); };
+  lb.querySelector('#kidWaitAgain').addEventListener('click',()=>{ pruefen(); });
+  lb.querySelector('#kidWaitBack').addEventListener('click',()=>{ aus=true; kontoAbmelden(id); renderLogin(); });
+  setTimeout(takt, KONTO_WARTEN_MS);
+}
+/* ---------- grown-ups area: leave without logging out (concept 10.4; correction of #134) ---------- */
+/* "Close": the grown-up stays logged in (session and key stay) until "Log out". On a device a child uses too, the app
+   reminds him once to log out. */
+function kontoBereichVerlassen(){
+  const a=adultUser && accByRef({user:adultUser.user});
+  if(a && !kontoErinnert.has(a.id) && kontoListe().some(e=>e.art==='child')){ kontoErinnert.add(a.id); kontoBlatt={art:'erinnerung'}; renderSheets(); window.scrollTo(0,0); return; }
+  kontoBlatt=null; pendingRoute=null; restoreRealChild(); parentLock(); renderParentGate();
+}
+/* "Log out" of a grown-up: his session and his key copy leave this device; a child logged in here stays */
+function parentAbmelden(){
+  pendingRoute=null;
+  if(accountsOn()){ if(KONTO_UI){ kontoBlatt=null; if(adultUser) kontoAbmelden((accByRef({user:adultUser.user})||{}).id); } store.del('adultSession'); restoreRealChild(); }
+  parentLock(); renderParentGate();
+}
+/* ---------- ⚙ sections ---------- */
+const kontoZeit = iso => { if(!iso) return '–'; const d=new Date(iso); return fmtDay(dayKey(d))+' '+pad(d.getHours())+':'+pad(d.getMinutes()); };
+const kontoKindName = (id, login) => { const n=String(kidRead({id},'name','')||'').trim(); return n || login || ''; };
+function kontoVerb(k){ try{ return anmVerbindungen({ablage:localStorage, konto:k, now:Date.now()}); }catch(e){ return {kinder:[], eltern:[], offen:[], familie:null, verzeichnis:{}}; } }
+function kontoFamilieHTML(){
+  const de=PL()==='de', k=kontoIch(); if(!k || k.art!=='parent') return '';
+  const v=kontoVerb(k), kinder=v.kinder.filter(c=>c.name), warn=new Set(((kontoBericht&&kontoBericht.warnungen)||[]).map(w=>w.id));
+  const artText=a=>a==='child'?(de?'Kind':'child'):a==='parent'?(de?'Elternteil':'parent'):(de?'neues Passwort':'new password');
+  const msgs=kontoMeldungen.slice(-6).map(m=>`<p class="kmeld kmeld-${m.art}">${esc(m.text)}</p>`).join('');
+  return msgs
+    +`<h3 class="psub">${de?'Kinder':'Children'}</h3>`
+    +(kinder.length?`<ul class="klist">${kinder.map(c=>`<li>👧 <b>${esc(kontoKindName(c.id, c.name))}</b> <span class="small">(${esc(c.name)})</span> <button type="button" class="btn small" data-kneu="${esc(c.id)}">🔑 ${de?'Neues Passwort':'New password'}</button></li>`).join('')}</ul>`:`<p class="small">${de?'Noch kein Kind angelegt.':'No child added yet.'}</p>`)
+    +`<p><button type="button" class="btn" id="kKindAnlegen">➕ ${de?'Kind anlegen':'Add a child'}</button></p>`
+    +(v.eltern.length<2 && !v.offen.some(o=>o.art==='parent') ? `<p><button type="button" class="btn" id="kElternEinladen">➕ ${de?'Zweiten Elternteil einladen':'Invite the second parent'}</button></p>` : '')
+    +(v.offen.length?`<h3 class="psub">${de?'Offene Einladungen':'Open invitations'}</h3><ul class="klist">${v.offen.map(o=>`<li>${warn.has(o.invite)?'⚠️ ':''}${esc(o.display||o.name)} – ${artText(o.art)}, ${de?'gültig bis':'valid until'} ${esc(kontoZeit(o.until))} <button type="button" class="btn small" data-kzurueck="${esc(o.invite)}">${de?'Zurückziehen':'Withdraw'}</button></li>`).join('')}</ul>`:'');
+}
+function kontoGeraeteHTML(){
+  const de=PL()==='de', k=kontoIch(); if(!k) return '';
+  const liste=pid=>{ try{ return anmGeraete({ablage:localStorage, person:pid, now:Date.now()}); }catch(e){ return []; } };
+  const zeile=(pid,d)=>`<li>${d.diesesGeraet?'📍':'📱'} ${d.entfernt?'<s>':''}<b>${esc(d.name||(de?'Gerät ohne Namen':'Unnamed device'))}</b>${d.entfernt?'</s>':''}${d.diesesGeraet?(de?' (dieses Gerät)':' (this device)'):''}<br><span class="small">${de?'seit':'since'} ${kontoZeit(d.erstesMal)} · ${de?'zuletzt':'last'} ${kontoZeit(d.zuletzt)}${d.entfernt?' · '+(de?'entfernt am ':'removed on ')+kontoZeit(d.entfernt):''}${d.wartet?' · '+(de?'wird beim nächsten Abgleich entfernt':'is removed with the next sync'):''}</span>${!d.diesesGeraet && !d.entfernt && !d.wartet?` <button type="button" class="btn small" data-kweg="${esc(pid)}|${esc(d.geraet)}">${de?'Entfernen':'Remove'}</button>`:''}</li>`;
+  const block=(pid, titel)=>{ const l=liste(pid); return `<h3 class="psub">${titel}</h3>`+(l.length?`<ul class="klist kgeraete">${l.map(d=>zeile(pid,d)).join('')}</ul>`:`<p class="small">${de?'Noch kein Abgleich – die Liste füllt sich danach.':'No sync yet – the list fills in after it.'}</p>`); };
+  let h=block(k.kennung, de?'Meine Geräte':'My devices');
+  if(k.art==='parent') for(const c of kontoVerb(k).kinder.filter(x=>x.name)) h+=block(c.id, (de?'Geräte von ':'Devices of ')+esc(kontoKindName(c.id, c.name)));
+  return h+`<h3 class="psub">${de?'Schlüssel erneuern':'Renew your key'}</h3><p class="small">${de?'Falls jemand Ihr Passwort kennen könnte: neues Passwort, neuer Schlüssel und neuer Wiederherstellungscode.':'If someone might know your password: new password, new key and new recovery code.'}</p><p><button type="button" class="btn" id="kErneuern">🔑 ${de?'Schlüssel erneuern':'Renew key'}</button></p>`;
+}
+/* ---------- panels (kontoBlatt) ---------- */
+const kontoHinweisNamen = de => de?'3 bis 20 Zeichen: kleine Buchstaben, Ziffern, Punkt oder Bindestrich.':'3 to 20 characters: small letters, digits, dot or hyphen.';
+function kontoBlattHTML(){
+  const de=PL()==='de', b=kontoBlatt, back=`<button type="button" class="btn small" id="kBack">${de?'← Zurück':'← Back'}</button>`, msg='<p id="kMsg" class="small" role="status"></p>';
+  if(b.art==='erinnerung') return `<div class="pcard" id="kErinnerung"><h2>${de?'Sie sind noch angemeldet':'You are still logged in'}</h2><p>${de?'Auf diesem Gerät übt auch ein Kind. Bitte melden Sie sich ab, wenn Sie fertig sind – sonst kann hier jeder den Elternbereich öffnen.':'A child uses this device too. Please log out when you are done – otherwise anyone here can open the grown-ups area.'}</p><p><button type="button" class="btn primary" id="kErAbmelden">${de?'Abmelden':'Log out'}</button> <button type="button" class="btn" id="kErBleiben">${de?'Angemeldet bleiben':'Stay logged in'}</button></p></div>`;
+  if(b.art==='kind1') return back+`<h2 class="psubjtitle">➕ ${de?'Kind anlegen':'Add a child'}</h2><form id="kKindForm" class="login-form"><div class="field"><label for="kKindName">${de?'Vorname des Kindes':'Child’s first name'}</label><input id="kKindName" maxlength="40" autocomplete="off" required></div><button class="btn primary" id="kKindWeiter" type="submit">${de?'Weiter':'Next'}</button>${msg}</form>`;
+  if(b.art==='kind2') return back+`<h2 class="psubjtitle">➕ ${de?'Kind anlegen':'Add a child'}</h2><p class="small">${de?`Mit diesem Anmeldenamen meldet sich ${esc(b.anzeige)} an. Sie können ihn ändern – ${kontoHinweisNamen(true)}`:`${esc(b.anzeige)} logs in with this name. You can change it – ${kontoHinweisNamen(false)}`}</p><form id="kKind2Form" class="login-form"><div class="field"><label for="kKindLogin">${de?'Anmeldename':'Login name'}</label><input id="kKindLogin" value="${esc(b.login)}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><button class="btn primary" id="kKindGo" type="submit">${de?'Start-QR-Code erstellen':'Create start QR code'}</button>${msg}</form>`;
+  if(b.art==='eltern') return back+`<h2 class="psubjtitle">➕ ${de?'Zweiten Elternteil einladen':'Invite the second parent'}</h2><p class="small">${de?'Er sieht danach dieselben Kinder wie Sie. Wählen Sie seinen Anmeldenamen – ':'They then see the same children as you. Choose their login name – '}${kontoHinweisNamen(de)}</p><form id="kElternForm" class="login-form"><div class="field"><label for="kElternLogin">${de?'Anmeldename':'Login name'}</label><input id="kElternLogin" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><button class="btn primary" id="kElternGo" type="submit">${de?'Einladung erstellen':'Create invitation'}</button>${msg}</form>`;
+  if(b.art==='qr'){
+    const link=anmStartlink(location.href, {anmeldename:b.login, code:b.code, fingerabdruck:b.fp});
+    const titel=b.zweck==='eltern'?(de?`Einladung für ${esc(b.login)}`:`Invitation for ${esc(b.login)}`):b.zweck==='neu'?(de?`Neues Passwort für ${esc(b.name)}`:`New password for ${esc(b.name)}`):(de?`Start-QR-Code für ${esc(b.name)}`:`Start QR code for ${esc(b.name)}`);
+    const wie=b.zweck==='eltern'
+      ?(de?'Auf dem Gerät des anderen Elternteils die Kamera auf den Code richten, dann „👪 Parent / Teacher“ tippen und ein eigenes Passwort wählen.':'On the other parent’s device, point the camera at the code, then tap “👪 Parent / Teacher” and choose an own password.')
+      :(de?`Auf dem Gerät von ${esc(b.name)} die Kamera auf den Code richten, dann „🎒 Student“ tippen und zusammen ein Passwort wählen.${b.zweck==='neu'?' Der Lernstand bleibt erhalten.':''}`:`On ${esc(b.name)}’s device, point the camera at the code, then tap “🎒 Student” and choose a password together.${b.zweck==='neu'?' The progress stays.':''}`);
+    return `<h2 class="psubjtitle">📷 ${titel}</h2><p class="small">${wie} ${de?'Ohne Kamera: Anmeldename und Startcode eintippen.':'Without a camera: type the login name and the start code.'}</p><div class="kqr" id="kQr">${anmQr(link, de?'Start-QR-Code':'Start QR code')}</div><p class="small">${de?'Anmeldename':'Login name'}: <b>${esc(b.login)}</b> · Startcode: <code id="kCode">${esc(b.code)}</code><br>${de?'Gilt einmal, bis':'Works once, until'} ${esc(kontoZeit(new Date(b.bis).toISOString()))}. ${de?'Nur persönlich zeigen.':'Show it in person only.'}</p><p id="kQrStatus" class="kqr-status" role="status">${kontoQrText()}</p><p>${b.fertig?'':`<button type="button" class="btn" id="kQrWeg">${de?'Zurückziehen':'Withdraw'}</button> `}<button type="button" class="btn primary" id="kQrFertig">${de?'Fertig':'Done'}</button></p>`;
+  }
+  if(b.art==='wegkind') return back+`<h2 class="psubjtitle">${de?'Gerät entfernen':'Remove device'}</h2><p>${de?`„${esc(b.gname)}“ von ${esc(b.name)} entfernen? Was dieses Gerät danach schickt, zählt nicht mehr.`:`Remove “${esc(b.gname)}” of ${esc(b.name)}? Whatever this device sends afterwards no longer counts.`}</p><p><button type="button" class="btn primary" id="kWegJa">${de?'Entfernen':'Remove'}</button></p>${msg}`;
+  if(b.art==='frageneu') return `<h2 class="psubjtitle">${de?`Jetzt neues Passwort für ${esc(b.name)}?`:`New password for ${esc(b.name)} now?`}</h2><p>${de?`Das Gerät ist entfernt. Bis ${esc(b.name)} ein neues Passwort hat, kann es noch lesen, was es schon hatte. Mit dem neuen Passwort ist auch das vorbei; der Lernstand bleibt erhalten.`:`The device is removed. Until ${esc(b.name)} has a new password, it can still read what it already had. A new password ends that; the progress stays.`}</p><p><button type="button" class="btn primary" id="kNeuJa">${de?'Ja, Start-QR-Code zeigen':'Yes, show start QR code'}</button> <button type="button" class="btn" id="kNeuSpaeter">${de?'Später':'Later'}</button></p>${msg}`;
+  if(b.art==='erneuern'){
+    const sugg=pwSuggest();
+    return back+`<h2 class="psubjtitle">🔑 ${b.geraet?(de?'Eigenes Gerät entfernen':'Remove own device'):(de?'Schlüssel erneuern':'Renew key')}</h2><p class="small">${b.geraet?(de?`„${esc(b.gname)}“ wird entfernt. Damit es nichts Neues mehr lesen kann, bekommen Sie dabei einen neuen Schlüssel.`:`“${esc(b.gname)}” is removed. So that it cannot read anything new, you get a new key with it.`):''} ${de?'Sie wählen ein neues Passwort und bekommen einen neuen Wiederherstellungscode. Auf Ihren anderen Geräten melden Sie sich danach mit dem neuen Passwort neu an – bis dahin sehen sie nichts Neues.':'You choose a new password and get a new recovery code. Then log in again with the new password on your other devices – until then they see nothing new.'}</p><form id="kErnForm" class="login-form"><input class="sr" type="text" name="username" autocomplete="username" value="${esc(adultUser?adultUser.user:'')}" readonly tabindex="-1" aria-hidden="true"><div class="field"><label for="kErnAlt">${de?'Aktuelles Passwort':'Current password'}</label><input id="kErnAlt" type="password" autocomplete="current-password" required></div><p class="pw-suggest">${de?'Vorschlag':'Suggestion'}: <b id="kErnSugg">${esc(sugg)}</b> <button type="button" class="btn small" id="kErnUse">${de?'Übernehmen':'Use it'}</button> <button type="button" class="btn small" id="kErnAnother">${de?'Anderer Vorschlag':'Another one'}</button></p><div class="field"><label for="kErnNeu1">${de?'Neues Passwort':'New password'}</label><input id="kErnNeu1" type="password" autocomplete="new-password" required></div><div class="field"><label for="kErnNeu2">${de?'Passwort wiederholen':'Repeat password'}</label><input id="kErnNeu2" type="password" autocomplete="new-password" required></div><button class="btn primary" id="kErnGo" type="submit">${b.geraet?(de?'Entfernen und Schlüssel erneuern':'Remove and renew key'):(de?'Schlüssel erneuern':'Renew key')}</button>${msg}</form>`;
+  }
+  if(b.art==='code') return `<div id="kCodeBox"></div>`;
+  return back;
+}
+function kontoQrText(){
+  const de=PL()==='de', b=kontoBlatt; if(!b || b.art!=='qr') return '';
+  if(b.fertig) return b.zweck==='eltern'?(de?`✓ ${b.login} gehört jetzt zur Familie.`:`✓ ${b.login} is now part of the family.`):b.zweck==='neu'?(de?`✓ ${b.name} hat ein neues Passwort.`:`✓ ${b.name} has a new password.`):(de?`✓ ${b.name} ist angemeldet und kann loslegen.`:`✓ ${b.name} is logged in and can start.`);
+  if(b.weg) return de?'Diese Einladung gilt nicht mehr.':'This invitation is no longer valid.';
+  return de?'⏳ Warte auf die erste Anmeldung …':'⏳ Waiting for the first login …';
+}
+/* the QR panel: status after each sync; withdrawn or expired elsewhere -> no longer valid */
+function kontoQrStatus(){
+  const b=kontoBlatt; if(!b || b.art!=='qr') return;
+  if(!b.fertig){ const k=kontoIch(); if(k && !kontoVerb(k).offen.some(o=>o.invite===b.id)) b.weg=true; }
+  const s=$('#aboutBody').querySelector('#kQrStatus'); if(s) s.textContent=kontoQrText();
+  const w=$('#aboutBody').querySelector('#kQrWeg'); if(w && (b.fertig || b.weg)) w.remove();
+}
+function kontoQrTakt(id){
+  setTimeout(async()=>{
+    const b=kontoBlatt; if(!b || b.art!=='qr' || b.id!==id || b.fertig || b.weg || !parentAccess) return;
+    if(!document.hidden) await kontoAbgleich();
+    kontoQrStatus(); kontoQrTakt(id);
+  }, KONTO_QR_MS);
+}
+function kontoBlattZeigen(b){ kontoBlatt=b; renderSheets(); window.scrollTo(0,0); if(b && b.art==='qr') kontoQrTakt(b.id); }
+function kontoFehler(err){
+  const de=PL()==='de', c=err && err.code;
+  if(c==='name-vergeben') return de?'Dieser Anmeldename ist schon vergeben. Bitte einen anderen wählen.':'This login name is taken. Please choose another one.';
+  if(c==='name-ungueltig') return kontoHinweisNamen(de);
+  if(c==='familie-fehlt') return de?'Ihr Gerät kennt Ihre Familie noch nicht. Bitte kurz warten und erneut versuchen.':'Your device does not know your family yet. Please wait a moment and try again.';
+  if(c==='buergschaft-fehlt') return de?'Das geht erst, wenn der Elternteil, der das Kind angelegt hat, Sie in der Familie bestätigt hat. Bitte später erneut versuchen.':'This works once the parent who added the child has confirmed you in the family. Please try again later.';
+  if(c==='anmeldung') return de?'Das aktuelle Passwort stimmt nicht.':'The current password is not right.';
+  if(c==='passwort-gleich') return de?'Das neue Passwort muss sich vom aktuellen unterscheiden.':'The new password must differ from the current one.';
+  if(c==='passwort-schwach') return pwStrongText(true);
+  if(c==='nicht-erlaubt' || c==='geraet-unbekannt' || c==='kind-unbekannt') return de?'Das geht hier nicht (mehr). Bitte die Seite neu öffnen.':'This is not possible (any more). Please open the page again.';
+  return loginTxt(true).noStore;
+}
+/* runs a step of a panel: message "One moment", button off; an error -> message, button on again */
+async function kontoSchritt(knopf, tun){
+  const body=$('#aboutBody'), m=body.querySelector('#kMsg'), k=knopf && body.querySelector(knopf);
+  if(k) k.disabled=true; if(m) m.textContent=loginTxt(true).moment;
+  try{ await tun(); }
+  catch(err){
+    if(err && typeof err.code!=='string') kontoFehlerListe.push('schritt: '+String(err&&err.message||err));
+    const m2=$('#aboutBody').querySelector('#kMsg'), k2=knopf && $('#aboutBody').querySelector(knopf);
+    if(m2) m2.textContent=kontoFehler(err);
+    else { kontoMeldungen.push({art:'warn', text:'⚠️ '+kontoFehler(err)}); if(!kontoBlatt && parentAccess) renderSheets(); }
+    if(k2) k2.disabled=false;
+  }
+}
+/* invitation steps: sync first (so the device knows its family), then the invitation, then sync again (so it is in the
+   storage before the QR code shows - the other device then waits seconds at most) */
+async function kontoEinladen(tun, blatt){
+  const z=kontoZugang(), k=kontoIch(); if(!z || !k) throw Object.assign(new Error('kein Zugang'),{code:'offline'});
+  await kontoAbgleich();
+  const r=await tun(z, kontoIch());
+  await kontoAbgleich();
+  kontoBlattZeigen({art:'qr', ...blatt, code:r.code, fp:r.fingerabdruck, id:r.id, login:r.anmeldename, bis:r.gueltigBis});
+}
+function kontoKindNeuStarten(kind){
+  const k=kontoIch(), c=k && kontoVerb(k).kinder.find(x=>x.id===kind); if(!c) return;
+  return kontoSchritt(null, ()=>kontoEinladen((z,me)=>anmKindNeu({zugang:z, ablage:localStorage, konto:me, kind, now:Date.now()}), {zweck:'neu', name:kontoKindName(c.id, c.name)}));
+}
+function kontoBinden(body){
+  const de=PL()==='de', q=s=>body.querySelector(s), an=(s,f)=>{ const e=q(s); if(e) e.addEventListener('click',f); }, form=(s,f)=>{ const e=q(s); if(e) e.addEventListener('submit',ev=>{ ev.preventDefault(); if(parentAccess) f(); }); };
+  an('#parentLeave',()=>{ if(parentAccess) kontoBereichVerlassen(); });
+  an('#kBack',()=>kontoBlattZeigen(null));
+  an('#kErAbmelden',parentAbmelden);
+  an('#kErBleiben',()=>{ kontoBlatt=null; kontoBereichVerlassen(); });
+  an('#kKindAnlegen',()=>kontoBlattZeigen({art:'kind1'}));
+  an('#kElternEinladen',()=>kontoBlattZeigen({art:'eltern'}));
+  an('#kErneuern',()=>kontoBlattZeigen({art:'erneuern'}));
+  body.querySelectorAll('[data-kneu]').forEach(b=>b.addEventListener('click',()=>{ if(parentAccess) kontoKindNeuStarten(b.dataset.kneu); }));
+  body.querySelectorAll('[data-kzurueck]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess) return; const id=b.dataset.kzurueck; kontoSchritt(null, async()=>{ const z=kontoZugang(); await anmZurueckziehen({zugang:z, ablage:localStorage, konto:kontoIch(), id, now:Date.now()}); await kontoAbgleich(); renderSheets(); }); }));
+  body.querySelectorAll('[data-kweg]').forEach(b=>b.addEventListener('click',()=>{
+    if(!parentAccess) return;
+    const [pid, geraet]=b.dataset.kweg.split('|'), k=kontoIch(); if(!k) return;
+    const d=(()=>{ try{ return anmGeraete({ablage:localStorage, person:pid, now:Date.now()}).find(x=>x.geraet===geraet); }catch(e){ return null; } })(), gname=(d && d.name)||(de?'Gerät ohne Namen':'Unnamed device');
+    if(pid===k.kennung) kontoBlattZeigen({art:'erneuern', geraet, gname});
+    else { const c=kontoVerb(k).kinder.find(x=>x.id===pid); if(c) kontoBlattZeigen({art:'wegkind', kind:pid, geraet, gname, name:kontoKindName(c.id, c.name)}); }
+  }));
+  form('#kKindForm',()=>{ const anzeige=q('#kKindName').value.trim(); if(!anzeige) return; kontoSchritt('#kKindWeiter', async()=>{ const z=kontoZugang(); if(!z) throw Object.assign(new Error('kein Zugang'),{code:'offline'}); const login=await anmNameVorschlag({zugang:z, anzeigename:anzeige}); kontoBlattZeigen({art:'kind2', anzeige, login}); }); });
+  form('#kKind2Form',()=>{ const b=kontoBlatt, login=anmName(q('#kKindLogin').value); if(!login){ q('#kMsg').textContent=kontoHinweisNamen(de); return; } kontoSchritt('#kKindGo', ()=>kontoEinladen((z,me)=>anmKindAnlegen({zugang:z, ablage:localStorage, konto:me, anmeldename:login, anzeigename:b.anzeige, now:Date.now()}), {zweck:'kind', name:b.anzeige})); });
+  form('#kElternForm',()=>{ const login=anmName(q('#kElternLogin').value); if(!login){ q('#kMsg').textContent=kontoHinweisNamen(de); return; } kontoSchritt('#kElternGo', ()=>kontoEinladen((z,me)=>anmElternEinladen({zugang:z, ablage:localStorage, konto:me, anmeldename:login, now:Date.now()}), {zweck:'eltern', name:login})); });
+  an('#kQrFertig',()=>kontoBlattZeigen(null));
+  an('#kQrWeg',()=>{ const b=kontoBlatt; if(!b || b.art!=='qr') return; kontoSchritt('#kQrWeg', async()=>{ const z=kontoZugang(); const r=await anmZurueckziehen({zugang:z, ablage:localStorage, konto:kontoIch(), id:b.id, now:Date.now()}); await kontoAbgleich(); kontoMeldungen.push({art:'info', text:r.zurueckgezogen?(de?`Die Einladung für ${b.zweck==='eltern'?b.login:b.name} ist zurückgezogen.`:`The invitation for ${b.zweck==='eltern'?b.login:b.name} is withdrawn.`):(de?'Die Einladung war schon eingelöst oder abgelaufen.':'The invitation was already used or had expired.')}); kontoBlattZeigen(null); }); });
+  an('#kWegJa',()=>{ const b=kontoBlatt; kontoSchritt('#kWegJa', async()=>{ const z=kontoZugang(); await anmGeraetEntfernen({ablage:localStorage, zugang:z, konto:kontoIch(), person:b.kind, geraet:b.geraet, now:Date.now()}); await kontoAbgleich(); kontoBlattZeigen({art:'frageneu', kind:b.kind, name:b.name}); }); });
+  an('#kNeuJa',()=>kontoKindNeuStarten(kontoBlatt.kind));
+  an('#kNeuSpaeter',()=>kontoBlattZeigen(null));
+  an('#kErnUse',()=>{ const v=q('#kErnSugg').textContent; q('#kErnNeu1').value=v; q('#kErnNeu2').value=v; q('#kErnNeu1').type='text'; });
+  an('#kErnAnother',()=>{ q('#kErnSugg').textContent=pwSuggest(); });
+  form('#kErnForm',()=>{
+    const b=kontoBlatt, alt=q('#kErnAlt').value, p1=q('#kErnNeu1').value, p2=q('#kErnNeu2').value, m=q('#kMsg'), user=adultUser.user;
+    if(pwWeak(p1, user)){ m.textContent=pwStrongText(true); return; }
+    if(p1!==p2){ m.textContent=loginTxt(true).diff; return; }
+    kontoSchritt('#kErnGo', async()=>{
+      const z=kontoZugang(), k=kontoIch(); if(!z || !k) throw Object.assign(new Error('kein Zugang'),{code:'offline'});
+      let neu;
+      if(b.geraet){ const r=await anmGeraetEntfernen({ablage:localStorage, zugang:z, konto:k, geraet:b.geraet, passwort:alt, neuesPasswort:p1, now:Date.now()}); neu=r.konto; }
+      else neu={...k, ...(await anmErneuern({zugang:z, anmeldename:k.anmeldename, passwort:alt, neuesPasswort:p1}))};
+      await kontoMerken(neu);
+      await kontoAbgleich();
+      kontoBlattZeigen({art:'code', code:neu.wiederherstellungscode, fp:neu.fingerabdruck});
+    });
+  });
+  const cb=q('#kCodeBox');
+  if(cb && kontoBlatt && kontoBlatt.art==='code'){
+    const b=kontoBlatt;
+    renderKontoCode({user:adultUser.user}, b.code, ()=>kontoBlattZeigen(null), cb, `<p class="small">✓ ${de?'Neuer Schlüssel. Ihre Prüfwörter jetzt':'New key. Your check words now'}: <b id="kFpNeu">${esc(b.fp||'')}</b></p>`);
+  }
+}
 /* Test account bar (for grown-ups, in their language): clearly marked, separate data, jump ahead one
    day, reset everything, and – while a grown-up is logged in – back to the grown-ups area. */
 function renderTestBar(){
@@ -5333,8 +5682,9 @@ function calendarText(days,time,text,now=new Date()){
 function bindParentSettings(){
   const de=PL()==='de';
   bindStoryCap(); bindProfileAdmin(); bindVersionAdmin(); addAdultInfo($('#aboutBody'));
-  // "Log out" is the only way out (Peter, 31.10.): no timer, no log-out in the background.
-  ['#parentClose','#parentClose2'].forEach(sel=>{ const pc=$(sel); if(pc) pc.addEventListener('click',()=>{ pendingRoute=null; if(accountsOn()){ if(KONTO_UI && adultUser) kontoAbmelden((accByRef({user:adultUser.user})||{}).id); store.del('adultSession'); restoreRealChild(); } parentLock(); renderParentGate(); }); });
+  // "Log out" ends it (Peter, 31.10.): no timer, no log-out in the background. With accounts in the storage (test build)
+  // "Close" leaves the area and the grown-up stays logged in (concept 10.4; kontoBereichVerlassen).
+  ['#parentClose','#parentClose2'].forEach(sel=>{ const pc=$(sel); if(pc) pc.addEventListener('click',parentAbmelden); });
   if($('#reminderForm')) $('#reminderForm').addEventListener('submit',e=>{
     e.preventDefault();if(!parentAccess) return;
     try{
@@ -5457,11 +5807,11 @@ const KONTO_GUIDE={
   kid:[['The very first time:','your grown-up gives you a start code – as a link or a QR code to scan. Then you choose your own password. Take the idea with three words and a number, like <i>Tiger-Lamp-River-4271</i>. Let the iPad remember it – then Face ID fills it in for you. A short password does not work: a strong one keeps your things safe. On another iPad, use the same user name and password.']],
   adultDe:[['Einmal einrichten:','Seite in Safari öffnen. Fragt die App nach dem Zugang zum Testspeicher, ihn einmal eingeben (vom Admin). Dann Teilen → „Zum Home-Bildschirm“. Künftig nur über das Symbol öffnen.'],
     ['Anmelden:','„👪 Parent / Teacher“. Beim ersten Mal den Startlink bzw. QR-Code öffnen (oder Benutzername und Startcode eingeben; er gilt einmal und 7 Tage). Dann ein eigenes Passwort wählen – am einfachsten den Vorschlag – und im Passwortspeicher sichern. Danach den Wiederherstellungscode sichern: im Passwortspeicher und als Datei. Auf weiteren Geräten: Benutzername und Passwort.'],
-    ['Kind anmelden:','„🎒 Student“ mit dem Startlink bzw. QR-Code des Kindes. Zusammen ein Merkpasswort wählen und im Passwortspeicher sichern. Auf weiteren Geräten: Benutzername und Passwort. Geschwister am selben Gerät wählen sich unter „Who\'s here?“ aus.'],
+    ['Kind anmelden:','unter ⚙️ → „👪 Familie“ → „Kind anlegen“: Die App zeigt einen Start-QR-Code. Auf dem Gerät des Kindes die Kamera darauf richten, „🎒 Student“ tippen und zusammen ein Merkpasswort wählen. Auf weiteren Geräten: Benutzername und Passwort. Passwort vergessen? Dort „Neues Passwort“ – der Lernstand bleibt. Geschwister am selben Gerät wählen sich unter „Who\'s here?“ aus. Geräte entfernen und den Schlüssel erneuern: ⚙️ → „📱 Meine Geräte“.'],
     ['Passwort vergessen:','Auf der Anmeldeseite „Passwort vergessen?“ tippen, den Wiederherstellungscode eingeben und ein neues Passwort wählen – danach den neuen Code wieder sichern. Ohne Code hilft der Admin. Nach 5 Fehlversuchen 30 Sekunden warten. Startcodes, Startlinks und den Wiederherstellungscode nicht weitergeben.']],
   adultEn:[['Set up once:','open the page in Safari. If the app asks for access to the test storage, enter it once (from the admin). Then Share → “Add to Home Screen”. From then on, open it with the icon.'],
     ['Log in:','“👪 Parent / Teacher”. The first time, open the start link or QR code (or enter username and start code; it works once and for 7 days). Then choose your own password – easiest is the suggestion – and save it in the password manager. Next, save the recovery code: in the password manager and as a file. On other devices: username and password.'],
-    ['Log in your child:','“🎒 Student” with your child’s start link or QR code. Choose a memorable password together and save it in the password manager. On other devices: username and password. Siblings on the same device pick themselves under “Who\'s here?”.'],
+    ['Log in your child:','under ⚙️ → “👪 Family” → “Add a child”: the app shows a start QR code. On your child’s device, point the camera at it, tap “🎒 Student” and choose a memorable password together. On other devices: username and password. Forgot the password? There, “New password” – the progress stays. Siblings on the same device pick themselves under “Who\'s here?”. Remove devices and renew your key: ⚙️ → “📱 My devices”.'],
     ['Forgot your password?','On the login page tap “Forgot your password?”, enter your recovery code and choose a new password – then save the new code again. Without the code, the admin can help. After 5 wrong tries, wait 30 seconds. Keep start codes, start links and the recovery code private.']],
   teacherDe:[['Anmelden:','„👪 Parent / Teacher“. Beim ersten Mal den Startlink bzw. QR-Code vom Admin öffnen (oder Benutzername und Startcode eingeben). Dann ein eigenes Passwort wählen und den Wiederherstellungscode sichern – im Passwortspeicher und als Datei. Auf weiteren Geräten: Benutzername und Passwort.'],
     ['Passwort vergessen:','Auf der Anmeldeseite „Passwort vergessen?“ tippen und den Wiederherstellungscode eingeben; danach den neuen Code wieder sichern. Ohne Code hilft der Admin. Nach 5 Fehlversuchen 30 Sekunden warten.']],
@@ -6003,7 +6353,7 @@ $('#tabEn').addEventListener('click',()=>setLang('en'));
 $('#tabInfo').addEventListener('click',()=>openAbout('info'));
 $('#tabSheets').addEventListener('click',()=>openAbout('sheets'));
 // No log-out in the background (Peter, 31.10.): an iPad is personal; only stop a running recording.
-document.addEventListener('visibilitychange',()=>{if(!document.hidden) checkForUpdate(); if(document.hidden) recStop();});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){ checkForUpdate(); if(KONTO_UI) kontoAbgleich(); } if(document.hidden) recStop();});
 window.addEventListener('hashchange',()=>{
   if(applyParentRoute()) return;
   // browser back out of ⚙ to a page without a route: back to the overview of the grown-ups area
@@ -6013,7 +6363,9 @@ window.addEventListener('hashchange',()=>{
 
 function boot(data){
   cleanStoredPrivate();
-  if(KONTO_UI) kontoSchluesselLaden();   // the person keys kept on this device (IndexedDB) back into memory
+  // the person keys kept on this device (IndexedDB) back into memory; then the children of the parents here, a sync and
+  // one every minute (task "Einladungen - Oberflaeche")
+  if(KONTO_UI) kontoSchluesselLaden().then(()=>{ const vor=kontoKinderText(); kontoKontenAuffrischen(); kontoNeuZeichnen(vor!==kontoKinderText()); kontoAbgleich(); kontoTaktStarten(); });
   renderHome();
   if(data && data.screen==='play' && Array.isArray(data.round) && data.round.length && WORLDS[data.world]){
     Object.assign(state, data); state.answered=false; state.typed=''; state.picked=[];

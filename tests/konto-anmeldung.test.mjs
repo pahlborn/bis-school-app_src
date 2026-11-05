@@ -20,6 +20,7 @@ import { konto } from './konten-hilfen.mjs';
 import { lokalerSpeicher } from '../src/module/speicher.mjs';
 import { startcodeAusstellen, ersteAnmeldung, anmelden as kontoAnmelden, kontoLookup } from '../src/module/konto.mjs';
 import { anmStartlink } from '../src/module/anmeldung.mjs';
+import { kindAnlegen, abgleichMitVerbindungen } from '../src/module/einladung.mjs';
 import { testinstanzUmwandeln, ersatzLesen } from '../werkzeug/testinstanz.mjs';
 
 const RUNDEN = 1000;                                          // nur fuer Konten, die das Werkzeug anlegt (Aussteller)
@@ -83,17 +84,34 @@ async function passwortWaehlen(G) {
   return pw;
 }
 
-/* ein Admin (vom Werkzeug angelegt) als Aussteller; startcode(name, art) stellt einen Startcode aus */
+/* ein Admin (vom Werkzeug angelegt) als Aussteller; startcode(name, art) stellt einen Startcode aus.
+   Aufgabe "Einladungen - Oberflaeche": ein Kind uebt erst, wenn ein Elterngeraet es aufgenommen hat - kind(name, von)
+   legt es auf einem Elterngeraet ohne App an (Modul einladung), aufnehmen(von) laesst dieses Geraet abgleichen. */
 async function welt() {
   const w = lokalerSpeicher(), z = w.geraet('d_Werkzeug1');
   const sc = await startcodeAusstellen({ zugang: z, aussteller: null, anmeldename: 'admin', art: 'admin', now: Date.now() });
   const admin = await ersteAnmeldung({ zugang: z, code: sc.code, passwort: 'Werkzeug-Admin-Passwort-1', now: Date.now(), runden: RUNDEN });
-  const offen = { admin };
+  const offen = { admin }, eltern = {};
+  const heute = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  const sync = (n) => abgleichMitVerbindungen({ ablage: eltern[n].a, zugang: w.geraet(eltern[n].d), konten: [offen[n]], now: Date.now(), heute: heute() });
+  const elternGeraet = async (n) => {
+    if (!eltern[n]) { const m = new Map(), d = 'd_W' + n.replace(/[^a-z0-9]/g, ''); eltern[n] = { d, a: { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => { m.set(k, String(v)); } } }; eltern[n].a.setItem('bq2_evDevice', JSON.stringify(d)); await sync(n); }
+    return eltern[n];
+  };
   return {
     w, z, offen,
     startcode: async (name, art, von = 'admin') => (await startcodeAusstellen({ zugang: z, aussteller: offen[von], anmeldename: name, art, now: Date.now() })).code,
-    elternteil: async (name) => { const c = (await startcodeAusstellen({ zugang: z, aussteller: admin, anmeldename: name, art: 'parent', now: Date.now() })).code; offen[name] = await ersteAnmeldung({ zugang: z, code: c, passwort: 'Werkzeug-Eltern-Passwort-' + name, now: Date.now(), runden: RUNDEN }); }
+    elternteil: async (name) => { const c = (await startcodeAusstellen({ zugang: z, aussteller: admin, anmeldename: name, art: 'parent', now: Date.now() })).code; offen[name] = await ersteAnmeldung({ zugang: z, code: c, passwort: 'Werkzeug-Eltern-Passwort-' + name, now: Date.now(), runden: RUNDEN }); },
+    kind: async (name, von) => { const g = await elternGeraet(von); const r = await kindAnlegen({ zugang: w.geraet(g.d), ablage: g.a, konto: offen[von], anmeldename: name, anzeigename: name.split('.')[0], now: Date.now() }); await sync(von); return r.code; },
+    aufnehmen: async (von) => sync(von)
   };
+}
+/* das Kind hat sein Passwort gewaehlt und wartet (Konzept 10.3); das Elterngeraet nimmt es auf, "Try again" -> weiter */
+async function aufnehmenLassen(W, G, von) {
+  await G.wartenAuf('#kidWait');
+  assert.ok(G.text().includes("Your grown-up’s device has to let you in first"), 'Kind wartet auf die Eltern');
+  await W.aufnehmen(von);
+  G.klick('#kidWaitAgain');
 }
 
 test('1 Erwachsener: Startlink -> eigenes Passwort -> Wiederherstellungscode (Passwortspeicher, Datei) -> Elternbereich; zweites Geraet nur mit Name und Passwort', async (t) => {
@@ -145,12 +163,16 @@ test('1 Erwachsener: Startlink -> eigenes Passwort -> Wiederherstellungscode (Pa
   assert.deepEqual(A.wert('kontoFehlerListe'), []);
   assert.ok((await W.z.directory(await kontoLookup('peter.a'))) !== null, 'Konto liegt im Speicher');
 
-  // der Startcode ist verbraucht: ein zweites Geraet kommt damit nicht hinein
+  // der Startcode ist verbraucht: ein zweites Geraet kommt damit nicht hinein. Seit "Einladungen - Oberflaeche" fuehrt ein
+  // Startcode zu einem bestehenden Konto zum Passwort-Schritt (neues Passwort eines Kindes) - der Startcode selbst sagt dann
+  // "gilt nicht (mehr)"; angemeldet wird niemand.
   const B = geraet(t, W.w, { name: 'Peters iPhone' });
   await anmelden(B, 'adult', 'peter.a', code);
-  assert.equal(await B.meldung('#loginMsg'), 'Benutzername oder Passwort stimmt nicht.');
+  await passwortWaehlen(B);
+  assert.equal(await B.meldung('#setPwMsg'), 'Dieser Startcode gilt nicht (mehr). Bitte einen neuen geben lassen.');
   assert.equal(B.erwachsen(), null);
   await assert.rejects(ersteAnmeldung({ zugang: W.z, code, passwort: 'Noch-ein-Passwort-123', now: Date.now(), runden: RUNDEN }), (e) => e.code === 'startcode-ungueltig');
+  B.klick('#setPwBack');
 
   // falscher Name und falsches Passwort: dieselbe Meldung
   B.tippe('#loginUser', 'peter.x'); B.tippe('#loginPw', pw); B.absenden('#loginGo');
@@ -179,13 +201,14 @@ test('1 Erwachsener: Startlink -> eigenes Passwort -> Wiederherstellungscode (Pa
 test('2 Kind: Startcode getippt -> eigenes Passwort, kein Wiederherstellungscode; zweites Geraet; Geschwister; falsche Rolle', async (t) => {
   const W = await welt();
   await W.elternteil('mama.b');
-  const codeK = await W.startcode('kathie.b', 'child', 'mama.b'), codeL = await W.startcode('lena.b', 'child', 'mama.b');
+  const codeK = await W.kind('kathie.b', 'mama.b'), codeL = await W.kind('lena.b', 'mama.b');
   const A = geraet(t, W.w, { name: 'Kathies iPad' });
   await anmelden(A, 'student', 'kathie.b', codeK);
   await A.wartenAuf('#setPwForm');
   assert.ok(A.text().includes('It works on every device you log in to'), 'Kinder: Englisch');
   assert.ok(A.text().includes('Idea'));
   const pwK = await passwortWaehlen(A);
+  await aufnehmenLassen(W, A, 'mama.b');
   await A.wartenAuf('#welcomeGo');
   assert.equal(A.da('#recCode'), false, 'Kinder haben keinen Wiederherstellungscode');
   assert.ok(A.text().includes('Welcome to Big Quest!'));
@@ -205,7 +228,8 @@ test('2 Kind: Startcode getippt -> eigenes Passwort, kein Wiederherstellungscode
   A.S.lauf(() => A.S.holen('showLogin')('student'));
   assert.deepEqual(A.offen(), [k.id], 'Kathies Schluessel noch da');
   // "Passwort vergessen?" beim Kind: Hinweis auf einen neuen Startcode, keine Wiederherstellung
-  assert.ok(A.text().includes("Who's here?") && A.text().includes('kathie.b'), "Who's here? zeigt Kathie");
+  // (Anzeigename aus "Kind anlegen" - "kathie" - kam mit der Aufnahme durch das Elterngeraet)
+  assert.ok(A.text().includes("Who's here?") && A.da('[data-kidpick="kathie.b"]') && A.im('[data-kidpick="kathie.b"]').textContent.includes('kathie'), "Who's here? zeigt Kathie");
   A.klick('#loginForgot');
   assert.equal(A.im('#loginMsg').textContent, 'Ask your grown-up for a new start code.');
   assert.equal(A.da('#forgotForm'), false);
@@ -213,6 +237,7 @@ test('2 Kind: Startcode getippt -> eigenes Passwort, kein Wiederherstellungscode
   // Geschwister am selben Geraet: Lena meldet sich an, Kathies Schluessel verlaesst das Geraet
   await anmelden(A, 'student', 'lena.b', codeL);
   const pwL = await passwortWaehlen(A);
+  await aufnehmenLassen(W, A, 'mama.b');
   await A.wartenAuf('#welcomeGo'); A.klick('#welcomeGo');
   const lena = A.liste().find((e) => e.user === 'lena.b');
   assert.deepEqual(A.offen(), [lena.id], 'nur das angemeldete Kind behaelt seine Schluesselkopie');
@@ -394,7 +419,7 @@ test('7 Testinstanz (Praefix bqt_): Anmeldung mit Startcode und auf dem zweiten 
   const KATHIE = { bq2_name: JSON.stringify('KATHIE-ECHT'), bq2_session: JSON.stringify({ user: 'kathie', id: 'p_71ANFJ3X5V35ZD7H22W1WB4107' }), bq2_evDevice: JSON.stringify('d_KATHIE'), bq2_kontoListe: '[]', bq_abgleich: '{}' };
   const W = await welt();
   await W.elternteil('peter.b');
-  const codeP = await W.startcode('anna.b', 'parent'), codeK = await W.startcode('kathie.b', 'child', 'peter.b');
+  const codeP = await W.startcode('anna.b', 'parent'), codeK = await W.kind('kathie.b', 'peter.b');
   const opt = { praefix: 'bqt_', speicher: { ...KATHIE }, anpassen: (h) => testinstanzUmwandeln(h, ERSATZ) };
   const A = geraet(t, W.w, { name: 'Testinstanz iPad', ...opt });
   assert.equal(A.wert('KONTO_UI'), true);
@@ -404,7 +429,7 @@ test('7 Testinstanz (Praefix bqt_): Anmeldung mit Startcode und auf dem zweiten 
   assert.equal(A.erwachsen().user, 'anna.b');
   A.S.lauf(() => A.S.holen('logout')());
   await anmelden(A, 'student', 'kathie.b', codeK);
-  await passwortWaehlen(A); await A.wartenAuf('#welcomeGo'); A.klick('#welcomeGo');
+  await passwortWaehlen(A); await aufnehmenLassen(W, A, 'peter.b'); await A.wartenAuf('#welcomeGo'); A.klick('#welcomeGo');
   assert.equal(A.sitzung().user, 'kathie.b');
   A.S.karteOeffnen(A.S.alleKarten().find((x) => !x.studio));
   A.S.frageBeantworten(A.S.zustand().round[0]);

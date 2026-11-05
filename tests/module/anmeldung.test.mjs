@@ -90,3 +90,42 @@ test('Anleitung: Punkte ersetzen, fehlender Punkt ist ein Fehler', () => {
   assert.equal(neu, '<ol><li><b>Anmelden:</b> neu</li><li><b>Sichern:</b> bleibt</li></ol><p><b>Forgot your password?</b> new</p>');
   assert.throws(() => anmPunkteErsetzen(t, [['Gibt es nicht:', 'x']]), /nicht gefunden/);
 });
+
+/* ---------- Aufgabe "Einladungen - Oberflaeche" (05.11.) ---------- */
+test('anmVersuch: Startcode zu einem bestehenden Konto (neues Passwort eines Kindes) fuehrt zum Passwort-Schritt; falsches Passwort bleibt "anmeldung"', async () => {
+  const { lokalerSpeicher } = await import('../../src/module/speicher.mjs');
+  const { startcodeAusstellen, ersteAnmeldung } = await import('../../src/module/konto.mjs');
+  const { anmVersuch } = await import('../../src/module/anmeldung.mjs');
+  const w = lokalerSpeicher(), z = w.geraet('d_T1'), now = Date.now();
+  const sa = await startcodeAusstellen({ zugang: z, aussteller: null, anmeldename: 'verwalter', art: 'admin', now });
+  await ersteAnmeldung({ zugang: z, code: sa.code, passwort: 'Tiger-Lamp-River-4271', now, runden: 1000 });
+  const r = await anmVersuch({ zugang: z, anmeldename: 'verwalter', text: CODE });
+  assert.deepEqual(r, { erstesMal: { anmeldename: 'verwalter', code: CODE } }, 'Startcode-Form -> der Code entscheidet');
+  await assert.rejects(anmVersuch({ zugang: z, anmeldename: 'verwalter', text: 'Falsches-Passwort-1234' }), (e) => e.code === 'anmeldung');
+  await assert.rejects(anmVersuch({ zugang: z, anmeldename: 'verwalter', text: 'Judoka-Anchor-Key-2947' }), (e) => e.code === 'anmeldung', 'Vorschlags-Form mit 22 Zeichen ist nie ein Startcode');
+});
+
+test('anmKindBereit: erst wenn ein Elterngeraet das Kind aufgenommen hat (aktueller Schluessel des Lernbereichs); Erwachsene immer', async () => {
+  const { lokalerSpeicher } = await import('../../src/module/speicher.mjs');
+  const { startcodeAusstellen, ersteAnmeldung } = await import('../../src/module/konto.mjs');
+  const { anmKindBereit, anmKindAnlegen, anmAbgleich } = await import('../../src/module/anmeldung.mjs');
+  const w = lokalerSpeicher(), now = () => Date.now();
+  const ablage = (d) => { const m = new Map([['bq2_evDevice', JSON.stringify(d)]]); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => { m.set(k, String(v)); } }; };
+  const sa = await startcodeAusstellen({ zugang: w.geraet('d_A'), aussteller: null, anmeldename: 'verwalter', art: 'admin', now: now() });
+  const admin = await ersteAnmeldung({ zugang: w.geraet('d_A'), code: sa.code, passwort: 'Tiger-Lamp-River-4271', now: now(), runden: 1000 });
+  const sp = await startcodeAusstellen({ zugang: w.geraet('d_A'), aussteller: admin, anmeldename: 'peter', art: 'parent', now: now() });
+  const P = await ersteAnmeldung({ zugang: w.geraet('d_P'), code: sp.code, passwort: 'Otter-Cake-Moss-1234', now: now(), runden: 1000 });
+  const aP = ablage('d_P'), sync = (a, d, k) => anmAbgleich({ ablage: a, zugang: w.geraet(d), konten: [k], now: now(), heute: '2026-11-05' });
+  assert.equal(await anmKindBereit({ ablage: aP, zugang: w.geraet('d_P'), konto: P, now: now() }), true, 'Erwachsene: immer');
+  await sync(aP, 'd_P', P);
+  const qr = await anmKindAnlegen({ zugang: w.geraet('d_P'), ablage: aP, konto: P, anmeldename: 'kathie', anzeigename: 'Kathie', now: now() });
+  await sync(aP, 'd_P', P);
+  const K = await ersteAnmeldung({ zugang: w.geraet('d_K'), code: qr.code, passwort: 'Puffin-Jam-Lake-9876', fingerabdruck: qr.fingerabdruck, now: now(), runden: 1000 });
+  const aK = ablage('d_K');
+  await sync(aK, 'd_K', K);
+  assert.equal(await anmKindBereit({ ablage: aK, zugang: w.geraet('d_K'), konto: K, now: now() }), false, 'vor der Aufnahme: wartet');
+  await sync(aP, 'd_P', P);
+  assert.equal(await anmKindBereit({ ablage: aK, zugang: w.geraet('d_K'), konto: K, now: now() }), true, 'nach der Aufnahme: darf ueben');
+  const off = w.geraet('d_K'); off.offline();
+  assert.equal(await anmKindBereit({ ablage: aK, zugang: off, konto: K, now: now() }), false, 'Speicher weg: (noch) nicht');
+});
