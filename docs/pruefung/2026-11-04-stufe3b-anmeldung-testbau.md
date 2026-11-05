@@ -33,7 +33,10 @@ Kathies App (Live-Bau) aendert ihr Verhalten nicht: Suchlauf - im Live-Bau steht
 | `tests/konto-anmeldung-browser.test.mjs` (1, Chromium, GitHub-Nachbau) | Bedienwege und Kennzeichnung: Startcode sofort aus der Adresse, Zugang, `username`/`current-password`/`new-password`, Code-Eintrag mit `name="username"`/`name="password"` in einem Formular, Download der Datei, Formular verschwindet nach dem Sichern, Schluessel in IndexedDB **nicht exportierbar**, Neuladen bleibt angemeldet, Abmelden loescht die Schluessel, zweites Geraet, "Passwort vergessen?" |
 | `tests/testpersonen.test.mjs` (+1 Pruefung) | Startlink je Startcode in der lokalen Datei |
 
-**Gegenproben:** 25, alle rot (`%TEMP%\opencode\gegenproben-anmeldung.mjs`). Zwei waren zuerst gruen und haben Luecken **in den Tests** gezeigt (Browser wartete mit einem Versprechen statt mit dem Ergebnis; Geschwister-Test meldete vorher ab) - beide Tests korrigiert, danach rot.
+**Befund der vollen Reihe (behoben):** 15 % der Passwort-Vorschlaege ("Judo-Anchor-Key-2947") haben genau 22 Zeichen und sahen damit aus wie ein Startcode - bei vertipptem Namen fuehrte das zu "Eigenes Passwort waehlen" statt "stimmt nicht" (zufaellig rot im ersten Lauf). Jetzt gilt die Form "Woerter-Zahl" nie als Startcode (5 000 Vorschlaege und 5 000 echte Codes im Test).
+Ausserdem in der vollen Reihe angepasst: `tests/stufe1-p4.test.mjs` liest die Anleitungen jetzt auch in der Form `kontoTexte(\`...\`, ...)`; `werkzeug/speicherstellen.json` kennt `bq2_kontoListe` und IndexedDB `bq2_konto`.
+
+**Gegenproben:** 26, alle rot (`%TEMP%\opencode\gegenproben-anmeldung.mjs`). Zwei waren zuerst gruen und haben Luecken **in den Tests** gezeigt (Browser wartete mit einem Versprechen statt mit dem Ergebnis; Geschwister-Test meldete vorher ab) - beide Tests korrigiert, danach rot.
 
 ## Entscheidungen (Peter kann widersprechen)
 - Startlink fuehrt zuerst zur **Rollenwahl** (Peter, 30.10.), danach ist das Formular ausgefuellt; Startlink-Format `#start=<name>/<code>[/<fingerabdruck>]` (Namen wie `peter.a` enthalten Punkte, darum `/`).

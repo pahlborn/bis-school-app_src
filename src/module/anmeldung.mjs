@@ -32,9 +32,12 @@ const anmFp = (t) => (typeof t === 'string' && /^[a-z]+(-[a-z]+){5}$/i.test(t) ?
 const anmPid = (x) => typeof x === 'string' && /^p_[0-9A-Za-z]{1,40}$/.test(x);
 const anmEsc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-/* is this typed text a start code (and not a password)? */
+/* is this typed text a start code (and not a password)? A start code is random; the form of the app's password suggestion
+   ("Judo-Anchor-Key-2947": words, dashes, a number - 15 % of them have 22 characters) is never taken for one. */
 export function anmIstStartcode(text) {
-  return typeof text === 'string' && ANM_STARTCODE.test(text.trim());
+  if (typeof text !== 'string') return false;
+  const t = text.trim();
+  return ANM_STARTCODE.test(t) && !/^[A-Za-z]+(-[A-Za-z]+)*-\d+$/.test(t);
 }
 
 /* "#start=<name>/<code>[/<fingerprint>]" -> { anmeldename, code, fingerabdruck (or null) }; anything else -> null */

@@ -155,6 +155,10 @@ test('1 Erwachsener: Startlink -> eigenes Passwort -> Wiederherstellungscode (Pa
   // falscher Name und falsches Passwort: dieselbe Meldung
   B.tippe('#loginUser', 'peter.x'); B.tippe('#loginPw', pw); B.absenden('#loginGo');
   assert.equal(await B.meldung('#loginMsg'), 'Benutzername oder Passwort stimmt nicht.');
+  // ein Vorschlags-Passwort mit genau 22 Zeichen (sieht aus wie ein Startcode) bei vertipptem Namen: auch nur "stimmt nicht"
+  B.tippe('#loginUser', 'peter.x'); B.tippe('#loginPw', 'Judoka-Anchor-Key-2947'); B.absenden('#loginGo');
+  assert.equal(await B.meldung('#loginMsg'), 'Benutzername oder Passwort stimmt nicht.');
+  assert.equal(B.da('#setPwForm'), false);
   B.tippe('#loginUser', 'peter.a'); B.tippe('#loginPw', pw + 'x'); B.absenden('#loginGo');
   assert.equal(await B.meldung('#loginMsg'), 'Benutzername oder Passwort stimmt nicht.');
 

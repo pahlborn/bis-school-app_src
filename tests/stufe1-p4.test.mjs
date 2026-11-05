@@ -259,7 +259,8 @@ test('Name und Geburtsdatum (Peter, 04.11.): zwei Kinder gleichen Namens - die L
 test('Anleitungen und Freigabe-Hinweis nennen Name, Nachname und Geburtsdatum (Eltern, Lehrkraft, Admin; DE und EN)', async () => {
   const { readFile } = await import('node:fs/promises');
   const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
-  const teil = (name) => { const m = html.match(new RegExp('const ' + name + '=`([\\s\\S]*?)`;')); assert.ok(m, name); return m[1]; };
+  // (seit "Anmeldung im Testbau": const X=kontoTexte(`...`, KONTO_GUIDE.x); - der Text selbst ist der von Kathies App)
+  const teil = (name) => { const m = html.match(new RegExp('const ' + name + '=(?:kontoTexte\\()?`([\\s\\S]*?)`(?:, KONTO_GUIDE\\.\\w+\\))?;')); assert.ok(m, name); return m[1]; };
   for (const g of ['GUIDE_ADULT_DE', 'GUIDE_TEACHER_DE', 'GUIDE_ADMIN_DE']) assert.match(teil(g), /Vor- und Nachname[^<]*Geburtsdatum[^<]*Emoji und Einstellungen/, g);
   for (const g of ['GUIDE_ADULT_EN', 'GUIDE_TEACHER_EN', 'GUIDE_ADMIN_EN']) assert.match(teil(g), /first and last name[^<]*date of birth[^<]*emoji (and|or) settings/, g);
   for (const alt of ['Den Namen aus dem Profil sehen Sie nicht', 'You do not see the name from the profile', 'Geburtstag, Emoji und Einstellungen', 'birthday, emoji or settings', 'birthday, emoji and settings', 'Geburtstag (ohne Jahr)', 'birthday (without year)']) assert.ok(!html.includes(alt), alt);

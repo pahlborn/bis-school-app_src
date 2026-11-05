@@ -9,6 +9,7 @@ import {
   anmCodeDatei, anmEintragAus, anmListe, anmListeMit, anmGeraetKonten, anmPunkteErsetzen
 } from '../../src/module/anmeldung.mjs';
 import { normAccounts } from '../../src/module/rechte.mjs';
+import { pwSuggest } from '../../src/module/passwort.mjs';
 
 const CODE = 'Ab3_-xY9Ab3_-xY9Ab3_-x';                       // 22 Zeichen base64url wie konto.startcodeAusstellen
 const FP = 'tiger-lamp-river-owl-cake-moon';
@@ -19,6 +20,15 @@ test('Startcode erkennen: 22 Zeichen base64url, sonst Passwort', () => {
   assert.equal(anmIstStartcode('  ' + CODE + ' '), true, 'Leerzeichen beim Abtippen');
   for (const x of ['Tiger-Lamp-River-427', CODE.slice(1), CODE + 'A', CODE.replace('_', '+'), '', null, 42]) assert.equal(anmIstStartcode(x), false, String(x));
   assert.ok(ANM_STARTCODE.test(CODE));
+});
+
+test('Startcode erkennen: kein Passwort-Vorschlag gilt als Startcode, jeder echte Startcode schon (Zufall, viele Laeufe)', () => {
+  let lang = 0;
+  for (let i = 0; i < 5000; i++) { const p = pwSuggest(); if (p.length === 22) lang++; assert.equal(anmIstStartcode(p), false, p); }
+  assert.ok(lang > 200, 'Vorschlaege mit genau 22 Zeichen kommen vor: ' + lang);
+  assert.equal(anmIstStartcode('Judo-Anchor-Key-29470'), false);
+  const b64url = (u8) => Buffer.from(u8).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  for (let i = 0; i < 5000; i++) { const c = b64url(crypto.getRandomValues(new Uint8Array(16))); assert.equal(anmIstStartcode(c), true, c); }
 });
 
 test('Startlink: hin und zurueck, mit und ohne Fingerabdruck; Namen mit Punkt', () => {
