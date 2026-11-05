@@ -3,6 +3,8 @@
 dist/
 # Ergebnis von werkzeug/testinstanz.mjs (Stufe 3c) - wird spaeter ins Repo bis-school-app-test hochgeladen
 dist-test/
+# Ergebnis von werkzeug/verschluesseln.mjs --familie (Vorbereitung Stufe 4) - erst nach Peters Go veroeffentlichen
+dist-familie/
 node_modules/
 
 # Lockdatei des Werkzeugs enthaelt die Adresse des Firmen-Paketspiegels - nicht einchecken

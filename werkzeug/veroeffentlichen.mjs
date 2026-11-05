@@ -3,6 +3,8 @@
 //
 //   node werkzeug/verschluesseln.mjs                       (vorher: bauen, prueft und schreibt dist/)
 //   node werkzeug/veroeffentlichen.mjs --ziel "C:\dev\Peters Bastelbude\bis-school-app" --text "Elternbereich F6"
+//   --dist <ordner>: ein anderer gebauter Ordner, z. B. dist-familie (Familienfassung, Stufe 4 - NUR nach Peters Go;
+//   Ablauf docs/veroeffentlichen.md, Abschnitt 6)
 //
 // Bricht ab, ohne etwas zu kopieren, wenn
 //  - dist/ fehlt oder die Huelle keinen Tresor hat oder Klartext der App enthaelt,
@@ -19,9 +21,10 @@ import { tresorAusHuelle, ohneTresor } from './kern.mjs';
 import { versionErmitteln, versionText } from './version.mjs';
 
 function schalter(argv) {
-  const s = { ziel: null, text: '', ohnePush: false };
+  const s = { ziel: null, text: '', ohnePush: false, dist: null };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '--ziel') s.ziel = path.resolve(argv[++i] || '');
+    else if (argv[i] === '--dist') s.dist = path.resolve(argv[++i] || '');   // z. B. dist-familie (Stufe 4, nur nach Peters Go)
     else if (argv[i] === '--text') s.text = String(argv[++i] || '').trim();
     else if (argv[i] === '--ohne-push') s.ohnePush = true;
     else throw new Error('Unbekannter Schalter: ' + argv[i]);

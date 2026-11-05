@@ -7,6 +7,11 @@
 // Weitere Schalter: --ziel <ordner> (statt dist/), --ohne-abgleich (nicht
 // gegen die veroeffentlichte Seite pruefen).
 //
+//   node werkzeug/verschluesseln.mjs --familie
+//     Bauart "Familie" (Vorbereitung Stufe 4, werkzeug/familie.mjs): baut nach dist-familie/ - gleicher Schluessel,
+//     ohne konten.json und Schuldaten, mit dem Familien-Repo verbunden, Suchlauf. Veroeffentlicht nichts; das geht
+//     nur nach Peters Go fuer Stufe 4 (docs/veroeffentlichen.md, Abschnitt 6). Mit --live-pruefen: dist-familie/.
+//
 //   node werkzeug/verschluesseln.mjs --live-pruefen
 //     nach dem Hochladen: vergleicht die Version in dist/ mit der veroeffentlichten Seite
 //     ("gleich", "anders (veroeffentlicht: vX)" oder "nicht erreichbar"). Baut nichts.
@@ -22,7 +27,8 @@
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { WURZEL, distBauen, quellenLesen, mitVeroeffentlichterPruefen, liveVergleichen } from './bauen.mjs';
+import { WURZEL, distBauen, familieBauen, quellenLesen, mitVeroeffentlichterPruefen, liveVergleichen } from './bauen.mjs';
+import { FAMILIE } from './familie.mjs';
 import { passwortPruefen, passwortNormal, schluesselAusPasswort, schluesselRoh, schluesselAusRoh, entschluesselnMitSchluessel, tresorAusHuelle, ITERATIONEN } from './kern.mjs';
 import { versionAuslesen, versionText } from './version.mjs';
 import * as ablage from './schluesselablage.mjs';
@@ -55,10 +61,11 @@ function verdecktFragen(frage) {
 }
 
 function schalterLesen(argv) {
-  const s = { passwort: false, vergessen: false, ohneAbgleich: false, ziel: null, livePruefen: false };
+  const s = { passwort: false, vergessen: false, ohneAbgleich: false, ziel: null, livePruefen: false, familie: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--passwort') s.passwort = true;
+    else if (a === '--familie') s.familie = true;
     else if (a === '--live-pruefen') s.livePruefen = true;
     else if (a === '--vergessen') s.vergessen = true;
     else if (a === '--ohne-abgleich') s.ohneAbgleich = true;
@@ -94,7 +101,7 @@ async function main() {
   if (s.livePruefen) {
     const g = await ablage.lesen(salt, ITERATIONEN);
     if (!g.roh) throw new Error('Kein gemerkter Schluessel - Live-Pruefung nicht moeglich.');
-    const html = await fs.readFile(path.join(s.ziel || path.join(WURZEL, 'dist'), 'index.html'), 'utf8');
+    const html = await fs.readFile(path.join(s.ziel || path.join(WURZEL, s.familie ? FAMILIE.ordner : 'dist'), 'index.html'), 'utf8');
     const klar = await entschluesselnMitSchluessel(tresorAusHuelle(html), await schluesselAusRoh(g.roh));
     const gebaut = versionAuslesen(Buffer.from(klar).toString('utf8'));
     if (!gebaut) throw new Error('dist/index.html enthaelt keine Version.');
@@ -143,6 +150,19 @@ async function main() {
   }
 
   console.log('\nVerschluessele und pruefe ...');
+  if (s.familie) {
+    const f = await familieBauen(zugang || passwort, s.ziel ? { ziel: s.ziel } : {});
+    if (passwort) console.log(`\nSchluessel gemerkt (nicht das Passwort): ${await ablage.speichern(f.schluesselRoh, f.salt, ITERATIONEN)}`);
+    console.log('\nFamilienfassung gebaut. Suchlauf bestanden:');
+    for (const p of f.pruefungen) console.log('  ok  ' + p.name);
+    console.log(`\nOrdner: ${f.ziel}`);
+    for (const d of f.dateien) console.log(`  ${d}`);
+    console.log(`\nApp ${f.appBytes} Bytes, verschluesselte Seite ${f.huelleBytes} Bytes. Version ${versionText(f.version)} - ${f.version.hash} - ${f.version.date}`);
+    console.log(`Speicher: ${FAMILIE.repoDaten} (Zugang einmal je Geraet). Anmeldung nur ueber Konten im Speicher.`);
+    if (f.version.draft) console.log('ACHTUNG: nicht eingecheckte Aenderungen (Version mit "-entwurf"). Diesen Stand NICHT veroeffentlichen.');
+    console.log('\nNICHT veroeffentlicht. Veroeffentlichen erst nach Peters Go fuer Stufe 4: docs/veroeffentlichen.md, Abschnitt 6.');
+    return;
+  }
   const r = await distBauen(zugang || passwort, s.ziel ? { ziel: s.ziel } : {});
 
   if (passwort) {

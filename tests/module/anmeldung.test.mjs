@@ -7,8 +7,9 @@ import assert from 'node:assert/strict';
 import {
   ANM_STARTCODE, ANM_EINTRAG, anmIstStartcode, anmStartlinkLesen, anmStartlink, anmCodeEintrag, anmNameAusEintrag,
   anmCodeDatei, anmEintragAus, anmListe, anmListeMit, anmGeraetKonten, anmPunkteErsetzen,
-  anmVerworfen, anmGeraetEntfernt, anmGeraetNeu, anmSpeicherFremd
+  anmVerworfen, anmGeraetEntfernt, anmGeraetNeu, anmSpeicherFremd, ANM_VERWORFEN_ZAEHLT
 } from '../../src/module/anmeldung.mjs';
+import { ABGLEICH_GRUENDE } from '../../src/module/abgleich.mjs';
 import { normAccounts } from '../../src/module/rechte.mjs';
 import { pwSuggest } from '../../src/module/passwort.mjs';
 
@@ -136,6 +137,15 @@ test('Abgleich in der App: Zahl des nicht Uebernommenen; Geraet entfernt? (nur d
   assert.equal(anmVerworfen(ablage), 0);
   m.set('bq_abgleichVerworfen', JSON.stringify([{ grund: 'unterschrift' }, { grund: 'nach-entfernung' }]));
   assert.equal(anmVerworfen(ablage), 2);
+  // Peter, 05.11. (aus #139): nur Gefaelschtes und Eintraege ohne Berechtigung zaehlen - nicht Harmloses aus der Reihenfolge
+  // (Autor/Geraet erst spaeter aufgenommen, z. B. nach "Schluessel erneuern"; aelterer Stand) oder einer neueren App-Fassung
+  const alle = [...ABGLEICH_GRUENDE, 'stand-alt'];
+  m.set('bq_abgleichVerworfen', JSON.stringify(alle.map((grund) => ({ grund }))));
+  assert.equal(anmVerworfen(ablage), 8);
+  assert.deepEqual(alle.filter((g) => !ANM_VERWORFEN_ZAEHLT.includes(g)).sort(), ['autor-unbekannt', 'format', 'geraet-nicht-angemeldet', 'stand-alt']);
+  assert.ok(ANM_VERWORFEN_ZAEHLT.every((g) => ABGLEICH_GRUENDE.includes(g)), 'nur Gruende, die es gibt');
+  m.set('bq_abgleichVerworfen', JSON.stringify([{ grund: 'autor-unbekannt', typ: 'family_set' }, null, 'x']));
+  assert.equal(anmVerworfen(ablage), 0, 'nach "Schluessel erneuern": ein Familien-Eintrag mit autor-unbekannt -> keine Zahl');
   m.set('bq_abgleichVerworfen', 'kaputt'); assert.equal(anmVerworfen(ablage), 0);
   m.set('bq2_evDevice', JSON.stringify('d_A1'));
   const st = (dev) => JSON.stringify({ 'kind:lern:p_k1': { log: [{ event: { type: 'device_added', payload: { device: 'd_A1' } } }, { event: { type: 'device_removed', payload: { device: dev } } }] } });

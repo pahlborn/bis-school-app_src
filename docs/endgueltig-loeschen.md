@@ -4,6 +4,10 @@ Stand: 05.11.2026 (Vorbereitung Stufe 4, Aufgabe "Export und Loeschen"; EP12, US
 
 ## Was die App beim Loeschen tut
 
+In der App (Familienfassung, Testinstanz): Elternbereich -> Einstellungen -> "Familie": je Kind "Daten" (Export) und
+"Loeschen" (Anmeldename zur Bestaetigung eintippen), unten "Mein Konto loeschen" (mit Passwort). "Ueber die App" ->
+"Daten exportieren und loeschen" verlinkt diese Anleitung.
+
 **Kind loeschen** (ein Elternteil, `kinddaten.kindDatenLoeschen`):
 1. Die Familie traegt das Kind aus (`family_set` mit `removed`) - sofort gesendet. Jedes Geraet der Familie laesst das
    Kind danach weg, gibt ihm keinen Schluessel mehr und legt seine Bereiche nie neu an.
@@ -30,7 +34,7 @@ Stand: 05.11.2026 (Vorbereitung Stufe 4, Aufgabe "Export und Loeschen"; EP12, US
 | Geraete, die seitdem nicht abgeglichen haben | ihre lokale Kopie | bis zum naechsten Abgleich; danach geloescht |
 | Geraet einer Lehrkraft mit Freigabe | ihre lokale Kopie des Lernstands | bleibt bis zur Einladungs-Aufgabe (EP9) - der Speicher ist leer, neue Daten kommen nicht mehr |
 | Sicherungsdateien, die jemand heruntergeladen hat | was beim Sichern da war | wie die Datei (Eltern bewahren sie auf) |
-| Sprachaufnahmen (IndexedDB `bq2_audio`) | nur auf dem Geraet, auf dem sie entstanden | werden nie abgeglichen. Das Modul loescht sie **nicht** (kein Zugriff auf IndexedDB) - das macht der Knopf in der Familienfassung mit (offen, dort einbauen) |
+| Sprachaufnahmen (IndexedDB `bq2_audio`) | nur auf dem Geraet, auf dem sie entstanden | werden nie abgeglichen. Das Modul loescht sie **nicht** (kein Zugriff auf IndexedDB) - das macht die App selbst: der Knopf "Loeschen" im Elternbereich auf diesem Geraet, jedes andere Geraet der Familie beim naechsten Abgleich (Aufgabe "Familienfassung bauen", `kontoLokalWeg`) |
 
 ## So entfernt man auch die alten Staende (GitHub)
 
