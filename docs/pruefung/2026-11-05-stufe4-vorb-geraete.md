@@ -57,7 +57,12 @@ Pfad-Regel fehlt; Anna entfernt Peters Geraet; Kind entfernt Geraete; Lehrkraft 
 darf gar nicht entfernen; Liste erkennt "entfernt" nicht; kein Geraetename. Dazu eine Probe, die **gruen bleiben muss**:
 nimmt man nur "meldet sich nicht wieder an" heraus, faengt die Pfad-Regel es trotzdem ab (zwei Schichten).
 
-Volle Reihe: siehe PR.
+**Volle Reihe** (eigener Arbeitsordner, mit `main` = cd7f9a5 = Teil a #135): erster Lauf 745/747 - zwei Rote in
+`testinstanz.test` (die neue Geraetestelle `bq_geraetEntfernen` steht dort in einer fest eingetragenen Liste; das Werkzeug
+macht sie richtig geraeteweit `bqt_geraetEntfernen`, nur der Test kannte sie nicht -> Liste nachgezogen). Zweiter Lauf
+746/747: **Zufallsrot** in `testpersonen.test` (sucht "anna" im kleingeschriebenen Speicherinhalt - in base64 kommen vier
+Buchstaben zufaellig vor) -> kurze Woerter jetzt nur als eigenes Wort (wie im Konto-Test), 3x einzeln gruen. Dritter
+Lauf **747/747** (326 s).
 
 ## Entscheidungen (Peter kann widersprechen)
 - Nur die Person selbst entfernt ihre Geraete; Eltern zusaetzlich die ihrer Kinder. Der andere Elternteil entfernt keine
