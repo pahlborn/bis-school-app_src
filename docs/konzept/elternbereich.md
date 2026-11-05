@@ -187,7 +187,7 @@ Eigene Ansicht mit „← Zurück“, ersetzt „📱 Bedienung & Technik“. Ei
 
 1. **Über diese Anwendung** (heutiger Einleitungsabsatz aus „So funktioniert“).
 2. **Wichtiger Hinweis** wie heute, ergänzt: „Die App weiß nicht, wer eine Aufgabe gelöst hat und mit welchen Hilfsmitteln. Was sie anzeigt, ist ein Hinweis; die Verantwortung für das Lernen und für Entscheidungen liegt bei den Eltern.“ Derselbe Satz kurz im ⓘ der Einschätzung.
-3. **Datenschutz** wie heute ohne Doppelungen: „Konten und Rechte“ auf zwei Sätze mit Verweis auf ⚙ Zugriff & Freigaben. Leseaufnahmen, Kalenderdatei, Google Fonts bleiben.
+3. **Datenschutz** wie heute ohne Doppelungen: „Konten und Rechte“ auf zwei Sätze mit Verweis auf ⚙ Zugriff & Freigaben. Leseaufnahmen, Kalenderdatei, Google Fonts bleiben. *(05.11.: Schriften sind jetzt eingebettet, der Satz zu Google Fonts ist entfallen.)*
 4. **Impressum:** Platzhalter „Wird ergänzt.“ / „To be added.“. Hinweis für später: Falls nötig, muss es ohne Passwort erreichbar sein (öffentliche Anmeldeseite `werkzeug/huelle.html`) und kollidiert mit `werkzeug/verbotene-woerter.txt`. In diesem Umbau nichts an der Hülle ändern.
 5. **Version:** Versionsnummer, „Nach neuer Version suchen“.
 

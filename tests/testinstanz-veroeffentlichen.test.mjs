@@ -214,7 +214,7 @@ test('Browser: die veroeffentlichte Testfassung aktualisiert sich selbst, ohne S
     const r = await page.evaluate(() => ({ gelesen: [...new Set(window.__gelesen || [])], schluessel: Object.keys(localStorage).filter((k) => /schluessel/i.test(k)) }));
     assert.deepEqual(r.schluessel, [], 'kein Schluessel auf dem Geraet');
     assert.deepEqual(r.gelesen.filter((k) => /schluessel/i.test(k) || !k.startsWith('bqt')), [], 'nur bqt gelesen, kein Schluessel');
-    assert.deepEqual(anfragen.filter((u) => !u.startsWith(s.url) && !u.includes('fonts.g')), [], 'keine fremde Adresse');
+    assert.deepEqual(anfragen.filter((u) => !u.startsWith(s.url)), [], 'keine fremde Adresse');
     assert.ok(anfragen.some((u) => /\/bis-school-app-test\/\?t=\d+$/.test(u)), 'Version auf der eigenen Seite nachgesehen');
     assert.deepEqual(fehler, []);
     await ctx.close();

@@ -44,7 +44,7 @@ for (const [name, kontext] of GERAETE) {
     assert.equal(await lies(page, 'emoji'), '"🦁"');
     assert.equal(await page.textContent('#profileName'), 'Alex');
     assert.equal(await page.textContent('#profileEmoji'), '🦁');
-    assert.deepEqual(anfragen.filter((u) => !u.includes('fonts.g')), []);
+    assert.deepEqual(anfragen, []);
     assert.deepEqual(fehler, []);
     await ctx.close();
   });

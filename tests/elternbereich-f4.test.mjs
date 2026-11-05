@@ -15,7 +15,7 @@ const GRUPPEN = {
   de: ['Forschung zu Lernen, Feedback und Hilfe', 'IB und Schule', 'Lehrpläne zum Vergleich', 'Lernprogramme und Materialien', 'Technik und Datenschutz', 'Nicht öffentliche Quellen'],
   en: ['Research on learning, feedback and help', 'IB and school', 'Curricula for comparison', 'Learning programs and materials', 'Technology and privacy', 'Non-public sources']
 };
-const QUELLEN = 55, SCHULE = 4;
+const QUELLEN = 56, SCHULE = 4;     // 56: + Schriftarten Fredoka/Nunito mit Lizenz (05.11.)
 // spot checks: a source sits in its group
 const STICH = { 1: 'doi.org/10.3102/0034654308325185', 2: 'ibo.org/terms-and-conditions', 3: 'lehrplanplus.bayern.de', 4: 'typing.com', 5: 'ico.org.uk' };
 

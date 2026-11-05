@@ -23,6 +23,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { DATEN_RE, GOOGLE_FONTS as GOOGLE_IM_MANIFEST, ohneSchriften, schriftenLesen, schriftenPruefen } from './schriften.mjs';
 
 export const TESTINSTANZ = Object.freeze({
   praefix: 'bqt_',                                   // statt bq2_ (Daten der App) und bq_ (Geraetedaten)
@@ -88,6 +89,17 @@ const VERSION_AUS_TRESOR = /async function publishedVersion\(\)\{\r?\n {2}const 
  * SPEICHER_TESTINSTANZ, der Suchlauf (testinstanzPruefen) verlangt genau diesen.
  */
 export function testinstanzUmwandeln(app, ersatz, { speicher = JSON.stringify(SPEICHER_TESTINSTANZ) } = {}) {
+  // eingebettete Schriften (Base64) bleiben unberuehrt: Ersetzungen ohne Ruecksicht auf Gross/klein koennten sonst
+  // zufaellig mitten in den Daten treffen
+  const daten = [];
+  const geschuetzt = String(app).replace(DATEN_RE, (m) => { daten.push(m); return `url(data:font/woff2;base64,BQSCHRIFT${daten.length - 1}x)`; });
+  const t = umwandeln(geschuetzt, ersatz, speicher);
+  const n = (t.match(/BQSCHRIFT\d+x/g) || []).length;
+  if (n !== daten.length) throw new Error(`Testinstanz: eingebettete Schriften ${n}x statt ${daten.length}x nach der Umwandlung - nichts gebaut.`);
+  return t.replace(/url\(data:font\/woff2;base64,BQSCHRIFT(\d+)x\)/g, (_, i) => daten[Number(i)]);
+}
+
+function umwandeln(app, ersatz, speicher) {
   let t = String(app);
   for (const [suche, neu] of ersatz.ersetzen) t = t.replace(new RegExp(reEsc(suche), 'gi'), () => neu);
   t = einmal(t, VERSION_AUS_TRESOR, () => VERSION_AUS_KLARTEXT, 'publishedVersion (mit Schluessel)');
@@ -128,10 +140,12 @@ function texte(x, min, out = new Set()) {
  * kontext: { woerter (verbotene-woerter.txt), auchVerboten, schule (schuldaten.json oder null), konten (konten.json oder
  * null), salt (aus salz.json, base64) }
  */
-export function testinstanzPruefen(app, manifest, { woerter = [], auchVerboten = [], schule = null, konten = null, salt = '' } = {}) {
+export function testinstanzPruefen(app, manifest, { woerter = [], auchVerboten = [], schule = null, konten = null, salt = '', schriften = schriftenLesen(WURZEL) } = {}) {
   const pruefungen = [];
   const pruef = (name, fund) => pruefungen.push({ name, ok: !fund, fund: fund || '' });
-  const alles = app + '\n' + manifest;
+  // Textsuchen ohne die eingebetteten Schriften: in rund 90 KB Base64 tauchen kurze Woerter zufaellig auf. Die Schriften
+  // selbst prueft "Schriften eingebettet" (nur Base64-Zeichen, genau die Daten aus werkzeug/schriften/schriften.json).
+  const alles = ohneSchriften(app) + '\n' + manifest;
 
   // keine Schuldaten
   pruef('Schuldaten leer (SCHOOL_DATA=null)', /const SCHOOL_DATA=null\|\|\{\};/.test(app) ? '' : 'SCHOOL_DATA ist nicht null');
@@ -179,6 +193,10 @@ export function testinstanzPruefen(app, manifest, { woerter = [], auchVerboten =
   const verboten = [...woerter, ...auchVerboten];
   const wortTreffer = verboten.filter((w) => new RegExp(reEsc(w), 'i').test(alles));
   pruef(`keine verbotenen Woerter (${verboten.length} gesucht, ganze App)`, wortTreffer.length ? wortTreffer.map((w) => `"${w}"`).join(', ') : '');
+
+  // Schriften eingebettet (05.11.): nichts von Google Fonts, jede Schrift genau einmal
+  const sf = [...schriftenPruefen(app, schriften), ...(GOOGLE_IM_MANIFEST.test(manifest) ? ['Google Fonts im Manifest'] : [])];
+  pruef(`Schriften eingebettet, nichts von Google Fonts (${schriften.map((s) => s.familie).join(', ')})`, sf.join(', '));
 
   // es ist der Testbau, mit Version
   pruef('Testbau (Module github, konto, geraeteabgleich)', ['function githubSpeicher(', 'async function kontoLookup(', 'async function geraetAbgleichen('].every((s) => app.includes(s)) ? '' : 'Testbau-Module fehlen');
