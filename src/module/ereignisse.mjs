@@ -66,7 +66,9 @@ const EV_SPEC = {
   member_removed: ['person:pid', ''],
   device_added: ['device:did', 'label:str'],
   device_removed: ['device:did', ''],
-  key_rotated: ['version:pos entfernt:pids stand:stand', ''],
+  // erneuert (task "Neuer Schluessel"): persons with new keys since the last version (a grown-up renewed his key, a child
+  // got a new password) - their bundles with an older version beyond "stand" no longer count, like those of the removed
+  key_rotated: ['version:pos entfernt:pids stand:stand', 'erneuert:pids'],
   // snapshot (task 5, module schnappschuss): idsHash = checksum of the events it contains, so a late event is noticed
   snapshot: ['upTo:utc count:int idsHash:sha state:obj', ''],
   // gaps per school (index.html "gaps", task 3b-0): one standard per event; day = the app's day (index.html dayKey)

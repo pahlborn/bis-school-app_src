@@ -212,8 +212,27 @@ test('Matrix: alle 35 Typen x 4 Rollen gegen die hier ausgeschriebene Tabelle', 
     if (got !== want) falsch.push(`${role} ${type}: ${got} instead of ${want}`);
   }
   assert.deepEqual(falsch, []);
-  for (const role of ROLES) assert.deepEqual(ANNAHME_RECHTE[role].slice().sort(), EVENT_TYPES.filter((t) => darf(role, t)).sort(), 'exported table ' + role);
+  // Neuer Schluessel: Lehrkraft und Admin duerfen member_added/key_rotated nur unter Bedingungen (Test unten) - die
+  // Matrix-Beispiele (ueber andere Personen, in fremden Bereichen) sind dort richtig abgelehnt
+  const BEDINGT = { teacher: ['key_rotated', 'member_added'], admin: ['key_rotated', 'member_added'] };
+  for (const role of ROLES) assert.deepEqual(ANNAHME_RECHTE[role].slice().sort(), EVENT_TYPES.filter((t) => darf(role, t) || (BEDINGT[role] || []).includes(t)).sort(), 'exported table ' + role);
   assert.ok(Object.isFrozen(ANNAHME_RECHTE) && Object.isFrozen(ANNAHME_RECHTE.child), 'the exported table cannot be changed');
+});
+
+test('Neuer Schluessel: Lehrkraft und Admin kuendigen nur ihren eigenen neuen Schluessel an (gleiche Rolle) und wechseln nur im eigenen Personen-Bereich; Kind gar nicht', async () => {
+  const pub2 = { ecdh: 'QUJD', ecdsa: 'REVG' };
+  for (const role of ['teacher', 'admin']) {
+    const [pid, did] = WHO[role];
+    const r = async (type, payload, area) => { const e = mk(type, pid, did, payload); return reason(await signEvent(e, area, KEYS[pid]), { ...Z, area }); };
+    assert.equal(await r('member_added', { person: pid, role, pub: pub2, stand: 2 }, AREA), 'ok', role + ': eigener neuer Schluessel');
+    assert.equal(await r('member_added', { person: 'p_k1', role: 'child', pub: pub2 }, AREA), 'rolle-darf-nicht', role + ': nicht ueber andere');
+    assert.equal(await r('member_added', { person: pid, role: 'parent', pub: pub2 }, AREA), 'rolle-darf-nicht', role + ': keine andere Rolle');
+    assert.equal(await r('key_rotated', { version: 2, entfernt: [], stand: {} }, AREA), 'rolle-darf-nicht', role + ': nicht in Kind-Bereichen');
+  }
+  const [kid, kdev] = WHO.child;
+  assert.equal(await reason(await signEvent(mk('member_added', kid, kdev, { person: kid, role: 'child', pub: pub2 }), AREA, KEYS[kid]), { ...Z, area: AREA }), 'rolle-darf-nicht', 'Kind: neue Schluessel nur ueber die Eltern');
+  assert.equal(roleMayWrite('teacher', mk('key_rotated', 'p_l1', 'd_l1', { version: 2, entfernt: [], stand: {} }), 'person:p_l1'), true, 'eigener Personen-Bereich');
+  assert.equal(roleMayWrite('teacher', mk('key_rotated', 'p_l1', 'd_l1', { version: 2, entfernt: [], stand: {} })), false, 'ohne Bereich: nein');
 });
 
 /* ---------- 5b gaps (task 3b-0) ---------- */

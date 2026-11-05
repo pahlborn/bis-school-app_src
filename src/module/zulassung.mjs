@@ -13,6 +13,9 @@
 //              member_added again with the same role and keys changes nothing; with others it starts a new period -
 //              unless its "stand" (directory entry of the keys, task "Einladungen"; missing = 1) is lower than the
 //              current period's: then it is dropped ("stand-alt"), so a late old device never puts old keys back.
+//              Task "Neuer Schluessel": a member may announce his OWN new keys (same role; teacher and admin, too), signed
+//              with the old ones - the new period starts one millisecond later, so the announcement is checked against
+//              the old keys.
 //              member_removed ends the membership and all devices of that person; device_removed ends the device
 //              for everybody who had it (a shared iPad).
 //   result:    { area, now, members: { <personId>: { role, pub, stand?, devices, perioden, geraete } }, verworfen: [{ id, grund }] }
@@ -81,8 +84,11 @@ export async function zulassungAus(eintraege, { area, anker, now } = {}) {
       if (a && a.role === p.role && zulGleichePub(a.pub, p.pub)) continue;
       // task "Einladungen": keys of an older directory entry never replace newer ones (an old device writing late)
       if (a && stand < (a.stand || 1)) { verworfen.push({ id: e.id, grund: 'stand-alt' }); continue; }
-      if (a) a.bis = t;
-      pe.perioden.push({ von: t, bis: null, role: p.role, pub: { ecdh: p.pub.ecdh, ecdsa: p.pub.ecdsa }, ...(stand > 1 ? { stand } : {}) });
+      // task "Neuer Schluessel": a person announcing his own new keys signs that with the old ones - so the new keys count
+      // from the next millisecond, and the announcement itself still belongs to the old period
+      const ab = a && e.author === p.person && !zulGleichePub(a.pub, p.pub) ? t + 1 : t;
+      if (a) a.bis = ab;
+      pe.perioden.push({ von: ab, bis: null, role: p.role, pub: { ecdh: p.pub.ecdh, ecdsa: p.pub.ecdsa }, ...(stand > 1 ? { stand } : {}) });
     } else if (e.type === 'member_removed') {
       const pe = personen.get(p.person), a = pe && zulAktiv(pe.perioden);
       if (!a) continue;
@@ -110,10 +116,17 @@ export async function zulassungAus(eintraege, { area, anker, now } = {}) {
   return { area, now, members, verworfen };
 }
 
-/* members who belong now (for the check of key entries: a removed parent's signature no longer counts) */
+/* members who belong now (for the check of key entries: a removed parent's signature no longer counts).
+   frueher (task "Neuer Schluessel"): the earlier public keys of a member who renewed his key - key entries he signed
+   before the change keep counting, so the history stays readable while the new version is handed out */
 export function aktiveMitglieder(zulassung) {
   if (!zulObj(zulassung) || !zulObj(zulassung.members)) throw zulFehler('Zulassung erwartet.');
-  return Object.fromEntries(Object.entries(zulassung.members).filter(([, m]) => zulObj(m) && Array.isArray(m.perioden) && zulAktiv(m.perioden)).map(([pid, m]) => [pid, { role: m.role, pub: m.pub, devices: m.devices, ...(m.stand ? { stand: m.stand } : {}) }]));
+  const frueher = (m) => {
+    const out = [];
+    for (const p of m.perioden) if (zulObj(p.pub) && !zulGleichePub(p.pub, m.pub) && !out.some((x) => zulGleichePub(x, p.pub))) out.push({ ecdh: p.pub.ecdh, ecdsa: p.pub.ecdsa });
+    return out.length ? { frueher: out } : {};
+  };
+  return Object.fromEntries(Object.entries(zulassung.members).filter(([, m]) => zulObj(m) && Array.isArray(m.perioden) && zulAktiv(m.perioden)).map(([pid, m]) => [pid, { role: m.role, pub: m.pub, devices: m.devices, ...(m.stand ? { stand: m.stand } : {}), ...frueher(m) }]));
 }
 const zulKennung = (z) => JSON.stringify(Object.entries(aktiveMitglieder(z)).map(([pid, m]) => [pid, m.role, m.pub.ecdh, m.pub.ecdsa]));
 
@@ -122,14 +135,14 @@ const zulKennung = (z) => JSON.stringify(Object.entries(aktiveMitglieder(z)).map
    module bereiche: lesbar; the events are checked against the admission anyway) -> if that brought new members, read the keys again (a key change
    signed by the second parent becomes usable once he is known) - at most "runden" times.
    -> { schluessel, zulassung, neu, verworfen, wartend } (neu and verworfen summed over all rounds) */
-export async function bereichHolen(stand, { zugang, ich, meineSchluessel, anker, now, runden = 4 } = {}) {
+export async function bereichHolen(stand, { zugang, ich, meineSchluessel, alteSchluessel, anker, now, runden = 4 } = {}) {
   if (!zulObj(stand) || typeof stand.bereich !== 'string') throw zulFehler('Geraetestand erwartet.');
   zulPruefeAnker(anker);
   const area = stand.bereich, bilde = (eintraege) => zulassungAus(eintraege, { area, anker, now });
   let zul = await bilde(stand.log), neu = 0, h = null, schluessel = null;
   const verworfen = [];
   for (let i = 0; i < runden; i++) {
-    schluessel = await schluesselLesen(zugang, area, { ich, meineSchluessel, mitglieder: aktiveMitglieder(zul) });
+    schluessel = await schluesselLesen(zugang, area, { ich, meineSchluessel, alteSchluessel, mitglieder: aktiveMitglieder(zul) });
     h = await holen(stand, { zugang, schluessel: { aktuell: schluessel.aktuell, keys: schluessel.lesbar }, zulassung: bilde, now });
     neu += h.neu;
     verworfen.push(...h.verworfen);

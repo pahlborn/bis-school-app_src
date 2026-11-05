@@ -49,9 +49,13 @@ export const ANNAHME_GRUENDE = ['format', 'autor-unbekannt', 'nicht-mitglied', '
 const ANN_RIGHTS = {
   child: ['answer', 'round_done', 'badge', 'review', 'practice_day', 'profile_set', 'rank_seen', 'sheet_created', 'sheet_result', 'checklist_set', 'day_flag', 'device_added', 'gap_state', 'advent_open', 'joke_seen', 'story_read', 'person_set', 'anchor_set'],
   parent: ['profile_set', 'sheet_created', 'sheet_discarded', 'setting_set', 'school_import', 'grant_set', 'grant_revoked', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated', 'snapshot', 'gap_state', 'gap_active', 'list_set', 'advent_open', 'joke_seen', 'story_read', 'person_set', 'glance_set', 'backup_made', 'anchor_set', 'family_set', 'invite_set'],
-  teacher: ['grant_opened', 'device_added', 'person_set'],
-  admin: ['grant_opened', 'device_added', 'person_set'],
+  teacher: ['grant_opened', 'device_added', 'person_set', 'member_added', 'key_rotated'],
+  admin: ['grant_opened', 'device_added', 'person_set', 'member_added', 'key_rotated'],
 };
+/* task "Neuer Schluessel" (US9.7): a grown-up renews his person key. He announces the new public keys himself with
+   member_added about himself, signed with the OLD key (that is the continuity: only the old key may name the new one) -
+   so teacher and admin may write member_added, but only about themselves and with their own role. A key change in their
+   own person area (they hand out its key) is theirs, too. Parents may write both anyway (they distribute the keys). */
 export const ANNAHME_RECHTE = Object.freeze(Object.fromEntries(Object.entries(ANN_RIGHTS).map(([r, t]) => [r, Object.freeze(t.slice())])));
 
 /* conditions beyond role and type (e = event, role = role of the author) */
@@ -60,6 +64,8 @@ const ANN_LIMITS = {
   grant_opened: (e) => e.payload.grantee === e.author,                        // the recipient logs his own opening, nobody else's
   gap_state: (e, role) => role !== 'child' || (e.payload.state === 'closed' && e.payload.by === 'app'),   // the child: only the automatic close
   anchor_set: (e, role) => (role === 'child' ? e.payload.kind === 'child' : e.payload.kind === 'family'),   // a child has a creating parent, a parent a family
+  member_added: (e, role) => role === 'parent' || (e.payload.person === e.author && e.payload.role === role),   // teacher, admin: only their own new key
+  key_rotated: (e, role, area) => role === 'parent' || area === 'person:' + e.author,                         // teacher, admin: only in their own area
 };
 
 /* ---------- helpers ---------- */
@@ -116,14 +122,15 @@ export async function acceptEvent(item, zulassung) {
   if (!Array.isArray(member.devices) || !member.devices.includes(e.device)) return { ok: false, grund: 'geraet-fremd' };
   if (typeof item.sig !== 'string' || !item.sig || !annObj(member.pub) || !(await verifyBytes(member.pub, canonicalBytes(e, zulassung.area), item.sig))) return { ok: false, grund: 'unterschrift' };
   if (!passtZumBereich(e, zulassung.area)) return { ok: false, grund: 'bereich-falsch' };
-  if (!roleMayWrite(member.role, e)) return { ok: false, grund: 'rolle-darf-nicht' };
+  if (!roleMayWrite(member.role, e, zulassung.area)) return { ok: false, grund: 'rolle-darf-nicht' };
   return { ok: true };
 }
 /* may this role write this (well-formed) event? Type and the extra conditions; the same rule the writer
-   (module schreiber) applies before it stores an event. Unknown roles may nothing. */
-export function roleMayWrite(role, e) {
+   (module schreiber) applies before it stores an event. Unknown roles may nothing. area: where it is written (some
+   conditions need it; without it they say no) */
+export function roleMayWrite(role, e, area) {
   const allowed = typeof role === 'string' && annOwn(ANN_RIGHTS, role) ? ANN_RIGHTS[role] : [];
-  return !!e && allowed.includes(e.type) && !(annOwn(ANN_LIMITS, e.type) && !ANN_LIMITS[e.type](e, role));
+  return !!e && allowed.includes(e.type) && !(annOwn(ANN_LIMITS, e.type) && !ANN_LIMITS[e.type](e, role, area));
 }
 /* checks every item; nothing is dropped silently: each item is either accepted or rejected with a reason.
    Order is kept. -> { angenommen: [item], verworfen: [{ item, grund }] } */
