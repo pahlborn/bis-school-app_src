@@ -278,7 +278,7 @@ export const anmKindLoeschen = ({ ablage, zugang, konto, kind, now, heute, gerae
 /* delete the own account of a parent, with his password (US12.2) */
 export const anmKontoLoeschen = ({ ablage, zugang, konto, passwort, now, heute, geraetName }) => kontoDatenLoeschen({ ablage, zugang, konto, passwort, now, heute, ...(geraetName ? { geraetName } : {}) });
 /* the school ratings of a child from its log (area schule, school_import; module ableitung) - or null. The family build
-   has no SCHOOL_DATA: Kathie's ratings come into her account (werkzeug/schulbewertungen-uebernehmen.mjs). */
+   has no SCHOOL_DATA: a child's ratings come into its account (werkzeug/schulbewertungen-uebernehmen.mjs). */
 export const anmSchule = (events, now) => deriveSchool(events, { now });
 
 /* ---------- guides ---------- */
