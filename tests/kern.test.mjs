@@ -114,7 +114,7 @@ test('dist: zu kurzes Passwort schreibt nichts', async () => {
 
 test('dist: verbotenes Wort in der Huelle bricht ab und schreibt nichts', async () => {
   const wurzel = await tmp();
-  for (const rel of [QUELLEN.app, QUELLEN.manifest, QUELLEN.salz, QUELLEN.woerter, ...ICONS]) {
+  for (const rel of [QUELLEN.app, QUELLEN.manifest, QUELLEN.salz, QUELLEN.woerter, 'werkzeug/schriften/schriften.json', ...ICONS]) {
     await fs.mkdir(path.dirname(path.join(wurzel, rel)), { recursive: true });
     await fs.copyFile(path.join(WURZEL, rel), path.join(wurzel, rel));
   }

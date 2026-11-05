@@ -27,7 +27,7 @@ function pruefePdf(buf) {
 
 test('practice sheet: dialog with PDF first; PDF has tasks, writing task and the answer page; nothing sent', async () => {
   const { ctx, page, fehler } = await appOeffnen(browser, server.url, { acceptDownloads: true, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
-  const anfragen = []; page.on('request', (q) => { if (!q.url().startsWith(server.url) && !q.url().includes('fonts.g')) anfragen.push(q.url()); });
+  const anfragen = []; page.on('request', (q) => { if (!q.url().startsWith(server.url)) anfragen.push(q.url()); });
   await ohneTeilen(page);
   await page.locator('#sheetBtn').click();
   assert.ok(await page.isVisible('#sheetDlg'));

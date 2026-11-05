@@ -70,7 +70,7 @@ const nurFund = (app, pruefung, manifest) => { const f = funde(app, manifest); a
 test('Bau: Suchlauf bestanden, fuenf Dateien, App im Klartext = umgewandelter Testbau, eigener Name, Version drin', () => {
   assert.deepEqual(GEBAUT.dateien, ['index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png']);
   for (const d of GEBAUT.dateien) assert.ok(fs.existsSync(path.join(ZIEL, d)), d);
-  assert.equal(GEBAUT.pruefungen.length, 16);
+  assert.equal(GEBAUT.pruefungen.length, 17);                     // 17.: Schriften eingebettet (05.11.)
   assert.deepEqual(GEBAUT.pruefungen.filter((p) => !p.ok), []);
   assert.ok(GEBAUT.pruefungen.some((p) => p.name === 'mit dem Test-Repo verbunden (pahlborn/bis-school-app-testdaten)'));
   assert.equal(APP.split(SPEICHER_ZEILE).length, 2, 'mit dem Test-Repo verbunden: ' + SPEICHER_ZEILE);
