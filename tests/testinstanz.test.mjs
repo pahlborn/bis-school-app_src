@@ -3,6 +3,9 @@
 // (testinstanzPruefen) findet jede Abweichung - hier je Pruefung mit einer absichtlich falschen Fassung belegt.
 // Dazu: die gebaute App liest und schreibt in der Node-Sandbox und im Browser nur bqt_ (Kathies Eintraege auf derselben
 // Herkunft bleiben unberuehrt).
+// Seit "Testinstanz verbinden" (Befund #134) ist die Testinstanz mit dem Test-Repo verbunden und startet mit der Anmeldung:
+// Sandbox und Browser melden sich zuerst als Kind an - gegen den GitHub-Nachbau, auf den api.github.com umgelenkt wird
+// (die gebaute Datei bleibt dabei unveraendert).
 //   node --test tests/testinstanz.test.mjs
 
 import { test, before, after } from 'node:test';
@@ -12,12 +15,14 @@ import os from 'node:os';
 import path from 'node:path';
 import http from 'node:http';
 import { WURZEL, QUELLEN, testinstanzBauen, appZusammensetzen } from '../werkzeug/bauen.mjs';
-import { TESTINSTANZ, ersatzLesen, testinstanzUmwandeln, testinstanzPruefen, testinstanzManifest, geraeteNamen, VERSION_AUS_KLARTEXT } from '../werkzeug/testinstanz.mjs';
+import { TESTINSTANZ, ersatzLesen, testinstanzUmwandeln, testinstanzPruefen, testinstanzManifest, geraeteNamen, VERSION_AUS_KLARTEXT, SPEICHER_MARKE, SPEICHER_TESTINSTANZ } from '../werkzeug/testinstanz.mjs';
 import { woerterLesen } from '../werkzeug/kern.mjs';
 import { appLesen } from '../werkzeug/module.mjs';
-import { GITHUB_TOKEN_SCHLUESSEL } from '../src/module/github.mjs';
+import { GITHUB_TOKEN_SCHLUESSEL, githubSpeicher } from '../src/module/github.mjs';
+import { startcodeAusstellen, ersteAnmeldung, kontoLookup } from '../src/module/konto.mjs';
 import { appSandbox } from './app-sandbox.mjs';
 import { browserStarten, LADEZEIT_MS } from './app-hilfen.mjs';
+import { githubNachbau } from './module/github-nachbau.mjs';
 
 const VERSION = { n: 999, hash: 'abc1234', date: '04.11.2026 18:00', draft: false };
 const lies = (rel) => fs.readFileSync(path.join(WURZEL, rel), 'utf8');
@@ -26,6 +31,10 @@ const SCHULE = JSON.parse(lies('werkzeug/schuldaten.json'));
 const KONTEN = JSON.parse(lies('werkzeug/konten.json'));
 const SALT = JSON.parse(lies(QUELLEN.salz)).salt;
 let ERSATZ, ZIEL, GEBAUT, APP, MANIFEST, KONTEXT;
+const TOKEN = 'github_pat_TESTINSTANZ_' + 'x7'.repeat(20);       // nur im Nachbau gueltig
+const REPO = TESTINSTANZ.repoDaten, GITHUB = 'https://api.github.com';
+const SPEICHER_ZEILE = 'const KONTO_SPEICHER=' + JSON.stringify(SPEICHER_TESTINSTANZ) + ';';
+let N, CODES;                                                    // GitHub-Nachbau; Startcodes der Testkinder
 
 before(async () => {
   ERSATZ = await ersatzLesen();
@@ -34,8 +43,16 @@ before(async () => {
   APP = fs.readFileSync(path.join(ZIEL, 'index.html'), 'utf8');
   MANIFEST = fs.readFileSync(path.join(ZIEL, 'manifest.webmanifest'), 'utf8');
   KONTEXT = { woerter: WOERTER, auchVerboten: ERSATZ.auchVerboten, schule: SCHULE, konten: KONTEN, salt: SALT };
+  // Test-Repo im Nachbau: Admin (vom Werkzeug) -> Elternteil -> Startcodes fuer zwei Testkinder (wie werkzeug/testpersonen.mjs)
+  N = await githubNachbau({ token: TOKEN, repos: [REPO] });
+  const z = githubSpeicher({ repo: REPO, token: TOKEN, basis: N.basis }).geraet('d_Werkzeug1');
+  const jetzt = Date.now();
+  const admin = await ersteAnmeldung({ zugang: z, code: (await startcodeAusstellen({ zugang: z, aussteller: null, anmeldename: 'admin', art: 'admin', now: jetzt })).code, passwort: 'Werkzeug-Admin-Passwort-1', now: jetzt, runden: 1000 });
+  const peter = await ersteAnmeldung({ zugang: z, code: (await startcodeAusstellen({ zugang: z, aussteller: admin, anmeldename: 'peter.a', art: 'parent', now: jetzt })).code, passwort: 'Werkzeug-Eltern-Passwort-1', now: jetzt, runden: 1000 });
+  CODES = {};
+  for (const n of ['mia.a', 'mia.b', 'mia.c']) CODES[n] = (await startcodeAusstellen({ zugang: z, aussteller: peter, anmeldename: n, art: 'child', now: jetzt })).code;
 });
-after(() => { fs.rmSync(ZIEL, { recursive: true, force: true }); });
+after(async () => { fs.rmSync(ZIEL, { recursive: true, force: true }); await N?.schliessen(); });
 
 const funde = (app, manifest = MANIFEST) => testinstanzPruefen(app, manifest, KONTEXT).funde;
 /* erwartet genau einen Fund, und zwar bei dieser Pruefung */
@@ -44,8 +61,12 @@ const nurFund = (app, pruefung, manifest) => { const f = funde(app, manifest); a
 test('Bau: Suchlauf bestanden, fuenf Dateien, App im Klartext = umgewandelter Testbau, eigener Name, Version drin', () => {
   assert.deepEqual(GEBAUT.dateien, ['index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png']);
   for (const d of GEBAUT.dateien) assert.ok(fs.existsSync(path.join(ZIEL, d)), d);
-  assert.equal(GEBAUT.pruefungen.length, 15);
+  assert.equal(GEBAUT.pruefungen.length, 16);
   assert.deepEqual(GEBAUT.pruefungen.filter((p) => !p.ok), []);
+  assert.ok(GEBAUT.pruefungen.some((p) => p.name === 'mit dem Test-Repo verbunden (pahlborn/bis-school-app-testdaten)'));
+  assert.equal(APP.split(SPEICHER_ZEILE).length, 2, 'mit dem Test-Repo verbunden: ' + SPEICHER_ZEILE);
+  assert.ok(!APP.includes(SPEICHER_MARKE), 'Marke ersetzt');
+  assert.deepEqual(SPEICHER_TESTINSTANZ, { art: 'github', repo: 'pahlborn/bis-school-app-testdaten', wurzel: '' });
   assert.deepEqual(funde(APP), []);
   assert.ok(APP.startsWith('<!DOCTYPE html>') || APP.startsWith('<!doctype html>'), 'die App selbst, keine Huelle');
   assert.ok(APP.includes('const APP_VERSION={"n":999,"hash":"abc1234"'), 'Version eingesetzt');
@@ -66,14 +87,14 @@ test('Umwandlung: alle Speicherstellen bqt_, Geraetedaten und Token geraeteweit,
   assert.ok(!APP.includes('bqt_schluessel'), 'kein Familienschluessel');
   assert.ok(APP.includes(VERSION_AUS_KLARTEXT), 'Aktualisierung ohne Schluessel');
   assert.ok(APP.includes('Stage Show') && APP.includes('Save the Park') && APP.includes('https://pahlborn.github.io/bis-school-app-test/'));
-  // ausser Praefixen, Ersetzungen, GLOBAL_KEYS, Titeln und publishedVersion ist jede Zeile gleich
+  // ausser Praefixen, Ersetzungen, GLOBAL_KEYS, Speicher, Titeln und publishedVersion ist jede Zeile gleich
   const ohnePV = (x) => x.replace(/async function publishedVersion\(\)\{[\s\S]*?\n\}/, 'PUBLISHED_VERSION');
   const zeilenA = ohnePV(roh).split('\n'), zeilenB = ohnePV(APP).split('\n');
   assert.equal(zeilenA.length, zeilenB.length, 'gleiche Zeilenzahl');
   const praefix = (z) => z.replace(/bq2_|\bbq_/g, 'bqt_').replace(/\bbqUpdateTo\b/g, 'bqtUpdateTo');
   const anders = zeilenA.map((z, i) => [z, zeilenB[i]]).filter(([a, b]) => praefix(a) !== b);
   assert.ok(anders.length >= 10 && anders.length < 40, 'Zahl der Zeilen mit mehr als Praefixen: ' + anders.length);
-  const erklaert = anders.filter(([a]) => /GLOBAL_KEYS=|<title>|apple-mobile-web-app-title/.test(a) || ERSATZ.ersetzen.some(([s]) => a.toLowerCase().includes(s.toLowerCase())));
+  const erklaert = anders.filter(([a, b]) => /GLOBAL_KEYS=|<title>|apple-mobile-web-app-title/.test(a) || (a.trim() === 'const KONTO_SPEICHER=' + SPEICHER_MARKE + ';' && b.trim() === SPEICHER_ZEILE) || ERSATZ.ersetzen.some(([s]) => a.toLowerCase().includes(s.toLowerCase())));
   assert.equal(anders.length, erklaert.length, 'unerklaerte Aenderung: ' + anders.filter((x) => !erklaert.includes(x)).map(([a]) => a.trim().slice(0, 80)).join(' | '));
 });
 
@@ -98,6 +119,13 @@ test('Gegenproben Suchlauf: jede Abweichung wird gefunden (Schuldaten, Konten, T
   nurFund(APP + "<script>localStorage.getItem('fremd')</script>", 'feste Speicherstellen');
   nurFund(APP.replace("const GITHUB_TOKEN_SCHLUESSEL = 'bqt_gh';", "const GITHUB_TOKEN_SCHLUESSEL = 'bqt_token';"), 'Token-Eintrag');
   nurFund(APP.replace('const GLOBAL_KEYS=/^(abgleich|abgleichVerworfen|geraetEntfernen|gh|', 'const GLOBAL_KEYS=/^(abgleich|abgleichVerworfen|geraetEntfernen|'), 'Geraetedaten und Token');
+  // Speicher: nicht verbunden (Marke noch da), anderes Repo, Nachbau-Adresse, Unterordner, zweimal, simulierter Speicher
+  const mitSpeicher = (s) => APP.replace(SPEICHER_ZEILE, () => 'const KONTO_SPEICHER=' + s + ';');
+  for (const s of [SPEICHER_MARKE, 'null', JSON.stringify({ ...SPEICHER_TESTINSTANZ, repo: 'pahlborn/bis-school-app' }), JSON.stringify({ ...SPEICHER_TESTINSTANZ, basis: 'http://127.0.0.1:9' }),
+    JSON.stringify({ ...SPEICHER_TESTINSTANZ, wurzel: 'laeufe' }), 'globalThis.__bqWelt'])
+    nurFund(mitSpeicher(s), 'mit dem Test-Repo verbunden');
+  nurFund(APP.replace(SPEICHER_ZEILE, () => SPEICHER_ZEILE + SPEICHER_ZEILE), 'mit dem Test-Repo verbunden');
+  nurFund(APP + '<!-- ' + SPEICHER_MARKE + ' -->', 'mit dem Test-Repo verbunden');
   // Aktualisierung: alte publishedVersion (mit Schluessel und Tresor, Speicherstelle schon bqt_), doppelt, ohne Version
   const mitTresor = /async function publishedVersion\(\)\{[\s\S]*?\n\}/.exec(appLesen('utf8', { bauart: 'test' }))[0].replace(/\r/g, '').replace('bq_schluessel', 'bqt_schluessel');
   nurFund(APP.replace(VERSION_AUS_KLARTEXT, () => mitTresor), 'Aktualisierung ohne Schluessel');
@@ -119,6 +147,8 @@ test('Gegenproben Umwandlung: geaenderte Stellen in index.html und Namensgleichh
   assert.throws(() => testinstanzUmwandeln(testbau.replace(/<title>/, '<title>A</title><title>'), ERSATZ), /<title> 2x/);
   assert.throws(() => testinstanzUmwandeln(testbau.replace('<meta name="apple-mobile-web-app-title"', '<meta name="x"'), ERSATZ), /apple-mobile-web-app-title 0x/);
   assert.throws(() => testinstanzUmwandeln(testbau.replace("localStorage.getItem('bq_schluessel')", "localStorage.getItem('bq_key')"), ERSATZ), /publishedVersion \(mit Schluessel\) 0x/);
+  assert.throws(() => testinstanzUmwandeln(testbau.replace(SPEICHER_MARKE, 'null'), ERSATZ), /Marke \/\*BQ_SPEICHER\*\/null 0x statt 1x/);
+  assert.throws(() => testinstanzUmwandeln(testbau.replace(SPEICHER_MARKE, SPEICHER_MARKE + '||' + SPEICHER_MARKE), ERSATZ), /Marke \/\*BQ_SPEICHER\*\/null 2x statt 1x/);
   assert.throws(() => testinstanzUmwandeln(testbau + "<script>localStorage.getItem('bq2_abgleich')</script>", ERSATZ), /"abgleich" ist Geraetename und zugleich Speicherstelle/);
   assert.throws(() => testinstanzUmwandeln(testbau + "<script>store.get('gh',null)</script>", ERSATZ), /"gh" ist Geraetename/);
 });
@@ -144,9 +174,30 @@ const KATHIE = {
   bq2_attempts: JSON.stringify([{ q: 'x', ok: true, t: '2026-11-01T10:00:00Z', w: 'numbers' }]), bq2_personEvents: '{}', bq2_evDevice: JSON.stringify('d_KATHIE'),
   bq_schluessel: 'S0NIQUVTU0VMLUtBVEhJRQ==', bq_abgleich: '{}', gh_token: 'ghp_WERKSTATT0123456789abcdefABCDEF0123'
 };
-const TOKEN = 'github_pat_TESTINSTANZ_' + 'x7'.repeat(20);
 /* haengt einen Zaehler an localStorage.getItem - ganz am Anfang des App-Skripts, also auch fuer alles beim Start */
 const lesezaehler = (h) => h.replace(/<script>\s*\(function\(\)\{/, (m) => m + "const __g=localStorage.getItem;localStorage.getItem=function(k){(globalThis.__bqGelesen||(globalThis.__bqGelesen=[])).push(String(k));return __g.call(this,k);};");
+/* fetch der Sandbox: api.github.com -> Nachbau (die App selbst bleibt unveraendert); merkt sich jede Adresse */
+const umleiten = (anfragen) => (u, o) => { const s = String(u); anfragen.push(s); return fetch(s.startsWith(GITHUB + '/') ? N.basis + s.slice(GITHUB.length) : 'http://127.0.0.1:9/nicht-github', o); };
+const warte = (ms) => new Promise((r) => setTimeout(r, ms));
+const nurTestRepo = (anfragen) => anfragen.filter((u) => !u.startsWith(GITHUB + '/repos/' + REPO + '/'));
+
+/* Anmeldung als Kind in der Sandbox: Rolle -> Name + Startcode -> vorgeschlagenes Passwort -> Willkommen (Klicks und
+   Formulare wie in tests/konto-anmeldung.test.mjs) */
+async function kindAnmeldenSandbox(S, name, code, { bisPasswort = false } = {}) {
+  const im = (sel) => S.lauf(() => S.$('#loginBody').querySelector(sel));
+  const klick = (sel) => S.lauf(() => { const e = im(sel); if (!e) throw new Error('nicht gefunden ' + sel); e.click(); });
+  const absenden = (sel) => S.lauf(() => { const k = im(sel); k.click(); const f = k.closest('form'); f.dispatchEvent({ type: 'submit', target: f, currentTarget: f, preventDefault() {}, stopPropagation() {} }); });
+  const warten = async (pruef, was) => { const t0 = Date.now(); while (!S.lauf(pruef)) { if (Date.now() - t0 > 30000) throw new Error('wartet vergeblich auf ' + was + ' - Seite: ' + S.lauf(() => S.$('#loginBody').textContent).slice(0, 300)); await warte(15); } };
+  klick('#roleStudent');
+  S.lauf(() => { im('#loginUser').value = name; im('#loginPw').value = code; });
+  absenden('#loginGo');
+  await warten(() => im('#setPwForm'), '#setPwForm');
+  klick('#pwUse'); absenden('#setPwGo');
+  if (bisPasswort) { await warten(() => { const m = im('#setPwMsg'); return m && m.textContent && !/moment/i.test(m.textContent); }, 'Meldung'); return im('#setPwMsg').textContent; }
+  await warten(() => im('#welcomeGo'), '#welcomeGo');
+  klick('#welcomeGo');
+  return null;
+}
 
 function runde(S, item) {
   S.karteOeffnen(S.alleKarten().find((k) => k.item === item));
@@ -154,9 +205,20 @@ function runde(S, item) {
   S.klick('#homeBtn');
 }
 
-test('Sandbox: die Testinstanz liest nur bqt-Eintraege, schreibt nur bqt-Eintraege, Kathies Eintraege bleiben gleich, der Token bleibt nur in bqt_gh', (t) => {
-  const S = appSandbox({ bauart: 'test', speicher: { ...KATHIE, bqt_gh: TOKEN }, anpassen: (h) => lesezaehler(testinstanzUmwandeln(h, ERSATZ)) });
+test('Sandbox: die Testinstanz startet mit der Anmeldung, meldet sich ueber das Test-Repo an, liest und schreibt nur bqt-Eintraege, Kathies Eintraege bleiben gleich, der Token bleibt nur in bqt_gh', async (t) => {
+  const anfragen = [];
+  const S = appSandbox({ bauart: 'test', seite: true, speicher: { ...KATHIE, bqt_gh: TOKEN }, anpassen: (h) => lesezaehler(testinstanzUmwandeln(h, ERSATZ)), globale: { fetch: umleiten(anfragen) } });
   t.diagnostic('BQ_SEED=' + S.seed);
+  assert.equal(S.lauf(() => S.holen('KONTO_UI')), true, 'Konto-Modus');
+  assert.deepEqual(JSON.parse(JSON.stringify(S.lauf(() => S.holen('KONTO_SPEICHER')))), SPEICHER_TESTINSTANZ);
+  assert.ok(S.sichtbar('#login') && !S.sichtbar('#home'), 'startet mit der Anmeldung');
+  assert.equal(S.lauf(() => !!S.$('#loginBody').querySelector('#kontoTokenForm')), false, 'Zugang schon auf dem Geraet');
+  await kindAnmeldenSandbox(S, 'mia.a', CODES['mia.a']);
+  const ich = JSON.parse(S.ablage.get('bqt_session'));
+  assert.equal(ich.user, 'mia.a');
+  assert.ok((await githubSpeicher({ repo: REPO, token: TOKEN, basis: N.basis }).geraet('d_Pruefer').directory(await kontoLookup('mia.a'))) !== null, 'Konto liegt im Test-Repo');
+  assert.ok(anfragen.length >= 2, 'ueber GitHub angemeldet: ' + anfragen.length);
+  assert.deepEqual(nurTestRepo(anfragen), [], 'nur das Test-Repo gefragt');
   runde(S, 'round');
   runde(S, 'numbers');
   const gelesen = [...new Set(S.ctx.__bqGelesen || [])];
@@ -165,13 +227,29 @@ test('Sandbox: die Testinstanz liest nur bqt-Eintraege, schreibt nur bqt-Eintrae
   for (const [k, v] of Object.entries(KATHIE)) assert.equal(S.ablage.get(k), v, 'unveraendert: ' + k);
   const neu = [...S.ablage.keys()].filter((k) => !(k in KATHIE));
   assert.deepEqual(neu.filter((k) => !k.startsWith('bqt_')), [], 'nur bqt_ geschrieben');
-  assert.ok(neu.includes('bqt_events') && neu.includes('bqt_evDevice'), 'die Testinstanz hat geuebt: ' + neu.join(', '));
+  assert.ok(neu.some((k) => k.startsWith('bqt_' + ich.id + '__events')) && neu.includes('bqt_evDevice') && neu.includes('bqt_kontoListe'), 'die Testinstanz hat unter der Kennung geuebt: ' + neu.join(', '));
   assert.deepEqual(neu.filter((k) => k !== 'bqt_gh' && S.ablage.get(k).includes(TOKEN)), [], 'Token nirgends sonst');
+  assert.deepEqual([...N.dateien(REPO).values()].filter((x) => x.includes(TOKEN)), [], 'Token nicht im Test-Repo');
   assert.equal(S.ablage.get('bqt_gh'), TOKEN);
   assert.equal(S.lauf(() => S.holen('store').get('name', null)), null, 'Kathies Name nicht gelesen');
   const total = S.lauf(() => S.holen('store').get('total', 0));
   assert.ok(total > 0 && total <= 16, 'nur die eigenen Antworten, nicht Kathies 777: ' + total);
   assert.equal(JSON.stringify(S.holen('eventErrors')), '[]');
+  assert.deepEqual(JSON.parse(JSON.stringify(S.holen('kontoFehlerListe'))), []);
+});
+
+test('Gegenprobe Sandbox: dieselbe Testinstanz mit einem anderen Repo erreicht ihren Speicher nicht - der Startcode bleibt unverbraucht', async (t) => {
+  const anfragen = [];
+  const fremd = JSON.stringify({ ...SPEICHER_TESTINSTANZ, repo: 'pahlborn/bis-school-app' });
+  const S = appSandbox({ bauart: 'test', seite: true, speicher: { bqt_gh: TOKEN }, anpassen: (h) => testinstanzUmwandeln(h, ERSATZ, { speicher: fremd }), globale: { fetch: umleiten(anfragen) } });
+  t.diagnostic('BQ_SEED=' + S.seed);
+  // im fremden Repo gibt es den Namen nicht -> die App haelt den Code fuer einen Startcode, findet ihn dort aber nicht
+  const msg = await kindAnmeldenSandbox(S, 'mia.c', CODES['mia.c'], { bisPasswort: true });
+  assert.match(msg, /start code does not work|Startcode gilt nicht/i, 'Meldung: ' + msg);
+  assert.equal(S.lauf(() => !!S.$('#loginBody').querySelector('#welcomeGo')), false);
+  assert.equal(S.ablage.get('bqt_session'), undefined, 'nicht angemeldet');
+  assert.ok(anfragen.length >= 1 && anfragen.every((u) => u.startsWith(GITHUB + '/repos/pahlborn/bis-school-app/')), anfragen.join(' '));
+  assert.equal(await githubSpeicher({ repo: REPO, token: TOKEN, basis: N.basis }).geraet('d_Pruefer').directory(await kontoLookup('mia.c')), null, 'im Test-Repo nichts angelegt');
 });
 
 test('Gegenprobe Sandbox: derselbe Testbau ohne Umwandlung liest Kathies bq2_-Eintraege (der Zaehler sieht es)', (t) => {
@@ -182,7 +260,7 @@ test('Gegenprobe Sandbox: derselbe Testbau ohne Umwandlung liest Kathies bq2_-Ei
   assert.equal(S.lauf(() => S.holen('store').get('total', 0)), 777);
 });
 
-test('Browser: die gebaute Testinstanz startet ohne Fehler, ein Fach oeffnet sich, nur bqt_-Eintraege gelesen und geschrieben', async () => {
+test('Browser: die gebaute Testinstanz startet mit der Anmeldung, Zugang einmal eingeben, Kind meldet sich ueber das Test-Repo an, ein Fach oeffnet sich, nur bqt_-Eintraege gelesen und geschrieben', async () => {
   const server = http.createServer((req, res) => {
     const datei = { '/': 'index.html', '/index.html': 'index.html', '/manifest.webmanifest': 'manifest.webmanifest' }[req.url.split('?')[0]];
     if (!datei) { res.writeHead(404); return res.end(); }
@@ -194,7 +272,14 @@ test('Browser: die gebaute Testinstanz startet ohne Fehler, ein Fach oeffnet sic
   const browser = await browserStarten();
   try {
     const ctx = await browser.newContext();
-    await ctx.route('**/*', (r) => (r.request().url().startsWith(url) ? r.continue() : r.abort()));
+    // nur die App und "api.github.com" (umgelenkt auf den Nachbau - die gebaute Datei bleibt, wie sie ist); alles andere nicht
+    const github = [];
+    await ctx.route('**/*', async (r) => {
+      const u = r.request().url();
+      if (u.startsWith(url)) return r.continue();
+      if (u.startsWith(GITHUB + '/')) { github.push(r.request().method() + ' ' + u); return r.fulfill({ response: await r.fetch({ url: N.basis + u.slice(GITHUB.length) }) }); }
+      return r.abort();
+    });
     await ctx.addInitScript(([vorher]) => {
       if (!sessionStorage.getItem('vorbereitet')) { for (const [k, v] of Object.entries(vorher)) localStorage.setItem(k, v); sessionStorage.setItem('vorbereitet', '1'); }
       const g = Storage.prototype.getItem;
@@ -205,13 +290,34 @@ test('Browser: die gebaute Testinstanz startet ohne Fehler, ein Fach oeffnet sic
     const fehler = [];
     page.on('pageerror', (e) => fehler.push(e.message));
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: LADEZEIT_MS });
-    await page.waitForSelector('#home h1');
+    await page.waitForSelector('#login:not([hidden])');
     assert.match(await page.title(), /Big Quest \(Test\)$/);
+    assert.equal(await page.locator('#home').isVisible(), false, 'ohne Anmeldung keine Startseite');
+    // Zugang zum Test-Repo, einmal je Geraet; vorher fragt die App GitHub nicht
+    assert.deepEqual(github, []);
+    await page.locator('#kontoToken').fill(TOKEN);
+    await page.locator('#kontoTokenGo').click();
+    await page.waitForSelector('#kontoTokenForm', { state: 'detached' });
+    // Kind: Name + Startcode -> eigenes Passwort -> Willkommen -> Startseite
+    await page.locator('#roleStudent').click();
+    await page.locator('#loginUser').fill('mia.b');
+    await page.locator('#loginPw').fill(CODES['mia.b']);
+    await page.locator('#loginGo').click();
+    await page.waitForSelector('#setPwForm', { timeout: 30000 });
+    await page.locator('#pwUse').click();
+    await page.locator('#setPwGo').click();
+    await page.locator('#welcomeGo').click({ timeout: 30000 });
+    await page.waitForSelector('#home h1');
     await page.locator('#subjects button.subject').first().click();
     await page.waitForSelector('#subjectBody button.world');
     assert.ok(await page.locator('#subjectBody button.world').first().isVisible(), 'Fach-Seite sichtbar');
     const r = await page.evaluate(() => ({ gelesen: [...new Set(window.__gelesen || [])], alle: Object.fromEntries(Object.keys(localStorage).map((k) => [k, localStorage.getItem(k)])) }));
     assert.deepEqual(fehler, []);
+    assert.equal(JSON.parse(r.alle.bqt_session).user, 'mia.b', 'als Kind angemeldet');
+    assert.equal(r.alle.bqt_gh, TOKEN, 'Zugang unter bqt_gh');
+    assert.ok(github.length >= 2 && github.every((x) => x.includes(' ' + GITHUB + '/repos/' + REPO + '/')), 'nur das Test-Repo gefragt: ' + github.join(' | '));
+    assert.ok(github.some((x) => x.startsWith('PUT ')), 'Konto im Test-Repo angelegt');
+    assert.ok((await githubSpeicher({ repo: REPO, token: TOKEN, basis: N.basis }).geraet('d_Pruefer').directory(await kontoLookup('mia.b'))) !== null, 'Konto liegt im Test-Repo');
     assert.ok(r.gelesen.length >= 5, r.gelesen.join(', '));
     assert.deepEqual(r.gelesen.filter((k) => !k.startsWith('bqt')), [], 'nur bqt gelesen');
     for (const [k, v] of Object.entries(KATHIE)) assert.equal(r.alle[k], v, 'unveraendert: ' + k);

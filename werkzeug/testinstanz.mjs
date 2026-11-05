@@ -11,7 +11,10 @@
 //  - Speicher im Browser unter eigenem Praefix bqt_ (statt bq2_ und bq_) und Token unter bqt_gh - gleiche Herkunft
 //    pahlborn.github.io wie Kathies App und die Werkstatt-Apps, darum liest die Testinstanz nie deren Eintraege,
 //  - aktualisiert sich selbst ohne Schluessel: die Version steht auf der veroeffentlichten Seite im Klartext
-//    (VERSION_AUS_KLARTEXT). Veroeffentlichen: werkzeug/testinstanz-veroeffentlichen.mjs.
+//    (VERSION_AUS_KLARTEXT). Veroeffentlichen: werkzeug/testinstanz-veroeffentlichen.mjs,
+//  - mit dem Test-Repo verbunden (Befund #134): die Marke /*BQ_SPEICHER*/null wird zu SPEICHER_TESTINSTANZ. Damit gilt
+//    der Konto-Modus (KONTO_UI): die Testinstanz startet mit der Anmeldung, Konten nur ueber das Verzeichnis im Test-Repo,
+//    Zugang einmal je Geraet unter bqt_gh.
 //
 // index.html bleibt unveraendert: das Werkzeug benennt die Speicherstellen im fertigen Text um und prueft danach mit
 // einem Suchlauf, dass nichts davon fehlt (testinstanzPruefen). Ein Fund bricht ab, bevor etwas geschrieben wird.
@@ -33,6 +36,11 @@ export const TESTINSTANZ = Object.freeze({
 });
 
 export const ERSATZ_DATEI = 'werkzeug/testinstanz-ersatz.json';
+
+/** Speicher der Testinstanz an der Marke in index.html (KONTO_SPEICHER): das private Test-Repo, echtes GitHub (kein
+ *  "basis" - die Tests lenken api.github.com selbst auf den Nachbau um). */
+export const SPEICHER_MARKE = '/*BQ_SPEICHER*/null';
+export const SPEICHER_TESTINSTANZ = Object.freeze({ art: 'github', repo: TESTINSTANZ.repoDaten, wurzel: TESTINSTANZ.wurzelDaten });
 
 const WURZEL = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const reEsc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -74,13 +82,16 @@ const VERSION_AUS_TRESOR = /async function publishedVersion\(\)\{\r?\n {2}const 
 
 /**
  * Fertige Testbau-App (Text, Module und Version eingesetzt) -> Text der Testinstanz.
- * 1. Schul-Namen neutral (ersatz.ersetzen), 2. Aktualisierung ohne Schluessel, 3. geraeteweite Namen in GLOBAL_KEYS,
- * 4. Praefixe, 5. Titel.
+ * 1. Schul-Namen neutral (ersatz.ersetzen), 2. Aktualisierung ohne Schluessel, 3. Speicher = Test-Repo,
+ * 4. geraeteweite Namen in GLOBAL_KEYS, 5. Praefixe, 6. Titel.
+ * speicher: nur fuer Tests - ein anderer Ausdruck an der Marke (z. B. der simulierte Speicher). Der Bau nimmt immer
+ * SPEICHER_TESTINSTANZ, der Suchlauf (testinstanzPruefen) verlangt genau diesen.
  */
-export function testinstanzUmwandeln(app, ersatz) {
+export function testinstanzUmwandeln(app, ersatz, { speicher = JSON.stringify(SPEICHER_TESTINSTANZ) } = {}) {
   let t = String(app);
   for (const [suche, neu] of ersatz.ersetzen) t = t.replace(new RegExp(reEsc(suche), 'gi'), () => neu);
   t = einmal(t, VERSION_AUS_TRESOR, () => VERSION_AUS_KLARTEXT, 'publishedVersion (mit Schluessel)');
+  t = einmal(t, new RegExp(reEsc(SPEICHER_MARKE)), () => speicher, 'Marke ' + SPEICHER_MARKE);
 
   // Geraetedaten (bq_abgleich, bq_schluessel ...) und der Token liegen kuenftig unter demselben Praefix wie die Daten
   // der App. Damit sie nie als Daten eines Kindes gelten (Umzug auf Kennungen, Sicherung), werden sie geraeteweit.
@@ -151,6 +162,13 @@ export function testinstanzPruefen(app, manifest, { woerter = [], auchVerboten =
   const gk = /const GLOBAL_KEYS=\/\^\(([^)]*)\)\$\//.exec(app);
   const fehlendGlobal = ['gh', 'abgleich', 'abgleichVerworfen'].filter((n) => !gk || !gk[1].split('|').includes(n));
   pruef('Geraetedaten und Token geraeteweit (GLOBAL_KEYS)', fehlendGlobal.length ? 'fehlt: ' + fehlendGlobal.join(', ') : '');
+
+  // mit dem Test-Repo verbunden (Befund #134): Marke ersetzt, genau eine Stelle, genau dieser Speicher (echtes GitHub)
+  const sp = [...app.matchAll(/const KONTO_SPEICHER=([^;\r\n]*);/g)].map((m) => m[1]);
+  pruef(`mit dem Test-Repo verbunden (${TESTINSTANZ.repoDaten})`,
+    app.includes(SPEICHER_MARKE) ? 'Marke ' + SPEICHER_MARKE + ' nicht ersetzt'
+      : sp.length !== 1 ? `KONTO_SPEICHER ${sp.length}x`
+        : sp[0] !== JSON.stringify(SPEICHER_TESTINSTANZ) ? 'anderer Speicher: ' + sp[0].slice(0, 80) : '');
 
   // Selbst-Aktualisierung ohne Schluessel: genau eine publishedVersion, sie liest die Version im Klartext
   const pv = [...app.matchAll(/async function publishedVersion\(\)\{[\s\S]*?\n\}/g)];

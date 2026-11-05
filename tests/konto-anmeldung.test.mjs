@@ -31,7 +31,8 @@ function geraet(t, welt, { name, hash = '', speicher = {}, extra = {}, anpassen,
   const geteilt = [];
   const S = appSandbox({
     bauart: 'test', seite: true, speicher,
-    anpassen: (h) => { const a = h.replace('/*BQ_SPEICHER*/null', 'globalThis.__bqWelt'); return anpassen ? anpassen(a) : a; },
+    // erst die eigene Anpassung (setzt sie den Speicher selbst, bleibt es dabei), dann der gemeinsame Speicher der Welt
+    anpassen: (h) => (anpassen ? anpassen(h) : h).replace('/*BQ_SPEICHER*/null', 'globalThis.__bqWelt'),
     globale: {
       __bqWelt: welt,
       location: { href: 'http://127.0.0.1/' + hash, origin: 'http://127.0.0.1', protocol: 'http:', host: '127.0.0.1', hostname: '127.0.0.1', pathname: '/', search: '', hash, replace() {}, reload() {}, assign() {} },
@@ -334,7 +335,7 @@ test('3b Fehler beim ersten Mal: abgelaufener oder fremder Startcode, kein Speic
 });
 
 test('4 Testinstanz: ohne Zugangsschluessel fragt die Anmeldeseite einmal danach', async (t) => {
-  const A = geraet(t, null, { name: 'iPad ohne Zugang', anpassen: (h) => h.replace('globalThis.__bqWelt', () => JSON.stringify({ art: 'github', repo: 'pahlborn/bis-school-app-testdaten', wurzel: '' })) });
+  const A = geraet(t, null, { name: 'iPad ohne Zugang', anpassen: (h) => h.replace('/*BQ_SPEICHER*/null', () => JSON.stringify({ art: 'github', repo: 'pahlborn/bis-school-app-testdaten', wurzel: '' })) });
   assert.equal(A.wert('KONTO_UI'), true);
   assert.ok(A.da('#kontoTokenForm'), 'Feld fuer den Zugang');
   A.klick('#roleAdult'); A.tippe('#loginUser', 'peter.a'); A.tippe('#loginPw', 'irgendwas-langes-1'); A.absenden('#loginGo');
@@ -395,7 +396,8 @@ test('7 Testinstanz (Praefix bqt_): Anmeldung mit Startcode und auf dem zweiten 
   const W = await welt();
   await W.elternteil('peter.b');
   const codeP = await W.startcode('anna.b', 'parent'), codeK = await W.startcode('kathie.b', 'child', 'peter.b');
-  const opt = { praefix: 'bqt_', speicher: { ...KATHIE }, anpassen: (h) => testinstanzUmwandeln(h, ERSATZ) };
+  // Testinstanz wie gebaut, nur der Speicher ist hier die Simulation (das echte Test-Repo: tests/testinstanz.test.mjs)
+  const opt = { praefix: 'bqt_', speicher: { ...KATHIE }, anpassen: (h) => testinstanzUmwandeln(h, ERSATZ, { speicher: 'globalThis.__bqWelt' }) };
   const A = geraet(t, W.w, { name: 'Testinstanz iPad', ...opt });
   assert.equal(A.wert('KONTO_UI'), true);
   await anmelden(A, 'adult', 'anna.b', codeP);
