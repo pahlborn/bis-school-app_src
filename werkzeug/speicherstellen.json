@@ -57,12 +57,14 @@
     { "key": "bq2_migr", "bereich": "geraet", "hinweis": "Umzug auf Kennungen, vor dem Store gelesen" },
     { "key": "bq2_personEvents", "bereich": "person", "hinweis": "Protokolle der Personen (personEvents); seit 3b-2a liest und schreibt das Protokoll sie selbst (Testbau)" },
     { "key": "bq_abgleich", "bereich": "geraet", "abgleich": "lokal", "hinweis": "Stufe 2 (3b-2b): Abgleich-Stand je Bereich (Modul geraeteabgleich, nur Testbau; nicht in index.html): Ausgang, Merker, angenommene Eintraege mit Unterschrift" },
-    { "key": "bq_abgleichVerworfen", "bereich": "geraet", "abgleich": "lokal", "hinweis": "Stufe 2 (3b-2b): beim Abgleich Verworfenes mit Grund (hoechstens 1000, Modul geraeteabgleich, nur Testbau)" }
+    { "key": "bq_abgleichVerworfen", "bereich": "geraet", "abgleich": "lokal", "hinweis": "Stufe 2 (3b-2b): beim Abgleich Verworfenes mit Grund (hoechstens 1000, Modul geraeteabgleich, nur Testbau)" },
+    { "key": "bq2_kontoListe", "bereich": "geraet", "abgleich": "lokal", "hinweis": "Stufe 3b (Anmeldung im Testbau): Konten, die sich auf diesem Geraet angemeldet haben (Kennung, Anmeldename, Art; kein Passwort, kein Schluessel); geraeteweit (GLOBAL_KEYS), nur Konto-Modus" }
   ],
   "sessionStorage": [
     { "key": "bqUpdateTo", "bereich": "geraet", "hinweis": "Update-Merker" }
   ],
   "indexedDB": [
-    { "key": "bq2_audio", "praefix": true, "bereich": "kind", "abgleich": "lokal", "sicherung": true, "hinweis": "Sprachaufnahmen: nie abgeglichen, aber in der Sicherungsdatei" }
+    { "key": "bq2_audio", "praefix": true, "bereich": "kind", "abgleich": "lokal", "sicherung": true, "hinweis": "Sprachaufnahmen: nie abgeglichen, aber in der Sicherungsdatei" },
+    { "key": "bq2_konto", "bereich": "geraet", "abgleich": "lokal", "sicherung": false, "hinweis": "Stufe 3b (Anmeldung im Testbau): nicht exportierbare Kopie der Personenschluessel der angemeldeten Personen; weg bei Abmelden; nur Konto-Modus" }
   ]
 }

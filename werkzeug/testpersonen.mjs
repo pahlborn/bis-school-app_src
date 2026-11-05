@@ -25,6 +25,7 @@ import { fileURLToPath } from 'node:url';
 import { PBKDF2_ROUNDS } from '../src/module/krypto.mjs';
 import { pwSuggest } from '../src/module/passwort.mjs';
 import { kontoLookup, startcodeAusstellen, ersteAnmeldung, anmelden } from '../src/module/konto.mjs';
+import { anmStartlink } from '../src/module/anmeldung.mjs';
 import { ablageOrdner } from './schluesselablage.mjs';
 import { TESTINSTANZ } from './testinstanz.mjs';
 
@@ -111,7 +112,10 @@ export function uebersichtText(stand, { repo, wurzel, jetzt }) {
     const s = stand.personen[p.name] || {};
     z.push(`${p.name.padEnd(10)} ${ARTEN[p.art].padEnd(10)} Familie ${p.familie}   in der App eintragen: ${p.eintragen}`);
     if (p.werkzeug && s.passwort) z.push(`           Anmeldename: ${p.name}   Passwort: ${s.passwort}` + (s.wiederherstellungscode ? `   Wiederherstellungscode: ${s.wiederherstellungscode}` : ''));
-    else if (s.startcode) z.push(`           Startcode (einmal, ausgestellt von ${p.von}): ${s.startcode.code}   gueltig bis ${tag(s.startcode.gueltigBis)}`);
+    else if (s.startcode) {
+      z.push(`           Startcode (einmal, ausgestellt von ${p.von}): ${s.startcode.code}   gueltig bis ${tag(s.startcode.gueltigBis)}`);
+      z.push(`           Startlink: ${anmStartlink(TESTINSTANZ.adresse, { anmeldename: p.name, code: s.startcode.code })}`);
+    }
     else if (s.benutzt) z.push('           Startcode benutzt - Anmeldung mit Name und eigenem Passwort');
     else z.push('           noch nicht angelegt (node werkzeug/testpersonen.mjs --anlegen)');
   }

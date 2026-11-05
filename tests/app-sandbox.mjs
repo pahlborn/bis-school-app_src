@@ -46,7 +46,9 @@ function teilPasst(el, teil) {
   return true;
 }
 
-export function appSandbox({ anpassen, seed = Number(process.env.BQ_SEED) || Date.now() % 1e9, speicher = {}, bauart = process.env.BQ_BAUART || 'live', seite = false } = {}) {
+//  - globale: weitere Namen fuer window (z. B. ein simulierter Speicher, File, navigator.share; Aufgabe "Anmeldung im
+//    Testbau") - sie stehen vor dem Start der App bereit.
+export function appSandbox({ anpassen, seed = Number(process.env.BQ_SEED) || Date.now() % 1e9, speicher = {}, bauart = process.env.BQ_BAUART || 'live', seite = false, globale = {} } = {}) {
   /* ---------- Elemente ---------- */
   const reg = new Map();                                                     // id -> Element (wie getElementById)
   class Knoten {
@@ -232,6 +234,7 @@ export function appSandbox({ anpassen, seed = Number(process.env.BQ_SEED) || Dat
   ctx.window = ctx; ctx.self = ctx; ctx.top = ctx;
   ctx.addEventListener = () => {}; ctx.removeEventListener = () => {};
   ctx.claude = { hot: { snapshot() {}, ready: (boot) => boot({}) } };    // wie im Browser-Test: Start ohne Vorgaben
+  Object.assign(ctx, globale);
   vm.createContext(ctx);
 
   // Zufall mit Startwert (mulberry32) - die App nutzt Math.random
