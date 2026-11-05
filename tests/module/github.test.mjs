@@ -180,6 +180,44 @@ test('GitHub: ETag - unveraenderter Ordner kostet nichts (304), Baum nur bei Aen
   assert.equal(N.zaehler.anfragen - z4.anfragen, 1, 'ein PUT, sonst nichts');
 });
 
+test('GitHub (Aufgabe "Abgleich in der App"): Schluessel mit ETag (unveraendert: eine 304, keine Datei); Sitzung fragt je Abgleich einmal; verbunden', async () => {
+  const s = neu(), a = s.geraet('d_a1'), c = s.geraet('d_c1');
+  await a.putKey(B, 'p_e1', { w: 1 }); await a.putKey(B, 'p_k1', { w: 2 });
+  assert.deepEqual(await c.keys(B), { p_e1: { w: 1 }, p_k1: { w: 2 } });
+  // unveraendert: eine Anfrage (304), keine Datei geholt
+  const z0 = { ...N.zaehler };
+  assert.deepEqual(await c.keys(B), { p_e1: { w: 1 }, p_k1: { w: 2 } });
+  assert.equal(N.zaehler.anfragen - z0.anfragen, 1); assert.equal(N.zaehler.unveraendert - z0.unveraendert, 1);
+  // eine Datei geaendert: Ordner (200) + nur diese Datei
+  await a.putKey(B, 'p_k1', { w: 3 });
+  const z1 = { ...N.zaehler };
+  assert.deepEqual(await c.keys(B), { p_e1: { w: 1 }, p_k1: { w: 3 } });
+  assert.equal(N.zaehler.anfragen - z1.anfragen, 2, 'Ordner + eine Datei');
+  // Sitzung: keys je Bereich einmal (Kopie - aendern schadet nicht), nach eigenem putKey neu
+  const t = c.sitzung(), z2 = { ...N.zaehler };
+  const k1 = await t.keys(B); k1.p_e1.w = 99;
+  assert.deepEqual(await t.keys(B), { p_e1: { w: 1 }, p_k1: { w: 3 } });
+  assert.equal(N.zaehler.anfragen - z2.anfragen, 1, 'einmal gefragt');
+  await t.putKey(B, 'p_e1', { w: 4 });
+  assert.deepEqual((await t.keys(B)).p_e1, { w: 4 }, 'nach eigenem Schreiben neu gelesen');
+  // Sitzung: der Ordner events einmal fuer alle Bereiche; nach eigenem Buendel im selben Bereich neu
+  await a.put(B, 'd_a1', { nr: 1, inhalt: 1 }); await a.put('kind:privat:p_k1', 'd_a1', { nr: 1, inhalt: 1 });
+  const u = c.sitzung(), z3 = { ...N.zaehler };
+  assert.deepEqual((await u.list(B)).kennungen, ['d_a1/1']);
+  assert.deepEqual((await u.list('kind:privat:p_k1')).kennungen, ['d_a1/1']);
+  const ordner = N.log.slice(-(N.zaehler.anfragen - z3.anfragen)).filter((x) => /\/contents\/lauf-\d+\/events\?/.test(x.url)).length;
+  assert.equal(ordner, 1, 'Ordner events einmal');
+  await u.put(B, 'd_c1', { nr: 1, inhalt: 'c' });
+  assert.deepEqual((await u.list(B)).kennungen, ['d_a1/1', 'd_c1/1'], 'nach eigenem Buendel neu gefragt');
+  // ohne Sitzung wie bisher; der Zugang der Simulation hat keine Sitzung (geraeteabgleich nimmt dann den Zugang selbst)
+  assert.equal(typeof a.sitzung, 'function');
+  // verbunden: nur ein Repo mit Konten (Ordner directory) - ein leeres oder nicht erreichbares nicht
+  assert.equal(await neu().geraet('d_x1').verbunden(), false, 'leer');
+  assert.equal(await githubSpeicher({ repo: 'pahlborn/gibt-es-nicht', token: TOKEN, basis: N.basis }).geraet('d_x1').verbunden(), false, 'nicht erreichbar (404)');
+  await a.putDirectory({ lookup: 'h1', kennung: 'p_e1' });
+  assert.equal(await a.verbunden(), true);
+});
+
 test('GitHub: Token-Schutz - nie in Meldungen, Fehlern, Ergebnissen, Adressen oder Inhalten; nur im Authorization-Kopf', async () => {
   const s = neu(), w = 'lauf-' + lauf, a = s.geraet('d_a1');
   const fehler = [];

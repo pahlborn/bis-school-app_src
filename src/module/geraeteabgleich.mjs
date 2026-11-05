@@ -134,6 +134,14 @@ async function gabBereich(o, area, ziel, anker, stand) {
     }
     await neuBilden();
     const art = area.split(':').slice(0, -1).join(':');
+    // task "Abgleich in der App": the own area of a person here has his key entry, but his keys open none of its versions
+    // - his key was renewed on another device (the entry is now wrapped for the new keys). The app asks him to log in
+    // again (a child: silent, its parents see it).
+    const eigenePid = art === 'person' ? area.slice('person:'.length) : null;
+    if (eigenePid && personen[eigenePid] && gabObj(eintraege) && Object.prototype.hasOwnProperty.call(eintraege, eigenePid)) {
+      const s = await schluesselLesen(zugang, area, { ich: eigenePid, ...schl(eigenePid), mitglieder: aktiveMitglieder(zul) });
+      if (!s.lesbar.size) bericht.veraltet = eigenePid;
+    }
     // 1b. task "Neuer Schluessel": announce the new keys of a person here with his old ones and send that at once - before
     //     any key changes, so every device that meets the new version can also learn whose keys sign it
     for (const pid of reihe) {
@@ -228,17 +236,20 @@ async function gabBereich(o, area, ziel, anker, stand) {
       if (schreiber) bericht.gesendet += (await senden(stand, { zugang, schluessel: schreiber })).gesendet;
       else { bericht.ok = false; bericht.fehler = 'kein-schluessel'; }
     }
-    // 6. into the app: what others wrote and annahme accepted (no admission events - they are the area's, not the app's)
+    // 6. into the app: what others wrote and annahme accepted (no admission events - they are the area's, not the app's).
+    //    Task "Abgleich in der App": inDieApp false (a child in the middle of a round) - nothing goes into the app now;
+    //    it stays in the area's log and comes with the next sync (this step compares the whole log with the app's).
     const app = gabZiel(o.ablage, ziel);
     const da = new Set(app.lesen().map((e) => gabObj(e) && e.id));
     const neu = stand.log.map((x) => x.event).filter((e) => e.device !== geraet && !da.has(e.id) && bereichVonEreignis(e) !== '*');
-    if (neu.length) {
+    if (neu.length && o.inDieApp) {
       app.schreiben(mergeLog([app.lesen(), neu], now).events);
       bericht.inDieApp = neu.length;
-    }
+    } else if (neu.length) bericht.zurueckgehalten = neu.length;
   } catch (err) {
     if (!err || typeof err.code !== 'string') throw err;
     bericht.ok = false; bericht.fehler = err.code;
+    if (err.code === 'limit') bericht.wartezeit = Number.isFinite(err.wartezeit) && err.wartezeit >= 0 ? err.wartezeit : 60000;
   }
   // task "Neuer Schluessel": the admission of this area still has the old keys of a person here (or the area could not be
   // read) - the app must keep alt
@@ -267,18 +278,27 @@ async function gabBereich(o, area, ziel, anker, stand) {
    Devices to remove (task "Meine Geraete", device storage bq_geraetEntfernen, noted by module geraete): in every area
    where such a device is registered for a member, the distributor writes device_removed and changes the key
    (key_rotated.geraete) - report: bereiche[area].entfernt
-   -> { bereiche: { <area>: { ok, fehler, aktion, gesendet, neu, verworfen, ohneSchluessel, inDieApp, erneuert?, erneuerungOffen? } },
+   inDieApp:    false = write nothing into the app's logs this time (task "Abgleich in der App": a child in the middle of a
+                round - fetching and sending go on; what came stays in the areas' logs and goes into the app with the next
+                sync). Default true.
+   -> { bereiche: { <area>: { ok, fehler, aktion, gesendet, neu, verworfen, ohneSchluessel, inDieApp, erneuert?, erneuerungOffen?, wartezeit?, zurueckgehalten? } },
         inDieApp: events written into the app's logs (the app then calls evNeuLaden), verworfen: [{ bereich, kennung, id, grund, typ? }],
-        erneuerungOffen: areas that do not have the new key of a person with alt yet } */
-export async function geraetAbgleichen({ ablage, zugang, personen, kinder = [], familien = [], verzeichnis = {}, now, heute, geraetName } = {}) {
+        erneuerungOffen: areas that do not have the new key of a person with alt yet,
+        limit?: wait time in ms (task "Abgleich in der App": the storage's hourly limit is reached - the remaining areas
+                were left out, fehler "limit"; ask again only after this time), zurueckgehalten?: events held back (inDieApp false),
+        veraltet?: [personId] - persons here whose keys no longer open their own area (renewed on another device) } */
+export async function geraetAbgleichen({ ablage, zugang, personen, kinder = [], familien = [], verzeichnis = {}, now, heute, geraetName, inDieApp = true } = {}) {
   gabPruefen({ ablage, zugang, personen, kinder, familien, verzeichnis, now, heute });
   const geraet = gabJson(ablage, GERAETEABGLEICH_SPEICHER.geraet, null);
   if (typeof geraet !== 'string' || !/^d_[0-9A-Za-z]{1,40}$/.test(geraet)) throw gabFehler('Geraet ohne Kennung (bq2_evDevice).');
   if (geraetName !== undefined && geraetName !== null && typeof geraetName !== 'string') throw gabFehler('geraetName: Text erwartet.');
+  if (typeof inDieApp !== 'boolean') throw gabFehler('inDieApp: true oder false erwartet.');
   const name = typeof geraetName === 'string' ? geraetName.trim().slice(0, 40) : '';
   // task "Meine Geraete": devices to remove, noted by module geraete ([{ person, geraet, am }])
   const entfernen = gabListe(gabJson(ablage, GERAETEABGLEICH_SPEICHER.entfernen, [])).filter((x) => gabObj(x) && gabPid(x.person) && typeof x.geraet === 'string' && /^d_[0-9A-Za-z]{1,40}$/.test(x.geraet) && x.geraet !== geraet);
-  const o = { ablage, zugang, personen, geraet, now, heute, verzeichnis, geraetName: name, entfernen };
+  // task "Abgleich in der App": a storage that offers a sitzung (module github) asks the same thing only once per sync
+  const z = typeof zugang.sitzung === 'function' ? zugang.sitzung() : zugang;
+  const o = { ablage, zugang: z, personen, geraet, now, heute, verzeichnis, geraetName: name, entfernen, inDieApp };
   const plan = [];                                                      // [area, target, anchor]
   for (const f of familien) plan.push([bereichName('familie', f.id), { familie: f.id }, f.anker]);
   for (const c of kinder) {
@@ -296,6 +316,13 @@ export async function geraetAbgleichen({ ablage, zugang, personen, kinder = [], 
   const out = { bereiche: {}, inDieApp: 0, verworfen: [], erneuerungOffen: [] };
   for (const [area, ziel, anker] of plan) {
     if (out.bereiche[area]) continue;
+    // task "Abgleich in der App": the hourly limit is reached - wait instead of asking again (the other areas come with
+    // the next sync, after the wait time)
+    if (out.limit !== undefined) {
+      out.bereiche[area] = { ok: false, fehler: 'limit', aktion: null, gesendet: 0, neu: 0, verworfen: [], ohneSchluessel: 0, inDieApp: 0, ausgelassen: true };
+      if (Object.values(personen).some((p) => p.alt)) out.erneuerungOffen.push(area);
+      continue;
+    }
     // the state is kept also after a storage error: holen changes it in one step only, and what was queued (own
     // events, signed) stays queued for the next time - that is how offline works
     const stand = gabObj(staende[area]) ? staende[area] : abgleichStand(area, geraet);
@@ -306,6 +333,9 @@ export async function geraetAbgleichen({ ablage, zugang, personen, kinder = [], 
     out.inDieApp += b.inDieApp;
     out.verworfen.push(...b.verworfen);
     if (b.erneuerungOffen) out.erneuerungOffen.push(area);
+    if (b.fehler === 'limit') out.limit = b.wartezeit;
+    if (b.zurueckgehalten) out.zurueckgehalten = (out.zurueckgehalten || 0) + b.zurueckgehalten;
+    if (b.veraltet) (out.veraltet || (out.veraltet = [])).push(b.veraltet);
   }
   if (out.verworfen.length) {
     const alt = gabListe(gabJson(ablage, GERAETEABGLEICH_SPEICHER.verworfen, []));

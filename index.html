@@ -637,6 +637,10 @@ const KONTO_SPEICHER=/*BQ_SPEICHER*/null;
 const APP_ACCOUNTS=normAccounts(/*BQ_KONTEN*/null) || kontoKontenStart();
 /* login with accounts in the storage: test build (module konto), a storage, no konten.json (kontoKontenStart) */
 const KONTO_UI=!!(APP_ACCOUNTS && APP_ACCOUNTS.konto);
+/* task "Abgleich in der App" (KONTO_UI only): the state of the sync on this device, in memory - letzter: end of the last
+   sync that reached the storage; versuch: start of the last one; fehler: offline | zugang | limit | null; wartenBis: the
+   storage's hourly limit (wait instead of asking again); neu: own entries since the last sync; timer: the next planned one */
+const kontoStatus={letzter:0, versuch:0, fehler:null, wartenBis:0, neu:false, bereit:false, timer:null, timerAt:0, veraltet:[], frisch:null};
 const $ = s => document.querySelector(s);
 const rnd = n => Math.floor(Math.random()*n);
 const pick = a => a[rnd(a.length)];
@@ -717,6 +721,7 @@ function eventHook(type, payload, kid){
       personSink=evSchreiber({read:()=>evPersonLog(mine()).liste(), write:l=>evPersonLog(mine()).schreiben(l), device:d, who:eventWho, now});
     }
     const r=(own?personSink:eventSink).write(type, payload);
+    if(r.ok && KONTO_UI) kontoNeuEintrag();   // task "Abgleich in der App": send it soon (bundled)
     return r.ok ? r.event : null;
   }catch(e){ eventErrors.push(type+': '+String(e&&e.message||e)); return null; }
 }
@@ -4755,6 +4760,8 @@ function parentHeaderHTML(){
   const onSet=state.pview==='settings', onHelp=state.pview==='help';
   let h=`<header class="phdr"><div class="phdr-row"><span class="phdr-who">👪 ${who}</span>${kidChip}<span class="phdr-act">${flagsHTML()}<button type="button" class="btn small phdr-icon${onHelp?' primary':''}" id="pHelp" aria-label="${de?'Hilfe':'Help'}" title="${de?'Hilfe':'Help'}" aria-pressed="${onHelp}">?</button><button type="button" class="btn small phdr-icon${onSet?' primary':''}" id="pSettings" aria-label="${de?'Einstellungen':'Settings'}" title="${de?'Einstellungen':'Settings'}" aria-pressed="${onSet}">⚙️</button>${KONTO_UI?`<button class="btn small" id="parentLeave" type="button">${de?'Schließen':'Close'}</button>`:''}<button class="btn small" id="parentClose" type="button">${close}</button></span></div>`;
   if(accountsOn() && kid && isTestUser(kid)) h+=`<div class="phdr-row phdr-test">🧪 <b>${de?'Hier stehen Testdaten.':'You are looking at test data.'}</b><button type="button" class="btn small primary" id="pPlayTest">▶ ${de?'Als Testkind spielen':'Play as test child'}</button>${store.get('sessionPrev',null)?`<button type="button" class="btn small" id="pRealData">${de?'Zurück zu echten Daten':'Back to real data'}</button>`:''}</div>`;
+  // task "Abgleich in der App": the line of the sync (accounts in the storage only; bound in kontoBinden)
+  if(KONTO_UI && adultUser) h+=`<div class="phdr-row phdr-sync small" id="kSync" role="status">${kontoZeileHTML()}</div>`;
   return h+'</header>';
 }
 /* ---------- login (S3, Peter 30.10.) ----------
@@ -4787,7 +4794,8 @@ const LOGIN_TXT={
   moment:'One moment …', noStore:'The app cannot reach its storage right now. Please try again later.',
   codeBad:'This start code does not work (any more). Please ask for a new one.', codeOld:'This start code has expired. Please ask for a new one.',
   codeFp:'This start code does not come from the person who gave you the QR code. Nothing was set up – please ask them again.',
-  forgot:'Forgot your password?', forgotKid:'Ask your grown-up for a new start code.'
+  forgot:'Forgot your password?', forgotKid:'Ask your grown-up for a new start code.',
+  fremd:'This version of the app is connected to a different storage – there are no accounts there. Please ask your grown-up or the admin.'
 };
 /* Grown-ups log in in their language (Peter, 31.10.); the shared role choice and the child stay English. */
 const LOGIN_DE={...LOGIN_TXT, user:'Benutzername', pw:'Passwort oder Startcode', go:'Anmelden', back:'← Zurück',
@@ -4798,7 +4806,8 @@ const LOGIN_DE={...LOGIN_TXT, user:'Benutzername', pw:'Passwort oder Startcode',
   moment:'Einen Moment …', noStore:'Die App erreicht ihren Speicher gerade nicht. Bitte später erneut versuchen.',
   codeBad:'Dieser Startcode gilt nicht (mehr). Bitte einen neuen geben lassen.', codeOld:'Dieser Startcode ist abgelaufen. Bitte einen neuen geben lassen.',
   codeFp:'Dieser Startcode stammt nicht von der Person, die Ihnen den QR-Code gegeben hat. Es wurde nichts eingerichtet – bitte dort noch einmal nachfragen.',
-  forgot:'Passwort vergessen?'};
+  forgot:'Passwort vergessen?',
+  fremd:'Diese Fassung ist mit einem anderen Speicher verbunden – dort gibt es keine Konten. Bitte beim Admin nachfragen.'};
 const loginTxt = adult => adult && store.get('parentLang','de')!=='en' ? LOGIN_DE : LOGIN_TXT;
 function showLogin(role){ $('#loginBody').innerHTML=''; renderLogin(role); show('login'); }
 /* Start link (S11 Stufe 1): ".../#start=<name>.<code>" fills in the login once; the code is removed from
@@ -4836,7 +4845,8 @@ const HELP={
   version:{title:'App-Version',text:'<p>Zeigt den Stand der App auf diesem Gerät. Die App aktualisiert sich beim Start und beim Zurückkehren selbst. „Nach neuer Version suchen“ vergleicht mit der veröffentlichten Seite.</p>'},
     sheets:{title:'Übungsblätter',text:'<p>Ihr Kind trägt seine Antworten vom Papier selbst ein: Startseite → „My sheets“. Die App prüft wie gewohnt, mit Tipp und zweitem Versuch.</p><p>Hier sehen Sie je Aufgabe „Richtig“, „Mit Hilfe“ oder „Noch nicht“. „Mit Hilfe“ und „Noch nicht“ sind gut so: Die App bietet dann leichtere Schritte an und wiederholt die Aufgabe später. Ein Blatt, das nicht eingetragen wird, zählt einfach nicht.</p>'},
   testday:{noGuide:true,title:'Testkonto: +1 Tag',text:'<p><b>+1 Tag</b> stellt die Uhr der App nur für dieses Testkonto einen Tag vor. So sehen Sie sofort, was sonst erst morgen passiert:</p><ul><li>Fehler kommen als Wiederholung zurück.</li><li>Der Lernbaum wächst.</li><li>Die Einschätzung im Elternbereich sammelt Übungstage.</li></ul><p>Die Daten des Kindes bleiben unberührt. <b>Testdaten löschen</b> setzt das Testkonto ganz zurück (auch den Tag).</p>'},
-  guidance:{title:'Ihr Kind unterstützen',text:'<p>Ein Vorschlag, wie oft geübt wird, und die wichtigsten Regeln. Konkretes zu jedem Thema steht bei jeder Quest unter „💡 So helfen Sie“.</p>'}
+  guidance:{title:'Ihr Kind unterstützen',text:'<p>Ein Vorschlag, wie oft geübt wird, und die wichtigsten Regeln. Konkretes zu jedem Thema steht bei jeder Quest unter „💡 So helfen Sie“.</p>'},
+  abgleich:{noGuide:true,title:'Abgleich',text:'<p>Die App gleicht von selbst ab – Sie müssen nichts tippen: beim Öffnen, beim Zurückkehren, alle 30 Sekunden, solange sie offen ist, und kurz nach neuen Einträgen. Beim Wechsel in eine andere App schickt sie noch, was offen ist.</p><ul><li><b>Kein Netz:</b> Alles bleibt auf dem Gerät und wird später nachgeholt. Es geht nichts verloren.</li><li><b>Mitten in einer Runde</b> ändert sich beim Kind nichts; Neues erscheint nach der Runde.</li><li><b>Nicht übernommen:</b> Einträge, die die App abgelehnt hat – etwa von einem entfernten Gerät oder ohne passende Unterschrift. Ihre Daten bleiben davon unberührt. Steigt die Zahl unerwartet, bitte den Admin fragen.</li></ul><p>Das Kind sieht vom Abgleich nichts.</p>'}
 };
 /* Grown-ups help in English: meaning-based, American English (Peter, 31.10.). */
 const HELP_EN={
@@ -4851,7 +4861,8 @@ const HELP_EN={
   version:{title:'App version',text:'<p>Shows the version on this device. The app updates itself when it starts and when you come back to it. “Check for a new version” compares it with the published page.</p>'},
     sheets:{title:'Practice sheets',text:'<p>Your child types in the answers from the paper: start page → “My sheets”. The app checks them as usual, with a tip and a second try.</p><p>Here you see “Correct”, “With help” or “Not yet” for each task. “With help” and “Not yet” are fine: the app then offers easier steps and brings the task back later. A sheet that isn’t entered simply doesn’t count.</p>'},
   testday:{title:'Test account: +1 day',text:'<p><b>+1 day</b> moves the app’s clock one day ahead, for this test account only. You see right away what would otherwise happen tomorrow:</p><ul><li>Mistakes come back as reviews.</li><li>The learning tree grows.</li><li>The summary in the grown-ups area collects practice days.</li></ul><p>Your child’s data is not touched. <b>Delete test data</b> resets the test account completely (including the day).</p>'},
-  guidance:{title:'Supporting your child',text:'<p>A suggestion for how often to practice, and the key rules. Concrete help for each topic is at every quest under “💡 How you can help”.</p>'}
+  guidance:{title:'Supporting your child',text:'<p>A suggestion for how often to practice, and the key rules. Concrete help for each topic is at every quest under “💡 How you can help”.</p>'},
+  abgleich:{title:'Sync',text:'<p>The app syncs by itself – you don’t need to tap anything: when it opens, when you come back, every 30 seconds while it is open, and shortly after new entries. When you switch to another app, it sends whatever is still open.</p><ul><li><b>No connection:</b> everything stays on the device and is caught up later. Nothing gets lost.</li><li><b>In the middle of a round</b> nothing changes for your child; new things appear after the round.</li><li><b>Not taken over:</b> entries the app refused – for example from a removed device or without a matching signature. Your data is not affected. If the number grows unexpectedly, please ask the admin.</li></ul><p>Your child sees nothing of the sync.</p>'}
 };
 const ADULT_H2=[['Einstufungen der Schule','school'],['School ratings','school'],['Einschätzung','overview'],['Summary','overview'],['Pisolala','storycap'],['Freiwillige Kalender','calendar'],['Optional calendar','calendar'],['Profilangaben','profile'],['Profile details','profile'],['App-Version','version'],['App version','version'],['Übungsblätter','sheets'],['Practice sheets','sheets'],['So unterstützen','guidance'],['Supporting','guidance']];
 function addAdultInfo(root){ root.querySelectorAll('h2').forEach(h=>{ const m=ADULT_H2.find(([t])=>h.textContent.trim().startsWith(t)); if(m && !h.querySelector('.info-btn')) h.insertAdjacentHTML('beforeend',` <button type="button" class="info-btn" data-help="${m[1]}" aria-label="Info">ⓘ</button>`); }); }
@@ -5023,6 +5034,9 @@ async function kontoLoginAbsenden(role, name, pw){
   try{
     const v=await anmVersuch({zugang:z, anmeldename:name, text:pw});
     if(v.erstesMal){
+      // task "Abgleich in der App" (finding #137): a storage without any account is not this app's - say so right away
+      // instead of asking for a password first
+      if(await anmSpeicherFremd(z)){ msg.textContent=T.fremd; btn.disabled=false; return; }
       const {anmeldename, code}=v.erstesMal; msg.textContent='';
       return renderSetPassword({user:anmeldename, role:role==='student'?'student':'parent', konto:{code, fp:kontoLinkFp && kontoLinkFp.code===code ? kontoLinkFp.fp : null}});
     }
@@ -5034,7 +5048,10 @@ async function kontoLoginAbsenden(role, name, pw){
     if(k.art==='child') return kontoKindStart(a, k.kennung, ()=>loginDone(a));
     loginDone(a); kontoAbgleich();
   }catch(err){
-    if(err && err.code==='anmeldung') return kontoFalsch(T, msg, btn);
+    if(err && err.code==='anmeldung'){
+      if(await anmSpeicherFremd(z)){ msg.textContent=T.fremd; btn.disabled=false; return; }
+      return kontoFalsch(T, msg, btn);
+    }
     msg.textContent=kontoFehlerText(err, T, role==='adult'); btn.disabled=false;
   }
 }
@@ -5055,6 +5072,9 @@ async function kontoErstesPasswort(u, pw){
 }
 /* an opened account (module konto) is logged in on this device: device list, accounts of the app, key copy */
 async function kontoAngemeldet(k){
+  // known as removed: a new device id now; else the first sync after this login may still learn it (a device whose old
+  // keys could no longer read the removal reads it with the new ones) - kontoAbgleichLauf checks once more then
+  kontoStatus.frisch=kontoNeueKennung(k.kennung) ? null : k.kennung;
   const e=anmEintragAus(k);
   try{ localStorage.setItem('bq2_kontoListe', JSON.stringify(anmListeMit(kontoListe(), e))); }catch(err){ kontoFehlerListe.push('liste: '+String(err&&err.message||err)); }
   const u=normAccounts(anmGeraetKonten([e])).users[0], i=APP_ACCOUNTS.users.findIndex(x=>x.id===u.id || x.user===u.user);
@@ -5063,6 +5083,18 @@ async function kontoAngemeldet(k){
   if(k.art==='child') for(const [id,o] of [...kontoOffen]) if(o.art==='child' && id!==k.kennung) kontoAbmelden(id);
   await kontoMerken(k);
   return u;
+}
+/* task "Abgleich in der App": a removed device (it learned that with a sync) where somebody logs in again starts as a
+   new device - a new device id, so what it writes counts again, and the states of the sync anew (they belonged to the old
+   id). Everybody else who was logged in here logs in anew, too: without a new login a removed device stays locked out. */
+function kontoNeueKennung(id){
+  if(!anmGeraetEntfernt({ablage:localStorage})) return false;
+  for(const o of [...kontoOffen.keys()]) if(o!==id) kontoAbmelden(o);
+  const s=store.get('session',null); if(s && s.id!==id) store.del('session');
+  const a=store.get('adultSession',null); if(a && a.id!==id) store.del('adultSession');
+  store.set('evDevice', newDeviceId()); eventSink=null; personSink=null; kontoZug=null;
+  anmGeraetNeu({ablage:localStorage});
+  return true;
 }
 /* the key copy of an opened account, in memory and in IndexedDB (task "Einladungen - Oberflaeche": with login name, stand
    and ursprung for the sync; after the first login also where the account belongs - public keys only). alt (right after
@@ -5151,8 +5183,14 @@ function kontoAlleAbmelden(){ kontoOffen.clear(); kontoAlt.clear(); kontoBlatt=n
    grown-up and - for parents - of each child, remove a device, renew the key). Panels of these steps replace the view
    (kontoBlatt) until "Back"/"Done". The device syncs with the storage (module anmeldung -> einladung): after the login,
    when the app starts or comes back, every minute while it is visible, before and after each invitation, and every few
-   seconds while a start QR code is shown. A new child practises only once a parent's device took it in. */
-const KONTO_TAKT_MS=60000, KONTO_QR_MS=4000, KONTO_WARTEN_MS=5000;
+   seconds while a start QR code is shown. A new child practises only once a parent's device took it in.
+   Task "Abgleich in der App" (05.11.; concept 9.1, 9.4): the device syncs by itself - when the app starts and when it
+   comes back, every KONTO_TAKT_MS while it is visible, after own entries at most every KONTO_SENDEN_MS (bundled), and
+   when it goes into the background with own entries not sent yet. Offline: nothing is lost, the next sync sends it. A
+   child in the middle of a round: fetching and sending go on, but nothing new goes into the app until the round is over.
+   The storage's hourly limit: no sync until its wait time is over. Grown-ups see a line "Letzter Abgleich: vor 2 Min."
+   in the grown-ups area (problems in plain words, entries not taken over as a number with ⓘ); a child sees nothing. */
+const KONTO_TAKT_MS=30000, KONTO_SENDEN_MS=30000, KONTO_QR_MS=4000, KONTO_WARTEN_MS=5000;
 const kontoGesehen=new Set(), kontoMeldungen=[];
 let kontoLauf=null, kontoNochmal=false, kontoBericht=null, kontoTaktAn=false;
 /* an opened account as the modules want it (login name, stand, ursprung; after the first login where it belongs; alt) */
@@ -5178,24 +5216,65 @@ function kontoGeraetName(){
 /* one sync at a time; a call during a running one asks for one more round and gets the running one */
 function kontoAbgleich(){
   if(!KONTO_UI || !kontoOffen.size || !kontoZugang()) return Promise.resolve(null);
+  if(Date.now()<kontoStatus.wartenBis){ kontoPlanen(); return Promise.resolve(null); }   // hourly limit: wait, do not ask again
   if(kontoLauf){ kontoNochmal=true; return kontoLauf; }
   const p=kontoAbgleichLauf(); kontoLauf=p;
-  p.then(()=>{ if(kontoLauf===p) kontoLauf=null; });
+  p.then(()=>{ if(kontoLauf===p) kontoLauf=null; kontoPlanen(); });
   return p;
 }
+/* a child in the middle of a round: nothing new goes into the app now (values never change under its hands) */
+const kontoInRunde = () => state.screen==='play';
+/* the device storage for the sync: a write into one of the app's logs makes the app read its logs anew right away - an
+   own entry written while the sync is still running then never overwrites what the sync just brought in */
+const kontoAblage={getItem:k=>localStorage.getItem(k), setItem:(k,v)=>{ localStorage.setItem(k,v); if(/events$/i.test(String(k))) evNeuLaden(); }};
+const KONTO_SPEICHERFEHLER=['offline','zugang','limit'];
 async function kontoAbgleichLauf(){
   let r=null;
   do{
     kontoNochmal=false;
     const z=kontoZugang(), ids=[...kontoOffen.keys()];
     if(!z || !ids.length) break;
+    if(Date.now()<kontoStatus.wartenBis) break;
+    const offen=kontoStatus.neu; kontoStatus.neu=false; kontoStatus.versuch=Date.now();
+    let fehler=null, warten=0;
     try{
-      const vorher=kontoEinladungen();
-      r=await anmAbgleich({ablage:localStorage, zugang:z, konten:ids.map(kontoKonto), now:Date.now(), heute:dayKey(), geraetName:kontoGeraetName()});
+      const vorher=kontoEinladungen(), runde=kontoInRunde();
+      r=await anmAbgleich({ablage:kontoAblage, zugang:z, konten:ids.map(kontoKonto), now:Date.now(), heute:dayKey(), geraetName:kontoGeraetName(), inDieApp:!runde});
+      const codes=Object.values((r.bericht&&r.bericht.bereiche)||{}).map(b=>b.fehler);
+      fehler=r.limit!==undefined?'limit':codes.includes('zugang')?'zugang':codes.includes('offline')?'offline':null;
+      if(fehler==='limit') warten=r.limit;
+      if(r.bericht) kontoStatus.veraltet=(r.bericht.veraltet||[]).slice();   // keys renewed on another device
       kontoNachAbgleich(r, vorher);
-    }catch(err){ kontoFehlerListe.push('abgleich: '+String(err&&err.message||err)); r=null; }
+    }catch(err){
+      r=null;
+      if(err && KONTO_SPEICHERFEHLER.includes(err.code)){ fehler=err.code; if(fehler==='limit') warten=Number.isFinite(err.wartezeit)?err.wartezeit:60000; }
+      else kontoFehlerListe.push('abgleich: '+String(err&&err.message||err));
+    }
+    kontoStatus.fehler=fehler;
+    if(fehler==='limit') kontoStatus.wartenBis=Date.now()+Math.max(1000, warten||0);
+    if(!fehler) kontoStatus.letzter=Date.now();
+    else if(offen) kontoStatus.neu=true;                                  // not sent: the next sync tries again
+    // the first sync after a login brought the news that this device was removed: new device id, sync once more
+    if(!fehler && r && kontoStatus.frisch){ const id=kontoStatus.frisch; kontoStatus.frisch=null; if(kontoOffen.has(id) && kontoNeueKennung(id)) kontoNochmal=true; }
+    kontoZeileAuffrischen();
   }while(kontoNochmal);
   return r;
+}
+/* own entries (eventHook): send them soon - at most every KONTO_SENDEN_MS, bundled */
+function kontoNeuEintrag(){ kontoStatus.neu=true; if(kontoStatus.bereit) kontoPlanen(); }
+/* the one timer of the sync: the next regular sync (KONTO_TAKT_MS after the last one), earlier when own entries wait
+   (KONTO_SENDEN_MS after the last attempt), never before the end of a wait for the hourly limit. While the page is hidden
+   the timer does nothing - coming back starts a sync anyway. */
+function kontoPlanen(){
+  if(!KONTO_UI || !kontoStatus.bereit || !kontoOffen.size) return;
+  const jetzt=Date.now(), basis=Math.max(kontoStatus.versuch, 0)||jetzt;
+  let at=basis+KONTO_TAKT_MS;
+  if(kontoStatus.neu) at=Math.min(at, basis+KONTO_SENDEN_MS);
+  at=Math.max(at, kontoStatus.wartenBis, jetzt);
+  if(kontoStatus.timer!==null && kontoStatus.timerAt===at) return;
+  if(kontoStatus.timer!==null) clearTimeout(kontoStatus.timer);
+  kontoStatus.timerAt=at;
+  kontoStatus.timer=setTimeout(()=>{ kontoStatus.timer=null; if(document.hidden) return; if(kontoLauf) return; kontoAbgleich(); }, at-jetzt);
 }
 /* open invitations of the parents on this device: invitation id -> { name, display, art } */
 function kontoEinladungen(){
@@ -5258,8 +5337,45 @@ function kontoNeuZeichnen(geaendert){
 }
 function kontoTaktStarten(){
   if(kontoTaktAn || !KONTO_UI) return; kontoTaktAn=true;
-  const tick=()=>{ if(!document.hidden && kontoOffen.size) kontoAbgleich(); setTimeout(tick, KONTO_TAKT_MS); };
-  setTimeout(tick, KONTO_TAKT_MS);
+  kontoStatus.bereit=true; kontoPlanen();
+}
+/* ---------- what grown-ups see of the sync (task "Abgleich in der App"): one line under the header ---------- */
+function kontoVor(ms, de){
+  const m=Math.floor(ms/60000), h=Math.floor(m/60);
+  if(m<1) return de?'gerade eben':'just now';
+  if(m<60) return de?`vor ${m} Min.`:`${m} min ago`;
+  if(h<24) return de?`vor ${h} Std.`:`${h} h ago`;
+  return de?`am ${kontoZeit(new Date(Date.now()-ms).toISOString())}`:`on ${kontoZeit(new Date(Date.now()-ms).toISOString())}`;
+}
+/* hints that need the grown-up to log in again here: his key was renewed on another device, or this device was removed */
+function kontoNeuAnmelden(){
+  const k=kontoIch(); if(!k) return null;
+  if(anmGeraetEntfernt({ablage:localStorage})) return 'entfernt';
+  if(k.art!=='child' && kontoStatus.veraltet.includes(k.kennung)) return 'erneuert';
+  return null;
+}
+function kontoZeileHTML(){
+  const de=PL()==='de', s=kontoStatus, jetzt=Date.now(), teile=[];
+  const neu=kontoNeuAnmelden();
+  if(neu) teile.push(`<b>⚠️ ${neu==='entfernt'?(de?'Dieses Gerät wurde entfernt.':'This device was removed.'):(de?'Ihr Schlüssel wurde auf einem anderen Gerät erneuert.':'Your key was renewed on another device.')} ${de?'Bitte melden Sie sich hier neu an.':'Please log in again here.'}</b> <button type="button" class="btn small primary" id="kNeuAnmelden">${de?'Neu anmelden':'Log in again'}</button>`);
+  if(s.fehler==='offline') teile.push(de?'📴 Kein Netz – wird nachgeholt.':'📴 No connection – will catch up later.');
+  else if(s.fehler==='zugang') teile.push(`🔑 ${de?'Der Zugang zum Speicher ist abgelaufen oder ungültig.':'The access to the storage has expired or is not valid.'} <button type="button" class="btn small" id="kTokenNeu">${de?'Neuen Zugangsschlüssel eintragen':'Enter a new access key'}</button>`);
+  else if(s.fehler==='limit') teile.push(de?`⏳ Gerade zu viele Abgleiche – ab ${kontoUhrzeit(s.wartenBis)} geht es weiter.`:`⏳ Too many syncs just now – it goes on from ${kontoUhrzeit(s.wartenBis)}.`);
+  teile.push(`🔄 ${de?'Letzter Abgleich':'Last sync'}: ${s.letzter?kontoVor(jetzt-s.letzter, de):(de?'noch keiner':'none yet')}`);
+  const v=anmVerworfen(localStorage);
+  if(v) teile.push(de?`${v} ${v===1?'Eintrag':'Einträge'} nicht übernommen`:`${v} ${v===1?'entry':'entries'} not taken over`);
+  return teile.join(' · ')+` <button type="button" class="info-btn" data-help="abgleich" aria-label="Info">ⓘ</button>`;
+}
+const kontoUhrzeit = ms => { const d=new Date(ms); return pad(d.getHours())+':'+pad(d.getMinutes()); };
+/* after a sync: the line anew (only the line - a form being filled in stays as it is) */
+function kontoZeileAuffrischen(){
+  if(!KONTO_UI || !parentAccess) return;
+  const z=$('#aboutBody').querySelector('#kSync'); if(!z) return;
+  z.innerHTML=kontoZeileHTML(); kontoZeileBinden(z);
+}
+function kontoZeileBinden(z){
+  const a=z.querySelector('#kNeuAnmelden'); if(a) a.addEventListener('click',()=>{ if(!parentAccess) return; parentAbmelden(); showLogin('adult'); });
+  const t=z.querySelector('#kTokenNeu'); if(t) t.addEventListener('click',()=>{ if(parentAccess) kontoBlattZeigen({art:'token'}); });
 }
 /* ---------- a child after its login: practise only once a parent's device took it in ---------- */
 async function kontoKindIstBereit(id){
@@ -5352,6 +5468,7 @@ function kontoBlattHTML(){
     return back+`<h2 class="psubjtitle">🔑 ${b.geraet?(de?'Eigenes Gerät entfernen':'Remove own device'):(de?'Schlüssel erneuern':'Renew key')}</h2><p class="small">${b.geraet?(de?`„${esc(b.gname)}“ wird entfernt. Damit es nichts Neues mehr lesen kann, bekommen Sie dabei einen neuen Schlüssel.`:`“${esc(b.gname)}” is removed. So that it cannot read anything new, you get a new key with it.`):''} ${de?'Sie wählen ein neues Passwort und bekommen einen neuen Wiederherstellungscode. Auf Ihren anderen Geräten melden Sie sich danach mit dem neuen Passwort neu an – bis dahin sehen sie nichts Neues.':'You choose a new password and get a new recovery code. Then log in again with the new password on your other devices – until then they see nothing new.'}</p><form id="kErnForm" class="login-form"><input class="sr" type="text" name="username" autocomplete="username" value="${esc(adultUser?adultUser.user:'')}" readonly tabindex="-1" aria-hidden="true"><div class="field"><label for="kErnAlt">${de?'Aktuelles Passwort':'Current password'}</label><input id="kErnAlt" type="password" autocomplete="current-password" required></div><p class="pw-suggest">${de?'Vorschlag':'Suggestion'}: <b id="kErnSugg">${esc(sugg)}</b> <button type="button" class="btn small" id="kErnUse">${de?'Übernehmen':'Use it'}</button> <button type="button" class="btn small" id="kErnAnother">${de?'Anderer Vorschlag':'Another one'}</button></p><div class="field"><label for="kErnNeu1">${de?'Neues Passwort':'New password'}</label><input id="kErnNeu1" type="password" autocomplete="new-password" required></div><div class="field"><label for="kErnNeu2">${de?'Passwort wiederholen':'Repeat password'}</label><input id="kErnNeu2" type="password" autocomplete="new-password" required></div><button class="btn primary" id="kErnGo" type="submit">${b.geraet?(de?'Entfernen und Schlüssel erneuern':'Remove and renew key'):(de?'Schlüssel erneuern':'Renew key')}</button>${msg}</form>`;
   }
   if(b.art==='code') return `<div id="kCodeBox"></div>`;
+  if(b.art==='token') return back+`<h2 class="psubjtitle">🔑 ${de?'Neuer Zugangsschlüssel':'New access key'}</h2><p class="small">${de?'Den Schlüssel bekommen Sie vom Admin. Er gilt für dieses Gerät; Ihre Daten bleiben, wie sie sind.':'You get the key from the admin. It is for this device; your data stays as it is.'}</p><form id="kTokenForm" class="login-form"><div class="field"><label for="kTokenNeuWert">${de?'Zugangsschlüssel':'Access key'}</label><input id="kTokenNeuWert" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><button class="btn primary" id="kTokenGo" type="submit">${de?'Speichern':'Save'}</button>${msg}</form>`;
   return back;
 }
 function kontoQrText(){
@@ -5416,6 +5533,8 @@ function kontoKindNeuStarten(kind){
 function kontoBinden(body){
   const de=PL()==='de', q=s=>body.querySelector(s), an=(s,f)=>{ const e=q(s); if(e) e.addEventListener('click',f); }, form=(s,f)=>{ const e=q(s); if(e) e.addEventListener('submit',ev=>{ ev.preventDefault(); if(parentAccess) f(); }); };
   an('#parentLeave',()=>{ if(parentAccess) kontoBereichVerlassen(); });
+  const zs=q('#kSync'); if(zs) kontoZeileBinden(zs);
+  form('#kTokenForm',()=>{ const m=q('#kMsg'); try{ anmTokenSpeichern(localStorage, q('#kTokenNeuWert').value); }catch(err){ m.textContent=de?'Dieser Schlüssel sieht nicht richtig aus. Bitte prüfen.':'This key does not look right. Please check it.'; return; } kontoZug=null; kontoStatus.fehler=null; kontoSchritt('#kTokenGo', async()=>{ await kontoAbgleich(); kontoBlattZeigen(null); }); });
   an('#kBack',()=>kontoBlattZeigen(null));
   an('#kErAbmelden',parentAbmelden);
   an('#kErBleiben',()=>{ kontoBlatt=null; kontoBereichVerlassen(); });
@@ -6353,7 +6472,8 @@ $('#tabEn').addEventListener('click',()=>setLang('en'));
 $('#tabInfo').addEventListener('click',()=>openAbout('info'));
 $('#tabSheets').addEventListener('click',()=>openAbout('sheets'));
 // No log-out in the background (Peter, 31.10.): an iPad is personal; only stop a running recording.
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){ checkForUpdate(); if(KONTO_UI) kontoAbgleich(); } if(document.hidden) recStop();});
+// Task "Abgleich in der App": coming back fetches; going into the background sends own entries not sent yet.
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){ checkForUpdate(); if(KONTO_UI) kontoAbgleich(); } if(document.hidden){ recStop(); if(KONTO_UI && kontoStatus.neu) kontoAbgleich(); }});
 window.addEventListener('hashchange',()=>{
   if(applyParentRoute()) return;
   // browser back out of ⚙ to a page without a route: back to the overview of the grown-ups area

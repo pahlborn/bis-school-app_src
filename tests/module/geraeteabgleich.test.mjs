@@ -74,6 +74,29 @@ test('Offline: nichts geht verloren - die Ereignisse bleiben in der App und gehe
   assert.equal(re.inDieApp, 1); assert.deepEqual(E.log().map((e) => e.id), [a.id]);
 });
 
+test('Abgleich in der App: inDieApp false haelt Neues zurueck (kommt beim naechsten Mal); limit - die uebrigen Bereiche werden ausgelassen, Wartezeit im Bericht', async () => {
+  const welt = lokalerSpeicher({ now: () => T0 });
+  const E = geraet(welt, 'd_E1', ['p_e1']), K = geraet(welt, 'd_K1', ['p_k1']);
+  await E.sync(); await K.sync();
+  const a = K.schreibt('p_k1', 'answer', antwort('r'), 10);
+  const rk = await K.sync({ inDieApp: false });
+  assert.equal(rk.bereiche['kind:lern:p_k1'].gesendet, 1, 'gesendet wird trotzdem');
+  const r1 = await E.sync({ inDieApp: false });
+  assert.equal(r1.inDieApp, 0); assert.equal(r1.zurueckgehalten, 1); assert.deepEqual(E.log(), [], 'nichts in der App');
+  const r2 = await E.sync();
+  assert.equal(r2.inDieApp, 1); assert.deepEqual(E.log().map((e) => e.id), [a.id], 'beim naechsten Mal da');
+  // limit: der erste Bereich meldet es -> keine weitere Frage an den Speicher
+  let n = 0;
+  const z = welt.geraet('d_E1');
+  const voll = { ...z, keys: async () => { n++; const e = new Error('speicher: limit'); e.code = 'limit'; e.wartezeit = 600000; throw e; } };
+  const r3 = await geraetAbgleichen({ ablage: E.a, zugang: voll, personen: { p_e1: P.p_e1 }, kinder: [KIND()], verzeichnis: VZ(), now: T0 + 3600e3, heute: HEUTE });
+  assert.equal(r3.limit, 600000);
+  assert.equal(n, 1, 'nach dem Limit nicht weiter gefragt');
+  assert.ok(Object.values(r3.bereiche).every((b) => b.fehler === 'limit'));
+  assert.equal(Object.values(r3.bereiche).filter((b) => b.ausgelassen).length, 4);
+  await assert.rejects(geraetAbgleichen({ ablage: E.a, zugang: z, personen: { p_e1: P.p_e1 }, kinder: [KIND()], verzeichnis: VZ(), now: T0, heute: HEUTE, inDieApp: 'nein' }), /inDieApp/);
+});
+
 test('Ohne Schluessel der Person: ein Ereignis einer Person, deren Schluessel nicht auf dem Geraet liegen, wird nicht gesendet (gezaehlt); niemand mit aktuellem Schluessel -> kein-schluessel', async () => {
   const welt = lokalerSpeicher({ now: () => T0 });
   const E = geraet(welt, 'd_E1', ['p_e1']), K = geraet(welt, 'd_K1', ['p_k1']);
