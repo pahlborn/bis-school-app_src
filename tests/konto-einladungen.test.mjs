@@ -21,7 +21,7 @@ import { appLesen } from '../werkzeug/module.mjs';
 import { kontenEinsetzen, kennungErzeugen } from '../werkzeug/konten.mjs';
 import { konto } from './konten-hilfen.mjs';
 import { lokalerSpeicher } from '../src/module/speicher.mjs';
-import { startcodeAusstellen, ersteAnmeldung, anmelden as kontoAnmelden } from '../src/module/konto.mjs';
+import { startcodeAusstellen, ersteAnmeldung, anmelden as kontoAnmelden, kontoLookup } from '../src/module/konto.mjs';
 import { anmStartlink } from '../src/module/anmeldung.mjs';
 import { qrSvg } from '../src/module/qrcode.mjs';
 import { keyFingerprint } from '../src/module/krypto.mjs';
@@ -431,4 +431,67 @@ test('4 Kathies App (Live-Bau) und Testbau mit konten.json: keine Familie, keine
     L.klick('#parentClose');
     assert.equal(L.lauf(() => L.holen('adultUser')), null, bauart + ': Abmelden wie bisher');
   }
+});
+
+/* was von einer Person (Kennung) noch auf einem Geraet liegt: Schluessel oder Werte, die sie nennen */
+const reste = (G, id) => [...G.S.ablage.entries()].filter(([k, v]) => k.includes(id) || String(v).includes(id)).map(([k]) => k);
+
+/* Familie fuer Test 5/6: Peter (Laptop + iPhone), Anna (iPhone), Kathie (iPad), Kathie hat 2 Antworten gegeben */
+async function familieMitZweiElternGeraeten(t) {
+  const W = await welt();
+  const P = await peter(t, W);
+  const kq = await kindAnlegen(P, 'Kathie', 'kathie');
+  const K = geraet(t, W.w, { name: 'Kathies iPad', hash: link(kq.link) });
+  await kindStart(K, P);
+  P.klick('#kQrFertig');
+  const kid = K.sitzung().id;
+  P.einstellungen('familie');
+  P.klick('#kElternEinladen'); await P.wartenAuf('#kElternForm');
+  P.tippe('#kElternLogin', 'anna.a'); P.absenden('#kElternGo'); await P.wartenAuf('#kQr');
+  const A = geraet(t, W.w, { name: 'Annas iPhone', hash: link(qrLink(P, 'anna.a').link), ua: UA.iphone });
+  A.pw = (await erwachsenStart(A)).pw;
+  await P.sync();
+  P.klick('#kQrFertig');
+  const P2 = geraet(t, W.w, { name: 'Peters iPhone', ua: UA.iphone });
+  await anmelden(P2, 'adult', 'peter.a', P.pw);
+  await P2.warten(() => P2.erwachsen(), 'Peter auf dem iPhone');
+  ueben(K, 2);
+  await K.sync(); await P.sync(); await A.sync(); await P2.sync(); await P2.sync();
+  A.kennung = A.liste()[0].id;
+  return { W, P, P2, A, K, kid };
+}
+async function kontoLoeschen(G) {
+  G.einstellungen('familie');
+  G.klick('#kKontoLoeschen'); await G.wartenAuf('#kKlForm');
+  G.tippe('#kKlPw', G.pw); G.absenden('#kKlGo');
+  await G.wartenAuf('#kKontoWeg');
+}
+
+/* die Gegenprobe zu 5 (Anna loescht ihr Konto, Peters Geraete behalten alles) und Faelle ohne App: tests/module/kinddaten.test.mjs */
+test('5 Ein Elternteil loescht sein Konto, der andere bleibt: seine anderen Geraete raeumen die Kinderdaten beim naechsten Abgleich selbst weg', async (t) => {
+  const { W, P, P2, A, K, kid } = await familieMitZweiElternGeraeten(t);
+  assert.equal(P2.antworten(kid).length, 2, 'vorher: Peters iPhone kennt Kathies Stand');
+  assert.ok(reste(P2, kid).length > 0 && reste(A, kid).length > 0);
+
+  await kontoLoeschen(P);
+  assert.equal(await W.z.directory(await kontoLookup('peter.a')), null, 'Verzeichniseintrag weg');
+  assert.deepEqual(reste(P, P.kennung), [], 'Peters Laptop: nichts mehr von Peter');
+  assert.deepEqual(reste(P, kid), [], 'Peters Laptop: nichts mehr von Kathie');
+  // das andere Geraet weiss noch nichts - bis zum naechsten Abgleich
+  assert.ok(reste(P2, kid).length > 0, 'iPhone vor dem Abgleich');
+  await P2.sync();
+  await P2.warten(() => !P2.erwachsen() && P2.S.sichtbar('#login'), 'Peters iPhone abgemeldet');
+  assert.deepEqual(reste(P2, kid), [], 'Peters iPhone: nichts mehr von Kathie');
+  assert.deepEqual(reste(P2, P.kennung), [], 'Peters iPhone: nichts mehr von Peter');
+  assert.deepEqual(P2.liste(), []);
+  assert.deepEqual(JSON.parse(P2.S.ablage.get('bq_abgleich') || '{}'), {}, 'kein Bereichsstand mehr');
+
+  // Anna und Kathie sind davon nicht beruehrt: sie uebt weiter, Anna sieht es mit den neuen Schluesseln
+  await A.sync(); await P2.sync();
+  assert.equal(K.sitzung().id, kid, 'Kathie bleibt auf ihrem iPad angemeldet');
+  ueben(K, 1); await K.sync(); await A.sync();
+  assert.equal(A.antworten(kid).length, 3, 'Anna sieht Kathies Stand weiter');
+  assert.equal(A.wert('kidChoices()').length, 1);
+  assert.deepEqual(reste(P2, kid), [], 'Peters iPhone hat nach weiteren Abgleichen nichts neu angelegt');
+  for (const G of [P, A, K, P2]) assert.deepEqual(G.wert('kontoFehlerListe'), [], G.name + ': keine Fehler');
 });
