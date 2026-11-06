@@ -124,11 +124,11 @@ test('Freigabe mit echten Klicks: Einwilligungstext, nur Lehrkraft/Admin, Ersetz
     assert.match(await page.textContent('#pGrantMsg'), /keine Lehrkraft und keinen Admin/);
   }
   await page.locator('#pGrantWho').fill('frau'); await page.locator('#pGrantDays').fill('10');
-  assert.equal(await page.textContent('#pGrantConsent'), 'Sie geben frau für 10 Tage Einblick in: Lernstand. frau sieht dabei Vor- und Nachnamen und das Geburtsdatum Ihres Kindes, aber nicht Emoji und Einstellungen. frau kann nichts ändern. Sie können das jederzeit beenden. Was frau bis dahin gesehen hat, kann man nicht ungesehen machen.');
+  assert.equal(await page.textContent('#pGrantConsent'), 'Sie geben frau für 10 Tage Einblick in: Lernstand. frau sieht dabei Vor- und Nachnamen und das Geburtsdatum Ihres Kindes (und Jahrgangsstufe, Klasse und Schule, falls eingetragen), aber nicht Emoji und Einstellungen. frau kann nichts ändern. Sie können das jederzeit beenden. Was frau bis dahin gesehen hat, kann man nicht ungesehen machen.');
   await page.locator('.phdr [data-plang="en"]').click();
   await page.waitForFunction(() => /You give/.test(document.querySelector('#pGrantConsent')?.textContent || ''));
   await page.locator('#pGrantWho').fill('frau'); await page.locator('#pGrantDays').fill('10');
-  assert.equal(await page.textContent('#pGrantConsent'), 'You give frau access for 10 days to: learning progress. frau will see your child’s first and last name and date of birth, but not the emoji or settings. frau cannot change anything. You can end this at any time. What frau has seen until then cannot be unseen.');
+  assert.equal(await page.textContent('#pGrantConsent'), 'You give frau access for 10 days to: learning progress. frau will see your child’s first and last name and date of birth (and the grade, class and school, if entered), but not the emoji or settings. frau cannot change anything. You can end this at any time. What frau has seen until then cannot be unseen.');
   await page.locator('.phdr [data-plang="de"]').click();
   await page.waitForFunction(() => /Sie geben/.test(document.querySelector('#pGrantConsent')?.textContent || ''));
   await page.locator('#pGrantWho').fill('frau'); await page.locator('#pGrantDays').fill('10');
@@ -137,7 +137,7 @@ test('Freigabe mit echten Klicks: Einwilligungstext, nur Lehrkraft/Admin, Ersetz
   assert.match(await page.textContent('.pgrants'), /frau · Lernstand · läuft bis/);
   // the consent text as given is kept in the log and in the event
   const erteilt = await page.evaluate((id) => JSON.parse(localStorage.getItem('bq2_' + id + '__grantlog') || '[]').find((e) => e.ev === 'erteilt'), ID('mia'));
-  assert.match(erteilt.text, /sieht dabei Vor- und Nachnamen und das Geburtsdatum Ihres Kindes, aber nicht Emoji und Einstellungen/);
+  assert.match(erteilt.text, /sieht dabei Vor- und Nachnamen und das Geburtsdatum Ihres Kindes \(und Jahrgangsstufe, Klasse und Schule, falls eingetragen\), aber nicht Emoji und Einstellungen/);
   // the teacher looks: read-only, without school ratings; the name, but no other profile details; logged as viewed (once a day)
   await erwachsen(page, 'frau');
   assert.equal((await page.textContent('#pKid')).trim(), '👧 Mia Sonnenschein (mia)', 'Peter, 03.11.: she must see whom she works with');
@@ -151,10 +151,10 @@ test('Freigabe mit echten Klicks: Einwilligungstext, nur Lehrkraft/Admin, Ersetz
   await page.setViewportSize({ width: 1280, height: 720 });
   // her guide says so (DE and EN)
   await page.locator('#pHelp').click(); await page.waitForSelector('#pHelpBack');
-  assert.match(await page.locator('.phelp-view').innerText(), /Oben stehen Vor- und Nachname des Kindes, damit Sie wissen, mit wem Sie arbeiten; heißen zwei Kinder gleich, auch das Geburtsdatum\. Emoji und Einstellungen sehen Sie nicht\./);
+  assert.match(await page.locator('.phelp-view').innerText(), /Oben stehen Vor- und Nachname des Kindes, damit Sie wissen, mit wem Sie arbeiten; heißen zwei Kinder gleich, auch das Geburtsdatum\. Klasse und Schule stehen dabei, wenn die Familie sie eingetragen hat\. Emoji und Einstellungen sehen Sie nicht\./);
   await page.locator('.phdr [data-plang="en"]').click();
   await page.waitForFunction(() => /Help for teachers/.test(document.querySelector('.phelp-view')?.innerText || ''));
-  assert.match(await page.locator('.phelp-view').innerText(), /The child’s first and last name are shown at the top, so you know whom you are working with; if two children have the same name, the date of birth too\. You do not see the emoji or settings\./);
+  assert.match(await page.locator('.phelp-view').innerText(), /The child’s first and last name are shown at the top, so you know whom you are working with; if two children have the same name, the date of birth too\. The class and school are shown if the family entered them\. You do not see the emoji or settings\./);
   await page.locator('.phdr [data-plang="de"]').click();
   await page.waitForFunction(() => /Hilfe für Lehrkräfte/.test(document.querySelector('.phelp-view')?.innerText || ''));
   await page.locator('#pHelpBack').click();
@@ -264,8 +264,9 @@ test('Anleitungen und Freigabe-Hinweis nennen Name, Nachname und Geburtsdatum (E
   for (const g of ['GUIDE_ADULT_DE', 'GUIDE_TEACHER_DE', 'GUIDE_ADMIN_DE']) assert.match(teil(g), /Vor- und Nachname[^<]*Geburtsdatum[^<]*Emoji und Einstellungen/, g);
   for (const g of ['GUIDE_ADULT_EN', 'GUIDE_TEACHER_EN', 'GUIDE_ADMIN_EN']) assert.match(teil(g), /first and last name[^<]*date of birth[^<]*emoji (and|or) settings/, g);
   for (const alt of ['Den Namen aus dem Profil sehen Sie nicht', 'You do not see the name from the profile', 'Geburtstag, Emoji und Einstellungen', 'birthday, emoji or settings', 'birthday, emoji and settings', 'Geburtstag (ohne Jahr)', 'birthday (without year)']) assert.ok(!html.includes(alt), alt);
-  assert.match(html, /sieht den Lernstand, Namen und Geburtsdatum Ihres Kindes nur, wenn Sie es hier freigeben/);
-  assert.match(html, /sees your child’s progress, name and date of birth only if you allow it here/);
+  // Aufgabe "Schule und Klasse" (Peter, 05.11.): Klasse und Schule kommen dazu
+  assert.match(html, /sieht den Lernstand, Namen, Geburtsdatum, Klasse und Schule Ihres Kindes nur, wenn Sie es hier freigeben/);
+  assert.match(html, /sees your child’s progress, name, date of birth, class and school only if you allow it here/);
 });
 
 test('Admin ohne Freigabe: nur Verwaltungsangaben, keine Inhalte und keine Anzeigenamen', async () => {

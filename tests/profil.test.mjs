@@ -89,8 +89,9 @@ test('birthday: "—" removes it, half a date or a non-existent day is not saved
 });
 
 // Peter, 04.11. (task "Name und Geburtsdatum"): last name and the year of birth are added - so a teacher with a grant can
-// tell children with the same first name apart. Still no age, school, class or grade field.
-test('data minimisation: exactly first name, last name, birthday (year optional), emoji; no age or school field; old controls are gone', async () => {
+// tell children with the same first name apart. Still no age field. Peter, 05.11. (task "Schule und Klasse"): grade, class
+// and school get their own small dialog "My school" (tests/schule-klasse.test.mjs) - in "My profile" only the button to it.
+test('data minimisation: exactly first name, last name, birthday (year optional), emoji; no age field; school only behind its own button; old controls are gone', async () => {
   const { ctx, page } = await appOeffnen(browser, server.url);
   assert.equal(await page.locator('#bdayBtn').count(), 0);
   assert.equal(await page.locator('#playerName').count(), 0);
@@ -98,7 +99,9 @@ test('data minimisation: exactly first name, last name, birthday (year optional)
   assert.equal(await page.locator('#profileDlg input[type="text"]').count(), 2);
   assert.equal(await page.locator('#profileDlg select').count(), 3);
   const text = await page.textContent('#profileDlg');
-  assert.ok(!/\bage\b|school|class|grade/i.test(text), text);
+  assert.ok(!/\bage\b|class|grade/i.test(text), text);
+  assert.equal(text.split('school').length - 1, 1, 'only the button "My school"');
+  assert.equal((await page.textContent('#pfSchool')).trim(), '🏫 My school');
   assert.equal(text.split('This stays on this device.').length - 1, 1);
   assert.equal(await page.locator('#pfEmojis button').count(), 12);
   await ctx.close();
