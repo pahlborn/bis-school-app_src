@@ -4659,8 +4659,17 @@ function aboutAppHTML(){
   const sec=(title,body,id)=>`<details class="about-sec" data-about="${id}"><summary>${title}</summary><div class="about-sec-body">${body}</div></details>`;
   return `<div class="pabout">${main.replace(/<h2>[^<]*<\/h2>/,'')}</div><div class="about-menu">`
     +(privacy?sec(privacy.title, privacy.body, 'privacy'):'')
+    +(KONTO_UI?sec(de?'Daten exportieren und löschen':'Export and delete data', kontoLoeschenInfoHTML(de), 'loeschen'):'')
     +sec(de?'Impressum':'Legal notice', `<p>${de?'Wird ergänzt.':'To be added.'}</p>`, 'imprint')
     +`</div>`+versionAdminHTML();
+}
+/* accounts in the storage (family build): export and deletion in plain words; removing old versions from GitHub's
+   history is the admin's job by hand (guide in the source repository, docs/endgueltig-loeschen.md) */
+const KONTO_LOESCHEN_ANLEITUNG='https://github.com/pahlborn/bis-school-app_src/blob/main/docs/endgueltig-loeschen.md';
+function kontoLoeschenInfoHTML(de){
+  return de
+    ? `<p>Eltern sichern und löschen die Daten eines Kindes unter ⚙ → „👪 Familie“ (📄 Daten, 🗑️ Löschen); dort steht auch „Mein Konto löschen“. Gelöscht wird im Speicher und auf allen Geräten der Familie, auch die Leseaufnahmen.</p><p>Ältere, verschlüsselte Stände bleiben in der Versionsgeschichte des Speichers bei GitHub; ohne Schlüssel sind sie nicht lesbar. Auf Wunsch entfernt der Admin auch sie: <a href="${KONTO_LOESCHEN_ANLEITUNG}" target="_blank" rel="noopener">Anleitung für den Admin</a>.</p>`
+    : `<p>Parents save and delete a child’s data under ⚙ → “👪 Family” (📄 Data, 🗑️ Delete); “Delete my account” is there, too. It is deleted in the storage and on every device of the family, recordings included.</p><p>Older, encrypted versions stay in the storage’s history at GitHub; without the keys nobody can read them. On request the admin removes them, too: <a href="${KONTO_LOESCHEN_ANLEITUNG}" target="_blank" rel="noopener">guide for the admin</a>.</p>`;
 }
 function settingsViewHTML(secHTML){
   const de=PL()==='de', close=accountsOn()?(de?'Abmelden':'Log out'):(de?'Sperren':'Lock');
@@ -4985,7 +4994,7 @@ const HELP={
     sheets:{title:'Übungsblätter',text:'<p>Ihr Kind trägt seine Antworten vom Papier selbst ein: Startseite → „My sheets“. Die App prüft wie gewohnt, mit Tipp und zweitem Versuch.</p><p>Hier sehen Sie je Aufgabe „Richtig“, „Mit Hilfe“ oder „Noch nicht“. „Mit Hilfe“ und „Noch nicht“ sind gut so: Die App bietet dann leichtere Schritte an und wiederholt die Aufgabe später. Ein Blatt, das nicht eingetragen wird, zählt einfach nicht.</p>'},
   testday:{noGuide:true,title:'Testkonto: +1 Tag',text:'<p><b>+1 Tag</b> stellt die Uhr der App nur für dieses Testkonto einen Tag vor. So sehen Sie sofort, was sonst erst morgen passiert:</p><ul><li>Fehler kommen als Wiederholung zurück.</li><li>Der Lernbaum wächst.</li><li>Die Einschätzung im Elternbereich sammelt Übungstage.</li></ul><p>Die Daten des Kindes bleiben unberührt. <b>Testdaten löschen</b> setzt das Testkonto ganz zurück (auch den Tag).</p>'},
   guidance:{title:'So unterstützen Sie Ihr Kind',text:'<p>Ein Vorschlag, wie oft geübt wird, und die wichtigsten Regeln. Konkretes zu jedem Thema steht bei jeder Quest unter „💡 So helfen Sie“.</p>'},
-  abgleich:{noGuide:true,title:'Abgleich',text:'<p>Die App gleicht von selbst ab – Sie müssen nichts tippen: beim Öffnen, beim Zurückkehren, alle 30 Sekunden, solange sie offen ist, und kurz nach neuen Einträgen. Beim Wechsel in eine andere App schickt sie noch, was offen ist.</p><ul><li><b>Kein Netz:</b> Alles bleibt auf dem Gerät und wird später nachgeholt. Es geht nichts verloren.</li><li><b>Mitten in einer Runde</b> ändert sich beim Kind nichts; Neues erscheint nach der Runde.</li><li><b>Nicht übernommen:</b> Einträge, die die App abgelehnt hat – etwa von einem entfernten Gerät oder ohne passende Unterschrift. Ihre Daten bleiben davon unberührt. Steigt die Zahl unerwartet, bitte den Admin fragen.</li></ul><p>Das Kind sieht vom Abgleich nichts.</p>'}
+  abgleich:{noGuide:true,title:'Abgleich',text:'<p>Die App gleicht von selbst ab – Sie müssen nichts tippen: beim Öffnen, beim Zurückkehren, alle 30 Sekunden, solange sie offen ist, und kurz nach neuen Einträgen. Beim Wechsel in eine andere App schickt sie noch, was offen ist.</p><ul><li><b>Kein Netz:</b> Alles bleibt auf dem Gerät und wird später nachgeholt. Es geht nichts verloren.</li><li><b>Mitten in einer Runde</b> ändert sich beim Kind nichts; Neues erscheint nach der Runde.</li><li><b>Nicht übernommen:</b> Einträge, die die App abgelehnt hat, weil sie gefälscht waren oder ohne Berechtigung kamen – etwa von einem entfernten Gerät. Harmloses aus der Reihenfolge der Geräte zählt nicht mit. Ihre Daten bleiben davon unberührt. Steigt die Zahl unerwartet, bitte den Admin fragen.</li></ul><p>Das Kind sieht vom Abgleich nichts.</p>'}
 };
 /* Grown-ups help in English: meaning-based, American English (Peter, 31.10.). */
 const HELP_EN={
@@ -5001,7 +5010,7 @@ const HELP_EN={
     sheets:{title:'Practice sheets',text:'<p>Your child types in the answers from the paper: start page → “My sheets”. The app checks them as usual, with a tip and a second try.</p><p>Here you see “Correct”, “With help” or “Not yet” for each task. “With help” and “Not yet” are fine: the app then offers easier steps and brings the task back later. A sheet that isn’t entered simply doesn’t count.</p>'},
   testday:{title:'Test account: +1 day',text:'<p><b>+1 day</b> moves the app’s clock one day ahead, for this test account only. You see right away what would otherwise happen tomorrow:</p><ul><li>Mistakes come back as reviews.</li><li>The learning tree grows.</li><li>The summary in the grown-ups area collects practice days.</li></ul><p>Your child’s data is not touched. <b>Delete test data</b> resets the test account completely (including the day).</p>'},
   guidance:{title:'How to support your child',text:'<p>A suggestion for how often to practice, and the key rules. Concrete help for each topic is at every quest under “💡 How you can help”.</p>'},
-  abgleich:{title:'Sync',text:'<p>The app syncs by itself – you don’t need to tap anything: when it opens, when you come back, every 30 seconds while it is open, and shortly after new entries. When you switch to another app, it sends whatever is still open.</p><ul><li><b>No connection:</b> everything stays on the device and is caught up later. Nothing gets lost.</li><li><b>In the middle of a round</b> nothing changes for your child; new things appear after the round.</li><li><b>Not taken over:</b> entries the app refused – for example from a removed device or without a matching signature. Your data is not affected. If the number grows unexpectedly, please ask the admin.</li></ul><p>Your child sees nothing of the sync.</p>'}
+  abgleich:{title:'Sync',text:'<p>The app syncs by itself – you don’t need to tap anything: when it opens, when you come back, every 30 seconds while it is open, and shortly after new entries. When you switch to another app, it sends whatever is still open.</p><ul><li><b>No connection:</b> everything stays on the device and is caught up later. Nothing gets lost.</li><li><b>In the middle of a round</b> nothing changes for your child; new things appear after the round.</li><li><b>Not taken over:</b> entries the app refused because they were forged or came without permission – for example from a removed device. Harmless things from the order of the devices do not count. Your data is not affected. If the number grows unexpectedly, please ask the admin.</li></ul><p>Your child sees nothing of the sync.</p>'}
 };
 const ADULT_H2=[['Schulische Einstufungen','school'],['School assessments','school'],['Einschätzung','overview'],['Summary','overview'],['Pisolala','storycap'],['Freiwillige Kalender','calendar'],['Optional calendar','calendar'],['Profilangaben','profile'],['Profile details','profile'],['App-Version','version'],['App version','version'],['Übungsblätter','sheets'],['Practice sheets','sheets'],['So unterstützen','guidance'],['How to support','guidance']];
 function addAdultInfo(root){ root.querySelectorAll('h2').forEach(h=>{ const m=ADULT_H2.find(([t])=>h.textContent.trim().startsWith(t)); if(m && !h.querySelector('.info-btn')) h.insertAdjacentHTML('beforeend',` <button type="button" class="info-btn" data-help="${m[1]}" aria-label="Info">ⓘ</button>`); }); }
@@ -5140,7 +5149,7 @@ function kontoZugang(){
 /* test instance: the access key of the test storage, once per device (concept 12; shared login page, US English) */
 function kontoTokenHTML(){
   if(!anmTokenNoetig(KONTO_SPEICHER, localStorage)) return '';
-  return `<details class="login-help" id="kontoTokenBox" open><summary>🔑 Test storage</summary><p>This test version keeps its data in a private test storage. Enter the access key from the admin once on this device.</p><form id="kontoTokenForm" class="login-form"><div class="field"><label for="kontoToken">Access key</label><input id="kontoToken" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><button class="btn" id="kontoTokenGo" type="submit">Save</button><p id="kontoTokenMsg" class="small" role="status"></p></form></details>`;
+  return `<details class="login-help" id="kontoTokenBox" open><summary>🔑 Storage access</summary><p>This app keeps its data in a private storage. Enter the access key from the admin once on this device.</p><form id="kontoTokenForm" class="login-form"><div class="field"><label for="kontoToken">Access key</label><input id="kontoToken" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><button class="btn" id="kontoTokenGo" type="submit">Save</button><p id="kontoTokenMsg" class="small" role="status"></p></form></details>`;
 }
 function kontoTokenVerbinden(){
   const f=$('#loginBody').querySelector('#kontoTokenForm'); if(!f) return;
@@ -5355,6 +5364,7 @@ function kontoGeraetName(){
 /* one sync at a time; a call during a running one asks for one more round and gets the running one */
 function kontoAbgleich(){
   if(!KONTO_UI || !kontoOffen.size || !kontoZugang()) return Promise.resolve(null);
+  if(kontoLoeschtGerade) return Promise.resolve(null);                                   // a deletion is running (it syncs itself)
   if(Date.now()<kontoStatus.wartenBis){ kontoPlanen(); return Promise.resolve(null); }   // hourly limit: wait, do not ask again
   if(kontoLauf){ kontoNochmal=true; return kontoLauf; }
   const p=kontoAbgleichLauf(); kontoLauf=p;
@@ -5442,8 +5452,26 @@ function kontoNachAbgleich(r, vorher){
     : (de?`⚠️ Die Einladung für ${nameVon(w.id)} wurde nicht mit dem richtigen Schlüssel eingelöst. Es wurde nichts übernommen. Bitte die Einladung zurückziehen und neu einladen.`:`⚠️ The invitation for ${nameVon(w.id)} was not used with the right key. Nothing was taken over. Please withdraw it and invite again.`));
   for(const id of r.abgelaufen) melde('x:'+id, 'info', de?`Die Einladung für ${nameVon(id)} ist abgelaufen.`:`The invitation for ${nameVon(id)} has expired.`);
   for(const x of r.erneuert) melde('e:'+x.person+':'+x.fingerabdruck, 'info', de?`ℹ️ ${x.name||'Der andere Elternteil'} hat einen neuen Schlüssel. Prüfwörter: ${x.fingerabdruck}`:`ℹ️ ${x.name||'The other parent'} has a new key. Check words: ${x.fingerabdruck}`);
+  // task "Familienfassung bauen": a child deleted by a parent (its data already left this device - module einladung) and
+  // accounts no longer in the storage: off this device too (list, key copy, session, recordings); whoever of them is
+  // logged in here now is logged out
+  // An account deleted on another device that this device already knew: the module reports its areas as gone (fehler
+  // "geloescht") - a grown-up's own area, a child's learning area, the family area (the last parent deleted his account
+  // before this device read that the children were taken out). Their data leave this device as well.
+  const b=(r.bericht && r.bericht.bereiche)||{}, gone=a=>!!(b[a] && b[a].fehler==='geloescht'), still=!kontoInRunde();
+  const kontoWeg=still ? [...kontoOffen.keys()].filter(id=>kontoOffen.get(id).art!=='child' && gone('person:'+id)) : [];
+  const kindWeg=still ? Object.keys(b).filter(a=>a.startsWith('kind:lern:') && gone(a)).map(a=>a.slice(10)) : [];
+  for(const kid of kindWeg) try{ anmKindLokalEntfernen({ablage:localStorage, kind:kid}); }catch(e){ kontoFehlerListe.push('entfernen: '+String(e&&e.message||e)); }
+  for(const f of still ? Object.keys(b).filter(a=>a.startsWith('familie:') && gone(a)).map(a=>a.slice(8)) : []) kontoFamilieWeg(f);
+  const weg=[...new Set([...(r.geloescht||[]), ...(r.kontoGeloescht||[]), ...kindWeg, ...kontoWeg])];
+  for(const id of weg){ const a=accByRef({id}); if(a && a.role==='student' && !kontoWeg.includes(id) && !(r.kontoGeloescht||[]).includes(id)) melde('d:'+id, 'info', de?`ℹ️ ${kontoKindName(id, a.user)} wurde gelöscht.`:`ℹ️ ${kontoKindName(id, a.user)} was deleted.`); kontoLokalWeg(id); }
   const vorherKinder=kontoKinderText();
   kontoKontenAuffrischen();
+  if(weg.length){
+    evNeuLaden();
+    if(parentAccess && adultUser && !accByRef({user:adultUser.user})){ parentAbmelden(); return; }
+    if(!parentAccess && !studentSession() && state.screen!=='login'){ showLogin(); return; }
+  }
   kontoNeuZeichnen(neu>0 || r.inDieApp>0 || vorherKinder!==kontoKinderText());
 }
 /* the accounts of the app: those that logged in here, and the children of the parents logged in here (from the family's
@@ -5570,10 +5598,11 @@ function kontoFamilieHTML(){
   const msgs=kontoMeldungen.slice(-6).map(m=>`<p class="kmeld kmeld-${m.art}">${esc(m.text)}</p>`).join('');
   return msgs
     +`<h3 class="psub">${de?'Kinder':'Children'}</h3>`
-    +(kinder.length?`<ul class="klist">${kinder.map(c=>`<li>👧 <b>${esc(kontoKindName(c.id, c.name))}</b> <span class="small">(${esc(c.name)})</span> <button type="button" class="btn small" data-kneu="${esc(c.id)}">🔑 ${de?'Neues Passwort':'New password'}</button></li>`).join('')}</ul>`:`<p class="small">${de?'Noch kein Kind angelegt.':'No child added yet.'}</p>`)
+    +(kinder.length?`<ul class="klist">${kinder.map(c=>`<li>👧 <b>${esc(kontoKindName(c.id, c.name))}</b> <span class="small">(${esc(c.name)})</span> <button type="button" class="btn small" data-kneu="${esc(c.id)}">🔑 ${de?'Neues Passwort':'New password'}</button> <button type="button" class="btn small" data-kexport="${esc(c.id)}">📄 ${de?'Daten':'Data'}</button> <button type="button" class="btn small" data-kloesch="${esc(c.id)}">🗑️ ${de?'Löschen':'Delete'}</button></li>`).join('')}</ul>`:`<p class="small">${de?'Noch kein Kind angelegt.':'No child added yet.'}</p>`)
     +`<p><button type="button" class="btn" id="kKindAnlegen">➕ ${de?'Kind anlegen':'Add a child'}</button></p>`
     +(v.eltern.length<2 && !v.offen.some(o=>o.art==='parent') ? `<p><button type="button" class="btn" id="kElternEinladen">➕ ${de?'Zweiten Elternteil einladen':'Invite the second parent'}</button></p>` : '')
-    +(v.offen.length?`<h3 class="psub">${de?'Offene Einladungen':'Open invitations'}</h3><ul class="klist">${v.offen.map(o=>`<li>${warn.has(o.invite)?'⚠️ ':''}${esc(o.display||o.name)} – ${artText(o.art)}, ${de?'gültig bis':'valid until'} ${esc(kontoZeit(o.until))} <button type="button" class="btn small" data-kzurueck="${esc(o.invite)}">${de?'Zurückziehen':'Withdraw'}</button></li>`).join('')}</ul>`:'');
+    +(v.offen.length?`<h3 class="psub">${de?'Offene Einladungen':'Open invitations'}</h3><ul class="klist">${v.offen.map(o=>`<li>${warn.has(o.invite)?'⚠️ ':''}${esc(o.display||o.name)} – ${artText(o.art)}, ${de?'gültig bis':'valid until'} ${esc(kontoZeit(o.until))} <button type="button" class="btn small" data-kzurueck="${esc(o.invite)}">${de?'Zurückziehen':'Withdraw'}</button></li>`).join('')}</ul>`:'')
+    +`<h3 class="psub">${de?'Mein Konto löschen':'Delete my account'}</h3><p><button type="button" class="btn small" id="kKontoLoeschen">🗑️ ${de?'Mein Konto löschen':'Delete my account'}</button></p>`;
 }
 function kontoGeraeteHTML(){
   const de=PL()==='de', k=kontoIch(); if(!k) return '';
@@ -5607,6 +5636,10 @@ function kontoBlattHTML(){
     return back+`<h2 class="psubjtitle">🔑 ${b.geraet?(de?'Eigenes Gerät entfernen':'Remove own device'):(de?'Schlüssel erneuern':'Renew key')}</h2><p class="small">${b.geraet?(de?`„${esc(b.gname)}“ wird entfernt. Damit es nichts Neues mehr lesen kann, bekommen Sie dabei einen neuen Schlüssel.`:`“${esc(b.gname)}” is removed. So that it cannot read anything new, you get a new key with it.`):''} ${de?'Sie wählen ein neues Passwort und bekommen einen neuen Wiederherstellungscode. Auf Ihren anderen Geräten melden Sie sich danach mit dem neuen Passwort neu an – bis dahin sehen sie nichts Neues.':'You choose a new password and get a new recovery code. Then log in again with the new password on your other devices – until then they see nothing new.'}</p><form id="kErnForm" class="login-form"><input class="sr" type="text" name="username" autocomplete="username" value="${esc(adultUser?adultUser.user:'')}" readonly tabindex="-1" aria-hidden="true"><div class="field"><label for="kErnAlt">${de?'Aktuelles Passwort':'Current password'}</label><input id="kErnAlt" type="password" autocomplete="current-password" required></div><p class="pw-suggest">${de?'Vorschlag':'Suggestion'}: <b id="kErnSugg">${esc(sugg)}</b> <button type="button" class="btn small" id="kErnUse">${de?'Übernehmen':'Use it'}</button> <button type="button" class="btn small" id="kErnAnother">${de?'Anderer Vorschlag':'Another one'}</button></p><div class="field"><label for="kErnNeu1">${de?'Neues Passwort':'New password'}</label><input id="kErnNeu1" type="password" autocomplete="new-password" required></div><div class="field"><label for="kErnNeu2">${de?'Passwort wiederholen':'Repeat password'}</label><input id="kErnNeu2" type="password" autocomplete="new-password" required></div><button class="btn primary" id="kErnGo" type="submit">${b.geraet?(de?'Entfernen und Schlüssel erneuern':'Remove and renew key'):(de?'Schlüssel erneuern':'Renew key')}</button>${msg}</form>`;
   }
   if(b.art==='code') return `<div id="kCodeBox"></div>`;
+  // task "Familienfassung bauen": export and deletion (module kinddaten; concept 13, US12.1/12.2)
+  if(b.art==='export') return back+`<h2 class="psubjtitle">📄 ${de?`Daten von ${esc(b.name)}`:`Data of ${esc(b.name)}`}</h2><p class="small">${de?`Alles, was zu ${esc(b.name)} gespeichert ist – Stand nach dem letzten Abgleich. Die lesbare Seite öffnet jeder Browser; die Datei enthält dasselbe für Programme.`:`Everything stored about ${esc(b.name)} – as of the last sync. Any browser opens the readable page; the file holds the same for programs.`}</p><p><button type="button" class="btn primary" id="kExHtml">📄 ${de?'Lesbare Seite sichern':'Save readable page'}</button> <button type="button" class="btn" id="kExJson">🗂️ ${de?'Datei (JSON) sichern':'Save file (JSON)'}</button></p>${msg}`;
+  if(b.art==='loeschkind') return back+`<h2 class="psubjtitle">🗑️ ${de?`${esc(b.name)} löschen`:`Delete ${esc(b.name)}`}</h2><p>${de?`Gelöscht wird alles von ${esc(b.name)}: Lernstand, Profil, Schulbewertungen, Freigaben, Geräte und Leseaufnahmen – im Speicher und auf diesem Gerät. Die anderen Geräte räumen beim nächsten Abgleich auf; ${esc(b.name)} kann sich danach nicht mehr anmelden. Das lässt sich nicht rückgängig machen.`:`Everything of ${esc(b.name)} is deleted: progress, profile, school ratings, grants, devices and recordings – in the storage and on this device. The other devices clean up with their next sync; ${esc(b.name)} can no longer log in. This cannot be undone.`}</p><p class="small">${de?'Tipp: vorher „📄 Daten“ sichern.':'Tip: save “📄 Data” first.'}</p><form id="kLoeschForm" class="login-form"><div class="field"><label for="kLoeschName">${de?`Zur Bestätigung den Anmeldenamen eintippen: <b>${esc(b.login)}</b>`:`To confirm, type the login name: <b>${esc(b.login)}</b>`}</label><input id="kLoeschName" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><button class="btn primary" id="kLoeschGo" type="submit">${de?'Endgültig löschen':'Delete for good'}</button>${msg}</form>`;
+  if(b.art==='loeschkonto') return back+`<h2 class="psubjtitle">🗑️ ${de?'Mein Konto löschen':'Delete my account'}</h2><p>${b.letzter?(de?'Sie sind der einzige Elternteil. Gelöscht werden Ihr Konto, die Familie und jedes Kind mit allen Daten – im Speicher und auf diesem Gerät.':'You are the only parent. Your account, the family and every child with all data are deleted – in the storage and on this device.'):(de?'Sie verlassen die Familie, Ihr Konto wird gelöscht. Die Kinder bleiben beim anderen Elternteil.':'You leave the family and your account is deleted. The children stay with the other parent.')} ${de?'Das lässt sich nicht rückgängig machen.':'This cannot be undone.'}</p>${b.letzter?`<p class="small">${de?'Tipp: vorher je Kind „📄 Daten“ sichern.':'Tip: save “📄 Data” of each child first.'}</p>`:''}<form id="kKlForm" class="login-form"><input class="sr" type="text" name="username" autocomplete="username" value="${esc(adultUser?adultUser.user:'')}" readonly tabindex="-1" aria-hidden="true"><div class="field"><label for="kKlPw">${de?'Ihr Passwort':'Your password'}</label><input id="kKlPw" type="password" autocomplete="current-password" required></div><button class="btn primary" id="kKlGo" type="submit">${de?'Endgültig löschen':'Delete for good'}</button>${msg}</form>`;
   if(b.art==='token') return back+`<h2 class="psubjtitle">🔑 ${de?'Neuer Zugangsschlüssel':'New access key'}</h2><p class="small">${de?'Den Schlüssel bekommen Sie vom Admin. Er gilt für dieses Gerät; Ihre Daten bleiben, wie sie sind.':'You get the key from the admin. It is for this device; your data stays as it is.'}</p><form id="kTokenForm" class="login-form"><div class="field"><label for="kTokenNeuWert">${de?'Zugangsschlüssel':'Access key'}</label><input id="kTokenNeuWert" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><button class="btn primary" id="kTokenGo" type="submit">${de?'Speichern':'Save'}</button>${msg}</form>`;
   return back;
 }
@@ -5640,6 +5673,7 @@ function kontoFehler(err){
   if(c==='anmeldung') return de?'Das aktuelle Passwort stimmt nicht.':'The current password is not right.';
   if(c==='passwort-gleich') return de?'Das neue Passwort muss sich vom aktuellen unterscheiden.':'The new password must differ from the current one.';
   if(c==='passwort-schwach') return pwStrongText(true);
+  if(c==='nicht-gesendet') return de?'Ohne Verbindung zum Speicher wurde nichts gelöscht. Bitte mit Netz erneut versuchen.':'Without a connection to the storage nothing was deleted. Please try again with a connection.';
   if(c==='nicht-erlaubt' || c==='geraet-unbekannt' || c==='kind-unbekannt') return de?'Das geht hier nicht (mehr). Bitte die Seite neu öffnen.':'This is not possible (any more). Please open the page again.';
   return loginTxt(true).noStore;
 }
@@ -5669,6 +5703,62 @@ function kontoKindNeuStarten(kind){
   const k=kontoIch(), c=k && kontoVerb(k).kinder.find(x=>x.id===kind); if(!c) return;
   return kontoSchritt(null, ()=>kontoEinladen((z,me)=>anmKindNeu({zugang:z, ablage:localStorage, konto:me, kind, now:Date.now()}), {zweck:'neu', name:kontoKindName(c.id, c.name)}));
 }
+/* ---------- export and deletion (task "Familienfassung bauen"; module kinddaten via anmeldung) ---------- */
+/* export: sync first (the newest state of every device), then all data of the child as a readable page and a file */
+function kontoExport(kind){
+  const k=kontoIch(), c=k && kontoVerb(k).kinder.find(x=>x.id===kind); if(!c) return;
+  return kontoSchritt(null, async()=>{
+    await kontoAbgleich();
+    const r=await anmKindExport({ablage:localStorage, konto:kontoIch(), kind, now:Date.now(), heute:dayKey(), sprache:PL()==='de'?'de':'en'});
+    kontoBlattZeigen({art:'export', kind, name:kontoKindName(c.id, c.name), html:r.html, json:r.json, dateiname:r.dateiname});
+  });
+}
+/* a file to the share menu (iPad: "Save to Files") or, without it, as a download */
+async function kontoDateiSichern(text, name, type, de, msg){
+  const file=new File([text], name, {type});
+  if(navigator.canShare && navigator.share && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file], title:name}); if(msg) msg.textContent=de?'Datei geteilt.':'File shared.'; return; }catch(e){ if(e && e.name==='AbortError'){ if(msg) msg.textContent=''; return; } }
+  }
+  const x=document.createElement('a'); x.href=URL.createObjectURL(file); x.download=name; document.body.appendChild(x); x.click(); x.remove(); setTimeout(()=>URL.revokeObjectURL(x.href),5000);
+  if(msg) msg.textContent=(de?'Datei gespeichert (Downloads): ':'File saved (downloads): ')+name;
+}
+/* deleting never runs next to a sync (both write the device state of the areas): no new sync from now, the running one
+   ends first */
+let kontoLoeschtGerade=false;
+async function kontoLoeschenLauf(tun){
+  kontoLoeschtGerade=true;
+  try{ if(kontoLauf) await kontoLauf; return await tun(); }
+  finally{ kontoLoeschtGerade=false; }
+}
+/* an account deleted (here or - learned with the sync - on another device) leaves this device: its line in the device
+   list, its key copy, its sessions, its data and - for a child - its recordings (IndexedDB; module kinddaten cannot reach
+   them). familie: the family area that went with it (the last parent deleted his account) */
+function kontoLokalWeg(id, familie){
+  if(!id) return;
+  try{ localStorage.setItem('bq2_kontoListe', JSON.stringify(kontoListe().filter(e=>e.id!==id))); }catch(e){}
+  kontoAbmelden(id);
+  const s=store.get('session',null); if(s && s.id===id) store.del('session');
+  const sp=store.get('sessionPrev',null); if(sp && sp.id===id) store.del('sessionPrev');
+  const as=store.get('adultSession',null); if(as && as.id===id) store.del('adultSession');
+  const here=store.get('kidsHere',[]); if(Array.isArray(here) && here.includes(id)) store.set('kidsHere', here.filter(x=>x!==id));
+  const seen=store.get('lastSeen',{}); if(seen && typeof seen==='object' && Object.prototype.hasOwnProperty.call(seen,id)){ delete seen[id]; store.set('lastSeen',seen); }
+  const keys=[]; try{ for(let i=0;i<localStorage.length;i++) keys.push(localStorage.key(i)); }catch(e){}
+  for(const k of keys) if(k && (k.startsWith('bq2_'+id+'__') || k==='bq2_pw_'+id)) try{ localStorage.removeItem(k); }catch(e){}
+  kontoOhne('bq2_personEvents', o=>{ delete o[id]; });
+  kontoOhne('bq_abgleich', o=>{ delete o['person:'+id]; });
+  kontoOhneEintraege('bq_abgleichVerworfen', v=>v.bereich==='person:'+id);
+  if(familie) kontoFamilieWeg(familie);
+  if(typeof indexedDB!=='undefined') try{ indexedDB.deleteDatabase('bq2_audio__'+id); }catch(e){}
+}
+/* a family area gone (the last parent deleted his account): its device state and log leave this device */
+function kontoFamilieWeg(f){
+  kontoOhne('bq_abgleich', o=>{ delete o['familie:'+f]; });
+  kontoOhne('bq2_familyEvents', o=>{ delete o[f]; });
+  kontoOhneEintraege('bq_abgleichVerworfen', v=>v.bereich==='familie:'+f);
+}
+/* device storage helpers: an object without some keys / a list without some entries (written only if something went) */
+function kontoOhne(lk, f){ try{ const o=JSON.parse(localStorage.getItem(lk)||'null'); if(o && typeof o==='object' && !Array.isArray(o)){ const n=Object.keys(o).length; f(o); if(Object.keys(o).length!==n) localStorage.setItem(lk, JSON.stringify(o)); } }catch(e){} }
+function kontoOhneEintraege(lk, weg){ try{ const l=JSON.parse(localStorage.getItem(lk)||'null'); if(Array.isArray(l)){ const n=l.filter(v=>!(v && typeof v==='object' && weg(v))); if(n.length!==l.length) localStorage.setItem(lk, JSON.stringify(n)); } }catch(e){} }
 function kontoBinden(body){
   const de=PL()==='de', q=s=>body.querySelector(s), an=(s,f)=>{ const e=q(s); if(e) e.addEventListener('click',f); }, form=(s,f)=>{ const e=q(s); if(e) e.addEventListener('submit',ev=>{ ev.preventDefault(); if(parentAccess) f(); }); };
   an('#parentLeave',()=>{ if(parentAccess) kontoBereichVerlassen(); });
@@ -5695,6 +5785,40 @@ function kontoBinden(body){
   an('#kQrFertig',()=>kontoBlattZeigen(null));
   an('#kQrWeg',()=>{ const b=kontoBlatt; if(!b || b.art!=='qr') return; kontoSchritt('#kQrWeg', async()=>{ const z=kontoZugang(); const r=await anmZurueckziehen({zugang:z, ablage:localStorage, konto:kontoIch(), id:b.id, now:Date.now()}); await kontoAbgleich(); kontoMeldungen.push({art:'info', text:r.zurueckgezogen?(de?`Die Einladung für ${b.zweck==='eltern'?b.login:b.name} ist zurückgezogen.`:`The invitation for ${b.zweck==='eltern'?b.login:b.name} is withdrawn.`):(de?'Die Einladung war schon eingelöst oder abgelaufen.':'The invitation was already used or had expired.')}); kontoBlattZeigen(null); }); });
   an('#kWegJa',()=>{ const b=kontoBlatt; kontoSchritt('#kWegJa', async()=>{ const z=kontoZugang(); await anmGeraetEntfernen({ablage:localStorage, zugang:z, konto:kontoIch(), person:b.kind, geraet:b.geraet, now:Date.now()}); await kontoAbgleich(); kontoBlattZeigen({art:'frageneu', kind:b.kind, name:b.name}); }); });
+  body.querySelectorAll('[data-kexport]').forEach(b=>b.addEventListener('click',()=>{ if(parentAccess) kontoExport(b.dataset.kexport); }));
+  body.querySelectorAll('[data-kloesch]').forEach(b=>b.addEventListener('click',()=>{
+    if(!parentAccess) return;
+    const k=kontoIch(), c=k && kontoVerb(k).kinder.find(x=>x.id===b.dataset.kloesch); if(!c) return;
+    kontoBlattZeigen({art:'loeschkind', kind:c.id, login:c.name, name:kontoKindName(c.id, c.name)});
+  }));
+  an('#kKontoLoeschen',()=>{ if(!parentAccess) return; const k=kontoIch(); if(!k) return; const v=kontoVerb(k); kontoBlattZeigen({art:'loeschkonto', letzter:!v.eltern.some(p=>p!==k.kennung)}); });
+  an('#kExHtml',()=>{ const b=kontoBlatt; if(b && b.art==='export') kontoDateiSichern(b.html, b.dateiname.html, 'text/html', de, q('#kMsg')); });
+  an('#kExJson',()=>{ const b=kontoBlatt; if(b && b.art==='export') kontoDateiSichern(b.json, b.dateiname.json, 'application/json', de, q('#kMsg')); });
+  form('#kLoeschForm',()=>{
+    const b=kontoBlatt; if(!b || b.art!=='loeschkind') return;
+    if(anmName(q('#kLoeschName').value)!==b.login){ q('#kMsg').textContent=de?'Der Anmeldename stimmt nicht – es wurde nichts gelöscht.':'The login name does not match – nothing was deleted.'; return; }
+    kontoSchritt('#kLoeschGo', ()=>kontoLoeschenLauf(async()=>{
+      const z=kontoZugang(), me=kontoIch(); if(!z || !me) throw Object.assign(new Error('kein Zugang'),{code:'offline'});
+      await anmKindLoeschen({ablage:localStorage, zugang:z, konto:me, kind:b.kind, now:Date.now(), heute:dayKey(), geraetName:kontoGeraetName()});
+      kontoLokalWeg(b.kind);
+      kontoMeldungen.push({art:'ok', text:de?`✓ ${b.name} ist gelöscht.`:`✓ ${b.name} is deleted.`});
+      kontoKontenAuffrischen(); evNeuLaden();
+      kontoBlattZeigen(null);
+    }));
+  });
+  form('#kKlForm',()=>{
+    const b=kontoBlatt, pw=q('#kKlPw').value; if(!b || b.art!=='loeschkonto' || !pw) return;
+    kontoSchritt('#kKlGo', ()=>kontoLoeschenLauf(async()=>{
+      const z=kontoZugang(), me=kontoIch(); if(!z || !me) throw Object.assign(new Error('kein Zugang'),{code:'offline'});
+      const familie=kontoVerb(me).familie;
+      const r=await anmKontoLoeschen({ablage:localStorage, zugang:z, konto:me, passwort:pw, now:Date.now(), heute:dayKey(), geraetName:kontoGeraetName()});
+      for(const k of r.kinder||[]) kontoLokalWeg(k.kind);
+      kontoLokalWeg(me.kennung, r.familieGeloescht ? familie : null);
+      kontoKontenAuffrischen(); evNeuLaden();
+      parentAbmelden();
+      const lb=$('#loginBody'); if(lb && !$('#login').hidden) lb.insertAdjacentHTML('afterbegin', `<p class="kmeld kmeld-ok" id="kKontoWeg">✓ ${de?'Ihr Konto ist gelöscht.':'Your account is deleted.'}</p>`);
+    }));
+  });
   an('#kNeuJa',()=>kontoKindNeuStarten(kontoBlatt.kind));
   an('#kNeuSpaeter',()=>kontoBlattZeigen(null));
   an('#kErnUse',()=>{ const v=q('#kErnSugg').textContent; q('#kErnNeu1').value=v; q('#kErnNeu2').value=v; q('#kErnNeu1').type='text'; });
@@ -5821,7 +5945,17 @@ STANDARD_TEXT['E-S2']='Sprechen und Zuhören: Meinungen äußern und besprechen'
    ES = emerging with support, Obs. = observed, Ind. = independent. */
 const SCHOOL_DATA=/*BQ_SCHULE*/null||{};
 const schoolKid = () => { const n=viewedKid(), a=n && APP_ACCOUNTS.users.find(u=>u.user===n && u.role==='student'); return a ? a.id : null; };
-const schoolData = () => { if(!accountsOn()) return null; const g=viewerGrant(); if(g && !g.scope.includes('school')) return null; return SCHOOL_DATA[schoolKid()]||null; };
+/* With accounts in the storage (family build, test instance; KONTO_UI) there is no SCHOOL_DATA: the ratings are in the
+   child's account (area schule, school_import - werkzeug/schulbewertungen-uebernehmen.mjs) and come with the sync into
+   its log. Computed from that log (module anmeldung: anmSchule), anew only when the log changed. */
+let schoolCache=null;
+function schoolFromAccount(id){
+  if(!id || typeof anmSchule!=='function') return null;
+  const log=evKindLog('bq2_'+id+'__'), v=log.version();
+  if(!schoolCache || schoolCache.id!==id || schoolCache.v!==v){ let d=null; try{ d=anmSchule(log.liste(), Date.now()); }catch(e){ eventErrors.push('schule: '+String(e&&e.message||e)); } schoolCache={id, v, d}; }
+  return schoolCache.d;
+}
+const schoolData = () => { if(!accountsOn()) return null; const g=viewerGrant(); if(g && !g.scope.includes('school')) return null; const id=schoolKid(); return (KONTO_UI ? schoolFromAccount(id) : SCHOOL_DATA[id])||null; };
 const SL={C:'c',M:'m',E:'e',RS:'rs',N:'rs'};
 /* latest rating per standard: [{day, r}] newest first */
 function schoolRatings(d){
@@ -6140,11 +6274,11 @@ const sourcesHTML=(lang='en')=>{ const de=lang==='de', G=SOURCE_GROUPS[de?'de':'
    all devices, start code once and 7 days, recovery code. Kathie's app keeps its guides unchanged (KONTO_UI false). */
 const KONTO_GUIDE={
   kid:[['The very first time:','your grown-up gives you a start code – as a link or a QR code to scan. Then you choose your own password. Take the idea with three words and a number, like <i>Tiger-Lamp-River-4271</i>. Let the iPad remember it – then Face ID fills it in for you. A short password does not work: a strong one keeps your things safe. On another iPad, use the same user name and password.']],
-  adultDe:[['Einmal einrichten:','Seite in Safari öffnen. Fragt die App nach dem Zugang zum Testspeicher, ihn einmal eingeben (vom Admin). Dann Teilen → „Zum Home-Bildschirm“. Künftig nur über das Symbol öffnen.'],
+  adultDe:[['Einmal einrichten:','Seite in Safari öffnen. Fragt die App nach dem Zugang zum Speicher, ihn einmal eingeben (vom Admin). Dann Teilen → „Zum Home-Bildschirm“. Künftig nur über das Symbol öffnen.'],
     ['Anmelden:','„👪 Parent / Teacher“. Beim ersten Mal den Startlink bzw. QR-Code öffnen (oder Benutzername und Startcode eingeben; er gilt einmal und 7 Tage). Dann ein eigenes Passwort wählen – am einfachsten den Vorschlag – und im Passwortspeicher sichern. Danach den Wiederherstellungscode sichern: im Passwortspeicher und als Datei. Auf weiteren Geräten: Benutzername und Passwort.'],
     ['Kind anmelden:','unter ⚙️ → „👪 Familie“ → „Kind anlegen“: Die App zeigt einen Start-QR-Code. Auf dem Gerät des Kindes die Kamera darauf richten, „🎒 Student“ tippen und zusammen ein Merkpasswort wählen. Auf weiteren Geräten: Benutzername und Passwort. Passwort vergessen? Dort „Neues Passwort“ – der Lernstand bleibt. Geschwister am selben Gerät wählen sich unter „Who\'s here?“ aus. Geräte entfernen und den Schlüssel erneuern: ⚙️ → „📱 Meine Geräte“.'],
     ['Passwort vergessen:','Auf der Anmeldeseite „Passwort vergessen?“ tippen, den Wiederherstellungscode eingeben und ein neues Passwort wählen – danach den neuen Code wieder sichern. Ohne Code hilft der Admin. Nach 5 Fehlversuchen 30 Sekunden warten. Startcodes, Startlinks und den Wiederherstellungscode nicht weitergeben.']],
-  adultEn:[['Set up once:','open the page in Safari. If the app asks for access to the test storage, enter it once (from the admin). Then Share → “Add to Home Screen”. From then on, open it with the icon.'],
+  adultEn:[['Set up once:','open the page in Safari. If the app asks for access to the storage, enter it once (from the admin). Then Share → “Add to Home Screen”. From then on, open it with the icon.'],
     ['Log in:','“👪 Parent / Teacher”. The first time, open the start link or QR code (or enter username and start code; it works once and for 7 days). Then choose your own password – easiest is the suggestion – and save it in the password manager. Next, save the recovery code: in the password manager and as a file. On other devices: username and password.'],
     ['Log in your child:','under ⚙️ → “👪 Family” → “Add a child”: the app shows a start QR code. On your child’s device, point the camera at it, tap “🎒 Student” and choose a memorable password together. On other devices: username and password. Forgot the password? There, “New password” – the progress stays. Siblings on the same device pick themselves under “Who\'s here?”. Remove devices and renew your key: ⚙️ → “📱 My devices”.'],
     ['Forgot your password?','On the login page tap “Forgot your password?”, enter your recovery code and choose a new password – then save the new code again. Without the code, the admin can help. After 5 wrong tries, wait 30 seconds. Keep start codes, start links and the recovery code private.']],

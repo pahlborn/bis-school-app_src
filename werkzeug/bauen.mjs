@@ -25,6 +25,7 @@ import { kontenLesen, kontenEinsetzen } from './konten.mjs';
 import { schuleLesen, schuleEinsetzen } from './schule.mjs';
 import { moduleEinsetzen } from './module.mjs';
 import { TESTINSTANZ, ersatzLesen, testinstanzUmwandeln, testinstanzManifest, testinstanzPruefen } from './testinstanz.mjs';
+import { FAMILIE, familieUmwandeln, familiePruefen } from './familie.mjs';
 import { schriftenLesen, schriftenEinsetzen, schriftenPruefen } from './schriften.mjs';
 
 /** The app as it goes into the vault: version, accounts (S3/S11), school data by ID (S11 P2) and the embedded fonts
@@ -157,6 +158,41 @@ export async function testinstanzBauen({ wurzel = WURZEL, ziel = path.join(wurze
   await fs.writeFile(path.join(ziel, 'manifest.webmanifest'), manifest, 'utf8');
   for (const icon of ICONS) await fs.copyFile(path.join(wurzel, icon), path.join(ziel, icon));
   return { ziel, dateien: ['index.html', 'manifest.webmanifest', ...ICONS], appBytes: Buffer.byteLength(app), version: v, pruefungen };
+}
+
+/**
+ * Bauart "Familie" (Vorbereitung Stufe 4, werkzeug/familie.mjs): Testbau ohne Schuldaten und ohne konten.json, mit dem
+ * Familien-Repo verbunden, Speicher unter bqf_ - verschluesselt mit dem Familienpasswort wie Kathies App. zugang wie bei
+ * distBauen (Passwort oder { schluesselRoh }). Schreibt erst, wenn der Suchlauf (familiePruefen) nichts findet und die
+ * Probe-Entschluesselung die App Byte fuer Byte ergibt. Ziel: dist-familie/ (nicht eingecheckt). Veroeffentlicht nichts.
+ */
+export async function familieBauen(zugang, { wurzel = WURZEL, ziel = path.join(wurzel, FAMILIE.ordner), version = null } = {}) {
+  const passwort = typeof zugang === 'string' ? zugang : null;
+  if (passwort === null && !(zugang && zugang.schluesselRoh)) throw new Error('familieBauen braucht ein Passwort oder einen gemerkten Schluessel.');
+  if (passwort !== null) passwortPruefen(passwort);
+  const lies = (rel, enc) => fs.readFile(path.join(wurzel, rel), enc);
+  const q = await quellenLesen(wurzel);
+  if (q.woerter.length === 0) throw new Error(`${QUELLEN.woerter} ist leer - ohne Liste prueft der Lauf nichts.`);
+  const v = version || versionErmitteln(wurzel);
+  const testbau = moduleEinsetzen(await lies(QUELLEN.app), { bauart: 'test', ordner: path.join(wurzel, 'src', 'module') });
+  // konten und schule bewusst null: die Marken bleiben leer (Neubeginn; Schulbewertungen kommen ins Konto des Kindes)
+  const schriften = schriftenLesen(wurzel);
+  const text = familieUmwandeln(appZusammensetzen(testbau, v, null, null, schriften).toString('utf8'));
+  const app = Buffer.from(text, 'utf8');
+  const schluessel = passwort !== null ? await schluesselAusPasswort(passwort, q.salt) : await schluesselAusRoh(zugang.schluesselRoh);
+  const html = huelleBauen(q.vorlage, await verschluesselnMitSchluessel(app, schluessel, q.salt));
+  const { funde, pruefungen } = familiePruefen(text, html, q.manifest, { woerter: q.woerter, schule: await schuleLesen(wurzel), konten: await kontenLesen(wurzel), version: v, schriften });
+  if (funde.length) throw new Error('Suchlauf Familienfassung, nichts geschrieben:\n  - ' + funde.join('\n  - '));
+  const zurueck = passwort !== null ? await entschluesseln(tresorAusHuelle(html), passwort) : await entschluesselnMitSchluessel(tresorAusHuelle(html), schluessel);
+  if (!Buffer.from(zurueck).equals(app)) throw new Error('Probe-Entschluesselung ergibt nicht die App, nichts geschrieben.');
+  await fs.mkdir(ziel, { recursive: true });
+  await fs.writeFile(path.join(ziel, 'index.html'), html, 'utf8');
+  await fs.writeFile(path.join(ziel, 'manifest.webmanifest'), q.manifest, 'utf8');
+  for (const icon of ICONS) await fs.copyFile(path.join(wurzel, icon), path.join(ziel, icon));
+  return {
+    ziel, dateien: ['index.html', 'manifest.webmanifest', ...ICONS], appBytes: app.length, huelleBytes: Buffer.byteLength(html), version: v, pruefungen,
+    schluesselRoh: await schluesselRoh(schluessel), salt: q.salt
+  };
 }
 
 /**
