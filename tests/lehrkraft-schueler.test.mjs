@@ -313,3 +313,71 @@ test('Lehrkraft: eine Freigabe der anderen Familie wird keinem Kind gleichen Nam
   assert.equal(liest(C2, 'kathie.b', 'attempts', []).length, A2.wert('attempts').length);
   assert.deepEqual(C2.log('kathie'), []);
 });
+
+/* Aufgabe "Schule und Klasse" (Peter, 05.11.): das Kind traegt unter "My school" Jahrgangsstufe, Klasse und Schule ein */
+function meineSchule(S, stufe, klasse, schule) {
+  return S.lauf(() => {
+    S.holen('openMySchool')();
+    const b = S.$('#msGrades').querySelectorAll('button').find((x) => x.dataset.grade === String(stufe)); if (b) b.click();
+    S.$('#msClass').value = klasse; S.$('#msSchool').value = schule;
+    S.holen('saveMySchoolDlg')();
+    return S.$('#msMessage').textContent;
+  });
+}
+const SCHULJAHR = () => { const [y, m] = tag().split('-').map(Number), s = m >= 8 ? y : y - 1; return s + '/' + pad((s + 1) % 100); };
+
+test('Aufgabe "Schule und Klasse": Kind traegt ein, Eltern aendern, Lehrkraft sieht Klasse und Schule nur mit Freigabe; die andere Familie nie', async (t) => {
+  const welt = lokalerSpeicher();
+  const ins = await installation({ kathie: ['student', 1], peter: ['parent', 1], 'kathie.b': ['student', 2], 'peter.b': ['parent', 2], lehrer: ['teacher', 0] });
+  const B1 = await geraet(t, welt, ins, { name: 'Familie 1: Peters Laptop', wer: 'peter', kinder: [ins.kind('kathie')] });
+  const A1 = await geraet(t, welt, ins, { name: 'Familie 1: Kathies iPad', wer: 'kathie', kinder: [ins.kind('kathie')] });
+  const B2 = await geraet(t, welt, ins, { name: 'Familie 2: Peters Laptop', wer: 'peter.b', kinder: [ins.kind('kathie.b')] });
+  const A2 = await geraet(t, welt, ins, { name: 'Familie 2: Kathies iPad', wer: 'kathie.b', kinder: [ins.kind('kathie.b')] });
+  const sync = async (...gs) => { for (const G of gs) { await G.abgleichen(); assert.deepEqual(G.r.verworfen, [], G.name); } };
+  profil(A1.S, 'Kathie', [], 'Becker'); profil(A2.S, 'Kathie', [], 'Schmidt');
+  // ohne Jahrgangsstufe wird nichts gespeichert; mit: Klasse und Schule wie eingetragen, dazu das Schuljahr
+  assert.equal(meineSchule(A1.S, 0, 'Blue Owls', 'Sunny Hill'), 'Please choose your grade.');
+  assert.equal(A1.wert('mySchool', null), null);
+  assert.equal(meineSchule(A1.S, 3, '  Blue Owls ', ' Sunny Hill  '), '');
+  assert.deepEqual(A1.wert('mySchool'), { grade: 3, cls: 'Blue Owls', school: 'Sunny Hill', year: SCHULJAHR() });
+  const ev = A1.log('kathie').filter((e) => e.type === 'profile_set' && e.payload.field === 'mySchool');
+  assert.equal(ev.length, 1); assert.equal(bereichVonEreignis(ev[0]), 'kind:lern', 'Bereich kind:lern (BEREICH_JE_TYP)');
+  assert.equal(meineSchule(A1.S, 3, 'Blue Owls', 'Sunny Hill'), ''); assert.equal(A1.log('kathie').filter((e) => e.payload.field === 'mySchool').length, 1, 'gleich gespeichert: kein zweites Ereignis');
+  meineSchule(A2.S, 3, 'Red Foxes', 'Hill Top');
+  runde(A1.S, 'round'); runde(A2.S, 'units');
+  await sync(A1, A2, B1, B2);
+  assert.deepEqual(B1.wert('mySchool'), A1.wert('mySchool'), 'bei den Eltern angekommen');
+
+  // nur Familie 1 gibt frei
+  const g1 = freigeben(B1, 'lehrer');
+  await sync(B1);
+  const C = await geraet(t, welt, ins, { name: 'Geraet der Lehrkraft', wer: 'lehrer', kinder: [ins.kind('kathie', [g1.id]), ins.kind('kathie.b')] });
+  await sync(C);
+  assert.deepEqual(auswahl(C), ['kathie']);
+  assert.deepEqual(kopf(C), ['👧 Kathie Becker (kathie) · Klasse Blue Owls · Sunny Hill'], 'mit Freigabe: Klasse und Schule');
+  assert.equal(liest(C, 'kathie.b', 'mySchool', null), null, 'ohne Freigabe: nichts');
+  const ls = C.S.ctx.localStorage, alles = Array.from({ length: ls.length }, (_, i) => ls.key(i) + '=' + ls.getItem(ls.key(i))).join('\n');
+  assert.ok(!alles.includes('Red Foxes') && !alles.includes('Hill Top'), 'nichts von Familie 2 auf dem Geraet der Lehrkraft');
+  // Eltern aendern (Formular im Elternbereich): neue Klasse, Jahrgangsstufe 4 -> Hinweis, dass es dafuer noch keine Aufgaben gibt
+  const hinweis = B1.S.lauf(() => {
+    B1.S.holen('state').pview = 'settings'; B1.S.holen('renderSheets')();
+    B1.S.$('#psGrade').value = '4'; B1.S.$('#psClass').value = '4 Green'; B1.S.$('#psSchool').value = 'Sunny Hill';
+    B1.S.$('#pSchoolForm').dispatchEvent({ type: 'submit', preventDefault() {} });
+    const t2 = B1.S.$('#aboutBody').textContent; B1.S.holen('state').pview = null; return t2;
+  });
+  assert.match(hinweis, /Für Jahrgangsstufe 4 gibt es in Big Quest noch keine Aufgaben/);
+  assert.ok(B1.log('kathie').some((e) => e.type === 'profile_set' && e.payload.field === 'mySchool' && e.author === ins.P.peter.id && e.payload.value.grade === 4), 'Ereignis vom Elternteil');
+  await sync(B1, A1, C);
+  assert.deepEqual(A1.wert('mySchool'), { grade: 4, cls: '4 Green', school: 'Sunny Hill', year: SCHULJAHR() }, 'beim Kind angekommen');
+  assert.deepEqual(kopf(C), ['👧 Kathie Becker (kathie) · Klasse 4 Green · Sunny Hill']);
+  // die Eltern der anderen Familie sehen davon nichts
+  assert.ok(!JSON.stringify(B2.log('kathie')).includes('Sunny') && B2.wert('mySchool').school === 'Hill Top');
+  // nach dem Ende der Freigabe: nichts Neues mehr bei der Lehrkraft
+  beenden(B1, g1);
+  await sync(B1, C);
+  meineSchule(A1.S, 4, '4 Yellow', 'Sunny Hill');
+  await sync(A1, B1, C);
+  assert.equal(B1.wert('mySchool').cls, '4 Yellow');
+  assert.ok(!JSON.stringify(C.log('kathie')).includes('4 Yellow'), 'nach dem Ende kommt nichts mehr an');
+  for (const G of [A1, A2, B1, B2, C]) assert.equal(JSON.stringify(G.S.holen('eventErrors')), '[]', G.name);
+});

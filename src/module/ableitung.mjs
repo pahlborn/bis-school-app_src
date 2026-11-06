@@ -4,7 +4,7 @@
 //
 // The result looks exactly like what index.html keeps today, so the app can later read it unchanged:
 //   attempts, ev, due, total, best_<quest>, badges, tried, treeStage, rankSeen, sheets, sheetNo
-//   and the "last wins" values name, lastName, birthday, emoji, kidLang, focusMode, focusManual, unlocked, storyCap,
+//   and the "last wins" values name, lastName, birthday, mySchool, emoji, kidLang, focusMode, focusManual, unlocked, storyCap,
 //   greetDay, mysteryDone, bdayParty, chk_<studio>; and gaps (task 3b-0: {closed, active, hold}, see abGaps);
 //   grants, grantlog, lastBackup (task 3b-1c, see abGrant).
 // From the log of a person (task 3b-1c, area person:<id>): parentLang, muted, conceptSeen (the day it was opened) and

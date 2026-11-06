@@ -12,7 +12,7 @@ import { derive } from '../src/module/ableitung.mjs';
 import { bereichVonEreignis } from '../src/module/bereiche.mjs';
 import { altStand, LESEN_ANFANG } from '../src/module/lesen.mjs';
 
-const WERTE = ['name', 'lastName', 'birthday', 'emoji', 'kidLang', 'storyCap', 'greetDay', 'mysteryDone', 'bdayParty', 'unlocked', 'focusMode', 'focusManual', 'gaps', 'jokeSeen', 'storyRead', 'muted', 'grants', 'grantlog', 'lastBackup'];
+const WERTE = ['name', 'lastName', 'birthday', 'mySchool', 'emoji', 'kidLang', 'storyCap', 'greetDay', 'mysteryDone', 'bdayParty', 'unlocked', 'focusMode', 'focusManual', 'gaps', 'jokeSeen', 'storyRead', 'muted', 'grants', 'grantlog', 'lastBackup'];
 const betroffen = (k) => WERTE.includes(k) || k.startsWith('chk_') || /^advent\d{4}$/.test(k);
 function haken() { window.__bqh = { listEvents, eventHook, jokesFor, themeNow, ohneKind: () => eventNoChild.slice(), ohnePerson: () => eventNoPerson.slice(), probleme: () => ({ abgelehnt: eventSink ? eventSink.problems.concat(personSink.problems) : null, fehler: eventErrors }) }; }
 /* 3b-1c: what the app keeps on the device only and computes from "until" when reading (task 3b-2) - not in the events */
@@ -92,15 +92,21 @@ test('ohne Konten: Profil, Geburtstagsfeier, Checkliste, Raetsel, Spannungsgrenz
   await page.locator('#pProfileForm button[type="submit"]').click();
   r = await vergleich(page);
   assert.equal(r.app.name, 'Sam'); assert.equal(r.app.lastName, 'Schmidt'); assert.equal(r.app.birthday, '2018-11-02');
+  // Eltern tragen Schule und Klasse ein (Aufgabe "Schule und Klasse", 05.11.)
+  await page.locator('.pschool-edit summary').click();
+  await page.selectOption('#psGrade', '3'); await page.fill('#psClass', 'Blue Owls');
+  await page.locator('#pSchoolForm button[type="submit"]').click();
+  r = await vergleich(page);
+  assert.deepEqual(r.app.mySchool, { grade: 3, cls: 'Blue Owls', year: '2026/27' });
   page.once('dialog', (d) => d.accept());
   await page.locator('#profileDelete').click();
   await page.locator('#parentClose').click();
   r = await vergleich(page);
-  for (const k of ['name', 'lastName', 'birthday', 'emoji']) assert.equal(k in r.app, false, k + ' deleted');
+  for (const k of ['name', 'lastName', 'birthday', 'emoji', 'mySchool']) assert.equal(k in r.app, false, k + ' deleted');
 
   const a = arten(r.events);
-  for (const t of ['profile_set:name', 'profile_set:lastName', 'profile_set:birthday', 'profile_set:emoji', 'day_flag:bdayParty', 'day_flag:mysteryDone', 'setting_set:storyCap', 'checklist_set']) assert.ok(a[t] > 0, 'reached: ' + t);
-  assert.deepEqual([...new Set(r.events.filter((e) => e.author === 'p_eltern').map((e) => e.type + ':' + (e.payload.field || e.payload.setting)))].sort(), ['profile_set:birthday', 'profile_set:emoji', 'profile_set:lastName', 'profile_set:name', 'setting_set:storyCap'], 'grown-up: storyCap, name/birthday and the deletion');
+  for (const t of ['profile_set:name', 'profile_set:lastName', 'profile_set:birthday', 'profile_set:mySchool', 'profile_set:emoji', 'day_flag:bdayParty', 'day_flag:mysteryDone', 'setting_set:storyCap', 'checklist_set']) assert.ok(a[t] > 0, 'reached: ' + t);
+  assert.deepEqual([...new Set(r.events.filter((e) => e.author === 'p_eltern').map((e) => e.type + ':' + (e.payload.field || e.payload.setting)))].sort(), ['profile_set:birthday', 'profile_set:emoji', 'profile_set:lastName', 'profile_set:mySchool', 'profile_set:name', 'setting_set:storyCap'], 'grown-up: storyCap, name/birthday, school and the deletion');
   assert.deepEqual(fehler, []);
   await ctx.close();
 });

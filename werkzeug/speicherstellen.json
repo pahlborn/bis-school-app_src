@@ -17,6 +17,7 @@
     { "key": "name", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true },
     { "key": "lastName", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true, "hinweis": "Nachname (Aufgabe Name und Geburtsdatum, 04.11.): Kind im Profil oder Eltern; Bereich kind:lern" },
     { "key": "birthday", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true, "hinweis": "'MM-TT' oder 'JJJJ-MM-TT' (Jahr freiwillig, seit 04.11.); Bereich kind:lern" },
+    { "key": "mySchool", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true, "hinweis": "{grade 1-6, cls?, school?, year '2026/27'} (Aufgabe Schule und Klasse, 05.11.): Kind unter My school oder Eltern; nur Eingetragenes; Bereich kind:lern" },
     { "key": "emoji", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true },
     { "key": "bdayParty", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true },
     { "key": "sheets", "bereich": "kind", "abgleich": "protokoll", "sicherung": true },
