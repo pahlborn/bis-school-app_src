@@ -156,6 +156,61 @@ export function kindLokalEntfernen({ ablage, kind } = {}) {
   return { bereiche: weg, schluessel };
 }
 
+/* ---------- a parent left the family (task "Konto loeschen - andere Geraete", follow-up of "Familienfassung bauen") ---------- */
+/* did this parent take himself out of his family on ANOTHER device (kontoDatenLoeschen with another parent staying:
+   family_set removed about himself, written by himself)? Only his own entry counts - another parent's entry about him
+   does not make his devices drop the children. An entry of this very device does not count: that is the deleting call
+   itself, which still has to send it (and may fail offline - then nothing leaves this device). A parent without a family
+   here -> false. */
+export function elternAusgetreten({ ablage, konto, now } = {}) {
+  eldPruefen({ ablage, konto, now });
+  if (konto.art !== 'parent') return false;
+  const v = verbindungen({ ablage, konto, now });
+  if (!v.familie) return false;
+  const dieses = eldJson(ablage, GERAETEABGLEICH_SPEICHER.geraet, null);
+  return eldGewinner(eldLog(ablage, { familie: v.familie }).lesen(), 'family_set', now)
+    .some((e) => e.payload.removed === true && e.payload.person === konto.kennung && e.author === konto.kennung && e.device !== dieses);
+}
+
+/* what a parent who left the family keeps on this device - nothing: every child of the family (as kindLokalEntfernen:
+   device state, what was dropped, the app's data of the child), the family area (device state, log, what was dropped) and
+   his own area (device state, log, devices noted for removal). The account itself (key copy, device list, sessions,
+   recordings) the app drops on its own (kontoLokalWeg). behalten = { kinder: [id], familien: [id] } - what another
+   account on this device still needs stays (a child's own device with the parent logged in).
+   -> { kinder: [id with something removed], familie: id | null, bereiche: [area] } */
+export function elternLokalEntfernen({ ablage, konto, now, behalten = {} } = {}) {
+  eldPruefen({ ablage, konto, now });
+  const v = verbindungen({ ablage, konto, now });
+  const bleibenK = new Set(Array.isArray(behalten.kinder) ? behalten.kinder : []), bleibenF = new Set(Array.isArray(behalten.familien) ? behalten.familien : []);
+  // the children of the family and the ones taken out earlier (a child of another family on this device is not touched)
+  const kinder = new Set([...v.kinder.map((c) => c.id), ...v.entfernt.filter((x) => x.role === 'child').map((x) => x.person)]);
+  const out = { kinder: [], familie: null, bereiche: [] };
+  for (const kind of [...kinder].sort()) {
+    if (bleibenK.has(kind)) continue;
+    const r = kindLokalEntfernen({ ablage, kind });
+    if (r.bereiche.length || r.schluessel) { out.kinder.push(kind); out.bereiche.push(...r.bereiche); }
+  }
+  const alle = [bereichName('person', konto.kennung)];
+  if (v.familie && !bleibenF.has(v.familie)) { out.familie = v.familie; alle.push(bereichName('familie', v.familie)); }
+  const st = eldJson(ablage, GERAETEABGLEICH_SPEICHER.staende, {});
+  if (eldObj(st)) {
+    const weg = alle.filter((a) => Object.prototype.hasOwnProperty.call(st, a));
+    for (const a of weg) delete st[a];
+    if (weg.length) { ablage.setItem(GERAETEABGLEICH_SPEICHER.staende, JSON.stringify(st)); out.bereiche.push(...weg); }
+  }
+  const ohne = (k, id) => { const o = eldJson(ablage, k, null); if (eldObj(o) && Object.prototype.hasOwnProperty.call(o, id)) { delete o[id]; ablage.setItem(k, JSON.stringify(o)); } };
+  ohne(GERAETEABGLEICH_SPEICHER.personen, konto.kennung);
+  if (out.familie) ohne(GERAETEABGLEICH_SPEICHER.familien, out.familie);
+  const verworfen = eldJson(ablage, GERAETEABGLEICH_SPEICHER.verworfen, null);
+  if (Array.isArray(verworfen)) {
+    const n = verworfen.filter((x) => !(eldObj(x) && alle.includes(x.bereich)));
+    if (n.length !== verworfen.length) ablage.setItem(GERAETEABGLEICH_SPEICHER.verworfen, JSON.stringify(n));
+  }
+  const entfernen = eldJson(ablage, GERAETEABGLEICH_SPEICHER.entfernen, null);
+  if (Array.isArray(entfernen)) ablage.setItem(GERAETEABGLEICH_SPEICHER.entfernen, JSON.stringify(entfernen.filter((x) => !(eldObj(x) && x.person === konto.kennung))));
+  return out;
+}
+
 /* ---------- after the first login ---------- */
 /* notes where a new account belongs - only for the result of konto.ersteAnmeldung (it carries anker/familie; an account
    from konto.anmelden finds this in its own area): a child -> its anchor; a parent invited by a parent -> that family;
@@ -411,7 +466,7 @@ export async function abgleichMitVerbindungen({ ablage, zugang, konten: alleKont
   // removed a deleted child's data) asks the directory first: a deleted account is not synced (its own area would be
   // made anew); the app logs it out. Costs one or two reads, only until the device knows the area.
   const bekannt = eldJson(ablage, GERAETEABGLEICH_SPEICHER.staende, {});
-  const konten = [];
+  let konten = [];
   for (const k of alleKonten) {
     if (!(eldObj(bekannt) && eldObj(bekannt[bereichName('person', k.kennung)])) && typeof k.anmeldename === 'string' && kontoName(k.anmeldename)) {
       const s = await kontoStand({ zugang, anmeldename: k.anmeldename });
@@ -420,7 +475,30 @@ export async function abgleichMitVerbindungen({ ablage, zugang, konten: alleKont
     konten.push(k);
   }
   if (!konten.length) return out;
-  const personen = kontoPersonen(...konten);
+  let personen = kontoPersonen(...konten);
+  // task "Konto loeschen - andere Geraete": a parent who took himself out of the family (family_set removed about himself,
+  // written on the device where he deleted his account) or whose own area is gone from the storage: this device drops
+  // everything of the family - the children, the family area, his own area - and reports him as deleted (the app logs him
+  // out and forgets the account). The other accounts on this device stay and keep what they need. -> true: konten changed
+  const austritte = () => {
+    const raus = konten.filter((k) => k.art === 'parent'
+      && ((out.bericht && out.bericht.bereiche[bereichName('person', k.kennung)] && out.bericht.bereiche[bereichName('person', k.kennung)].fehler === 'geloescht') || elternAusgetreten({ ablage, konto: k, now })));
+    if (!raus.length) return false;
+    const bleiben = konten.filter((k) => !raus.includes(k)), behalten = { kinder: [], familien: [] };
+    for (const k of bleiben) {
+      const v = verbindungen({ ablage, konto: k, now });
+      behalten.kinder.push(...v.kinder.map((c) => c.id), ...(k.art === 'child' ? [k.kennung] : []));
+      if (v.familie) behalten.familien.push(v.familie);
+    }
+    for (const k of raus) {
+      const r = elternLokalEntfernen({ ablage, konto: k, now, behalten });
+      for (const kind of r.kinder) if (!out.geloescht.includes(kind)) out.geloescht.push(kind);
+      if (!out.kontoGeloescht.includes(k.kennung)) out.kontoGeloescht.push(k.kennung);
+    }
+    konten = bleiben;
+    personen = konten.length ? kontoPersonen(...konten) : {};
+    return true;
+  };
   const sammeln = () => {
     const g = { familien: new Map(), kinder: new Map(), verzeichnis: {} };
     for (const k of konten) {
@@ -431,6 +509,8 @@ export async function abgleichMitVerbindungen({ ablage, zugang, konten: alleKont
     }
     return { familien: [...g.familien.values()], kinder: [...g.kinder.values()], verzeichnis: g.verzeichnis };
   };
+  // a parent already known to have left: not synced at all (nothing is sent in his name, nothing handed to him)
+  if (austritte() && !konten.length) return out;
   let plan = sammeln();
   for (let i = 0; i < EINLADUNG_RUNDEN; i++) {
     out.bericht = await geraetAbgleichen({ ablage, zugang, personen, kinder: plan.kinder, familien: plan.familien, verzeichnis: plan.verzeichnis, now, heute, geraetName, inDieApp });
@@ -440,6 +520,7 @@ export async function abgleichMitVerbindungen({ ablage, zugang, konten: alleKont
     for (const v of out.bericht.verworfen) {
       if (v.typ === 'member_added' && ELD_WARNEN.includes(v.grund) && !out.warnungen.some((x) => x.id === v.id)) out.warnungen.push({ id: v.id, art: 'schluessel', person: null, grund: v.grund, bereich: v.bereich });
     }
+    if (austritte()) { if (!konten.length) break; plan = sammeln(); continue; }
     if (out.bericht.limit !== undefined) { out.limit = out.bericht.limit; break; }
     if (!inDieApp) break;
     let geschrieben = 0;

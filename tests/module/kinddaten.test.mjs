@@ -6,7 +6,7 @@ import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { KINDDATEN_FEHLER, KINDDATEN_FORMAT, KINDDATEN_STELLEN, kindDatenExport, kindDatenLoeschen, kontoDatenLoeschen } from '../../src/module/kinddaten.mjs';
-import { verbindungen, kindAnlegen, elternteilEinladen, abgleichMitVerbindungen, kindLokalEntfernen, EINLADUNG_FEHLER } from '../../src/module/einladung.mjs';
+import { verbindungen, kindAnlegen, elternteilEinladen, abgleichMitVerbindungen, kindLokalEntfernen, elternAusgetreten, elternLokalEntfernen, EINLADUNG_FEHLER } from '../../src/module/einladung.mjs';
 import { KONTO_FEHLER, startcodeAusstellen, ersteAnmeldung, anmelden, kontoLookup } from '../../src/module/konto.mjs';
 import { lokalerSpeicher, SPEICHER_FEHLER } from '../../src/module/speicher.mjs';
 import { githubSpeicher } from '../../src/module/github.mjs';
@@ -272,7 +272,8 @@ jedeWelt('Konto loeschen, Anna (zweiter Elternteil): nur mit Passwort; ihr Berei
   await fehlt(kontoDatenLoeschen({ ablage: K.a, zugang: K.z(), konto: K.konto, passwort: PW.kathie, now: weiter(W), heute: HEUTE, runden: R }), 'nicht-erlaubt', 'ein Kind loescht kein Konto');
   assert.equal(await leer(W, 'person:' + ak), false, 'abgelehnt -> nichts geloescht');
   const r = await kontoDatenLoeschen({ ablage: P2.a, zugang: P2.z(), konto: P2.konto, passwort: PW.anna, now: weiter(W), heute: HEUTE, runden: R });
-  assert.deepEqual([r.familieGeloescht, r.kinder, r.bereiche.map((b) => b.bereich)], [false, [], ['person:' + ak]]);
+  assert.deepEqual([r.familieGeloescht, r.kinder.map((x) => [x.kind, x.nurLokal]), r.bereiche.map((b) => b.bereich)], [false, [[kk, true]], ['person:' + ak]], 'Kathie bleibt im Speicher, verlaesst nur dieses Geraet');
+  assert.equal(await leer(W, 'kind:lern:' + kk), false, 'Kathies Daten im Speicher bleiben');
   assert.equal(await leer(W, 'person:' + ak), true);
   assert.equal(await W.geraet('d_PRUEF').directory(await kontoLookup('anna')), null);
   await fehlt(anmelden({ zugang: W.geraet('d_X'), anmeldename: 'anna', passwort: PW.anna, runden: R }), 'anmeldung');
@@ -335,6 +336,144 @@ jedeWelt('Konto loeschen, letzter Elternteil: die ganze Familie ist weg (Kind, F
   assert.equal(B.P1.antworten(bk), 6);
 });
 
+/* ---------- Konto loeschen: die anderen Geraete des austretenden Elternteils ---------- */
+/* Peters zweites Geraet (Name + Passwort), kennt nach ein paar Abgleichen die Familie und Kathies Stand */
+async function zweitesGeraet(W, d, anmeldename, passwort, name, mit) {
+  const g = geraet(W, d, await anmelden({ zugang: W.geraet(d), anmeldename, passwort, runden: R }), name);
+  for (let i = 0; i < 3; i++) { await g.sync(); for (const x of mit) await x.sync(); }
+  return g;
+}
+const nichts = (g, ...ids) => ids.flatMap((id) => g.spuren(id).concat([...g.a.m.entries()].filter(([k, v]) => !k.includes(id) && String(v).includes(id)).map(([k]) => k)));
+const bereicheDa = (g) => Object.keys(JSON.parse(g.a.getItem(GERAETEABGLEICH_SPEICHER.staende) || '{}'));
+
+jedeWelt('Konto loeschen, Peter - Anna bleibt: Peters anderes Geraet raeumt beim naechsten Abgleich Kinderdaten, Familie und Bereich weg (eigenes member_removed); das loeschende Geraet auch', async (W) => {
+  const { P1, P2, K } = await welt(W);
+  const kk = K.konto.kennung, pk = P1.konto.kennung, ak = P2.konto.kennung;
+  const P3 = await zweitesGeraet(W, 'd_P3', 'peter', PW.peter, 'Peters iPhone', [K, P1]);
+  assert.equal(P3.antworten(kk), 3, 'vorher: das zweite Geraet kennt Kathies Stand');
+  assert.ok(P3.spuren(kk).length > 0 && bereicheDa(P3).includes('familie:' + pk));
+  const r = await kontoDatenLoeschen({ ablage: P1.a, zugang: P1.z(), konto: P1.konto, passwort: PW.peter, now: weiter(W), heute: HEUTE, runden: R });
+  // das loeschende Geraet: Kinder und Familie sind auch hier weg (der App-Teil raeumt dazu Aufnahmen und Anmeldung)
+  assert.deepEqual(r.kinder.map((x) => [x.kind, x.nurLokal]), [[kk, true]]);
+  assert.deepEqual(nichts(P1, kk), [], 'loeschendes Geraet: nichts mehr von Kathie');
+  assert.deepEqual(bereicheDa(P1), [], 'loeschendes Geraet: kein Bereichsstand mehr');
+  assert.equal(JSON.parse(P1.a.getItem('bq2_familyEvents') || '{}')[pk], undefined, 'loeschendes Geraet: Familienprotokoll weg');
+  // das andere Geraet weiss noch nichts - bis zum naechsten Abgleich
+  assert.ok(P3.spuren(kk).length > 0, 'vor dem Abgleich noch alles da');
+  const x = await P3.sync();
+  assert.deepEqual([x.geloescht, x.kontoGeloescht], [[kk], [pk]]);
+  assert.deepEqual(nichts(P3, kk), [], 'zweites Geraet: nichts mehr von Kathie');
+  assert.deepEqual(bereicheDa(P3), [], 'zweites Geraet: kein Bereichsstand mehr');
+  for (const k of ['bq2_familyEvents', 'bq2_personEvents']) assert.deepEqual(Object.keys(JSON.parse(P3.a.getItem(k) || '{}')), [], 'zweites Geraet: ' + k + ' leer');
+  assert.deepEqual(P3.a.getItem('bq_abgleichVerworfen') === null ? [] : JSON.parse(P3.a.getItem('bq_abgleichVerworfen')), []);
+  // weitere Abgleiche legen nichts neu an (Peters Bereich bleibt weg), Anna und Kathie sind unberuehrt
+  for (let i = 0; i < 2; i++) { const y = await P3.sync(); assert.deepEqual([y.geloescht, y.kontoGeloescht], [[], [pk]]); }
+  assert.deepEqual(nichts(P3, kk, pk), [], 'nach weiteren Abgleichen nichts neu');
+  assert.equal(await leer(W, 'person:' + pk), true, 'Peters Bereich im Speicher bleibt weg');
+  K.ueben(2);
+  for (const G of [K, P2, K, P2]) { const y = await G.sync(); assert.deepEqual(y.bericht.verworfen, [], G.d); }
+  assert.equal(P2.antworten(kk), 5, 'Kathie kommt bei Anna an');
+  assert.ok(P2.spuren(kk).length > 0 && P2.v().kinder.length === 1 && P2.v().eltern.join() === ak, 'Anna behaelt alles');
+  assert.equal(await leer(W, 'kind:lern:' + kk), false, 'die Kinderdaten im Speicher bleiben');
+});
+
+jedeWelt('Konto loeschen, Peter - der Speicher laesst sich danach nicht leeren: sein anderes Geraet raeumt trotzdem auf (das Austreten allein genuegt, sein Bereich ist noch da)', async (W) => {
+  const { P1, P2, K } = await welt(W);
+  const kk = K.konto.kennung, pk = P1.konto.kennung;
+  const P3 = await zweitesGeraet(W, 'd_P3', 'peter', PW.peter, 'Peters iPhone', [K, P1]);
+  const z = P1.z(), kaputt = Object.assign({}, z, { removeArea: async () => { const e = new Error('offline'); e.code = 'offline'; throw e; } });
+  await assert.rejects(kontoDatenLoeschen({ ablage: P1.a, zugang: kaputt, konto: P1.konto, passwort: PW.peter, now: weiter(W), heute: HEUTE, runden: R }), (e) => e.code === 'offline');
+  assert.equal(await leer(W, 'person:' + pk), false, 'sein Bereich ist noch da');
+  const x = await P3.sync();
+  assert.deepEqual([x.geloescht, x.kontoGeloescht], [[kk], [pk]], 'aufgeraeumt wegen des Austretens');
+  assert.deepEqual(nichts(P3, kk), []);
+  await P2.sync();
+  assert.equal(P2.antworten(kk), 3);
+});
+
+jedeWelt('Konto loeschen, Peter - fehlt sein Bereich im Speicher (das Austreten kam nie an): sein anderes Geraet raeumt auch auf', async (W) => {
+  const { P1, K } = await welt(W);
+  const kk = K.konto.kennung, pk = P1.konto.kennung;
+  const P3 = await zweitesGeraet(W, 'd_P3', 'peter', PW.peter, 'Peters iPhone', [K, P1]);
+  await W.geraet('d_PRUEF').removeArea('person:' + pk);
+  const x = await P3.sync();
+  assert.deepEqual([x.geloescht, x.kontoGeloescht], [[kk], [pk]]);
+  assert.deepEqual(nichts(P3, kk), []);
+});
+
+jedeWelt('Gegenprobe: Anna loescht ihr Konto - Peters Geraete behalten alles und melden nichts als geloescht', async (W) => {
+  const { P1, P2, K } = await welt(W);
+  const kk = K.konto.kennung, pk = P1.konto.kennung;
+  const P3 = await zweitesGeraet(W, 'd_P3', 'peter', PW.peter, 'Peters iPhone', [K, P1]);
+  await kontoDatenLoeschen({ ablage: P2.a, zugang: P2.z(), konto: P2.konto, passwort: PW.anna, now: weiter(W), heute: HEUTE, runden: R });
+  for (const G of [P1, P3, P1, P3]) { const x = await G.sync(); assert.deepEqual([x.geloescht, x.kontoGeloescht, x.bericht.verworfen], [[], [], []], G.d); }
+  for (const G of [P1, P3]) { assert.equal(G.antworten(kk), 3, G.d); assert.ok(bereicheDa(G).includes('familie:' + pk), G.d); }
+});
+
+jedeWelt('Gegenprobe: bricht das Loeschen vor dem Senden ab (kein Netz), raeumt auch ein spaeterer Abgleich dieses Geraets nichts weg; der zweite Versuch geht durch', async (W) => {
+  const { P1, P2, K } = await welt(W);
+  const kk = K.konto.kennung, pk = P1.konto.kennung;
+  // ohne Senden: kein Buendel kommt an (auch nicht ueber die Sitzung des GitHub-Speichers - sie umgeht eine Huelle um den Zugang)
+  const z = P1.z(), nein = async () => { const e = new Error('offline'); e.code = 'offline'; throw e; };
+  const ohneSenden = { ...z, put: nein, ...(typeof z.sitzung === 'function' ? { sitzung: () => ({ ...z.sitzung(), put: nein }) } : {}) };
+  await fehlt(kontoDatenLoeschen({ ablage: P1.a, zugang: ohneSenden, konto: P1.konto, passwort: PW.peter, now: weiter(W), heute: HEUTE, runden: R }), 'nicht-gesendet');
+  assert.equal(elternAusgetreten({ ablage: P1.a, konto: P1.konto, now: W.uhr.t }), false, 'der eigene, noch nicht gesendete Eintrag zaehlt nicht');
+  const x = await P1.sync();
+  assert.deepEqual([x.geloescht, x.kontoGeloescht], [[], []], 'der Abgleich dieses Geraets raeumt nichts weg und sendet');
+  assert.ok(P1.spuren(kk).length > 0 && bereicheDa(P1).includes('familie:' + pk));
+  const r = await kontoDatenLoeschen({ ablage: P1.a, zugang: P1.z(), konto: P1.konto, passwort: PW.peter, now: weiter(W), heute: HEUTE, runden: R });
+  assert.deepEqual(r.kinder.map((y) => y.kind), [kk]);
+  assert.deepEqual(nichts(P1, kk), []);
+  await P2.sync();
+  assert.equal(P2.antworten(kk), 3);
+});
+
+jedeWelt('Ein Geraet mit Peter UND Anna: nach Peters Austritt gehen seine Daten, die Kinder und die Familie bleiben fuer Anna', async (W) => {
+  const { P1, P2, K } = await welt(W);
+  const kk = K.konto.kennung, pk = P1.konto.kennung, ak = P2.konto.kennung;
+  const G = geraet(W, 'd_G1', P1.konto, 'Gemeinsames iPad');
+  const beide = () => abgleichMitVerbindungen({ ablage: G.a, zugang: W.geraet('d_G1'), konten: [P1.konto, P2.konto], now: weiter(W), heute: HEUTE, geraetName: 'Gemeinsames iPad' });
+  for (let i = 0; i < 3; i++) await beide();
+  assert.equal(G.antworten(kk), 3);
+  await kontoDatenLoeschen({ ablage: P1.a, zugang: P1.z(), konto: P1.konto, passwort: PW.peter, now: weiter(W), heute: HEUTE, runden: R });
+  const x = await beide();
+  assert.deepEqual([x.geloescht, x.kontoGeloescht], [[], [pk]], 'nur Peters Konto geht, kein Kind');
+  assert.equal(G.antworten(kk), 3, 'Kathies Stand bleibt fuer Anna');
+  assert.equal(bereicheDa(G).includes('person:' + pk), false, 'nichts von Peters Bereich');
+  assert.ok(bereicheDa(G).includes('familie:' + pk) && bereicheDa(G).includes('kind:lern:' + kk) && bereicheDa(G).includes('person:' + ak));
+  const y = await abgleichMitVerbindungen({ ablage: G.a, zugang: W.geraet('d_G1'), konten: [P2.konto], now: weiter(W), heute: HEUTE });
+  assert.deepEqual([y.geloescht, y.kontoGeloescht, y.bericht.verworfen], [[], [], []]);
+});
+
+test('elternAusgetreten: nur der eigene Eintrag eines anderen Geraets zaehlt; elternLokalEntfernen rueckt nichts anderes an', async () => {
+  const W = WELTEN.Simulation();
+  const { P1, P2, K } = await welt(W);
+  const kk = K.konto.kennung, pk = P1.konto.kennung, ak = P2.konto.kennung;
+  const now = W.uhr.t;
+  assert.equal(elternAusgetreten({ ablage: P1.a, konto: P1.konto, now }), false, 'niemand ausgetreten');
+  assert.equal(elternAusgetreten({ ablage: K.a, konto: K.konto, now }), false, 'ein Kind tritt nie aus');
+  assert.equal(elternAusgetreten({ ablage: ablage(), konto: P1.konto, now }), false, 'ohne Familie');
+  // ein Eintrag von Anna ueber Peter: kein Austritt Peters
+  const log = JSON.parse(P1.a.getItem('bq2_familyEvents'))[pk];
+  const vorlage = log.filter((e) => e.type === 'family_set' && e.payload.person === pk).pop() || log.find((e) => e.type === 'family_set');
+  const eintrag = (autor, geraetKennung, person) => newEvent({ type: 'family_set', author: autor, device: geraetKennung, at: new Date(now + 5000).toISOString(), payload: { person, role: 'parent', pub: P1.konto.pub, stand: 1, removed: true } });
+  const mit = (e) => { const a = ablage(); for (const [k, v] of P1.a.m) a.setItem(k, v); const all = JSON.parse(a.getItem('bq2_familyEvents')); all[pk] = all[pk].concat([e]); a.setItem('bq2_familyEvents', JSON.stringify(all)); return a; };
+  assert.ok(vorlage, 'Familienprotokoll gelesen');
+  assert.equal(elternAusgetreten({ ablage: mit(eintrag(ak, 'd_P2', pk)), konto: P1.konto, now: now + 10000 }), false, 'Annas Eintrag ueber Peter zaehlt nicht');
+  assert.equal(elternAusgetreten({ ablage: mit(eintrag(pk, 'd_P1', pk)), konto: P1.konto, now: now + 10000 }), false, 'sein Eintrag von diesem Geraet zaehlt nicht (das ist das loeschende Geraet)');
+  assert.equal(elternAusgetreten({ ablage: mit(eintrag(pk, 'd_P3', pk)), konto: P1.konto, now: now + 10000 }), true, 'sein Eintrag von einem anderen Geraet zaehlt');
+  // elternLokalEntfernen: ein Kind einer anderen Familie auf demselben Geraet bleibt unberuehrt
+  const a = mit(eintrag(pk, 'd_P3', pk));
+  a.setItem('bq2_p_FREMD__events', '[1]');
+  const st = JSON.parse(a.getItem(GERAETEABGLEICH_SPEICHER.staende)); st['kind:lern:p_FREMD'] = { log: [] }; a.setItem(GERAETEABGLEICH_SPEICHER.staende, JSON.stringify(st));
+  const r = elternLokalEntfernen({ ablage: a, konto: P1.konto, now: now + 10000 });
+  assert.deepEqual(r.kinder, [kk]);
+  assert.equal(a.getItem('bq2_p_FREMD__events'), '[1]');
+  assert.ok(Object.keys(JSON.parse(a.getItem(GERAETEABGLEICH_SPEICHER.staende))).includes('kind:lern:p_FREMD'), 'fremdes Kind: Bereichsstand bleibt');
+  const b = mit(eintrag(pk, 'd_P3', pk));
+  assert.deepEqual(elternLokalEntfernen({ ablage: b, konto: P1.konto, now: now + 10000, behalten: { kinder: [kk], familien: [pk] } }).kinder, [], 'behalten: Kind bleibt');
+  assert.ok(b.getItem('bq2_' + kk + '__events') !== null);
+});
 test('kindLokalEntfernen: nur das Kind, auch ohne key/removeItem (dann wird sein Protokoll geleert)', () => {
   const m = new Map([['bq2_p_K1__events', '[1]'], ['bq2_p_K1__total', '3'], ['bq2_p_K2__events', '[2]'],
     [GERAETEABGLEICH_SPEICHER.staende, JSON.stringify({ 'kind:lern:p_K1': { log: [] }, 'kind:lern:p_K2': { log: [] }, 'person:p_K1': {} })]]);

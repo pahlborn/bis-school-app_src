@@ -22,7 +22,9 @@
 //     logged in cannot do it). The last parent of a family: every child (as above), the family area, his own area and
 //     directory entries - the whole family is gone. With another parent: he leaves the family (family_set removed about
 //     himself, sent at once), his own area, directory entries and open invitations go; the other parent's next sync
-//     changes every key without him (module geraeteabgleich). The children stay with the other parent.
+//     changes every key without him (module geraeteabgleich). The children stay with the other parent - but not on his
+//     devices: this one drops the children and the family at once (kinder: entries with nurLokal), his other devices
+//     with their next sync (module einladung abgleichMitVerbindungen: elternAusgetreten).
 //   Honest limit (Peter, 05.11.): GitHub keeps old, encrypted versions in the git history. Without the keys they cannot
 //     be read - and the keys go with the directory entries. To remove them for good: docs/endgueltig-loeschen.md (delete
 //     the repository or rewrite its history). The family area keeps that the child existed (encrypted, for the parents).
@@ -37,7 +39,7 @@ import { bereichName } from './bereiche.mjs';
 import { zulassungAus, aktiveMitglieder } from './zulassung.mjs';
 import { GERAETEABGLEICH_SPEICHER } from './geraeteabgleich.mjs';
 import { anmelden, kontoLookup, kontoName, KONTO_STAENDE_MAX } from './konto.mjs';
-import { verbindungen, abgleichMitVerbindungen, kindLokalEntfernen } from './einladung.mjs';
+import { verbindungen, abgleichMitVerbindungen, kindLokalEntfernen, elternLokalEntfernen } from './einladung.mjs';
 import { meineGeraete } from './geraete.mjs';
 
 /* error codes of this module */
@@ -330,8 +332,8 @@ export async function kindDatenLoeschen({ ablage, zugang, konto, kind, now, heut
 }
 
 /* US12.2: a parent deletes his own account (see the top). passwort = his current password (asked again).
-   -> { familieGeloescht (true: he was the last parent), kinder: [results of kindDatenLoeschen], bereiche, verzeichnis,
-        einladungen } - afterwards the app logs him out and forgets him on this device */
+   -> { familieGeloescht (true: he was the last parent), kinder: [results of kindDatenLoeschen - or { kind, nurLokal: true }
+        for a child that stays with the other parent and only leaves this device], bereiche, verzeichnis, einladungen } - afterwards the app logs him out and forgets him on this device */
 export async function kontoDatenLoeschen({ ablage, zugang, konto, passwort, now, heute, geraetName, runden } = {}) {
   kdtPruefen({ ablage, konto, now });
   if (!kdtTag(heute)) throw kdtFalsch('"heute" (JJJJ-MM-TT) fehlt.');
@@ -356,5 +358,12 @@ export async function kontoDatenLoeschen({ ablage, zugang, konto, passwort, now,
   out.einladungen = await kdtEinladungenWeg(ablage, zugang, konto, verbindungen({ ablage, konto, now }), undefined, now);
   const sp = await kdtSpeicherLeeren(zugang, eigene, konto.anmeldename);
   out.bereiche = sp.bereiche; out.verzeichnis = sp.verzeichnis;
+  // another parent stays: the children's data and the family leave this device as well (kinder: nurLokal - nothing of the
+  // children was deleted in the storage; the app drops them from the device like a deleted child). His other devices do
+  // the same with their next sync (module einladung, elternAusgetreten).
+  if (andere.length) {
+    const l = elternLokalEntfernen({ ablage, konto, now });
+    for (const kind of l.kinder) out.kinder.push({ kind, bereiche: [], verzeichnis: 0, einladungen: 0, lokal: { bereiche: l.bereiche.filter((a) => a.endsWith(':' + kind)), schluessel: 0 }, nurLokal: true });
+  }
   return out;
 }

@@ -182,7 +182,8 @@ test('1 Erwachsener: Startlink -> eigenes Passwort -> Wiederherstellungscode (Pa
   B.tippe('#loginUser', 'peter.x'); B.tippe('#loginPw', 'Judoka-Anchor-Key-2947'); B.absenden('#loginGo');
   assert.equal(await B.meldung('#loginMsg'), 'Benutzername oder Passwort stimmt nicht.');
   assert.equal(B.da('#setPwForm'), false);
-  B.tippe('#loginUser', 'peter.a'); B.tippe('#loginPw', pw + 'x'); B.absenden('#loginGo');
+  // (ein Zeichen, das in keinem Startcode vorkommt: Vorschlag + Buchstabe saehe bei 21 Zeichen wie ein Startcode aus)
+  B.tippe('#loginUser', 'peter.a'); B.tippe('#loginPw', pw + '!'); B.absenden('#loginGo');
   assert.equal(await B.meldung('#loginMsg'), 'Benutzername oder Passwort stimmt nicht.');
 
   // zweites Geraet: nur Anmeldename und Passwort -> dieselbe Person, ohne Startcode, ohne Wiederherstellungscode
