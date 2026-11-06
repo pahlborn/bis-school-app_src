@@ -108,7 +108,7 @@ test('Gegenproben Suchlauf: jede Abweichung wird gefunden', () => {
   // Testpersonen: jeder Name, irgendwo in der App
   assert.ok(testpersonenNamen().length >= 9, testpersonenNamen().join(','));
   for (const n of testpersonenNamen()) nurFund(APP.replace('</body>', `<!-- ${n} --></body>`), 'keine Testpersonen');
-  assert.deepEqual(funde(APP.replace('</body>', '<!-- peter.ahlborn, anna.abc --></body>')), [], 'nur ganze Anmeldenamen zaehlen');
+  assert.deepEqual(funde(APP.replace('</body>', '<!-- mira.sonnentaler, lio.sonnental.x, jonas.wellenbergx --></body>')), [], 'nur ganze Anmeldenamen zaehlen');
   // Testinstanz: Praefix, Repo, Adresse, Name
   for (const x of ["localStorage.getItem('bqt_gh')", TESTINSTANZ.repoDaten, TESTINSTANZ.adresse, TESTINSTANZ.name]) {
     const f = funde(APP.replace('</body>', `<!-- ${x} --></body>`));
@@ -167,9 +167,9 @@ test('Bau bricht ab und schreibt nichts, wenn eine Testperson in index.html steh
   try {
     for (const d of ['src/module', 'werkzeug']) fs.cpSync(path.join(WURZEL, d), path.join(w, d), { recursive: true, filter: (q) => !q.includes('node_modules') });
     for (const d of ['icon-180.png', 'icon-192.png', 'icon-512.png']) fs.copyFileSync(path.join(WURZEL, d), path.join(w, d));
-    fs.writeFileSync(path.join(w, 'index.html'), lies('index.html').replace('</body>', '<!-- Kathie Beispiel --></body>'));
+    fs.writeFileSync(path.join(w, 'index.html'), lies('index.html').replace('</body>', '<!-- Lio Sonnental --></body>'));
     const ziel = path.join(w, 'ziel');
-    await assert.rejects(familieBauen(TEST_PW, { wurzel: w, ziel, version: VERSION }), /Suchlauf Familienfassung, nichts geschrieben:\n {2}- keine Testpersonen[^\n]*"Kathie Beispiel"/);
+    await assert.rejects(familieBauen(TEST_PW, { wurzel: w, ziel, version: VERSION }), /Suchlauf Familienfassung, nichts geschrieben:\n {2}- keine Testpersonen[^\n]*"Lio Sonnental"/);
     assert.equal(fs.existsSync(ziel), false, 'nichts geschrieben');
     fs.writeFileSync(path.join(w, 'index.html'), lies('index.html'));
     await familieBauen(TEST_PW, { wurzel: w, ziel, version: VERSION });

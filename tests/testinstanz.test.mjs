@@ -49,9 +49,9 @@ before(async () => {
   const z = githubSpeicher({ repo: REPO, token: TOKEN, basis: N.basis }).geraet('d_Werkzeug1');
   const jetzt = Date.now();
   const admin = await ersteAnmeldung({ zugang: z, code: (await startcodeAusstellen({ zugang: z, aussteller: null, anmeldename: 'admin', art: 'admin', now: jetzt })).code, passwort: 'Werkzeug-Admin-Passwort-1', now: jetzt, runden: 1000 });
-  const peter = await ersteAnmeldung({ zugang: z, code: (await startcodeAusstellen({ zugang: z, aussteller: admin, anmeldename: 'peter.a', art: 'parent', now: jetzt })).code, passwort: 'Werkzeug-Eltern-Passwort-1', now: jetzt, runden: 1000 });
+  const peter = await ersteAnmeldung({ zugang: z, code: (await startcodeAusstellen({ zugang: z, aussteller: admin, anmeldename: 'mira.sonnental', art: 'parent', now: jetzt })).code, passwort: 'Werkzeug-Eltern-Passwort-1', now: jetzt, runden: 1000 });
   // Aufgabe "Einladungen - Oberflaeche": ein Kind uebt erst, wenn ein Elterngeraet es aufgenommen hat - die Kinder legt
-  // Peters Geraet (ohne App, Modul einladung) an; ELTERN.sync() nimmt sie auf, waehrend sie warten
+  // Geraet des Elternteils (ohne App, Modul einladung) an; ELTERN.sync() nimmt sie auf, waehrend sie warten
   const m = new Map(), a = { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => { m.set(k, String(v)); } };
   a.setItem('bq2_evDevice', JSON.stringify('d_Werkzeug2'));
   const zP = githubSpeicher({ repo: REPO, token: TOKEN, basis: N.basis }).geraet('d_Werkzeug2');
@@ -95,7 +95,7 @@ test('Umwandlung: alle Speicherstellen bqt_, Geraetedaten und Token geraeteweit,
   for (const k of ["'bqt_session'", "'bqt_abgleich'", "'bqt_abgleichVerworfen'", "'bqt_evDevice'", "'bqt_gh'", "'bqtUpdateTo'"]) assert.ok(APP.includes(k), k);
   assert.ok(!APP.includes('bqt_schluessel'), 'kein Familienschluessel');
   assert.ok(APP.includes(VERSION_AUS_KLARTEXT), 'Aktualisierung ohne Schluessel');
-  assert.ok(APP.includes('Stage Show') && APP.includes('Save the Park') && APP.includes('https://pahlborn.github.io/bis-school-app-test/'));
+  assert.ok(APP.includes('Stage Show') && APP.includes('Save the Park') && APP.includes('https://big-quest-test.github.io/') && !APP.includes('bis-school-app-test/'));
   // ausser Praefixen, Ersetzungen, GLOBAL_KEYS, Speicher, Titeln und publishedVersion ist jede Zeile gleich
   const ohnePV = (x) => x.replace(/async function publishedVersion\(\)\{[\s\S]*?\n\}/, 'PUBLISHED_VERSION');
   const zeilenA = ohnePV(roh).split('\n'), zeilenB = ohnePV(APP).split('\n');
@@ -177,7 +177,8 @@ test('Bau bricht ab und schreibt nichts, wenn ein verbotenes Wort ohne Ersatz in
   } finally { fs.rmSync(w, { recursive: true, force: true }); }
 });
 
-/* Kathies echte Eintraege auf derselben Herkunft (pahlborn.github.io) - die Testinstanz darf sie nie lesen oder aendern */
+/* Kathies echte Eintraege auf derselben Herkunft - die Testinstanz darf sie nie lesen oder aendern. Seit 06.11. liegt sie unter eigener
+   Herkunft (big-quest-test.github.io); das Praefix bqt_ bleibt als zweite Sicherung und wird weiter geprueft. */
 const KATHIE = {
   bq2_name: JSON.stringify('KATHIE-ECHT'), bq2_total: '777', bq2_kidLang: JSON.stringify('de'), bq2_session: JSON.stringify({ user: 'kathie', id: 'p_71ANFJ3X5V35ZD7H22W1WB4107' }),
   bq2_attempts: JSON.stringify([{ q: 'x', ok: true, t: '2026-11-01T10:00:00Z', w: 'numbers' }]), bq2_personEvents: '{}', bq2_evDevice: JSON.stringify('d_KATHIE'),
@@ -203,7 +204,7 @@ async function kindAnmeldenSandbox(S, name, code, { bisPasswort = false } = {}) 
   await warten(() => im('#setPwForm'), '#setPwForm');
   klick('#pwUse'); absenden('#setPwGo');
   if (bisPasswort) { await warten(() => { const m = im('#setPwMsg'); return m && m.textContent && !/moment/i.test(m.textContent); }, 'Meldung'); return im('#setPwMsg').textContent; }
-  // das Kind wartet, bis Peters Geraet es aufgenommen hat (Konzept 10.3)
+  // das Kind wartet, bis das Geraet des Elternteils es aufgenommen hat (Konzept 10.3)
   await warten(() => im('#kidWait') || im('#welcomeGo'), '#kidWait');
   if (S.lauf(() => !!im('#kidWait'))) { await ELTERN.sync(); klick('#kidWaitAgain'); }
   await warten(() => im('#welcomeGo'), '#welcomeGo');
@@ -324,7 +325,7 @@ test('Browser: die gebaute Testinstanz startet mit der Anmeldung, Zugang einmal 
     await page.waitForSelector('#setPwForm', { timeout: 30000 });
     await page.locator('#pwUse').click();
     await page.locator('#setPwGo').click();
-    // das Kind wartet, bis Peters Geraet es aufgenommen hat; danach geht es von selbst weiter (Takt der App)
+    // das Kind wartet, bis das Geraet des Elternteils es aufgenommen hat; danach geht es von selbst weiter (Takt der App)
     await page.waitForSelector('#kidWait', { timeout: 30000 });
     await ELTERN.sync();
     await page.locator('#welcomeGo').click({ timeout: 30000 });

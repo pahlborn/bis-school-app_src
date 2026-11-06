@@ -9,14 +9,14 @@
 // Der Token kommt aus %LOCALAPPDATA%\bis-school-app\testdaten-token.txt (anderer Pfad: BQ_GH_TOKEN_DATEI).
 //
 // Wer was bekommt (Ausstellerkette wie im Konto-Modul: Admin -> Erwachsene, Elternteil -> Kind):
-//  - admin, peter.a, peter.b: legt das Werkzeug selbst an (Passwort + Wiederherstellungscode in der lokalen Datei).
-//    Das ist noetig, weil nur ein angemeldeter Admin bzw. Elternteil Startcodes unterschreiben kann.
+//  - admin, mira.sonnental, mira.wellenberg: legt das Werkzeug selbst an (Passwort + Wiederherstellungscode in der
+//    lokalen Datei). Das ist noetig, weil nur ein angemeldeter Admin bzw. Elternteil Startcodes unterschreiben kann.
 //    Auf dem Geraet: Anmeldung mit Name und Passwort (Weg "weiteres Geraet").
-//  - lehrkraft, anna.a, anna.b: Startcode vom Admin;  kathie.a / kathie.b: Startcode von peter.a / peter.b.
-//    Auf dem Geraet: erste Anmeldung mit dem Startcode, eigenes Passwort.
-// Gleiche Namen: die Anmeldenamen muessen eindeutig sein (.a/.b); Vorname, Nachname und Geburtsdatum traegt die
-// Person in der App selbst ein - die Datei nennt, was sie eintragen soll (gleich, nur das Geburtsdatum unterscheidet).
-// Familien-Verbindung (Anna <-> Kind, zweites Geraet findet die Kinder) kommt mit der Aufgabe "Einladungen".
+//  - lehrkraft, jonas.sonnental, jonas.wellenberg: Startcode vom Admin;  lio.sonnental / lio.wellenberg: Startcode von
+//    mira.sonnental / mira.wellenberg. Auf dem Geraet: erste Anmeldung mit dem Startcode, eigenes Passwort.
+// Nur Fantasienamen (Peter, 06.11.). Gleiche Vornamen in beiden Familien: unterscheiden lassen sie sich ueber den
+// Nachnamen und (bei den Kindern) das Geburtsdatum - die Person traegt beides in der App selbst ein; die Datei nennt,
+// was sie eintragen soll.
 
 import fs from 'node:fs/promises';
 import os from 'node:os';
@@ -33,13 +33,17 @@ import { TESTINSTANZ } from './testinstanz.mjs';
 export const TESTPERSONEN = Object.freeze([
   { name: 'admin', art: 'admin', von: null, werkzeug: true, familie: '-', eintragen: 'Admin' },
   { name: 'lehrkraft', art: 'teacher', von: 'admin', familie: '-', eintragen: 'Lehrkraft' },
-  { name: 'peter.a', art: 'parent', von: 'admin', werkzeug: true, familie: 'A', eintragen: 'Peter Beispiel' },
-  { name: 'anna.a', art: 'parent', von: 'admin', familie: 'A', eintragen: 'Anna Beispiel' },
-  { name: 'kathie.a', art: 'child', von: 'peter.a', familie: 'A', eintragen: 'Kathie Beispiel, Geburtsdatum 14.05.2017' },
-  { name: 'peter.b', art: 'parent', von: 'admin', werkzeug: true, familie: 'B', eintragen: 'Peter Beispiel' },
-  { name: 'anna.b', art: 'parent', von: 'admin', familie: 'B', eintragen: 'Anna Beispiel' },
-  { name: 'kathie.b', art: 'child', von: 'peter.b', familie: 'B', eintragen: 'Kathie Beispiel, Geburtsdatum 03.09.2017' }
+  { name: 'mira.sonnental', art: 'parent', von: 'admin', werkzeug: true, familie: 'A', eintragen: 'Mira Sonnental' },
+  { name: 'jonas.sonnental', art: 'parent', von: 'admin', familie: 'A', eintragen: 'Jonas Sonnental' },
+  { name: 'lio.sonnental', art: 'child', von: 'mira.sonnental', familie: 'A', eintragen: 'Lio Sonnental, Geburtsdatum 14.05.2017' },
+  { name: 'mira.wellenberg', art: 'parent', von: 'admin', werkzeug: true, familie: 'B', eintragen: 'Mira Wellenberg' },
+  { name: 'jonas.wellenberg', art: 'parent', von: 'admin', familie: 'B', eintragen: 'Jonas Wellenberg' },
+  { name: 'lio.wellenberg', art: 'child', von: 'mira.wellenberg', familie: 'B', eintragen: 'Lio Wellenberg, Geburtsdatum 03.09.2017' }
 ].map((p) => Object.freeze(p)));
+
+/* nur Fantasienamen (Peter, 06.11.): keine Namen der Familie - weder als Anmeldename noch als eingetragener Name */
+export const FAMILIENNAMEN_VERBOTEN = Object.freeze(['kathie', 'peter', 'anna']);
+const BREIT = Math.max(...TESTPERSONEN.map((p) => p.name.length));
 
 /* ein Startcode, der in weniger als einem Tag ablaeuft, wird neu ausgestellt */
 export const STARTCODE_RESERVE_MS = 24 * 3600 * 1000;
@@ -105,19 +109,20 @@ export function uebersichtText(stand, { repo, wurzel, jetzt }) {
   const z = [
     'Big Quest Testinstanz - Testpersonen (NUR auf diesem Rechner; nicht weitergeben ausser an die Testperson)',
     `Stand: ${tag(jetzt)}   Daten: ${repo}${wurzel ? '/' + wurzel : ''}   App: ${TESTINSTANZ.adresse}`,
-    'Gleiche Namen in beiden Familien - nur das Geburtsdatum der Kinder unterscheidet sie.',
+    'Gleiche Vornamen in beiden Familien - Nachname und (bei den Kindern) Geburtsdatum unterscheiden sie.',
     ''
   ];
+  const ein = ' '.repeat(BREIT + 1);
   for (const p of TESTPERSONEN) {
     const s = stand.personen[p.name] || {};
-    z.push(`${p.name.padEnd(10)} ${ARTEN[p.art].padEnd(10)} Familie ${p.familie}   in der App eintragen: ${p.eintragen}`);
-    if (p.werkzeug && s.passwort) z.push(`           Anmeldename: ${p.name}   Passwort: ${s.passwort}` + (s.wiederherstellungscode ? `   Wiederherstellungscode: ${s.wiederherstellungscode}` : ''));
+    z.push(`${p.name.padEnd(BREIT)} ${ARTEN[p.art].padEnd(10)} Familie ${p.familie}   in der App eintragen: ${p.eintragen}`);
+    if (p.werkzeug && s.passwort) z.push(ein + `Anmeldename: ${p.name}   Passwort: ${s.passwort}` + (s.wiederherstellungscode ? `   Wiederherstellungscode: ${s.wiederherstellungscode}` : ''));
     else if (s.startcode) {
-      z.push(`           Startcode (einmal, ausgestellt von ${p.von}): ${s.startcode.code}   gueltig bis ${tag(s.startcode.gueltigBis)}`);
-      z.push(`           Startlink: ${anmStartlink(TESTINSTANZ.adresse, { anmeldename: p.name, code: s.startcode.code })}`);
+      z.push(ein + `Startcode (einmal, ausgestellt von ${p.von}): ${s.startcode.code}   gueltig bis ${tag(s.startcode.gueltigBis)}`);
+      z.push(ein + `Startlink: ${anmStartlink(TESTINSTANZ.adresse, { anmeldename: p.name, code: s.startcode.code })}`);
     }
-    else if (s.benutzt) z.push('           Startcode benutzt - Anmeldung mit Name und eigenem Passwort');
-    else z.push('           noch nicht angelegt (node werkzeug/testpersonen.mjs --anlegen)');
+    else if (s.benutzt) z.push(ein + 'Startcode benutzt - Anmeldung mit Name und eigenem Passwort');
+    else z.push(ein + 'noch nicht angelegt (node werkzeug/testpersonen.mjs --anlegen)');
   }
   return z.join('\n') + '\n';
 }
@@ -144,7 +149,7 @@ export async function testpersonenLauf({ zugang, now = Date.now(), anlegen = fal
   const r = await testpersonenAnlegen({ zugang, now, anlegen, stand, merken: anlegen ? merken : async () => {}, ...(runden ? { runden } : {}), ...(rand ? { rand } : {}) });
   if (anlegen) await merken(r.stand);
   sag(`Testpersonen in ${repo}${wurzel ? '/' + wurzel : ''}${anlegen ? '' : ' (nur angesehen, nichts geschrieben)'}:`);
-  for (const z of r.zeilen) sag(`  ${z.name.padEnd(10)} ${ARTEN[z.art].padEnd(10)} Familie ${z.familie}  ${z.status}`);
+  for (const z of r.zeilen) sag(`  ${z.name.padEnd(BREIT)} ${ARTEN[z.art].padEnd(10)} Familie ${z.familie}  ${z.status}`);
   sag(anlegen ? `Startcodes, Passwoerter, Wiederherstellungscodes: ${textDatei}` : 'Anlegen mit: node werkzeug/testpersonen.mjs --anlegen');
   const text = zeilenAus.join('\n');
   const geheim = geheimnisse(r.stand).filter((g) => text.includes(g));

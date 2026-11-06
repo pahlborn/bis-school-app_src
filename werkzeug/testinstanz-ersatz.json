@@ -9,8 +9,8 @@
     ["https://www.bis-school.com/fs/pages/1629", "https://example.org/"],
     ["https://www.bis-school.com/academic-life/primary-school-haimhausen", "https://example.org/"],
     ["https://www.bis-school.com/admissions/resources", "https://example.org/"],
-    ["https://pahlborn.github.io/bis-school-app/", "https://pahlborn.github.io/bis-school-app-test/"],
+    ["https://pahlborn.github.io/bis-school-app/", "https://big-quest-test.github.io/"],
     ["Kathie", "Mia"]
   ],
-  "auchVerboten": ["bis-school.com", "Kathie", "pahlborn.github.io/bis-school-app/"]
+  "auchVerboten": ["bis-school.com", "Kathie", "pahlborn.github.io/bis-school-app/", "pahlborn.github.io/bis-school-app-test/"]
 }
