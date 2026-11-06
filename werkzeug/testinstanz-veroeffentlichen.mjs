@@ -1,10 +1,11 @@
 // Testinstanz veroeffentlichen (Stufe 3c): bringt die gebaute Testinstanz (dist-test/) ins oeffentliche Repo
-// bis-school-app-test (GitHub Pages: https://pahlborn.github.io/bis-school-app-test/). Gegenstueck zu
+// big-quest-test/big-quest-test.github.io (GitHub Pages: https://big-quest-test.github.io/, App im Wurzelverzeichnis;
+// Unterordner wie probe-* bleiben unberuehrt). Gegenstueck zu
 // werkzeug/veroeffentlichen.mjs, aber OHNE Verschluesselung: die Testinstanz enthaelt nichts Geheimes.
 // Regeln wie bei Kathies App: nur nach Peters ausdruecklicher Freigabe (docs/veroeffentlichen.md, Abschnitt 5).
 //
 //   node werkzeug/testinstanz.mjs                                    (vorher: bauen, Suchlauf, schreibt dist-test/)
-//   node werkzeug/testinstanz-veroeffentlichen.mjs --ziel "C:\dev\Peters Bastelbude\bis-school-app-test" --text "erste Fassung"
+//   node werkzeug/testinstanz-veroeffentlichen.mjs --ziel "C:\dev\Peters Bastelbude\big-quest-test.github.io" --text "erste Fassung"
 //   node werkzeug/testinstanz-veroeffentlichen.mjs --live-pruefen    (danach: Version der Seite = gebaute Version?)
 //
 // Bricht ab, OHNE etwas zu kopieren, wenn
@@ -13,7 +14,7 @@
 //    die kopiert werden: keine Schuldaten, keine Konten aus konten.json, kein Familienpasswort (Tresor, Salz),
 //    keine fremden Speicherstellen, keine verbotenen Woerter, Aktualisierung ohne Schluessel,
 //  - dist-test/ nicht zum Quellstand passt (anderer Commit: erst neu bauen) oder der Quellstand ein Entwurf ist,
-//  - das Ziel nicht das Repo der Testinstanz ist (Remote nicht ".../bis-school-app-test", oder dort liegt eine
+//  - das Ziel nicht das Repo der Testinstanz ist (Remote nicht ".../big-quest-test.github.io", oder dort liegt eine
 //    verschluesselte Huelle = Kathies App),
 //  - das Ziel schon eine neuere Version hat (Geraete aktualisieren nur auf hoehere Nummern),
 //  - das Ziel-Repo nicht sauber ist.
@@ -29,7 +30,7 @@ import { TESTINSTANZ, testinstanzPruefen } from './testinstanz.mjs';
 import { versionErmitteln, versionAuslesen, versionText } from './version.mjs';
 
 export const DATEIEN = ['index.html', 'manifest.webmanifest', ...ICONS];
-export const ZIEL_REPO = /[/:\\]bis-school-app-test(?:\.git)?[/\\]?$/;
+export const ZIEL_REPO = /[/:\\]big-quest-test[/\\]big-quest-test\.github\.io(?:\.git)?[/\\]?$/;
 // Fuer Tests mit BQ_TESTINSTANZ_URL auf einen lokalen Server umlenkbar.
 export const TESTINSTANZ_URL = process.env.BQ_TESTINSTANZ_URL || TESTINSTANZ.adresse;
 
@@ -50,10 +51,10 @@ function schalter(argv) {
 
 /** Alle Pruefungen vor dem Kopieren. -> { app, version } oder wirft (dann ist nichts kopiert). */
 export async function testinstanzVorPruefen({ quelle = WURZEL, dist, ziel, version }) {
-  if (!ziel) throw new Error('--ziel fehlt (Pfad zum Repo bis-school-app-test, z. B. "C:\\dev\\Peters Bastelbude\\bis-school-app-test").');
+  if (!ziel) throw new Error('--ziel fehlt (Pfad zum Repo big-quest-test.github.io, z. B. "C:\\dev\\Peters Bastelbude\\big-quest-test.github.io").');
   if (!fs.existsSync(path.join(ziel, '.git'))) throw new Error('Ziel ist kein Git-Repo: ' + ziel);
   const remote = gitOderLeer(ziel, 'remote', 'get-url', 'origin');
-  if (remote && !ZIEL_REPO.test(remote)) throw new Error('Ziel ist nicht das Repo der Testinstanz (origin = ' + remote + ', erwartet .../bis-school-app-test).');
+  if (remote && !ZIEL_REPO.test(remote)) throw new Error('Ziel ist nicht das Repo der Testinstanz (origin = ' + remote + ', erwartet .../big-quest-test/big-quest-test.github.io).');
   const zielApp = fs.existsSync(path.join(ziel, 'index.html')) ? fs.readFileSync(path.join(ziel, 'index.html'), 'utf8') : '';
   if (/id="tresor"/.test(zielApp)) throw new Error('Im Ziel liegt eine verschluesselte Huelle (Kathies App) - dorthin wird die Testinstanz nie kopiert.');
 
@@ -134,7 +135,7 @@ async function main() {
   }
   const r = await testinstanzVeroeffentlichen(s);
   console.log(r.geaendert ? `Veroeffentlicht: ${r.nachricht}` : `Nichts zu tun: ${r.version} ist schon veroeffentlicht.`);
-  console.log('Danach: gh run list -R pahlborn/bis-school-app-test -L 1 - node werkzeug/testinstanz-veroeffentlichen.mjs --live-pruefen');
+  console.log('Danach: gh run list -R ' + TESTINSTANZ.repoSeite + ' -L 1 - node werkzeug/testinstanz-veroeffentlichen.mjs --live-pruefen');
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

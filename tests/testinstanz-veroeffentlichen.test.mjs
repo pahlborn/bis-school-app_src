@@ -40,13 +40,13 @@ function zielRepo() {
   fs.writeFileSync(path.join(z, 'README.md'), 'Big Quest Test'); git(z, 'add', '.'); git(z, 'commit', '-q', '-m', 'start');
   return z;
 }
-/** Ziel mit origin = lokales "bis-school-app-test.git" (bare) - so laeuft auch Pull und Push */
+/** Ziel mit origin = lokales "big-quest-test/big-quest-test.github.io.git" (bare) - so laeuft auch Pull und Push */
 function zielMitOrigin() {
-  const basis = tmp('remote'), bare = path.join(basis, 'bis-school-app-test.git');
+  const basis = tmp('remote'), bare = path.join(basis, 'big-quest-test', 'big-quest-test.github.io.git');
   git(basis, 'init', '-q', '--bare', bare);
   const start = zielRepo();
   git(start, 'remote', 'add', 'origin', bare); git(start, 'push', '-q', '-u', 'origin', 'HEAD');
-  const klon = (name) => { const k = path.join(tmp(name), 'bis-school-app-test'); git(path.dirname(k), 'clone', '-q', bare, k); nutzer(k); return k; };
+  const klon = (name) => { const k = path.join(tmp(name), 'big-quest-test.github.io'); git(path.dirname(k), 'clone', '-q', bare, k); nutzer(k); return k; };
   return { bare, klon };
 }
 function distMit(aendern, { datei = 'index.html', von = DIST } = {}) {
@@ -75,7 +75,7 @@ test('gepruefte Testinstanz: alle fuenf Dateien kopiert, Commit "Big Quest Test 
   assert.deepEqual(git(z, 'show', '--name-only', '--format=', 'HEAD').split('\n'), ['index.html']);
 });
 
-test('mit Pull und Push gegen ein lokales "bis-school-app-test.git": kommt an, holt vorher fremde Commits; aeltere Version wird abgelehnt', async () => {
+test('mit Pull und Push gegen ein lokales "big-quest-test.github.io.git": kommt an, holt vorher fremde Commits; aeltere Version wird abgelehnt', async () => {
   const { bare, klon } = zielMitOrigin();
   const a = klon('a'), b = klon('b');
   // jemand anderes aendert das README (z. B. Peter im Browser), a weiss davon noch nichts
@@ -142,12 +142,12 @@ test('falsches Ziel: Kathies Repo (Huelle mit Tresor), fremdes origin, unsauber,
   await assert.rejects(testinstanzVeroeffentlichen({ dist: DIST, ziel: kathie, ohnePush: true, version: V }), /verschluesselte Huelle \(Kathies App\)/);
   assert.equal(git(kathie, 'status', '--porcelain'), '');
 
-  for (const url of ['https://github.com/pahlborn/bis-school-app.git', 'https://github.com/pahlborn/bis-school-app-testdaten.git', 'https://github.com/pahlborn/gt40-engine']) {
+  for (const url of ['https://github.com/pahlborn/bis-school-app.git', 'https://github.com/pahlborn/bis-school-app-test.git', 'https://github.com/pahlborn/big-quest-test.github.io.git', 'https://github.com/big-quest/big-quest.github.io.git', 'https://github.com/pahlborn/bis-school-app-testdaten.git', 'https://github.com/pahlborn/gt40-engine']) {
     const z = zielRepo(); git(z, 'remote', 'add', 'origin', url);
     await assert.rejects(testinstanzVeroeffentlichen({ dist: DIST, ziel: z, ohnePush: true, version: V }), /nicht das Repo der Testinstanz/, url);
     nurReadme(z);
   }
-  const passt = zielRepo(); git(passt, 'remote', 'add', 'origin', 'https://github.com/pahlborn/bis-school-app-test.git');
+  const passt = zielRepo(); git(passt, 'remote', 'add', 'origin', 'https://github.com/big-quest-test/big-quest-test.github.io.git');
   assert.equal((await testinstanzVeroeffentlichen({ dist: DIST, ziel: passt, ohnePush: true, version: V })).geaendert, true, 'richtiges origin wird angenommen');
 
   const unsauber = zielRepo(); fs.writeFileSync(path.join(unsauber, 'fremd.txt'), 'x');
@@ -189,7 +189,7 @@ test('Browser: die veroeffentlichte Testfassung aktualisiert sich selbst, ohne S
   // spaetere Anfrage (Nachsehen "?t=", Neuladen "?v=") bekommt v8 - so haengt der Test nicht davon ab, wann die App
   // zum ersten Mal nachsieht (3 s nach dem Start, danach erst wieder nach 5 Minuten).
   await testinstanzVeroeffentlichen({ dist: DIST8, ziel: z, ohnePush: true, version: V8 });
-  const s = await server({ '/bis-school-app-test/': seite() }, { '/bis-school-app-test/': v7 });
+  const s = await server({ '/': seite() }, { '/': v7 });   // App im Wurzelverzeichnis (big-quest-test.github.io)
   const browser = await browserStarten();
   try {
     const ctx = await browser.newContext();
@@ -204,10 +204,10 @@ test('Browser: die veroeffentlichte Testfassung aktualisiert sich selbst, ohne S
     page.on('pageerror', (e) => fehler.push(e.message));
     page.on('request', (q) => anfragen.push(q.url()));
     // die Testinstanz startet mit der Anmeldung (mit dem Test-Repo verbunden) - auch dort aktualisiert sie sich
-    await page.goto(s.url + '/bis-school-app-test/', { waitUntil: 'domcontentloaded', timeout: LADEZEIT_MS });
+    await page.goto(s.url + '/', { waitUntil: 'domcontentloaded', timeout: LADEZEIT_MS });
     await page.waitForSelector('#login:not([hidden])');
     assert.ok((await page.content()).includes('const APP_VERSION={"n":7,'), 'geoeffnet: v7');
-    await page.waitForURL(/\/bis-school-app-test\/\?v=8$/, { timeout: 20000 });
+    await page.waitForURL(/:\d+\/\?v=8$/, { timeout: 20000 });
     await page.waitForSelector('#login:not([hidden])');
     assert.ok(await page.evaluate(() => [...document.scripts].some((x) => x.textContent.includes('const APP_VERSION={"n":8,'))), 'jetzt v8');
     assert.ok(await page.locator('#kontoTokenForm').isVisible(), 'Anmeldeseite der Testinstanz (Zugang zum Test-Repo)');
@@ -215,7 +215,7 @@ test('Browser: die veroeffentlichte Testfassung aktualisiert sich selbst, ohne S
     assert.deepEqual(r.schluessel, [], 'kein Schluessel auf dem Geraet');
     assert.deepEqual(r.gelesen.filter((k) => /schluessel/i.test(k) || !k.startsWith('bqt')), [], 'nur bqt gelesen, kein Schluessel');
     assert.deepEqual(anfragen.filter((u) => !u.startsWith(s.url)), [], 'keine fremde Adresse');
-    assert.ok(anfragen.some((u) => /\/bis-school-app-test\/\?t=\d+$/.test(u)), 'Version auf der eigenen Seite nachgesehen');
+    assert.ok(anfragen.some((u) => /:\d+\/\?t=\d+$/.test(u)), 'Version auf der eigenen Seite nachgesehen');
     assert.deepEqual(fehler, []);
     await ctx.close();
   } finally { await browser.close(); s.close(); }

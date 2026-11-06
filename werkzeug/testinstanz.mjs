@@ -8,8 +8,8 @@
 //  - OHNE Kathies Schuldaten (werkzeug/schuldaten.json), OHNE werkzeug/konten.json (Konten nur ueber das Verzeichnis),
 //  - OHNE Familienpasswort: keine Huelle, kein Tresor - die App liegt im Klartext. Darum gilt die Liste der verbotenen
 //    Woerter hier fuer die GANZE App; Schul-Namen ersetzt werkzeug/testinstanz-ersatz.json vorher durch neutrale,
-//  - Speicher im Browser unter eigenem Praefix bqt_ (statt bq2_ und bq_) und Token unter bqt_gh - gleiche Herkunft
-//    pahlborn.github.io wie Kathies App und die Werkstatt-Apps, darum liest die Testinstanz nie deren Eintraege,
+//  - Speicher im Browser unter eigenem Praefix bqt_ (statt bq2_ und bq_) und Token unter bqt_gh. Seit 06.11. liegt die
+//    Testinstanz unter eigener Herkunft (big-quest-test.github.io); das Praefix bleibt als zweite Sicherung,
 //  - aktualisiert sich selbst ohne Schluessel: die Version steht auf der veroeffentlichten Seite im Klartext
 //    (VERSION_AUS_KLARTEXT). Veroeffentlichen: werkzeug/testinstanz-veroeffentlichen.mjs,
 //  - mit dem Test-Repo verbunden (Befund #134): die Marke /*BQ_SPEICHER*/null wird zu SPEICHER_TESTINSTANZ. Damit gilt
@@ -30,7 +30,8 @@ export const TESTINSTANZ = Object.freeze({
   tokenEintrag: 'bqt_gh',                            // = GITHUB_TOKEN_SCHLUESSEL in src/module/github.mjs
   sitzungPraefix: 'bqt',                             // sessionStorage: bqUpdateTo -> bqtUpdateTo
   name: 'Big Quest Test',                            // Name auf dem Home-Bildschirm (nicht verwechseln mit Kathies App)
-  adresse: 'https://pahlborn.github.io/bis-school-app-test/',
+  adresse: 'https://big-quest-test.github.io/',        // eigene Adresse (06.11.): eigener Passwortspeicher-Eintrag
+  repoSeite: 'big-quest-test/big-quest-test.github.io', // oeffentliches Repo der Seite (GitHub Pages, App im Wurzelverzeichnis)
   repoDaten: 'pahlborn/bis-school-app-testdaten',    // privates Repo mit den Daten der Testpersonen
   wurzelDaten: '',                                   // Ordner darin (leer = oberste Ebene)
   ordner: 'dist-test'
