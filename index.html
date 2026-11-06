@@ -126,6 +126,11 @@ button{font:inherit;color:inherit}
 @media (min-width:380px){.pf-emojis{grid-template-columns:repeat(6,minmax(44px,1fr))}}
 .pf-emojis button{min-height:44px;min-width:44px;font-size:1.4rem;border-radius:12px;border:2px solid var(--line);background:var(--surface);cursor:pointer;padding:0}
 .pf-emojis button[aria-pressed="true"]{border-color:var(--accent);background:var(--soft);box-shadow:inset 0 0 0 2px var(--accent)}
+.ms-grades button{font-family:var(--display);font-weight:600}
+.pf-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0}
+.pf-foot .btn{flex:none}
+.pf-names .field.ms-class{flex:0 0 34%}
+.school-ask{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .profile-dlg .row > .btn{flex:1 1 100px}
 .login-body{display:flex;flex-direction:column;gap:14px;background:var(--surface);border:2px solid var(--line);border-radius:22px;padding:20px;margin-top:8px}
 .login-roles{display:flex;flex-direction:column;gap:12px}
@@ -494,6 +499,7 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
     </div>
     <div id="testBar" class="note-banner test-bar" hidden></div>
     <div id="savedNote" class="note-banner" role="status" hidden>Saved ✓</div>
+    <div id="schoolAsk" class="note-banner school-ask" hidden><span>🏫 Which grade are you in?</span><button class="btn small" id="schoolAskBtn" type="button" aria-haspopup="dialog">My school</button></div>
     <div id="rankNote" class="note-banner rank-note" role="status" hidden></div>
     <button class="today" id="todayBtn" type="button"><span class="icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7.1L12 17.3 5.7 21l1.7-7.1L2 9.2l7.1-.6z"/></svg></span><span><span class="name">Practise Today</span><br><span class="sub" id="todaySub">8 questions from your focus topics</span></span></button>
     <div id="homeNote" class="note-banner" hidden></div>
@@ -523,9 +529,22 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
         <div class="pf-bday"><select id="pfDay" aria-label="Day"></select><select id="pfMonth" aria-label="Month"></select><select id="pfYear" aria-label="Year"></select></div>
       </fieldset>
       <fieldset class="pf-set"><legend>Pick your emoji</legend><div id="pfEmojis" class="pf-emojis"></div></fieldset>
-      <p class="small">This stays on this device.</p>
+      <p class="small pf-foot"><span>This stays on this device.</span><button class="btn small" id="pfSchool" type="button" aria-haspopup="dialog">🏫 My school</button></p>
       <p id="pfMessage" class="small" role="status"></p>
       <div class="row"><button class="btn" id="pfClose" type="button">Close</button><button class="btn primary" id="pfSave" type="submit">Save</button></div>
+    </form>
+  </dialog>
+
+  <!-- MY SCHOOL (task "Schule und Klasse", Peter 05.11.): grade (required), class and school (optional). Only what the
+       child or the parents enter is shown - no fixed text names a school, class or teacher. -->
+  <dialog id="schoolDlg" class="profile-dlg" aria-labelledby="schoolTitle">
+    <form id="schoolForm" method="dialog">
+      <h2 id="schoolTitle">🏫 My school</h2>
+      <fieldset class="pf-set"><legend>Which grade are you in?</legend><div id="msGrades" class="pf-emojis ms-grades"></div></fieldset>
+      <div class="pf-names"><div class="field ms-class"><label for="msClass">Class</label><input id="msClass" type="text" maxlength="12" autocomplete="off"></div><div class="field"><label for="msSchool">School</label><input id="msSchool" type="text" maxlength="60" autocomplete="off"></div></div>
+      <p class="small">Class and school are optional. This helps Big Quest pick the right tasks. Your grown-ups can see it; a teacher only if your parents allow it.</p>
+      <p id="msMessage" class="small" role="status"></p>
+      <div class="row"><button class="btn" id="msClose" type="button">Later</button><button class="btn primary" id="msSave" type="submit">Save</button></div>
     </form>
   </dialog>
 
@@ -2864,7 +2883,7 @@ function renderHome(){
   renderTestBar();
   const acc=accountsOn(); $('#adultBtn').hidden=!acc; $('#logoutBtn').hidden=!acc; // Help by role (Peter, 01.11.): a logged-in child has one help button with the child guide only.
   $('#aboutBtn').hidden=acc; $('#aboutBtn').textContent='📖 How it works & grown-ups';
-  renderProfileBtn();
+  renderProfileBtn(); renderSchoolAsk();
   const c=$('#subjects'); c.innerHTML='';
   SUBJECTS.forEach(s=>{
     const n=s.items.filter(k=>focusTopics().includes(k)).length;
@@ -3600,6 +3619,48 @@ function saveProfile(){
   if(savedTimer) clearTimeout(savedTimer); savedTimer=setTimeout(hideSaved,4000);
 }
 function hideSaved(){ if(savedTimer) clearTimeout(savedTimer); savedTimer=null; const s=$('#savedNote'); if(s) s.hidden=true; }
+/* My school (task "Schule und Klasse", Peter 05.11.): the grade (1-6, required), class and school (optional free text).
+   The child enters it ("My school"), the parents can do it in the grown-ups area. Fixed texts never name a school, class or
+   teacher - only what the family enters is shown (to the child, the parents, and a teacher or the admin with a grant).
+   Stored as mySchool {grade, cls?, school?, year}: year = the school year it was entered in ('2026/27', from 1 August), so
+   the app notices a new school year and asks the parents once; the archive of an old year is a task of the next big
+   version (AX1). Tasks exist only for grade 3 so far (CONTENT_GRADE); another grade only gives the parents a note. */
+const GRADES=[1,2,3,4,5,6], CONTENT_GRADE=3;
+const schoolYearOf = (day=dayKey()) => { const [y,m]=day.split('-').map(Number), s=m>=8?y:y-1; return s+'/'+pad((s+1)%100); };
+function mySchool(raw){ const v=raw===undefined?store.get('mySchool',null):raw; return v && typeof v==='object' && GRADES.includes(+v.grade) ? v : null; }
+/* stores grade, class and school with the current school year and writes the event (only if something changed) */
+function saveMySchool(grade, cls, school){
+  const v={grade:+grade}; if(cls) v.cls=cls; if(school) v.school=school; v.year=schoolYearOf();
+  const old=mySchool(); if(old && JSON.stringify(old)===JSON.stringify(v)) return false;
+  store.set('mySchool',v); eventHook('profile_set',{field:'mySchool', value:v}); return true;
+}
+/* "Klasse 3B · Name of the school" - only what was entered; with grade: "Jahrgangsstufe 3 · …" */
+function schoolText(v, de, withGrade){
+  if(!v) return '';
+  return [withGrade?(de?'Jahrgangsstufe ':'Grade ')+v.grade:'', v.cls?(de?'Klasse ':'Class ')+v.cls:'', v.school||''].filter(Boolean).join(' · ');
+}
+/* the child's start page asks until the grade is entered - not modal, nothing waits for it (logged-in child only, like the
+   greeting; never the admin's test child) */
+function renderSchoolAsk(){
+  const a=$('#schoolAsk'); if(!a) return;
+  a.hidden=!(accountsOn() && !adultUser && studentSession() && !isTestAccount() && !mySchool());
+}
+function openMySchool(){
+  const v=mySchool()||{}, box=$('#msGrades'); box.innerHTML='';
+  GRADES.forEach(g=>{ const b=document.createElement('button'); b.type='button'; b.textContent=String(g); b.dataset.grade=String(g); b.setAttribute('aria-pressed',String(+v.grade===g)); b.setAttribute('aria-label','Grade '+g);
+    b.addEventListener('click',()=>box.querySelectorAll('button').forEach(o=>o.setAttribute('aria-pressed',String(o===b)))); box.appendChild(b); });
+  $('#msClass').value=String(v.cls||''); $('#msSchool').value=String(v.school||''); $('#msMessage').textContent='';
+  const dlg=$('#schoolDlg'); if(dlg.showModal) dlg.showModal(); else dlg.setAttribute('open','');
+}
+function closeMySchool(){ const dlg=$('#schoolDlg'); if(dlg.close) dlg.close(); else dlg.removeAttribute('open'); }
+function saveMySchoolDlg(){
+  const pick=$('#msGrades button[aria-pressed="true"]');
+  if(!pick){ $('#msMessage').textContent='Please choose your grade.'; return; }
+  saveMySchool(pick.dataset.grade, $('#msClass').value.trim().slice(0,12), $('#msSchool').value.trim().slice(0,60));
+  closeMySchool(); renderHome();
+  const s=$('#savedNote'); s.hidden=false;
+  if(savedTimer) clearTimeout(savedTimer); savedTimer=setTimeout(hideSaved,4000);
+}
 /* Version (S7): the child sees only a small "v17" at the end of About; adults see number,
    build time and commit, and can check on request whether a newer version is published. */
 const versionLabel = () => APP_VERSION ? 'v'+APP_VERSION.n+(APP_VERSION.draft?'-entwurf':'') : 'Entwicklungsstand';
@@ -3677,9 +3738,57 @@ function bindProfileAdmin(){
     renderHome(); renderSheets(); });
   const b=$('#profileDelete'); if(!b) return;
   b.addEventListener('click',()=>{ if(!parentAccess) return; if(!confirm(PL()==='de'?'Name, Nachname, Geburtstag und Emoji auf diesem Gerät löschen? Lerndaten bleiben.':'Delete name, last name, birthday and emoji on this device? Learning data stays.')) return;
-    ['name','lastName','birthday','emoji'].forEach(k=>store.del(k));
-    eventHook('profile_set',{field:'name', value:null}); eventHook('profile_set',{field:'lastName', value:null}); eventHook('profile_set',{field:'birthday', value:null}); eventHook('profile_set',{field:'emoji', value:null});
+    ['name','lastName','birthday','emoji','mySchool'].forEach(k=>store.del(k));
+    eventHook('profile_set',{field:'name', value:null}); eventHook('profile_set',{field:'lastName', value:null}); eventHook('profile_set',{field:'birthday', value:null}); eventHook('profile_set',{field:'emoji', value:null}); eventHook('profile_set',{field:'mySchool', value:null});
     renderHome(); renderSheets(); });
+}
+/* Grown-ups area, "For <child>": school and class (task "Schule und Klasse", Peter 05.11.) - see, add or change; the grade
+   is required, class and school are optional. The values go into the fields as values, never as HTML. */
+const gradeNoteText = (v, de) => v && +v.grade!==CONTENT_GRADE ? (de?`Für Jahrgangsstufe ${v.grade} gibt es in Big Quest noch keine Aufgaben. Ihr Kind übt weiter mit den Aufgaben der Jahrgangsstufe ${CONTENT_GRADE}.`:`Big Quest has no tasks for grade ${v.grade} yet. Your child keeps practicing with the grade ${CONTENT_GRADE} tasks.`) : '';
+function mySchoolAdminHTML(){
+  const de=PL()==='de', v=mySchool(), g=v?+v.grade:0, note=gradeNoteText(v, de);
+  const opts='<option value="">—</option>'+GRADES.map(n=>`<option value="${n}"${n===g?' selected':''}>${n}</option>`).join('');
+  const line=v?`<b>${esc(schoolText(v, de, true))}</b>${v.year?` <span class="small">· ${de?'Schuljahr':'school year'} ${esc(v.year)}</span>`:''}`:(de?'Noch nicht eingetragen.':'Not entered yet.');
+  return `<h2>${de?'Schule und Klasse':'School and class'}</h2><p id="pSchoolLine">${line}</p>${note?`<p class="phow pgrade-note">${note}</p>`:''}
+    <p class="small">${de?'Trägt Ihr Kind unter „My school“ ein – oder Sie hier. Nach der Jahrgangsstufe richten sich die Aufgaben. Eine Lehrkraft sieht Klasse und Schule nur mit Ihrer Freigabe.':'Your child enters this under “My school” – or you do it here. The tasks follow the grade. A teacher sees the class and school only with your grant.'}</p>
+    <details class="pschool-edit"><summary>${de?'Schule und Klasse ändern':'Change school and class'}</summary><form id="pSchoolForm" class="login-form">
+    <div class="field"><label for="psGrade">${de?'Jahrgangsstufe':'Grade'}</label><select id="psGrade">${opts}</select></div>
+    <div class="field"><label for="psClass">${de?'Klasse (freiwillig)':'Class (optional)'}</label><input id="psClass" maxlength="12" autocomplete="off"></div>
+    <div class="field"><label for="psSchool">${de?'Schule (freiwillig)':'School (optional)'}</label><input id="psSchool" maxlength="60" autocomplete="off"></div>
+    <p><button class="btn small primary" type="submit">${de?'Speichern':'Save'}</button></p><p id="pSchoolMsg" class="small" role="status"></p></form></details>`;
+}
+function bindMySchoolAdmin(){
+  const f=$('#pSchoolForm'); if(!f) return;
+  const v=mySchool()||{}; $('#psClass').value=String(v.cls||''); $('#psSchool').value=String(v.school||'');
+  f.addEventListener('submit',e=>{ e.preventDefault(); if(!parentAccess || isTeacher() || viewerGrant()) return;
+    const de=PL()==='de', g=$('#psGrade').value;
+    if(!g){ $('#pSchoolMsg').textContent=de?'Bitte die Jahrgangsstufe wählen.':'Please choose the grade.'; return; }
+    saveMySchool(g, $('#psClass').value.trim().slice(0,12), $('#psSchool').value.trim().slice(0,60));
+    renderHome(); renderSheets(); });
+}
+/* New school year (from 1 August): the parents are asked once, on the overview, whether the child moved up a grade.
+   Either answer stores the new school year, so the question does not come back. Moving up clears the class (it
+   usually changes; the parents enter the new one under "For <child>"). Otherwise, for a grade without tasks, one calm note. */
+let schoolYearDone='';
+function schoolYearLine(){
+  if(!parentAccess || isTeacher() || viewerGrant()) return '';
+  const v=mySchool(), de=PL()==='de', now=schoolYearOf(); if(!v) return '';
+  if(v.year && v.year<now){
+    const next=Math.min(+v.grade+1, GRADES[GRADES.length-1]);
+    const yes=next>+v.grade?`<button type="button" class="btn small" data-pyear="${next}">${de?`Ja, Jahrgangsstufe ${next}`:`Yes, grade ${next}`}</button> `:'';
+    return `<p class="phow pyear-note">📅 ${de?`Neues Schuljahr ${now}:`:`New school year ${now}:`} ${next>+v.grade?(de?`Ist Ihr Kind jetzt in Jahrgangsstufe ${next}?`:`Is your child in grade ${next} now?`):(de?`Bleibt Ihr Kind in Jahrgangsstufe ${v.grade}?`:`Does your child stay in grade ${v.grade}?`)} ${yes}<button type="button" class="btn small" data-pyear="${v.grade}">${next>+v.grade?(de?`Nein, bleibt ${v.grade}`:`No, stays in ${v.grade}`):(de?'Ja':'Yes')}</button></p>`;
+  }
+  const done=schoolYearDone; schoolYearDone='';
+  const note=gradeNoteText(v, de);
+  return (done?`<p class="phow pyear-note" role="status">✓ ${esc(done)}</p>`:'')+(note?`<p class="phow pgrade-note">${note}</p>`:'');
+}
+function answerSchoolYear(grade){
+  if(!parentAccess || isTeacher() || viewerGrant()) return;
+  const v=mySchool(), de=PL()==='de'; if(!v) return;
+  const up=+grade>+v.grade;
+  saveMySchool(grade, up?'':v.cls, v.school);
+  schoolYearDone=up?(de?`Gespeichert: Jahrgangsstufe ${grade}. Die neue Klasse können Sie unter ⚙ bei „Schule und Klasse“ eintragen.`:`Saved: grade ${grade}. You can enter the new class under ⚙ in “School and class”.`):(de?`Gespeichert: Jahrgangsstufe ${grade}.`:`Saved: grade ${grade}.`);
+  renderHome(); renderSheets();
 }
 
 /* challenge offer (Practise Today, last question) */
@@ -4229,7 +4338,7 @@ function parentHomeHTML(){
   const noKid=accountsOn() && !viewedKid() ? myKidsNote() : '';
   if(noKid) return noKid;   // nothing to show: without a logged-in child the data on this device are not the child's
   // concept 5.3 (B4): notes only when something is to do - data move, backup, waiting sheet, "new here?"
-  return `${migrLine()}${backupLine()}${note}${newHereLine()}${glanceHTML()}<div class="playout"><div class="psubjects">${tiles}</div><aside class="pside"><div class="pcard" id="pSummary">${summaryHTML(all)}</div><div class="pcard">${legendHTML()}</div></aside></div>`;
+  return `${migrLine()}${backupLine()}${note}${schoolYearLine()}${newHereLine()}${glanceHTML()}<div class="playout"><div class="psubjects">${tiles}</div><aside class="pside"><div class="pcard" id="pSummary">${summaryHTML(all)}</div><div class="pcard">${legendHTML()}</div></aside></div>`;
 }
 function legendHTML(){
   // one line, dot + word (concept 5.3, B4); "provisional / confirmed" is explained in the ⓘ of the summary
@@ -4350,7 +4459,7 @@ function grantsHTML(){
   const evText={erteilt:de?'erteilt':'granted', 'geöffnet':de?'angesehen':'viewed', widerrufen:de?'beendet':'ended', abgelaufen:de?'abgelaufen':'expired'};
   const protokoll=log.length?`<details class="pgrantlog"><summary>${de?'Protokoll':'Log'} (${log.length})</summary><ul>${log.slice().reverse().slice(0,30).map(e=>`<li>${fmtDay(e.at.slice(0,10))} · ${esc(name(e.grantee))} · ${esc(evText[e.ev]||e.ev)}${e.scope?` · ${sc(e.scope)}`:''}</li>`).join('')}</ul></details>`:'';
   return `<h2>${de?'Zugriff & Freigaben':'Access & grants'}</h2>
-    <p class="phow">${de?'Eine Lehrkraft oder der Admin sieht den Lernstand, Namen und Geburtsdatum Ihres Kindes nur, wenn Sie es hier freigeben – befristet, nur lesend, jederzeit beendbar.':'A teacher or the admin sees your child’s progress, name and date of birth only if you allow it here – for a limited time, read-only, and you can end it any time.'}</p>
+    <p class="phow">${de?'Eine Lehrkraft oder der Admin sieht den Lernstand, Namen, Geburtsdatum, Klasse und Schule Ihres Kindes nur, wenn Sie es hier freigeben – befristet, nur lesend, jederzeit beendbar.':'A teacher or the admin sees your child’s progress, name, date of birth, class and school only if you allow it here – for a limited time, read-only, and you can end it any time.'}</p>
     ${list}${protokoll}
     <form id="pGrantForm" class="login-form">
       <div class="field"><label for="pGrantWho">${de?'Anmeldename der Person':'Login name of the person'}</label><input id="pGrantWho" autocomplete="off" autocapitalize="off" spellcheck="false" required></div>
@@ -4363,8 +4472,8 @@ function grantsHTML(){
 }
 function grantConsentText(who, days, scope){
   const de=PL()==='de', sc=scope.map(x=>x==='school'?(de?'Schuldaten':'school ratings'):(de?'Lernstand':'learning progress')).join(de?' und ':' and ');
-  return de?`Sie geben ${who} für ${days} Tage Einblick in: ${sc}. ${who} sieht dabei Vor- und Nachnamen und das Geburtsdatum Ihres Kindes, aber nicht Emoji und Einstellungen. ${who} kann nichts ändern. Sie können das jederzeit beenden. Was ${who} bis dahin gesehen hat, kann man nicht ungesehen machen.`
-           :`You give ${who} access for ${days} days to: ${sc}. ${who} will see your child’s first and last name and date of birth, but not the emoji or settings. ${who} cannot change anything. You can end this at any time. What ${who} has seen until then cannot be unseen.`;
+  return de?`Sie geben ${who} für ${days} Tage Einblick in: ${sc}. ${who} sieht dabei Vor- und Nachnamen und das Geburtsdatum Ihres Kindes (und Jahrgangsstufe, Klasse und Schule, falls eingetragen), aber nicht Emoji und Einstellungen. ${who} kann nichts ändern. Sie können das jederzeit beenden. Was ${who} bis dahin gesehen hat, kann man nicht ungesehen machen.`
+           :`You give ${who} access for ${days} days to: ${sc}. ${who} will see your child’s first and last name and date of birth (and the grade, class and school, if entered), but not the emoji or settings. ${who} cannot change anything. You can end this at any time. What ${who} has seen until then cannot be unseen.`;
 }
 function bindGrants(body){
   const f=$('#pGrantForm'); if(!f) return;
@@ -4405,7 +4514,7 @@ function accountsAdminHTML(){
    restored after the move to IDs (S11 P2). Which keys belong to a child is fixed in
    werkzeug/speicherstellen.json (checked by tests/stufe1-p1.test.mjs). Never in a backup: passwords,
    sessions, device keys. Recordings are included (the file stays with the family). */
-const BACKUP_KEYS={exact:['grants','grantlog','attempts','ev','due','total','badges','tried','treeStage','rankSeen','name','lastName','birthday','emoji','bdayParty','sheets','sheetNo','focusMode','focusManual','unlocked','gaps','storyCap','greetDay','mysteryDone','kidLang'], prefix:['best_','chk_','advent']};
+const BACKUP_KEYS={exact:['grants','grantlog','attempts','ev','due','total','badges','tried','treeStage','rankSeen','name','lastName','birthday','emoji','mySchool','bdayParty','sheets','sheetNo','focusMode','focusManual','unlocked','gaps','storyCap','greetDay','mysteryDone','kidLang'], prefix:['best_','chk_','advent']};
 const isBackupKey = k => BACKUP_KEYS.exact.includes(k) || BACKUP_KEYS.prefix.some(p=>k.startsWith(p));
 function childStoreKeys(){
   const pre=storeKey('x').slice(0,-1), plain=pre==='bq2_', out=[];
@@ -4531,7 +4640,7 @@ function undoRestore(){
    The sections keep their ids (settings, backup, grants, accounts) so their bindings and the open state stay as before. */
 function settingsSecs(){
   const lang=PL(), T=PT[lang], de=lang==='de', teacher=isTeacher(), kidOk=!accountsOn() || !!viewedKid(), kid=accountsOn()?viewedKid():null, s=[];
-  if(!teacher && kidOk) s.push(['settings', kid?(de?'👧 Für ':'👧 For ')+esc(kid):T.settings, storyCapHTML()+reminderHTML()+profileAdminHTML()]);
+  if(!teacher && kidOk) s.push(['settings', kid?(de?'👧 Für ':'👧 For ')+esc(kid):T.settings, storyCapHTML()+reminderHTML()+profileAdminHTML()+mySchoolAdminHTML()]);
   if(canBackup()) s.push(['backup', de?'💾 Sicherung & Daten':'💾 Backup & data', backupHTML()]);
   if(canBackup()) s.push(['grants', de?'🔐 Zugriff & Freigaben':'🔐 Access & grants', grantsHTML()]);
   if(accountsOn() && adultUser && adultUser.admin) s.push(['accounts', de?'🛠 Konten':'🛠 Accounts', accountsAdminHTML()]);
@@ -4662,6 +4771,7 @@ function renderSheets(){
   body.querySelectorAll('details.psheet').forEach(d=>d.addEventListener('toggle',()=>{ if(d.open) state.psheetOpen=d.dataset.sheetid; else if(state.psheetOpen===d.dataset.sheetid) state.psheetOpen=null; }));
   body.querySelectorAll('[data-opensheet]').forEach(b=>b.addEventListener('click',()=>{ state.psheetOpen=b.dataset.opensheet; if(!open.includes('sheets')) open.push('sheets'); renderSheets(); const d=$('#aboutBody details.psheet[open]'); if(d) d.scrollIntoView({block:'start'}); }));
   body.querySelectorAll('[data-backup]').forEach(b=>b.addEventListener('click',makeBackup));
+  body.querySelectorAll('[data-pyear]').forEach(b=>b.addEventListener('click',()=>answerSchoolYear(b.dataset.pyear)));
   const rf=$('#pRestoreFile'); if(rf) rf.addEventListener('change',()=>{ if(rf.files && rf.files[0]) readRestoreFile(rf.files[0]); });
   body.querySelectorAll('[data-restoreundo]').forEach(b=>b.addEventListener('click',undoRestore));
   body.querySelectorAll('[data-migrretry]').forEach(b=>b.addEventListener('click',()=>{ try{ localStorage.removeItem('bq2_migr'); }catch(e){} location.reload(); }));
@@ -4766,7 +4876,7 @@ function grantKidInfo(user){
   const acc=APP_ACCOUNTS.users.find(u=>u.user===user && u.role==='student'); if(!acc || acc.test) return null;
   const me=APP_ACCOUNTS.users.find(u=>u.user===adultUser.user)||{}; if(isParentOf(me, acc) || !myGrantFor(acc)) return null;
   const own=user===viewedKid(), val=(k,d)=>kidRead(acc,k,null) || (own ? store.get(k,null) : null) || d;
-  return {name:[val('name',''), val('lastName','')].map(x=>String(x||'').trim()).filter(Boolean).join(' '), bday:val('birthday',null)};
+  return {name:[val('name',''), val('lastName','')].map(x=>String(x||'').trim()).filter(Boolean).join(' '), bday:val('birthday',null), school:mySchool(val('mySchool',null))};
 }
 const grantKidName = user => (grantKidInfo(user)||{}).name || '';
 function grantKidLabel(user){
@@ -4775,7 +4885,8 @@ function grantKidLabel(user){
   const bd=same ? fmtBirthday(i.bday, PL()==='de') : '';
   return bd ? i.name+', '+bd : i.name;
 }
-const kidChipLabel = user => { const n=grantKidLabel(user); return n && n!==user ? `${n} (${user})` : user; };
+/* task "Schule und Klasse" (Peter, 05.11.): with a grant also the class and school the family entered (list and header) */
+const kidChipLabel = user => { const n=grantKidLabel(user), s=schoolText((grantKidInfo(user)||{}).school, PL()==='de', false), l=n && n!==user ? `${n} (${user})` : user; return s ? l+' · '+s : l; };
 /* Header of the grown-ups area: only what the user needs (Peter, 31.10.: no processing notes here;
    how log-out works belongs to the guide). */
 function parentHeaderHTML(){
@@ -6036,7 +6147,7 @@ function calendarText(days,time,text,now=new Date()){
 }
 function bindParentSettings(){
   const de=PL()==='de';
-  bindStoryCap(); bindProfileAdmin(); bindVersionAdmin(); addAdultInfo($('#aboutBody'));
+  bindStoryCap(); bindProfileAdmin(); bindMySchoolAdmin(); bindVersionAdmin(); addAdultInfo($('#aboutBody'));
   // "Log out" ends it (Peter, 31.10.): no timer, no log-out in the background. With accounts in the storage (test build)
   // "Close" leaves the area and the grown-up stays logged in (concept 10.4; kontoBereichVerlassen).
   ['#parentClose','#parentClose2'].forEach(sel=>{ const pc=$(sel); if(pc) pc.addEventListener('click',parentAbmelden); });
@@ -6195,7 +6306,7 @@ const GUIDE_KID=kontoTexte(`<div class="quick"><b>Quick guide</b><ol>
 <li><b>After a round:</b> choose a joke, the Mystery Question or a Pisolala story.</li>
 <li><b>Lese-Studio:</b> read aloud, record yourself and listen. Your grown-up can help you share the best recording with your class.</li>
 <li><b>Practice sheet:</b> make a sheet with a grown-up and work on paper. Then tap your sheet under “My sheets” and type in your answers – just like Practise Today.</li>
-<li><b>My profile:</b> tap your name at the top to change your name, last name, birthday or emoji.</li>
+<li><b>My profile:</b> tap your name at the top to change your name, last name, birthday or emoji. <b>My school</b> is there too: your grade, class and school.</li>
 <li><b>Your grown-ups</b> can see what you have worked on. There are no grades in Big Quest – only learning. Other grown-ups, like a teacher, can only look if your parents allow it.</li>
 <li><b>Log out</b> when someone else wants to use this iPad. Your brother or sister then taps their own name and types their own password.</li>
 </ol>`, KONTO_GUIDE.kid);
@@ -6208,7 +6319,7 @@ const GUIDE_ADULT_DE=kontoTexte(`<h3 class="pguide-h">Hilfe für Eltern</h3><ol 
 <li><b>Kind anmelden:</b> „🎒 Student“ mit dem Startcode des Kindes. Zusammen ein Merkpasswort wählen und im Passwortspeicher sichern. Geschwister am selben Gerät wählen sich unter „Who's here?“ aus.</li>
 <li><b>Nachsehen:</b> Der Lernstand liegt nur auf dem Gerät, auf dem Ihr Kind übt. Mit mehreren Kindern wählen Sie oben aus. <b>Danach abmelden</b> – dann ist dort wieder Ihr Kind angemeldet.</li>
 <li><b>Sichern:</b> einmal im Monat, auf dem Gerät des Kindes: ${GO('sicherung','💾 Sicherung & Daten')}.</li>
-<li><b>Freigaben:</b> Eine Lehrkraft oder der Admin sieht Ihr Kind nur mit Ihrer Freigabe – dann mit Vor- und Nachnamen und Geburtsdatum, aber ohne Emoji und Einstellungen: ${GO('freigaben','🔐 Zugriff & Freigaben')}.</li>
+<li><b>Freigaben:</b> Eine Lehrkraft oder der Admin sieht Ihr Kind nur mit Ihrer Freigabe – dann mit Vor- und Nachnamen, Geburtsdatum, Klasse und Schule, aber ohne Emoji und Einstellungen: ${GO('freigaben','🔐 Zugriff & Freigaben')}.</li>
 <li><b>Passwort vergessen:</b> Der Startcode gilt weiter; sonst gibt der Admin einen neuen. Nach 5 Fehlversuchen 30 Sekunden warten. Familienpasswort, Startcodes und Startlinks nicht weitergeben.</li>
 </ol>`, KONTO_GUIDE.adultDe);
 const GUIDE_ADULT_EN=kontoTexte(`<h3 class="pguide-h">Help for parents</h3><ol class="steps">
@@ -6217,13 +6328,13 @@ const GUIDE_ADULT_EN=kontoTexte(`<h3 class="pguide-h">Help for parents</h3><ol c
 <li><b>Log in your child:</b> “🎒 Student” with your child’s start code. Choose a memorable password together and save it in the password manager. Siblings on the same device pick themselves under “Who's here?”.</li>
 <li><b>Take a look:</b> the progress is only on the device where your child practices. With several children, choose at the top. <b>Log out afterwards</b> – your child is then logged in there again.</li>
 <li><b>Back up:</b> once a month, on your child’s device: ${GO_EN('sicherung','💾 Backup & data')}.</li>
-<li><b>Grants:</b> a teacher or the admin sees your child only with your grant – then with first and last name and date of birth, but without emoji and settings: ${GO_EN('freigaben','🔐 Access & grants')}.</li>
+<li><b>Grants:</b> a teacher or the admin sees your child only with your grant – then with first and last name, date of birth, class and school, but without emoji and settings: ${GO_EN('freigaben','🔐 Access & grants')}.</li>
 <li><b>Forgot your password?</b> The start code keeps working; otherwise the admin gives you a new one. After 5 wrong tries, wait 30 seconds. Keep the family password, start codes and start links private.</li>
 </ol>`, KONTO_GUIDE.adultEn);
 const GUIDE_TEACHER_DE=kontoTexte(`<h3 class="pguide-h">Hilfe für Lehrkräfte</h3><ol class="steps">
 <li><b>Anmelden:</b> „👪 Parent / Teacher“, Benutzername und Startcode vom Admin – oder Startlink bzw. QR-Code. Dann ein eigenes Passwort wählen.</li>
 <li><b>Einblick nur mit Freigabe:</b> Nennen Sie den Eltern Ihren Anmeldenamen. Sie geben Einblick, befristet und im gewählten Umfang. Schuldaten sehen Sie nur, wenn die Eltern sie freigeben.</li>
-<li><b>Ansehen:</b> auf dem Gerät, auf dem das Kind übt. Sie können nur lesen, nichts ändern. Oben stehen Vor- und Nachname des Kindes, damit Sie wissen, mit wem Sie arbeiten; heißen zwei Kinder gleich, auch das Geburtsdatum. Emoji und Einstellungen sehen Sie nicht.</li>
+<li><b>Ansehen:</b> auf dem Gerät, auf dem das Kind übt. Sie können nur lesen, nichts ändern. Oben stehen Vor- und Nachname des Kindes, damit Sie wissen, mit wem Sie arbeiten; heißen zwei Kinder gleich, auch das Geburtsdatum. Klasse und Schule stehen dabei, wenn die Familie sie eingetragen hat. Emoji und Einstellungen sehen Sie nicht.</li>
 <li><b>Protokoll:</b> Die Eltern sehen, wann Sie die Übersicht angesehen haben.</li>
 <li><b>Wofür:</b> eine private Übungs-App der Familie, nicht für den dienstlichen Einsatz in der Schule. Bitte keine Bildschirmfotos weitergeben; Fragen direkt mit den Eltern klären.</li>
 <li><b>Passwort vergessen:</b> Der Startcode gilt weiter; sonst gibt der Admin einen neuen. Nach 5 Fehlversuchen 30 Sekunden warten.</li>
@@ -6231,7 +6342,7 @@ const GUIDE_TEACHER_DE=kontoTexte(`<h3 class="pguide-h">Hilfe für Lehrkräfte</
 const GUIDE_TEACHER_EN=kontoTexte(`<h3 class="pguide-h">Help for teachers</h3><ol class="steps">
 <li><b>Log in:</b> “👪 Parent / Teacher”, username and start code from the admin – or the start link or QR code. Then choose your own password.</li>
 <li><b>Access only with a grant:</b> tell the parents your login name. They give you access, for a limited time and to the extent they choose. You see school ratings only if the parents allow it.</li>
-<li><b>Look:</b> on the device where the child practices. You can only look; nothing can be changed. The child’s first and last name are shown at the top, so you know whom you are working with; if two children have the same name, the date of birth too. You do not see the emoji or settings.</li>
+<li><b>Look:</b> on the device where the child practices. You can only look; nothing can be changed. The child’s first and last name are shown at the top, so you know whom you are working with; if two children have the same name, the date of birth too. The class and school are shown if the family entered them. You do not see the emoji or settings.</li>
 <li><b>Log:</b> the parents see when you looked at the overview.</li>
 <li><b>Purpose:</b> the family’s private practice app, not for official use at school. Please do not pass on screenshots; talk to the parents directly.</li>
 <li><b>Forgot your password?</b> The start code keeps working; otherwise the admin gives you a new one. After 5 wrong tries, wait 30 seconds.</li>
@@ -6239,13 +6350,13 @@ const GUIDE_TEACHER_EN=kontoTexte(`<h3 class="pguide-h">Help for teachers</h3><o
 const GUIDE_ADMIN_DE=kontoTexte(`<h3 class="pguide-h">Für den Admin</h3><ol class="steps">
 <li><b>Konten und Startcodes</b> pflegen Sie mit dem Konten-Werkzeug auf Ihrem Rechner. Neue Startcodes als Startlink oder QR-Code nur persönlich übergeben.</li>
 <li><b>Übersicht der Konten:</b> ${GO('konten','🛠 Konten')} – nur Verwaltungsangaben, keine Inhalte.</li>
-<li><b>Lernstand eines Kindes:</b> nur mit Freigabe der Eltern, wie bei einer Lehrkraft – mit Vor- und Nachnamen und Geburtsdatum, ohne Emoji und Einstellungen. Ihr eigenes Kind sehen Sie über Ihr Elternkonto.</li>
+<li><b>Lernstand eines Kindes:</b> nur mit Freigabe der Eltern, wie bei einer Lehrkraft – mit Vor- und Nachnamen, Geburtsdatum, Klasse und Schule, ohne Emoji und Einstellungen. Ihr eigenes Kind sehen Sie über Ihr Elternkonto.</li>
 <li><b>Testkinder:</b> oben in der Kinderauswahl unter „🧪 Testkinder“; „▶ Als Testkind spielen“ öffnet die Kinderseite mit Testdaten.</li>
 </ol>`, KONTO_GUIDE.adminDe);
 const GUIDE_ADMIN_EN=kontoTexte(`<h3 class="pguide-h">For the admin</h3><ol class="steps">
 <li><b>Accounts and start codes</b> are maintained with the account tool on your computer. Hand over new start codes as a start link or QR code in person only.</li>
 <li><b>Account overview:</b> ${GO_EN('konten','🛠 Accounts')} – administrative details only, no contents.</li>
-<li><b>A child’s progress:</b> only with a grant from the parents, like a teacher – with first and last name and date of birth, without emoji and settings. You see your own child through your parent account.</li>
+<li><b>A child’s progress:</b> only with a grant from the parents, like a teacher – with first and last name, date of birth, class and school, without emoji and settings. You see your own child through your parent account.</li>
 <li><b>Test children:</b> at the top in the child list under “🧪 Test children”; “▶ Play as test child” opens the child’s pages with test data.</li>
 </ol>`, KONTO_GUIDE.adminEn);
 /* the grown-ups guide that fits the person who is logged in */
@@ -6637,6 +6748,10 @@ $('#profileBtn').addEventListener('click',openProfile);
 $('#rank').addEventListener('click',openRankPath);
 $('#rankClose').addEventListener('click',()=>{ const d=$('#rankDlg'); if(d.close) d.close(); else d.removeAttribute('open'); });
 $('#pfClose').addEventListener('click',closeProfile);
+$('#pfSchool').addEventListener('click',openMySchool);   // on top of "My profile"; what is typed there stays
+$('#schoolAskBtn').addEventListener('click',openMySchool);
+$('#msClose').addEventListener('click',closeMySchool);
+$('#schoolForm').addEventListener('submit',e=>{ e.preventDefault(); saveMySchoolDlg(); });
 $('#profileForm').addEventListener('submit',e=>{ e.preventDefault(); saveProfile(); });
 document.addEventListener('pointerdown',e=>{ if(savedTimer && !e.target.closest('#profileDlg')) hideSaved(); });
 $('#soundBtn').addEventListener('click',()=>{ const muted=!isMuted(); store.set('muted',muted); if((eventWho()||{}).role==='child') eventHook('profile_set',{field:'muted', value:muted}); else eventHook('person_set',{field:'muted', value:muted});   // the child's own switch (3b-1b-4); a grown-up's: his person area (3b-1c)

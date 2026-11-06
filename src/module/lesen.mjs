@@ -23,7 +23,7 @@ import { effectiveTime } from './ereignisse.mjs';
 /* the child's values that come from its log (werkzeug/speicherstellen.json: bereich kind/eltern, abgleich protokoll,
    abgeleitet or letzte-gilt; tests/module/lesen.test.mjs compares both lists). Not here: treeStage (a device note:
    "the tree grew" is shown once per device - the tree itself follows the practice days), events. */
-export const LESEN_KIND = Object.freeze(['attempts', 'ev', 'due', 'total', 'badges', 'tried', 'rankSeen', 'name', 'lastName', 'birthday', 'emoji',
+export const LESEN_KIND = Object.freeze(['attempts', 'ev', 'due', 'total', 'badges', 'tried', 'rankSeen', 'name', 'lastName', 'birthday', 'mySchool', 'emoji',
   'bdayParty', 'sheets', 'sheetNo', 'focusMode', 'focusManual', 'unlocked', 'storyCap', 'greetDay', 'mysteryDone', 'storyRead',
   'jokeSeen', 'kidLang', 'gaps', 'grants', 'grantlog', 'lastBackup']);
 export const LESEN_KIND_PRAEFIX = Object.freeze(['best_', 'chk_', 'advent']);

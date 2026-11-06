@@ -147,7 +147,7 @@ const AUSDRUCK = {
   "'best_'+k": [['best_'], () => true],
   "'chk_'+k": [['chk_'], () => true],
   'key': [['advent'], (umgebung) => umgebung.includes("const key='advent'")],
-  'k': [['name', 'lastName', 'birthday', 'emoji'], (umgebung) => umgebung.includes("['name','lastName','birthday','emoji'].forEach(k=>store.del(k))")],
+  'k': [['name', 'lastName', 'birthday', 'emoji', 'mySchool'], (umgebung) => umgebung.includes("['name','lastName','birthday','emoji','mySchool'].forEach(k=>store.del(k))")],
   'langKey()': [['kidLang', 'parentLang'], (umgebung) => umgebung.includes('store.set(langKey()')],
   'pwKey(u)': [['pw_'], () => true],
 };

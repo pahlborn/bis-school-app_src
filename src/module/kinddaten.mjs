@@ -51,7 +51,7 @@ export const KINDDATEN_FORMAT = 'bq-kinddaten';
    not in the export), person (a grown-up's own settings - not the child's data). praefix: the key is a family of keys. */
 export const KINDDATEN_STELLEN = Object.freeze([
   ['attempts', 'kind'], ['ev', 'kind'], ['due', 'kind'], ['best_', 'kind', 1], ['total', 'kind'], ['badges', 'kind'], ['tried', 'kind'],
-  ['treeStage', 'kind'], ['rankSeen', 'kind'], ['name', 'kind'], ['lastName', 'kind'], ['birthday', 'kind'], ['emoji', 'kind'],
+  ['treeStage', 'kind'], ['rankSeen', 'kind'], ['name', 'kind'], ['lastName', 'kind'], ['birthday', 'kind'], ['mySchool', 'kind'], ['emoji', 'kind'],
   ['bdayParty', 'kind'], ['sheets', 'kind'], ['sheetNo', 'kind'], ['focusMode', 'kind'], ['focusManual', 'kind'], ['unlocked', 'kind'],
   ['storyCap', 'kind'], ['greetDay', 'kind'], ['mysteryDone', 'kind'], ['storyRead', 'kind'], ['jokeSeen', 'kind'], ['chk_', 'kind', 1],
   ['advent', 'kind', 1], ['kidLang', 'kind'], ['muted', 'kind'], ['events', 'kind'],
@@ -234,7 +234,7 @@ export async function kindDatenExport({ ablage, konto, kind, now, heute, sprache
   const zeilen = (keys) => keys.filter((key) => Object.prototype.hasOwnProperty.call(d, key)).map((key) => ['<code>' + kdtEsc(key) + '</code>', kdtWert(d[key], T)]);
   const teile = [];
   const abschnitt = (titel, inhalt) => teile.push('<section><h2>' + kdtEsc(titel) + '</h2>' + inhalt + '</section>');
-  abschnitt(T.profil, kdtTabelle([T.feld, T.wert], zeilen(['name', 'lastName', 'birthday', 'emoji', 'kidLang', 'muted', 'bdayParty'])));
+  abschnitt(T.profil, kdtTabelle([T.feld, T.wert], zeilen(['name', 'lastName', 'birthday', 'mySchool', 'emoji', 'kidLang', 'muted', 'bdayParty'])));
   const antworten = log.filter((e) => e.type === 'answer').length;
   abschnitt(T.lernstand, kdtTabelle([T.feld, T.wert], [
     [kdtEsc(T.sterne), kdtWert(d.total, T)], [kdtEsc(T.abzeichen), kdtWert(d.badges ? Object.keys(d.badges).length : 0, T)],
