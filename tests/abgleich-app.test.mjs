@@ -27,6 +27,7 @@ import { keyFingerprint } from '../src/module/krypto.mjs';
 import { appLesen } from '../werkzeug/module.mjs';
 import { kontenEinsetzen, kennungErzeugen } from '../werkzeug/konten.mjs';
 import { konto } from './konten-hilfen.mjs';
+import { neuFormular, registrieren } from './erstanmeldung-hilfen.mjs';
 
 const RUNDEN = 1000;
 const REPO = 'pahlborn/bis-school-app-testdaten';
@@ -126,7 +127,7 @@ function geraet(t, W, { name, hash = '', ua = UA.ipad, speicher = {}, idb = idbN
   t.diagnostic(name + ': BQ_SEED=' + S.seed);
   G.S = S;
   W.uhr.ruhe(() => S.holen('kontoLauf'));
-  const finde = (sel) => S.lauf(() => S.$('#loginBody').querySelector(sel) || S.$('#aboutBody').querySelector(sel));
+  const finde = (sel) => S.lauf(() => S.$('#loginBody').querySelector(sel) || neuFormular(G, sel) || S.$('#aboutBody').querySelector(sel));
   G.im = finde;
   G.da = (sel) => !!finde(sel);
   G.text = () => S.lauf(() => S.$('#loginBody').textContent);
@@ -173,8 +174,7 @@ async function passwortWaehlen(G) {
   return pw;
 }
 async function erwachsenStart(G) {
-  G.klick('#roleAdult'); G.absenden('#loginGo');
-  const pw = await passwortWaehlen(G);
+  const pw = await registrieren(G);   // Einladung: ohne Rollenwahl zum Passwort
   await G.wartenAuf('#recCode');
   G.klick('#recGo'); await G.wartenAuf('#welcomeGo'); G.klick('#welcomeGo');
   await G.sync();
@@ -204,8 +204,7 @@ async function familie(t, W, { takt } = {}) {
   await P.wartenAuf('#kQr');
   const code = P.im('#kCode').textContent;
   const K = geraet(t, W, { name: 'Kathies iPad', takt, hash: link(anmStartlink('http://127.0.0.1/', { anmeldename: 'kathie', code, fingerabdruck: P.fp })) });
-  K.klick('#roleStudent'); K.absenden('#loginGo');
-  K.pw = await passwortWaehlen(K);
+  K.pw = await registrieren(K);
   await K.wartenAuf('#kidWait');
   // (die Uhr laeuft zwischen den Schritten etwas weiter - wie in echt; sonst laegen Kathies erste Eintraege auf derselben
   // Millisekunde wie die Aufnahme und vor der Anmeldung ihres Geraets)
@@ -428,7 +427,7 @@ test('5 Erwachsene sehen den Abgleich: letzter, kein Netz, Zugang, Limit (warten
   P.S.ablage.set('bqt_gh', FALSCH); P.S.lauf(() => P.S.holen('kontoZug=null'));
   await W.uhr.vor(30000);
   const z = P.zeile();
-  assert.match(z, /🔑 Der Zugang zum Speicher ist abgelaufen oder ungültig\.\s*Neuen Zugangsschlüssel eintragen/, z);
+  assert.match(z, /🔑 Der Zugangscode dieses Geräts passt nicht mehr \(abgelaufen oder ungültig\)\.\s*Gerät neu verbinden/, z);
   for (const x of [FALSCH, TOKEN, 'github_pat', '401', '403', 'zugang', 'Bearer']) assert.equal(P.S.lauf(() => P.S.$('#aboutBody').innerHTML).includes(x), false, 'nicht in der Anzeige: ' + x);
   P.klick('#kTokenNeu');
   await P.wartenAuf('#kTokenForm');
@@ -532,7 +531,7 @@ test('6 Schluessel woanders erneuert -> Hinweis; entferntes Geraet -> Hinweis, n
   await P2.sync(); await P.sync();
   assert.ok(P.log(K.kennung).some((e) => e.payload && e.payload.value === 'Vom-Neuen-iPhone'), 'nach der Neuanmeldung zaehlt es');
   P.einstellungen('geraete');
-  assert.match(P.abschnitt('devices').split('Geräte von')[0], /iPhone · Safari[\s\S]*entfernt am[\s\S]*iPhone · Safari/, 'altes iPhone entfernt, neues in der Liste');
+  assert.match(P.abschnitt('devices').split('Geräte von')[0], /iPhone \(Safari\)[\s\S]*entfernt am[\s\S]*iPhone \(Safari\)/, 'altes iPhone entfernt, neues in der Liste');
 
   // Kind: neues Passwort von Peter -> das alte iPad zeigt nichts davon (die Eltern sehen es)
   P.einstellungen('familie'); P.klick(`[data-kneu="${K.kennung}"]`); await P.wartenAuf('#kQr');

@@ -314,9 +314,12 @@ test('Browser: die gebaute Testinstanz startet mit der Anmeldung, Zugang einmal 
     assert.equal(await page.locator('#home').isVisible(), false, 'ohne Anmeldung keine Startseite');
     // Zugang zum Test-Repo, einmal je Geraet; vorher fragt die App GitHub nicht
     assert.deepEqual(github, []);
-    await page.locator('#kontoToken').fill(TOKEN);
-    await page.locator('#kontoTokenGo').click();
-    await page.waitForSelector('#kontoTokenForm', { state: 'detached' });
+    // (Aufgabe "Erstanmeldung per QR-Code": zuerst nur "Geraet verbinden" - hier den Zugangscode einfuegen; eine Anfrage, ✅)
+    assert.equal(await page.locator('#roleStudent').count(), 0, 'zuerst nur verbinden');
+    await page.locator('#verbLink').fill(TOKEN);
+    await page.locator('#verbGo').click();
+    await page.waitForSelector('#loginMeldung', { timeout: 30000 });
+    assert.match(await page.locator('#loginMeldung').textContent(), /^✅ (Device connected|Gerät verbunden)\.$/);   // Sprache des Geraets
     // Kind: Name + Startcode -> eigenes Passwort -> Willkommen -> Startseite
     await page.locator('#roleStudent').click();
     await page.locator('#loginUser').fill('mia.b');

@@ -267,6 +267,8 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 .rec-code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:1.3rem;letter-spacing:.06em;background:var(--soft);border-radius:12px;padding:10px 12px;text-align:center;user-select:all;margin:6px 0}
 /* family, devices, start QR code (test build with accounts; task "Einladungen - Oberflaeche") */
 .kqr svg{display:block;width:min(280px,72vw);height:auto;margin:10px auto;border-radius:8px}.kqr-status{font-weight:700}
+/* first login with an invitation, "Connect this device" (task "Erstanmeldung per QR-Code", 06.11.) */
+.kverb{font-weight:700}.pw-regeln.ok{color:#1b7a3a}.verb-kamera video{display:block;width:100%;max-width:420px;border-radius:12px;background:#000;margin:8px auto}
 .klist{list-style:none;padding:0;margin:6px 0}.klist li{padding:6px 0;border-bottom:1px solid var(--soft)}.kmeld{margin:6px 0;padding:8px 10px;border-radius:10px;background:var(--soft)}.kmeld-warn{background:#fde8e8}
 .today{display:grid;grid-template-columns:48px 1fr;gap:12px;align-items:center;text-align:left;width:100%;padding:14px 16px;border-radius:20px;border:0;background:var(--w-mix);color:#172033;cursor:pointer;box-shadow:var(--shadow);font:inherit}
 .today:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.12)}
@@ -591,6 +593,23 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
       <h1>Grade 3 – Big Quest</h1>
     </div>
     <div id="loginBody" class="login-body"></div>
+    <!-- First login with an invitation (task "Erstanmeldung per QR-Code", 06.11.; test build with accounts only): the
+         password field is marked "new-password" HERE in the page, not set by the script - only then does the device
+         suggest a strong password (tested on the iPhone, Probe "probe-passwort"). The app removes this block at the
+         start unless an invitation is being opened, so only one form is ever in the page. Texts are set by the app. -->
+    <div id="kontoNeu" class="login-body" hidden>
+      <p id="kontoNeuOk" class="kverb" role="status" hidden></p>
+      <h2 id="kontoNeuTitel"></h2>
+      <p id="kontoNeuInfo" class="small"></p>
+      <form id="kontoNeuForm" class="login-form" action="#" method="post">
+        <div class="field"><label for="kontoNeuName" id="kontoNeuNameL">User name</label><input id="kontoNeuName" name="username" type="text" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" readonly></div>
+        <div class="field"><label for="kontoNeuPw" id="kontoNeuPwL">Password</label><input id="kontoNeuPw" name="new-password" type="password" autocomplete="new-password" passwordrules="minlength: 12; required: lower; required: upper; required: digit;" required></div>
+        <p id="kontoNeuRegeln" class="small pw-regeln"></p>
+        <p class="pw-suggest"><span id="kontoNeuIdeeL">Idea</span>: <b id="kontoNeuSugg"></b> <button type="button" class="btn small" id="kontoNeuUse">Use it</button></p>
+        <button class="btn primary" id="kontoNeuGo" type="submit" disabled>Log in</button>
+        <p id="kontoNeuMsg" class="small" role="status"></p>
+      </form>
+    </div>
   </section>
 
   <!-- ABOUT & GROWN-UPS -->
@@ -683,6 +702,14 @@ const KONTO_SPEICHER=/*BQ_SPEICHER*/null;
 const APP_ACCOUNTS=normAccounts(/*BQ_KONTEN*/null) || kontoKontenStart();
 /* login with accounts in the storage: test build (module konto), a storage, no konten.json (kontoKontenStart) */
 const KONTO_UI=!!(APP_ACCOUNTS && APP_ACCOUNTS.konto);
+/* task "Erstanmeldung per QR-Code" (06.11.): the registration form in the page (#kontoNeu) stays only while an invitation
+   with a start code is being opened - otherwise it leaves the page right away, so the device never sees two forms */
+let kontoNeuTakt=null;
+/* the block, while it is in the page (null once it left) */
+function kontoNeuDa(){ const w=document.getElementById('kontoNeu'); return w && w.parentNode ? w : null; }
+function kontoNeuWeg(){ const w=kontoNeuDa(); if(w) w.remove(); if(kontoNeuTakt){ clearInterval(kontoNeuTakt); kontoNeuTakt=null; } }
+const kontoNeuLink = KONTO_UI && typeof anmEinladungLesen==='function' ? anmEinladungLesen(location.hash||'') : null;
+if(!(kontoNeuLink && kontoNeuLink.start)) kontoNeuWeg();
 /* task "Abgleich in der App" (KONTO_UI only): the state of the sync on this device, in memory - letzter: end of the last
    sync that reached the storage; versuch: start of the last one; fehler: offline | zugang | limit | null; wartenBis: the
    storage's hourly limit (wait instead of asking again); neu: own entries since the last sync; timer: the next planned one */
@@ -4660,6 +4687,8 @@ function aboutAppHTML(){
   return `<div class="pabout">${main.replace(/<h2>[^<]*<\/h2>/,'')}</div><div class="about-menu">`
     +(privacy?sec(privacy.title, privacy.body, 'privacy'):'')
     +(KONTO_UI?sec(de?'Daten exportieren und löschen':'Export and delete data', kontoLoeschenInfoHTML(de), 'loeschen'):'')
+    // third-party code in the test build (task "Erstanmeldung per QR-Code"): the QR reader of "Connect this device"
+    +(KONTO_UI && typeof ANM_QR_LESER!=='undefined'?sec(de?'Fremde Programmteile':'Third-party components', `<p>${de?'Den QR-Code beim Verbinden eines Geräts liest':'The QR code when connecting a device is read by'} <b>${esc(ANM_QR_LESER.name)} ${esc(ANM_QR_LESER.version)}</b> (Cosmo Wolfe ${de?'und Mitwirkende':'and contributors'}) – ${esc(ANM_QR_LESER.lizenz)}. ${de?'Unverändert in die App eingebettet; das Kamerabild bleibt auf dem Gerät, kein fremder Server.':'Embedded in the app unchanged; the camera picture stays on the device, no third-party server.'} <a href="${esc(ANM_QR_LESER.url)}" target="_blank" rel="noopener">${esc(ANM_QR_LESER.url)}</a> · <a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener">Apache License 2.0</a></p>`, 'lizenzen'):'')
     +sec(de?'Impressum':'Legal notice', `<p>${de?'Wird ergänzt.':'To be added.'}</p>`, 'imprint')
     +`</div>`+versionAdminHTML();
 }
@@ -4961,8 +4990,8 @@ function showLogin(role){ $('#loginBody').innerHTML=''; renderLogin(role); show(
 /* Start link (S11 Stufe 1): ".../#start=<name>.<code>" fills in the login once; the code is removed from
    the address right away so it does not stay in the browser history. */
 let startPrefill=null;
-function startFromHash(){
-  if(KONTO_UI) return kontoStartAusHash();
+function startFromHash(beimStart){
+  if(KONTO_UI) return kontoStartAusHash(beimStart);
   const m=/^#start=([^.]+)\.([A-Za-z0-9-]+)$/.exec(location.hash||'');
   if(!m || !accountsOn()) return false;
   try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){}
@@ -5038,9 +5067,10 @@ const LOGIN_HELP=`<details class="login-help"><summary>❓ Help</summary>
 <p>After logging in, students tap “❓ Help”. Grown-ups find their guide in the grown-ups area.</p></details>`;
 /* the same help with accounts in the storage (test build, KONTO_UI): one password for all devices, recovery code */
 const LOGIN_HELP_KONTO=`<details class="login-help"><summary>❓ Help</summary>
-<p><b>Students:</b> Tap 🎒 Student. Tap your name under “Who's here?” or type it, then enter your password. The first time, open the link or QR code from your grown-up (or type your user name and the start code). Then choose a strong password: three words and a number work well. Let the iPad remember it. On another iPad, use the same user name and password.</p>
-<p><b>Parents and teachers:</b> Tap 👪 Parent / Teacher. The first time, open your start link or QR code (or type your user name and start code). Then choose your own password: at least 12 characters, or take the app's suggestion of three words and a number. Save it in your password manager. Next you get a recovery code: save it too – in your password manager and as a file. On another device, use the same user name and password.</p>
-<p><b>Forgot your password?</b> Students: ask your parents for a new start code. Grown-ups: tap “Forgot your password?” and enter your recovery code. A start code works only once and for 7 days. After 5 wrong tries, wait 30 seconds.</p>
+<p><b>The first time:</b> open the link of your invitation or scan its QR code. The device connects by itself (“✅ Device connected”), your user name is already there, and you choose your own password – your device can suggest a strong one and remember it. On a device without the link, tap “📷 Scan QR code” or paste the link. The access code connects a device – once per device, for everyone who logs in there. It is not anyone’s password.</p>
+<p><b>Students:</b> Tap 🎒 Student. Tap your name under “Who's here?” or type it, then enter your password. Let the iPad remember it. On another iPad, use the same user name and password.</p>
+<p><b>Parents and teachers:</b> Tap 👪 Parent / Teacher, then your user name and password. After your first password you get a recovery code: save it – in your password manager and as a file. On another device, use the same user name and password.</p>
+<p><b>Forgot your password?</b> Students: ask your parents for a new start code. Grown-ups: tap “Forgot your password?” and enter your recovery code. An invitation works once and for 7 days; the same link connects another device later. After 5 wrong tries, wait 30 seconds.</p>
 <p>After logging in, students tap “❓ Help”. Grown-ups find their guide in the grown-ups area.</p></details>`;
 /* "Who's here?" (S11 Stufe 1, P3): on a device where children have logged in before, they pick themselves
    instead of typing the name; the password is still asked (the password manager fills it in). */
@@ -5050,18 +5080,23 @@ function whosHereHTML(){
   const val=(id,k)=>{ if(!ID_STORAGE) return null; if(EV_LESEN) return kidRead({id},k,null); const lk='bq2_'+id+'__'+k; try{ return JSON.parse(localStorage.getItem(lk)||'null'); }catch(e){ return null; } };
   return `<div class="whos-here"><p class="greet-q">Who's here?</p><div class="row">${kids.map(u=>`<button type="button" class="btn kid-pick" data-kidpick="${esc(u.user)}">${esc(val(u.id,'emoji')||'🙂')} ${esc(val(u.id,'name')||u.user)}</button>`).join('')}</div><p class="small">Someone else? Type the user name below.</p></div>`;
 }
-function renderLogin(role){
-  const b=$('#loginBody'), T=loginTxt(role==='adult');
+/* opts (accounts in the storage): meldung = a line above (e.g. "✅ Device connected – please log in"), name = the login
+   name filled in (invitation link used again) */
+function renderLogin(role, opts){
+  const b=$('#loginBody'), T=loginTxt(role==='adult'), o=opts||{};
+  kontoNeuWeg(); if(KONTO_UI) kameraStopp();
+  const zeile=o.meldung?`<p class="kverb" id="loginMeldung" role="status">${esc(o.meldung)}</p>`:'';
   if(!role){
-    // the version in short form on the login page (Peter, 01.11.)
-    b.innerHTML=`<h2>${T.who}</h2><div class="login-roles"><button class="btn primary" id="roleStudent" type="button">${T.student}</button><button class="btn" id="roleAdult" type="button">${T.adult}</button></div>${KONTO_UI?kontoTokenHTML()+LOGIN_HELP_KONTO:LOGIN_HELP}<p class="small app-version" id="loginVersion">${esc(versionLabel())}</p>`;
+    // task "Erstanmeldung per QR-Code" (B2): a device without access code first only connects - then "Who is logging in?"
+    if(KONTO_UI && anmTokenNoetig(KONTO_SPEICHER, localStorage)) return renderVerbinden(o.meldung);
+    // the version in short form on the login page (Peter, 01.11.); both roles look the same (B2: nothing preselected)
+    b.innerHTML=`${zeile}<h2>${T.who}</h2><div class="login-roles"><button class="btn${KONTO_UI?'':' primary'}" id="roleStudent" type="button">${T.student}</button><button class="btn" id="roleAdult" type="button">${T.adult}</button></div>${KONTO_UI?LOGIN_HELP_KONTO:LOGIN_HELP}<p class="small app-version" id="loginVersion">${esc(versionLabel())}</p>`;
     $('#roleStudent').addEventListener('click',()=>renderLogin('student'));
     // accounts in the storage: a grown-up who only closed the grown-ups area is still logged in (concept 10.4)
     $('#roleAdult').addEventListener('click',()=>{ if(KONTO_UI && adultResume()) return; renderLogin('adult'); });
-    if(KONTO_UI) kontoTokenVerbinden();
     return;
   }
-  b.innerHTML=`<h2>${role==='student'?T.student:T.adult}</h2>${role==='student'?whosHereHTML():''}<form id="loginForm" class="login-form"><div class="field"><label for="loginUser">${T.user}</label><input id="loginUser" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><div class="field"><label for="loginPw">${T.pw}</label><input id="loginPw" type="password" autocomplete="current-password" required></div><button class="btn primary" id="loginGo" type="submit">${T.go}</button><p id="loginMsg" class="small" role="status"></p></form>${KONTO_UI?`<button class="btn small" id="loginForgot" type="button">${T.forgot}</button>`:''}<button class="btn small" id="loginBack" type="button">${T.back}</button>${KONTO_UI?LOGIN_HELP_KONTO:LOGIN_HELP}`;
+  b.innerHTML=`${zeile}<h2>${role==='student'?T.student:T.adult}</h2>${role==='student'?whosHereHTML():''}<form id="loginForm" class="login-form"><div class="field"><label for="loginUser">${T.user}</label><input id="loginUser" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><div class="field"><label for="loginPw">${T.pw}</label><input id="loginPw" type="password" autocomplete="current-password" required></div><button class="btn primary" id="loginGo" type="submit">${T.go}</button><p id="loginMsg" class="small" role="status"></p></form>${KONTO_UI?`<button class="btn small" id="loginForgot" type="button">${T.forgot}</button>`:''}<button class="btn small" id="loginBack" type="button">${T.back}</button>${KONTO_UI?LOGIN_HELP_KONTO:LOGIN_HELP}`;
   b.querySelectorAll('[data-kidpick]').forEach(x=>x.addEventListener('click',()=>{ $('#loginUser').value=x.dataset.kidpick; $('#loginPw').value=''; $('#loginPw').focus(); }));
   $('#loginBack').addEventListener('click',()=>{ if(studentSession()){ $('#loginBody').innerHTML=''; renderHome(); show('home'); } else renderLogin(); });
   if(KONTO_UI) $('#loginForgot').addEventListener('click',()=>{ if(role==='student') $('#loginMsg').textContent=T.forgotKid; else renderKontoVergessen(); });
@@ -5085,7 +5120,8 @@ function renderLogin(role){
       loginDone(u);
     }catch(err){ msg.textContent='Login is not possible in this browser.'; btn.disabled=false; }
   });
-  if(startPrefill){ $('#loginUser').value=startPrefill.name; $('#loginPw').value=startPrefill.code; startPrefill=null; $('#loginGo').focus(); }
+  if(o.name){ $('#loginUser').value=o.name; $('#loginPw').focus(); }
+  else if(startPrefill){ $('#loginUser').value=startPrefill.name; $('#loginPw').value=startPrefill.code; startPrefill=null; $('#loginGo').focus(); }
   else $('#loginUser').focus();
 }
 function renderSetPassword(u, renew){
@@ -5146,23 +5182,214 @@ function kontoZugang(){
   if(!kontoZug) kontoZug=anmZugang(KONTO_SPEICHER, {ablage:localStorage, geraet:kontoGeraet(), fetch:(a,o)=>fetch(a,o)});
   return kontoZug;
 }
-/* test instance: the access key of the test storage, once per device (concept 12; shared login page, US English) */
-function kontoTokenHTML(){
-  if(!anmTokenNoetig(KONTO_SPEICHER, localStorage)) return '';
-  return `<details class="login-help" id="kontoTokenBox" open><summary>🔑 Storage access</summary><p>This app keeps its data in a private storage. Enter the access key from the admin once on this device.</p><form id="kontoTokenForm" class="login-form"><div class="field"><label for="kontoToken">Access key</label><input id="kontoToken" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><button class="btn" id="kontoTokenGo" type="submit">Save</button><p id="kontoTokenMsg" class="small" role="status"></p></form></details>`;
+/* ---------- task "Erstanmeldung per QR-Code" (06.11.; Vorgabe Peter, findings B1-B4) ----------
+   The invitation (QR code, link, e-mail) carries the access code of the device and the start link:
+   "#zugang=<access code>&start=<name>/<code>[/<fingerprint>]". Opening it: both leave the address at once; the access
+   code is checked with the storage (one request) and replaces an older one only when it works - "✅ Device connected"
+   or "❌" with the reason; then the start code is looked at (it stays valid): a new account -> the password form in the
+   page (#kontoNeu: no role choice, the login name is fixed, the device suggests a strong password, "Log in" only once
+   the rules are met); a used code of an existing account -> "Device connected – please log in" (the link connects a
+   device again: Safari forgets a page after about 7 days). Without an access code (Home Screen app: own storage) the
+   app first shows only "Connect this device": scan the QR code with the camera IN the app, or paste the link or the
+   code. Terms (B3): "access code" connects a device, "password" belongs to a person. Texts in the device's language
+   until a person is known (German or US English). */
+const kontoVerbDe = () => /^de\b/i.test(String((navigator && navigator.language) || ''));
+function kontoVerbTxt(){
+  return kontoVerbDe() ? {
+    titel:'📲 Gerät verbinden', info:'Einmal je Gerät – gilt für alle, die sich hier anmelden. Den Zugangscode bringt die Einladung mit (QR-Code oder Link). Er ist nicht das Passwort einer Person.',
+    scan:'📷 QR-Code scannen', stop:'Abbrechen', kamAuf:'Kamera wird geöffnet …', scanHint:'Halten Sie den QR-Code der Einladung ins Bild. Das Bild bleibt auf dem Gerät.',
+    noCam:'❌ Die Kamera ist hier nicht verfügbar oder nicht erlaubt. Bitte den Link einfügen.', notOurs:'❌ Das ist kein QR-Code von Big Quest.',
+    paste:'Link einfügen (ganzer Link oder nur der Zugangscode)', go:'Verbinden', pasteBad:'❌ Das ist kein Link von Big Quest und kein Zugangscode.',
+    fremd:'❌ Dieser Link gehört zu einer anderen Fassung von Big Quest.', moment:'Einen Moment …',
+    ok:'✅ Gerät verbunden.', okAnmelden:'✅ Gerät verbunden – bitte anmelden.', benutzt:'Diese Einladung ist schon eingelöst – bitte anmelden.',
+    falsch:'❌ Der Zugangscode passt nicht oder ist abgelaufen. Bitte eine neue Einladung geben lassen.', offline:'❌ Kein Netz – bitte später noch einmal versuchen.',
+    limit:'❌ Gerade zu viele Anfragen – bitte in einer Stunde noch einmal versuchen.', fehlt:'Dieses Gerät ist noch nicht verbunden. Bitte zuerst verbinden.'
+  } : {
+    titel:'📲 Connect this device', info:'Once per device – it works for everyone who logs in here. The access code comes with the invitation (QR code or link). It is not anyone’s password.',
+    scan:'📷 Scan QR code', stop:'Cancel', kamAuf:'Opening the camera …', scanHint:'Hold the QR code of the invitation in front of the camera. The picture stays on this device.',
+    noCam:'❌ The camera is not available or not allowed here. Please paste the link.', notOurs:'❌ That is not a Big Quest QR code.',
+    paste:'Paste the link (the whole link or just the access code)', go:'Connect', pasteBad:'❌ That is not a Big Quest link or access code.',
+    fremd:'❌ This link belongs to another version of Big Quest.', moment:'One moment …',
+    ok:'✅ Device connected.', okAnmelden:'✅ Device connected – please log in.', benutzt:'This invitation has been used already – please log in.',
+    falsch:'❌ The access code does not work or has expired. Please ask for a new invitation.', offline:'❌ No connection – please try again later.',
+    limit:'❌ Too many requests right now – please try again in an hour.', fehlt:'This device is not connected yet. Please connect it first.'
+  };
 }
-function kontoTokenVerbinden(){
-  const f=$('#loginBody').querySelector('#kontoTokenForm'); if(!f) return;
-  f.addEventListener('submit',e=>{ e.preventDefault(); try{ anmTokenSpeichern(localStorage, $('#kontoToken').value); kontoZug=null; renderLogin(); }catch(err){ $('#kontoTokenMsg').textContent='This key does not look right. Please check it.'; } });
+/* "Connect this device" - first and only step on a device without access code (B2) */
+function renderVerbinden(meldung){
+  kontoNeuWeg(); kameraStopp();
+  const V=kontoVerbTxt(), b=$('#loginBody');
+  b.innerHTML=`<h2>${V.titel}</h2>${meldung?`<p class="kverb" id="verbMeldung" role="status">${esc(meldung)}</p>`:''}<p class="small">${V.info}</p><div id="verbinden"><p><button class="btn primary" id="verbScan" type="button">${V.scan}</button></p><div class="verb-kamera" id="verbKamera" hidden><video id="verbVideo" playsinline muted autoplay></video><button class="btn small" id="verbStop" type="button">${V.stop}</button></div><p id="verbKameraMsg" class="small" role="status"></p><form id="verbForm" class="login-form" autocomplete="off"><div class="field"><label for="verbLink">${V.paste}</label><input id="verbLink" type="text" inputmode="url" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://…#zugang=…"></div><button class="btn" id="verbGo" type="submit">${V.go}</button><p id="verbMsg" class="small" role="status"></p></form></div>${LOGIN_HELP_KONTO}<p class="small app-version" id="loginVersion">${esc(versionLabel())}</p>`;
+  $('#verbScan').addEventListener('click',kameraStart);
+  $('#verbStop').addEventListener('click',()=>{ kameraStopp(); const m=$('#verbKameraMsg'); if(m) m.textContent=''; });
+  $('#verbForm').addEventListener('submit',e=>{ e.preventDefault(); kontoEingabe($('#verbLink').value, $('#verbMsg')); });
 }
-/* start link "#start=<name>/<code>[/<fingerprint>]": read once, removed from the address; the role comes first
-   (Peter, 30.10.), then the form is filled in */
-function kontoStartAusHash(){
-  const s=anmStartlinkLesen(location.hash||''); if(!s) return false;
-  try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){}
-  startPrefill={name:s.anmeldename, code:s.code}; kontoLinkFp={code:s.code, fp:s.fingerabdruck};
-  showLogin();
+/* a pasted link / code or a scanned QR code -> connect (and with a start code: the invitation as if opened) */
+function kontoEingabe(text, msg){
+  const V=kontoVerbTxt(), e=anmEingefuegt(text, location.href);
+  if(!e){ if(msg) msg.textContent=V.pasteBad; return false; }
+  if(e.fremd){ if(msg) msg.textContent=V.fremd; return false; }
+  kontoLinkOeffnen(e);
   return true;
+}
+/* an invitation read in the app: with a start code the page opens anew with it (the password form is in the page only
+   when it starts with an invitation); only an access code: connect right here */
+let kontoStartWartet=null;   // a start link opened on a device that was not connected yet: it goes on after connecting
+function kontoLinkOeffnen(e){
+  if(!e.start && kontoStartWartet) e={zugang:e.zugang, start:kontoStartWartet};
+  kontoStartWartet=null;
+  if(e.start){
+    const h=anmEinladungslink('', {zugang:e.zugang, anmeldename:e.start.anmeldename, code:e.start.code, fingerabdruck:e.start.fingerabdruck});
+    try{ history.replaceState(null,'',location.pathname+location.search+h); }catch(err){}
+    location.reload();
+    return;
+  }
+  kontoLinkAblauf(e);
+}
+/* the camera IN the app (getUserMedia, playsinline) reads the QR code (module qrlesen via anmeldung) - nothing leaves the device */
+let kamStrom=null, kamLauf=0;
+async function kameraStart(){
+  const V=kontoVerbTxt(), m=$('#verbKameraMsg');
+  if(!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){ if(m) m.textContent=V.noCam; return; }
+  if(m) m.textContent=V.kamAuf;
+  const lauf=++kamLauf;
+  let s;
+  try{ s=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}, audio:false}); }
+  catch(err){ if(lauf===kamLauf && $('#verbKameraMsg')) $('#verbKameraMsg').textContent=V.noCam; return; }
+  const v=$('#verbVideo');
+  if(lauf!==kamLauf || !v){ s.getTracks().forEach(t=>t.stop()); return; }     // the page changed meanwhile
+  kamStrom=s; v.srcObject=s; $('#verbKamera').hidden=false; $('#verbScan').hidden=true;
+  try{ await v.play(); }catch(err){}
+  if($('#verbKameraMsg')) $('#verbKameraMsg').textContent=V.scanHint;
+  const cv=document.createElement('canvas'), cx=cv.getContext('2d',{willReadFrequently:true});
+  const schritt=()=>{
+    if(lauf!==kamLauf || !kamStrom) return;
+    if(v.readyState>=2 && v.videoWidth){
+      const w=Math.min(v.videoWidth, 800), h=Math.round(v.videoHeight*w/v.videoWidth);
+      cv.width=w; cv.height=h; cx.drawImage(v,0,0,w,h);
+      const text=anmQrLesen(cx.getImageData(0,0,w,h).data, w, h);
+      if(text){
+        const e=anmEingefuegt(text, location.href);
+        if(e && !e.fremd){ kameraStopp(); return kontoLinkOeffnen(e); }
+        const k=$('#verbKameraMsg'); if(k) k.textContent=e && e.fremd ? V.fremd : V.notOurs;
+      }
+    }
+    setTimeout(schritt, 200);
+  };
+  schritt();
+}
+function kameraStopp(){
+  kamLauf++;
+  if(kamStrom){ kamStrom.getTracks().forEach(t=>t.stop()); kamStrom=null; }
+  const k=document.getElementById('verbKamera'); if(k) k.hidden=true;
+  const b=document.getElementById('verbScan'); if(b) b.hidden=false;
+}
+/* opening an invitation at the start of the app ("#zugang=...&start=..." or one of the two) */
+function kontoStartAusHash(beimStart){
+  const e=anmEinladungLesen(location.hash||''); if(!e) return false;
+  // the app is open already (the link was opened in the same tab): start anew with it - only then is the password form in the page
+  if(!beimStart && e.start){ location.reload(); return true; }
+  try{ history.replaceState(null,'',location.pathname+location.search); }catch(err){}
+  kontoLinkAblauf(e);
+  return true;
+}
+let kontoLinkLaeuft=0;
+async function kontoLinkAblauf(e){
+  const V=kontoVerbTxt(), b=$('#loginBody'), lauf=++kontoLinkLaeuft;
+  kameraStopp();
+  b.innerHTML=`<p class="small" role="status" id="kLinkWarten">${V.moment}</p>`;
+  show('login');
+  let ok='';
+  if(e.zugang){
+    let r;
+    try{ r=await anmZugangUebernehmen({ablage:localStorage, speicher:KONTO_SPEICHER, token:e.zugang, fetch:(a,o)=>fetch(a,o), geraet:kontoGeraet()}); }
+    catch(err){ kontoFehlerListe.push('zugang: '+String(err&&err.message||err)); r='offline'; }
+    if(lauf!==kontoLinkLaeuft) return;
+    kontoZug=null; kontoStatus.fehler=null;
+    if(r!=='ok') return kontoLinkFehler(V[r]||V.falsch);
+    ok=V.ok;
+  } else if(anmTokenNoetig(KONTO_SPEICHER, localStorage)){ if(e.start) kontoStartWartet=e.start; return kontoLinkFehler(V.fehlt); }
+  if(!e.start){ kontoNeuWeg(); renderLogin(undefined, {meldung:ok}); kontoAbgleich(); return; }
+  const z=kontoZugang();
+  let p;
+  try{ p=await anmLinkPruefen({zugang:z, start:e.start, now:Date.now()}); }
+  catch(err){ if(lauf!==kontoLinkLaeuft) return; return kontoLinkFehler(err && err.code==='limit' ? V.limit : err && (err.code==='zugang') ? V.falsch : V.offline, ok); }
+  if(lauf!==kontoLinkLaeuft) return;
+  if(p.art==='registrieren') return kontoNeuZeigen({anmeldename:p.anmeldename, rolle:p.rolle, neu:p.neu, code:e.start.code, fp:e.start.fingerabdruck, ok});
+  kontoNeuWeg();
+  if(p.art==='anmelden'){
+    const rolle=p.rolle==='child'?'student':'adult';
+    // already logged in here with this account: just go on
+    const a=APP_ACCOUNTS.users.find(u=>u.user===p.anmeldename);
+    if(a && kontoOffen.has(a.id)){
+      if(rolle==='student' && studentSession() && studentSession().id===a.id){ $('#loginBody').innerHTML=''; renderHome(); show('home'); return; }
+      if(rolle==='adult' && store.get('adultSession',null) && adultResume()) return;
+    }
+    return renderLogin(rolle, {name:p.anmeldename, meldung:ok?V.okAnmelden:V.benutzt});
+  }
+  // the start code does not work (any more): say so - the device stays connected
+  const T=loginTxt(true), Tk=loginTxt(false), de=kontoVerbDe();
+  const text=p.code==='startcode-abgelaufen'?(de?T.codeOld:Tk.codeOld):p.code==='fingerabdruck'?(de?T.codeFp:Tk.codeFp):(de?T.codeBad:Tk.codeBad);
+  renderLogin(undefined, {meldung:(ok?ok+' ':'')+'❌ '+text});
+}
+/* the invitation did not work: nothing kept; a device without access code shows "Connect this device" with the reason */
+function kontoLinkFehler(text, ok){
+  kontoNeuWeg();
+  if(anmTokenNoetig(KONTO_SPEICHER, localStorage)) return renderVerbinden(text);
+  renderLogin(undefined, {meldung:(ok?ok+' ':'')+text});
+}
+/* the password form of the page (#kontoNeu): login name fixed, one field "new-password" with the rules shown at it; "Log
+   in" only once the rules are met - checked on input and every 400 ms (a password manager does not always send "input") */
+function kontoNeuZeigen(r){
+  const w=kontoNeuDa();
+  if(!w){ startPrefill={name:r.anmeldename, code:r.code}; kontoLinkFp={code:r.code, fp:r.fp}; return renderLogin(r.rolle==='child'?'student':'adult'); }
+  const kind=r.rolle==='child', T=loginTxt(!kind), de=!kind && store.get('parentLang','de')!=='en';
+  $('#loginBody').innerHTML='';
+  const q=id=>document.getElementById(id), name=q('kontoNeuName'), pw=q('kontoNeuPw'), go=q('kontoNeuGo'), regeln=q('kontoNeuRegeln');
+  q('kontoNeuOk').hidden=!r.ok; q('kontoNeuOk').textContent=r.ok||'';
+  q('kontoNeuTitel').textContent=kind?(r.neu?'Choose a new password':'Welcome! Choose your password'):de?'Willkommen – eigenes Passwort festlegen':'Welcome – choose your own password';
+  q('kontoNeuInfo').textContent=kind
+    ?(r.neu?'Your progress stays. Choose a new password – your iPad can suggest a strong one and remember it.':'Your user name is already there. Choose your own password – your iPad can suggest a strong one and remember it.')
+    :de?'Ihr Anmeldename steht schon da. Wählen Sie ein eigenes Passwort – Ihr Gerät schlägt ein starkes vor und merkt es sich. Es gilt auf allen Ihren Geräten.'
+      :'Your login name is already there. Choose your own password – your device suggests a strong one and remembers it. It works on all your devices.';
+  q('kontoNeuNameL').textContent=T.user;
+  q('kontoNeuPwL').textContent=de?'Passwort':'Password';
+  regeln.textContent=de?'Mindestens 12 Zeichen. Kein bekanntes Passwort, kein einfaches Muster, nicht Ihr Name.':'At least 12 characters. Not a common password, no simple pattern, not your name.';
+  q('kontoNeuIdeeL').textContent=de?'Oder ein Merkpasswort':kind?'Idea':'Or an easy-to-remember one';
+  q('kontoNeuSugg').textContent=pwSuggest();
+  q('kontoNeuUse').textContent=de?'Übernehmen':'Use it';
+  go.textContent=de?'Anmelden':'Log in';
+  name.value=r.anmeldename; pw.value=''; q('kontoNeuMsg').textContent='';
+  let pause=false;
+  const pruefen=()=>{ if(!kontoNeuDa()) return; const gut=!pwWeak(pw.value, r.anmeldename); go.disabled=pause || !gut; regeln.classList.toggle('ok', gut); };
+  pw.addEventListener('input',pruefen); pw.addEventListener('change',pruefen);
+  q('kontoNeuUse').addEventListener('click',()=>{ pw.value=q('kontoNeuSugg').textContent; pw.type='text'; pruefen(); });
+  if(kontoNeuTakt) clearInterval(kontoNeuTakt);
+  kontoNeuTakt=setInterval(pruefen, 400);
+  q('kontoNeuForm').addEventListener('submit',async ev=>{
+    ev.preventDefault();
+    const msg=q('kontoNeuMsg'), p=pw.value;
+    if(pause) return;
+    if(pwWeak(p, r.anmeldename)){ msg.textContent=pwStrongText(!kind); pruefen(); return; }
+    const z=kontoZugang();
+    if(!z){ msg.textContent=T.noStore; return; }
+    pause=true; pruefen(); msg.textContent=T.moment;
+    try{
+      const k=await anmErstesMal({zugang:z, code:r.code, passwort:p, fingerabdruck:r.fp||null, now:Date.now()});
+      loginFails=0;
+      const a=await kontoAngemeldet(k);
+      kontoNeuWeg();   // the form leaves the page after "submit": now the password manager offers to save name and password
+      if(k.art==='child') return kontoKindStart(a, k.kennung, ()=>renderWelcome(a));
+      if(k.wiederherstellungscode) renderKontoCode(a, k.wiederherstellungscode, ()=>renderWelcome(a));
+      else renderWelcome(a);
+      kontoAbgleich();   // a new grown-up: the first sync notes his family (module einladung) - in the background
+    }catch(err){
+      if(!kontoNeuDa()) return;
+      msg.textContent=kontoFehlerText(err, T, !kind); pause=false; pruefen();
+    }
+  });
+  w.hidden=false;
+  pruefen();
 }
 function kontoFehlerText(err, T, adult){
   const c=err && err.code;
@@ -5354,12 +5581,10 @@ function kontoKonto(id){
 }
 /* the grown-up logged in now (with his key on this device), or null */
 function kontoIch(){ const a=adultUser && accByRef({user:adultUser.user}); return a && kontoOffen.has(a.id) ? kontoKonto(a.id) : null; }
-/* a name for this device in "Meine Geräte" ("iPad · Safari") */
+/* a name for this device in "Meine Geräte": browser and Home Screen app are two devices (own storage) - "iPhone (Safari)" /
+   "iPhone (App)" (task "Erstanmeldung per QR-Code", 06.11.) */
 function kontoGeraetName(){
-  const ua=String((navigator && navigator.userAgent)||''), touch=(navigator && navigator.maxTouchPoints)>1;
-  const os=/iPad/.test(ua)||(/Macintosh/.test(ua) && touch)?'iPad':/iPhone/.test(ua)?'iPhone':/Android/.test(ua)?'Android':/Macintosh|Mac OS X/.test(ua)?'Mac':/Windows/.test(ua)?'Windows':/CrOS/.test(ua)?'Chromebook':/Linux/.test(ua)?'Linux':'';
-  const br=/Edg\//.test(ua)?'Edge':/CriOS|Chrome\//.test(ua)?'Chrome':/FxiOS|Firefox\//.test(ua)?'Firefox':/Safari\//.test(ua)?'Safari':'';
-  return [os,br].filter(Boolean).join(' · ');
+  return anmGeraetName({ua:(navigator && navigator.userAgent)||'', touch:(navigator && navigator.maxTouchPoints)>1, standalone:isStandalone()});
 }
 /* one sync at a time; a call during a running one asks for one more round and gets the running one */
 function kontoAbgleich(){
@@ -5526,7 +5751,7 @@ function kontoZeileHTML(){
   const neu=kontoNeuAnmelden();
   if(neu) teile.push(`<b>⚠️ ${neu==='entfernt'?(de?'Dieses Gerät wurde entfernt.':'This device was removed.'):(de?'Ihr Schlüssel wurde auf einem anderen Gerät erneuert.':'Your key was renewed on another device.')} ${de?'Bitte melden Sie sich hier neu an.':'Please log in again here.'}</b> <button type="button" class="btn small primary" id="kNeuAnmelden">${de?'Neu anmelden':'Log in again'}</button>`);
   if(s.fehler==='offline') teile.push(de?'📴 Kein Netz – wird nachgeholt.':'📴 No connection – will catch up later.');
-  else if(s.fehler==='zugang') teile.push(`🔑 ${de?'Der Zugang zum Speicher ist abgelaufen oder ungültig.':'The access to the storage has expired or is not valid.'} <button type="button" class="btn small" id="kTokenNeu">${de?'Neuen Zugangsschlüssel eintragen':'Enter a new access key'}</button>`);
+  else if(s.fehler==='zugang') teile.push(`🔑 ${de?'Der Zugangscode dieses Geräts passt nicht mehr (abgelaufen oder ungültig).':'The access code of this device no longer works (expired or not valid).'} <button type="button" class="btn small" id="kTokenNeu">${de?'Gerät neu verbinden':'Connect again'}</button>`);
   else if(s.fehler==='limit') teile.push(de?`⏳ Gerade zu viele Abgleiche – ab ${kontoUhrzeit(s.wartenBis)} geht es weiter.`:`⏳ Too many syncs just now – it goes on from ${kontoUhrzeit(s.wartenBis)}.`);
   teile.push(`🔄 ${de?'Letzter Abgleich':'Last sync'}: ${s.letzter?kontoVor(jetzt-s.letzter, de):(de?'noch keiner':'none yet')}`);
   const v=anmVerworfen(localStorage);
@@ -5610,6 +5835,8 @@ function kontoGeraeteHTML(){
   const zeile=(pid,d)=>`<li>${d.diesesGeraet?'📍':'📱'} ${d.entfernt?'<s>':''}<b>${esc(d.name||(de?'Gerät ohne Namen':'Unnamed device'))}</b>${d.entfernt?'</s>':''}${d.diesesGeraet?(de?' (dieses Gerät)':' (this device)'):''}<br><span class="small">${de?'seit':'since'} ${kontoZeit(d.erstesMal)} · ${de?'zuletzt':'last'} ${kontoZeit(d.zuletzt)}${d.entfernt?' · '+(de?'entfernt am ':'removed on ')+kontoZeit(d.entfernt):''}${d.wartet?' · '+(de?'wird beim nächsten Abgleich entfernt':'is removed with the next sync'):''}</span>${!d.diesesGeraet && !d.entfernt && !d.wartet?` <button type="button" class="btn small" data-kweg="${esc(pid)}|${esc(d.geraet)}">${de?'Entfernen':'Remove'}</button>`:''}</li>`;
   const block=(pid, titel)=>{ const l=liste(pid); return `<h3 class="psub">${titel}</h3>`+(l.length?`<ul class="klist kgeraete">${l.map(d=>zeile(pid,d)).join('')}</ul>`:`<p class="small">${de?'Noch kein Abgleich – die Liste füllt sich danach.':'No sync yet – the list fills in after it.'}</p>`); };
   let h=block(k.kennung, de?'Meine Geräte':'My devices');
+  // task "Erstanmeldung per QR-Code": connect another device (e.g. the Home Screen app, it has its own storage) with a QR code
+  if(anmZugangscode(KONTO_SPEICHER, localStorage)) h+=`<p><button type="button" class="btn" id="kVerbindenQr">📲 ${de?'Weiteres Gerät verbinden':'Connect another device'}</button></p>`;
   if(k.art==='parent') for(const c of kontoVerb(k).kinder.filter(x=>x.name)) h+=block(c.id, (de?'Geräte von ':'Devices of ')+esc(kontoKindName(c.id, c.name)));
   return h+`<h3 class="psub">${de?'Schlüssel erneuern':'Renew your key'}</h3><p class="small">${de?'Falls jemand Ihr Passwort kennen könnte: neues Passwort, neuer Schlüssel und neuer Wiederherstellungscode.':'If someone might know your password: new password, new key and new recovery code.'}</p><p><button type="button" class="btn" id="kErneuern">🔑 ${de?'Schlüssel erneuern':'Renew key'}</button></p>`;
 }
@@ -5622,12 +5849,18 @@ function kontoBlattHTML(){
   if(b.art==='kind2') return back+`<h2 class="psubjtitle">➕ ${de?'Kind anlegen':'Add a child'}</h2><p class="small">${de?`Mit diesem Anmeldenamen meldet sich ${esc(b.anzeige)} an. Sie können ihn ändern – ${kontoHinweisNamen(true)}`:`${esc(b.anzeige)} logs in with this name. You can change it – ${kontoHinweisNamen(false)}`}</p><form id="kKind2Form" class="login-form"><div class="field"><label for="kKindLogin">${de?'Anmeldename':'Login name'}</label><input id="kKindLogin" value="${esc(b.login)}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><button class="btn primary" id="kKindGo" type="submit">${de?'Start-QR-Code erstellen':'Create start QR code'}</button>${msg}</form>`;
   if(b.art==='eltern') return back+`<h2 class="psubjtitle">➕ ${de?'Zweiten Elternteil einladen':'Invite the second parent'}</h2><p class="small">${de?'Er sieht danach dieselben Kinder wie Sie. Wählen Sie seinen Anmeldenamen – ':'They then see the same children as you. Choose their login name – '}${kontoHinweisNamen(de)}</p><form id="kElternForm" class="login-form"><div class="field"><label for="kElternLogin">${de?'Anmeldename':'Login name'}</label><input id="kElternLogin" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><button class="btn primary" id="kElternGo" type="submit">${de?'Einladung erstellen':'Create invitation'}</button>${msg}</form>`;
   if(b.art==='qr'){
-    const link=anmStartlink(location.href, {anmeldename:b.login, code:b.code, fingerabdruck:b.fp});
+    // task "Erstanmeldung per QR-Code": the QR code carries the access code of this device, too - the other device is connected at once
+    const link=anmEinladungslink(location.href, {zugang:anmZugangscode(KONTO_SPEICHER, localStorage), anmeldename:b.login, code:b.code, fingerabdruck:b.fp});
     const titel=b.zweck==='eltern'?(de?`Einladung für ${esc(b.login)}`:`Invitation for ${esc(b.login)}`):b.zweck==='neu'?(de?`Neues Passwort für ${esc(b.name)}`:`New password for ${esc(b.name)}`):(de?`Start-QR-Code für ${esc(b.name)}`:`Start QR code for ${esc(b.name)}`);
     const wie=b.zweck==='eltern'
-      ?(de?'Auf dem Gerät des anderen Elternteils die Kamera auf den Code richten, dann „👪 Parent / Teacher“ tippen und ein eigenes Passwort wählen.':'On the other parent’s device, point the camera at the code, then tap “👪 Parent / Teacher” and choose an own password.')
-      :(de?`Auf dem Gerät von ${esc(b.name)} die Kamera auf den Code richten, dann „🎒 Student“ tippen und zusammen ein Passwort wählen.${b.zweck==='neu'?' Der Lernstand bleibt erhalten.':''}`:`On ${esc(b.name)}’s device, point the camera at the code, then tap “🎒 Student” and choose a password together.${b.zweck==='neu'?' The progress stays.':''}`);
-    return `<h2 class="psubjtitle">📷 ${titel}</h2><p class="small">${wie} ${de?'Ohne Kamera: Anmeldename und Startcode eintippen.':'Without a camera: type the login name and the start code.'}</p><div class="kqr" id="kQr">${anmQr(link, de?'Start-QR-Code':'Start QR code')}</div><p class="small">${de?'Anmeldename':'Login name'}: <b>${esc(b.login)}</b> · Startcode: <code id="kCode">${esc(b.code)}</code><br>${de?'Gilt einmal, bis':'Works once, until'} ${esc(kontoZeit(new Date(b.bis).toISOString()))}. ${de?'Nur persönlich zeigen.':'Show it in person only.'}</p><p id="kQrStatus" class="kqr-status" role="status">${kontoQrText()}</p><p>${b.fertig?'':`<button type="button" class="btn" id="kQrWeg">${de?'Zurückziehen':'Withdraw'}</button> `}<button type="button" class="btn primary" id="kQrFertig">${de?'Fertig':'Done'}</button></p>`;
+      ?(de?'Auf dem Gerät des anderen Elternteils die Kamera auf den Code richten (oder in Big Quest „📷 QR-Code scannen“). Dann wählt er ein eigenes Passwort. Nicht dabei? Die Einladung als E-Mail-Entwurf sichern und selbst verschicken.':'On the other parent’s device, point the camera at the code (or tap “📷 Scan QR code” in Big Quest). Then they choose their own password. Not here? Save the invitation as an e-mail draft and send it yourself.')
+      :(de?`Auf dem Gerät von ${esc(b.name)} die Kamera auf den Code richten (oder in Big Quest „📷 QR-Code scannen“) und zusammen ein Passwort wählen.${b.zweck==='neu'?' Der Lernstand bleibt erhalten.':''}`:`On ${esc(b.name)}’s device, point the camera at the code (or tap “📷 Scan QR code” in Big Quest) and choose a password together.${b.zweck==='neu'?' The progress stays.':''}`);
+    return `<h2 class="psubjtitle">📷 ${titel}</h2><p class="small">${wie} ${de?'Ohne Kamera: Anmeldename und Startcode eintippen.':'Without a camera: type the login name and the start code.'}</p><div class="kqr" id="kQr">${anmQr(link, de?'Start-QR-Code':'Start QR code')}</div><p class="small">${de?'Anmeldename':'Login name'}: <b>${esc(b.login)}</b> · Startcode: <code id="kCode">${esc(b.code)}</code><br>${de?'Gilt einmal, bis':'Works once, until'} ${esc(kontoZeit(new Date(b.bis).toISOString()))}. ${de?'Nur persönlich zeigen.':'Show it in person only.'}</p><p id="kQrStatus" class="kqr-status" role="status">${kontoQrText()}</p>${b.zweck==='eltern' && !b.fertig?`<p><button type="button" class="btn" id="kQrMail">✉️ ${de?'Als E-Mail-Entwurf sichern':'Save as an e-mail draft'}</button></p>`:''}<p>${b.fertig?'':`<button type="button" class="btn" id="kQrWeg">${de?'Zurückziehen':'Withdraw'}</button> `}<button type="button" class="btn primary" id="kQrFertig">${de?'Fertig':'Done'}</button></p><p id="kMsg" class="small" role="status"></p>`;
+  }
+  if(b.art==='verbinden'){
+    const z=anmZugangscode(KONTO_SPEICHER, localStorage); if(!z) return back;
+    const link=anmEinladungslink(location.href, {zugang:z});
+    return back+`<h2 class="psubjtitle">📲 ${de?'Weiteres Gerät verbinden':'Connect another device'}</h2><p class="small">${de?'Auf dem anderen Gerät Big Quest öffnen und „📷 QR-Code scannen“ tippen – auch in der App auf dem Home-Bildschirm. Danach melden Sie sich dort mit Ihrem Namen und Passwort an. Der Code verbindet nur das Gerät; er ist nicht Ihr Passwort. Nur persönlich zeigen.':'On the other device, open Big Quest and tap “📷 Scan QR code” – in the Home Screen app, too. Then log in there with your name and password. The code only connects the device; it is not your password. Show it in person only.'}</p><div class="kqr" id="kVerbQr">${anmQr(link, de?'Gerät verbinden':'Connect device')}</div>`;
   }
   if(b.art==='wegkind') return back+`<h2 class="psubjtitle">${de?'Gerät entfernen':'Remove device'}</h2><p>${de?`„${esc(b.gname)}“ von ${esc(b.name)} entfernen? Was dieses Gerät danach schickt, zählt nicht mehr.`:`Remove “${esc(b.gname)}” of ${esc(b.name)}? Whatever this device sends afterwards no longer counts.`}</p><p><button type="button" class="btn primary" id="kWegJa">${de?'Entfernen':'Remove'}</button></p>${msg}`;
   if(b.art==='frageneu') return `<h2 class="psubjtitle">${de?`Jetzt neues Passwort für ${esc(b.name)}?`:`New password for ${esc(b.name)} now?`}</h2><p>${de?`Das Gerät ist entfernt. Bis ${esc(b.name)} ein neues Passwort hat, kann es noch lesen, was es schon hatte. Mit dem neuen Passwort ist auch das vorbei; der Lernstand bleibt erhalten.`:`The device is removed. Until ${esc(b.name)} has a new password, it can still read what it already had. A new password ends that; the progress stays.`}</p><p><button type="button" class="btn primary" id="kNeuJa">${de?'Ja, Start-QR-Code zeigen':'Yes, show start QR code'}</button> <button type="button" class="btn" id="kNeuSpaeter">${de?'Später':'Later'}</button></p>${msg}`;
@@ -5640,7 +5873,7 @@ function kontoBlattHTML(){
   if(b.art==='export') return back+`<h2 class="psubjtitle">📄 ${de?`Daten von ${esc(b.name)}`:`Data of ${esc(b.name)}`}</h2><p class="small">${de?`Alles, was zu ${esc(b.name)} gespeichert ist – Stand nach dem letzten Abgleich. Die lesbare Seite öffnet jeder Browser; die Datei enthält dasselbe für Programme.`:`Everything stored about ${esc(b.name)} – as of the last sync. Any browser opens the readable page; the file holds the same for programs.`}</p><p><button type="button" class="btn primary" id="kExHtml">📄 ${de?'Lesbare Seite sichern':'Save readable page'}</button> <button type="button" class="btn" id="kExJson">🗂️ ${de?'Datei (JSON) sichern':'Save file (JSON)'}</button></p>${msg}`;
   if(b.art==='loeschkind') return back+`<h2 class="psubjtitle">🗑️ ${de?`${esc(b.name)} löschen`:`Delete ${esc(b.name)}`}</h2><p>${de?`Gelöscht wird alles von ${esc(b.name)}: Lernstand, Profil, Schulbewertungen, Freigaben, Geräte und Leseaufnahmen – im Speicher und auf diesem Gerät. Die anderen Geräte räumen beim nächsten Abgleich auf; ${esc(b.name)} kann sich danach nicht mehr anmelden. Das lässt sich nicht rückgängig machen.`:`Everything of ${esc(b.name)} is deleted: progress, profile, school ratings, grants, devices and recordings – in the storage and on this device. The other devices clean up with their next sync; ${esc(b.name)} can no longer log in. This cannot be undone.`}</p><p class="small">${de?'Tipp: vorher „📄 Daten“ sichern.':'Tip: save “📄 Data” first.'}</p><form id="kLoeschForm" class="login-form"><div class="field"><label for="kLoeschName">${de?`Zur Bestätigung den Anmeldenamen eintippen: <b>${esc(b.login)}</b>`:`To confirm, type the login name: <b>${esc(b.login)}</b>`}</label><input id="kLoeschName" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><button class="btn primary" id="kLoeschGo" type="submit">${de?'Endgültig löschen':'Delete for good'}</button>${msg}</form>`;
   if(b.art==='loeschkonto') return back+`<h2 class="psubjtitle">🗑️ ${de?'Mein Konto löschen':'Delete my account'}</h2><p>${b.letzter?(de?'Sie sind der einzige Elternteil. Gelöscht werden Ihr Konto, die Familie und jedes Kind mit allen Daten – im Speicher und auf diesem Gerät.':'You are the only parent. Your account, the family and every child with all data are deleted – in the storage and on this device.'):(de?'Sie verlassen die Familie, Ihr Konto wird gelöscht. Die Kinder bleiben beim anderen Elternteil.':'You leave the family and your account is deleted. The children stay with the other parent.')} ${de?'Das lässt sich nicht rückgängig machen.':'This cannot be undone.'}</p>${b.letzter?`<p class="small">${de?'Tipp: vorher je Kind „📄 Daten“ sichern.':'Tip: save “📄 Data” of each child first.'}</p>`:''}<form id="kKlForm" class="login-form"><input class="sr" type="text" name="username" autocomplete="username" value="${esc(adultUser?adultUser.user:'')}" readonly tabindex="-1" aria-hidden="true"><div class="field"><label for="kKlPw">${de?'Ihr Passwort':'Your password'}</label><input id="kKlPw" type="password" autocomplete="current-password" required></div><button class="btn primary" id="kKlGo" type="submit">${de?'Endgültig löschen':'Delete for good'}</button>${msg}</form>`;
-  if(b.art==='token') return back+`<h2 class="psubjtitle">🔑 ${de?'Neuer Zugangsschlüssel':'New access key'}</h2><p class="small">${de?'Den Schlüssel bekommen Sie vom Admin. Er gilt für dieses Gerät; Ihre Daten bleiben, wie sie sind.':'You get the key from the admin. It is for this device; your data stays as it is.'}</p><form id="kTokenForm" class="login-form"><div class="field"><label for="kTokenNeuWert">${de?'Zugangsschlüssel':'Access key'}</label><input id="kTokenNeuWert" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><button class="btn primary" id="kTokenGo" type="submit">${de?'Speichern':'Save'}</button>${msg}</form>`;
+  if(b.art==='token') return back+`<h2 class="psubjtitle">📲 ${de?'Gerät neu verbinden':'Connect this device again'}</h2><p class="small">${de?'Fügen Sie den Link aus Ihrer Einladung ein – oder nur den Zugangscode. Er gilt für dieses Gerät und für alle, die sich hier anmelden; Ihre Daten bleiben, wie sie sind.':'Paste the link from your invitation – or just the access code. It is for this device and everyone who logs in here; your data stays as it is.'}</p><form id="kTokenForm" class="login-form" autocomplete="off"><div class="field"><label for="kTokenNeuWert">${de?'Link oder Zugangscode':'Link or access code'}</label><input id="kTokenNeuWert" type="text" inputmode="url" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><button class="btn primary" id="kTokenGo" type="submit">${de?'Verbinden':'Connect'}</button>${msg}</form>`;
   return back;
 }
 function kontoQrText(){
@@ -5763,13 +5996,23 @@ function kontoBinden(body){
   const de=PL()==='de', q=s=>body.querySelector(s), an=(s,f)=>{ const e=q(s); if(e) e.addEventListener('click',f); }, form=(s,f)=>{ const e=q(s); if(e) e.addEventListener('submit',ev=>{ ev.preventDefault(); if(parentAccess) f(); }); };
   an('#parentLeave',()=>{ if(parentAccess) kontoBereichVerlassen(); });
   const zs=q('#kSync'); if(zs) kontoZeileBinden(zs);
-  form('#kTokenForm',()=>{ const m=q('#kMsg'); try{ anmTokenSpeichern(localStorage, q('#kTokenNeuWert').value); }catch(err){ m.textContent=de?'Dieser Schlüssel sieht nicht richtig aus. Bitte prüfen.':'This key does not look right. Please check it.'; return; } kontoZug=null; kontoStatus.fehler=null; kontoSchritt('#kTokenGo', async()=>{ await kontoAbgleich(); kontoBlattZeigen(null); }); });
+  form('#kTokenForm',()=>{
+    const m=q('#kMsg'), e=anmEingefuegt(q('#kTokenNeuWert').value, location.href);
+    if(!e || e.fremd || !e.zugang){ m.textContent=e && e.fremd?(de?'❌ Dieser Link gehört zu einer anderen Fassung von Big Quest.':'❌ This link belongs to another version of Big Quest.'):(de?'❌ Das ist kein Link von Big Quest und kein Zugangscode.':'❌ That is not a Big Quest link or access code.'); return; }
+    kontoSchritt('#kTokenGo', async()=>{
+      const r=await anmZugangUebernehmen({ablage:localStorage, speicher:KONTO_SPEICHER, token:e.zugang, fetch:(a,o)=>fetch(a,o), geraet:kontoGeraet()});
+      if(r!=='ok'){ const m2=$('#aboutBody').querySelector('#kMsg'), k2=$('#aboutBody').querySelector('#kTokenGo'); if(m2) m2.textContent=r==='offline'?(de?'❌ Kein Netz – bitte später noch einmal versuchen.':'❌ No connection – please try again later.'):r==='limit'?(de?'❌ Gerade zu viele Anfragen – bitte in einer Stunde noch einmal versuchen.':'❌ Too many requests right now – please try again in an hour.'):(de?'❌ Der Zugangscode passt nicht oder ist abgelaufen.':'❌ The access code does not work or has expired.'); if(k2) k2.disabled=false; return; }
+      kontoZug=null; kontoStatus.fehler=null; kontoMeldungen.push({art:'info', text:de?'✅ Gerät verbunden.':'✅ Device connected.'});
+      await kontoAbgleich(); kontoBlattZeigen(null);
+    });
+  });
   an('#kBack',()=>kontoBlattZeigen(null));
   an('#kErAbmelden',parentAbmelden);
   an('#kErBleiben',()=>{ kontoBlatt=null; kontoBereichVerlassen(); });
   an('#kKindAnlegen',()=>kontoBlattZeigen({art:'kind1'}));
   an('#kElternEinladen',()=>kontoBlattZeigen({art:'eltern'}));
   an('#kErneuern',()=>kontoBlattZeigen({art:'erneuern'}));
+  an('#kVerbindenQr',()=>kontoBlattZeigen({art:'verbinden'}));
   body.querySelectorAll('[data-kneu]').forEach(b=>b.addEventListener('click',()=>{ if(parentAccess) kontoKindNeuStarten(b.dataset.kneu); }));
   body.querySelectorAll('[data-kzurueck]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess) return; const id=b.dataset.kzurueck; kontoSchritt(null, async()=>{ const z=kontoZugang(); await anmZurueckziehen({zugang:z, ablage:localStorage, konto:kontoIch(), id, now:Date.now()}); await kontoAbgleich(); renderSheets(); }); }));
   body.querySelectorAll('[data-kweg]').forEach(b=>b.addEventListener('click',()=>{
@@ -5783,6 +6026,8 @@ function kontoBinden(body){
   form('#kKind2Form',()=>{ const b=kontoBlatt, login=anmName(q('#kKindLogin').value); if(!login){ q('#kMsg').textContent=kontoHinweisNamen(de); return; } kontoSchritt('#kKindGo', ()=>kontoEinladen((z,me)=>anmKindAnlegen({zugang:z, ablage:localStorage, konto:me, anmeldename:login, anzeigename:b.anzeige, now:Date.now()}), {zweck:'kind', name:b.anzeige})); });
   form('#kElternForm',()=>{ const login=anmName(q('#kElternLogin').value); if(!login){ q('#kMsg').textContent=kontoHinweisNamen(de); return; } kontoSchritt('#kElternGo', ()=>kontoEinladen((z,me)=>anmElternEinladen({zugang:z, ablage:localStorage, konto:me, anmeldename:login, now:Date.now()}), {zweck:'eltern', name:login})); });
   an('#kQrFertig',()=>kontoBlattZeigen(null));
+  // the invitation of the second parent as an e-mail draft: an HTML file with QR code and link (the grown-up sends it himself)
+  an('#kQrMail',()=>{ const b=kontoBlatt; if(!b || b.art!=='qr') return; const link=anmEinladungslink(location.href, {zugang:anmZugangscode(KONTO_SPEICHER, localStorage), anmeldename:b.login, code:b.code, fingerabdruck:b.fp}); const m=anmEinladungMail({link, qr:anmQr(link, de?'Einladung':'Invitation'), anmeldename:b.login, bis:b.bis, sprache:de?'de':'en'}); kontoDateiSichern(m.html, m.dateiname, 'text/html', de, q('#kMsg')); });
   an('#kQrWeg',()=>{ const b=kontoBlatt; if(!b || b.art!=='qr') return; kontoSchritt('#kQrWeg', async()=>{ const z=kontoZugang(); const r=await anmZurueckziehen({zugang:z, ablage:localStorage, konto:kontoIch(), id:b.id, now:Date.now()}); await kontoAbgleich(); kontoMeldungen.push({art:'info', text:r.zurueckgezogen?(de?`Die Einladung für ${b.zweck==='eltern'?b.login:b.name} ist zurückgezogen.`:`The invitation for ${b.zweck==='eltern'?b.login:b.name} is withdrawn.`):(de?'Die Einladung war schon eingelöst oder abgelaufen.':'The invitation was already used or had expired.')}); kontoBlattZeigen(null); }); });
   an('#kWegJa',()=>{ const b=kontoBlatt; kontoSchritt('#kWegJa', async()=>{ const z=kontoZugang(); await anmGeraetEntfernen({ablage:localStorage, zugang:z, konto:kontoIch(), person:b.kind, geraet:b.geraet, now:Date.now()}); await kontoAbgleich(); kontoBlattZeigen({art:'frageneu', kind:b.kind, name:b.name}); }); });
   body.querySelectorAll('[data-kexport]').forEach(b=>b.addEventListener('click',()=>{ if(parentAccess) kontoExport(b.dataset.kexport); }));
@@ -6273,21 +6518,21 @@ const sourcesHTML=(lang='en')=>{ const de=lang==='de', G=SOURCE_GROUPS[de?'de':'
 /* With accounts in the storage (test build, KONTO_UI) single points of the guides read differently: one password for
    all devices, start code once and 7 days, recovery code. Kathie's app keeps its guides unchanged (KONTO_UI false). */
 const KONTO_GUIDE={
-  kid:[['The very first time:','your grown-up gives you a start code – as a link or a QR code to scan. Then you choose your own password. Take the idea with three words and a number, like <i>Tiger-Lamp-River-4271</i>. Let the iPad remember it – then Face ID fills it in for you. A short password does not work: a strong one keeps your things safe. On another iPad, use the same user name and password.']],
-  adultDe:[['Einmal einrichten:','Seite in Safari öffnen. Fragt die App nach dem Zugang zum Speicher, ihn einmal eingeben (vom Admin). Dann Teilen → „Zum Home-Bildschirm“. Künftig nur über das Symbol öffnen.'],
-    ['Anmelden:','„👪 Parent / Teacher“. Beim ersten Mal den Startlink bzw. QR-Code öffnen (oder Benutzername und Startcode eingeben; er gilt einmal und 7 Tage). Dann ein eigenes Passwort wählen – am einfachsten den Vorschlag – und im Passwortspeicher sichern. Danach den Wiederherstellungscode sichern: im Passwortspeicher und als Datei. Auf weiteren Geräten: Benutzername und Passwort.'],
-    ['Kind anmelden:','unter ⚙️ → „👪 Familie“ → „Kind anlegen“: Die App zeigt einen Start-QR-Code. Auf dem Gerät des Kindes die Kamera darauf richten, „🎒 Student“ tippen und zusammen ein Merkpasswort wählen. Auf weiteren Geräten: Benutzername und Passwort. Passwort vergessen? Dort „Neues Passwort“ – der Lernstand bleibt. Geschwister am selben Gerät wählen sich unter „Who\'s here?“ aus. Geräte entfernen und den Schlüssel erneuern: ⚙️ → „📱 Meine Geräte“.'],
+  kid:[['The very first time:','your grown-up shows you a QR code. Scan it with the camera (or in Big Quest: “📷 Scan QR code”). Your name is already there – then you choose your own password. Take the idea with three words and a number, like <i>Tiger-Lamp-River-4271</i>. Let the iPad remember it – then Face ID fills it in for you. A short password does not work: a strong one keeps your things safe. On another iPad, use the same user name and password.']],
+  adultDe:[['Einmal einrichten:','den Link Ihrer Einladung öffnen oder ihren QR-Code mit der Kamera scannen: Das Gerät wird verbunden („✅ Gerät verbunden“), Ihr Anmeldename steht schon da. Dann ein eigenes Passwort festlegen – Ihr Gerät schlägt ein starkes vor und merkt es sich. Danach den Wiederherstellungscode sichern: im Passwortspeicher und als Datei. Freiwillig: Teilen → „Zum Home-Bildschirm“. Die App dort hat einen eigenen Speicher und fragt einmal nach dem Zugangscode: „📷 QR-Code scannen“ (Einladung, oder ⚙️ → „📱 Meine Geräte“ → „Weiteres Gerät verbinden“) oder den Link einfügen.'],
+    ['Anmelden:','„👪 Parent / Teacher“, Benutzername und Passwort – der Passwortspeicher schlägt beides vor. Auf weiteren Geräten genauso; ein neues Gerät verbinden Sie einmal mit dem Link oder QR-Code der Einladung. Der Zugangscode verbindet nur das Gerät, er ist nicht Ihr Passwort.'],
+    ['Kind anmelden:','unter ⚙️ → „👪 Familie“ → „Kind anlegen“: Die App zeigt einen Start-QR-Code. Auf dem Gerät des Kindes die Kamera darauf richten (oder in Big Quest „📷 QR-Code scannen“) und zusammen ein Merkpasswort wählen. Auf weiteren Geräten: Benutzername und Passwort. Passwort vergessen? Dort „Neues Passwort“ – der Lernstand bleibt. Geschwister am selben Gerät wählen sich unter „Who\'s here?“ aus. Geräte entfernen und den Schlüssel erneuern: ⚙️ → „📱 Meine Geräte“.'],
     ['Passwort vergessen:','Auf der Anmeldeseite „Passwort vergessen?“ tippen, den Wiederherstellungscode eingeben und ein neues Passwort wählen – danach den neuen Code wieder sichern. Ohne Code hilft der Admin. Nach 5 Fehlversuchen 30 Sekunden warten. Startcodes, Startlinks und den Wiederherstellungscode nicht weitergeben.']],
-  adultEn:[['Set up once:','open the page in Safari. If the app asks for access to the storage, enter it once (from the admin). Then Share → “Add to Home Screen”. From then on, open it with the icon.'],
-    ['Log in:','“👪 Parent / Teacher”. The first time, open the start link or QR code (or enter username and start code; it works once and for 7 days). Then choose your own password – easiest is the suggestion – and save it in the password manager. Next, save the recovery code: in the password manager and as a file. On other devices: username and password.'],
-    ['Log in your child:','under ⚙️ → “👪 Family” → “Add a child”: the app shows a start QR code. On your child’s device, point the camera at it, tap “🎒 Student” and choose a memorable password together. On other devices: username and password. Forgot the password? There, “New password” – the progress stays. Siblings on the same device pick themselves under “Who\'s here?”. Remove devices and renew your key: ⚙️ → “📱 My devices”.'],
+  adultEn:[['Set up once:','open the link of your invitation or scan its QR code with the camera: the device gets connected (“✅ Device connected”) and your login name is already there. Then choose your own password – your device suggests a strong one and remembers it. Next, save the recovery code: in the password manager and as a file. Optional: Share → “Add to Home Screen”. The app there has its own storage and asks once for the access code: “📷 Scan QR code” (the invitation, or ⚙️ → “📱 My devices” → “Connect another device”) or paste the link.'],
+    ['Log in:','“👪 Parent / Teacher”, username and password – the password manager suggests both. The same on other devices; connect a new device once with the link or QR code of the invitation. The access code only connects the device; it is not your password.'],
+    ['Log in your child:','under ⚙️ → “👪 Family” → “Add a child”: the app shows a start QR code. On your child’s device, point the camera at it (or tap “📷 Scan QR code” in Big Quest) and choose a memorable password together. On other devices: username and password. Forgot the password? There, “New password” – the progress stays. Siblings on the same device pick themselves under “Who\'s here?”. Remove devices and renew your key: ⚙️ → “📱 My devices”.'],
     ['Forgot your password?','On the login page tap “Forgot your password?”, enter your recovery code and choose a new password – then save the new code again. Without the code, the admin can help. After 5 wrong tries, wait 30 seconds. Keep start codes, start links and the recovery code private.']],
-  teacherDe:[['Anmelden:','„👪 Parent / Teacher“. Beim ersten Mal den Startlink bzw. QR-Code vom Admin öffnen (oder Benutzername und Startcode eingeben). Dann ein eigenes Passwort wählen und den Wiederherstellungscode sichern – im Passwortspeicher und als Datei. Auf weiteren Geräten: Benutzername und Passwort.'],
+  teacherDe:[['Anmelden:','Beim ersten Mal den Link der Einladung vom Admin öffnen oder ihren QR-Code scannen: Das Gerät wird verbunden, Ihr Anmeldename steht schon da. Dann ein eigenes Passwort festlegen (Ihr Gerät schlägt ein starkes vor) und den Wiederherstellungscode sichern – im Passwortspeicher und als Datei. Danach: „👪 Parent / Teacher“, Benutzername und Passwort; ein weiteres Gerät einmal mit demselben Link verbinden.'],
     ['Passwort vergessen:','Auf der Anmeldeseite „Passwort vergessen?“ tippen und den Wiederherstellungscode eingeben; danach den neuen Code wieder sichern. Ohne Code hilft der Admin. Nach 5 Fehlversuchen 30 Sekunden warten.']],
-  teacherEn:[['Log in:','“👪 Parent / Teacher”. The first time, open the start link or QR code from the admin (or enter username and start code). Then choose your own password and save the recovery code – in the password manager and as a file. On other devices: username and password.'],
+  teacherEn:[['Log in:','The first time, open the link of the invitation from the admin or scan its QR code: the device gets connected and your login name is already there. Then choose your own password (your device suggests a strong one) and save the recovery code – in the password manager and as a file. After that: “👪 Parent / Teacher”, username and password; connect another device once with the same link.'],
     ['Forgot your password?','On the login page tap “Forgot your password?” and enter your recovery code; then save the new code again. Without the code, the admin can help. After 5 wrong tries, wait 30 seconds.']],
-  adminDe:[['Konten und Startcodes','für Erwachsene stellen Sie aus, vorerst mit dem Werkzeug auf Ihrem Rechner. Ein Startcode gilt einmal und 7 Tage. Startlink oder QR-Code nur persönlich übergeben.']],
-  adminEn:[['Accounts and start codes','for grown-ups are issued by you, for now with the tool on your computer. A start code works once and for 7 days. Hand over the start link or QR code in person only.']]
+  adminDe:[['Konten und Startcodes','für Erwachsene stellen Sie aus, vorerst mit dem Werkzeug auf Ihrem Rechner. Es legt je Person eine Einladung als E-Mail-Entwurf an (QR-Code und Link mit Zugangscode und Startcode); Sie verschicken sie selbst. Eine Einladung gilt einmal und 7 Tage; derselbe Link verbindet später weitere Geräte.']],
+  adminEn:[['Accounts and start codes','for grown-ups are issued by you, for now with the tool on your computer. It makes an invitation per person as an e-mail draft (QR code and link with access code and start code); you send it yourself. An invitation works once and for 7 days; the same link connects more devices later.']]
 };
 const kontoTexte = (text, ersatz) => KONTO_UI ? anmPunkteErsetzen(text, ersatz) : text;
 const GUIDE_KID=kontoTexte(`<div class="quick"><b>Quick guide</b><ol>
@@ -6851,7 +7096,7 @@ function boot(data){
     show('play'); renderQuestion();
   } else if(data && data.screen==='studio' && STUDIOS[data.studio]){ openStudio(data.studio); }
   else if(data && data.screen==='subject' && SUBJECTS.some(s=>s.key===data.subject)){ openSubject(data.subject); }
-  else if(startFromHash()){ /* start link: login filled in */ }
+  else if(startFromHash(true)){ /* start link / invitation: login filled in, or the invitation is being opened */ }
   else if(parentRoute()) applyParentRoute();
   else if(accountsOn() && store.get('adultSession',null) && !isTestAccount() && adultResume()){ /* grown-up stays logged in */ }
   else show('home');   // with accounts and no login, show() leads to the login screen

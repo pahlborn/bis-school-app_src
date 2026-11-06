@@ -35,9 +35,10 @@ export async function appServer({ bauart = process.env.BQ_BAUART || 'live', anpa
 // Loading a test page gets 90 s instead of 30 s (04.11.): with several sessions working on the same machine, page.goto
 // sometimes took longer than 30 s and gave false red results. Real errors still show - only later.
 export const LADEZEIT_MS = 90000;
-export async function browserStarten() {
+// args: further Chromium switches (e.g. a fake camera for "Connect this device", task "Erstanmeldung per QR-Code")
+export async function browserStarten({ args } = {}) {
   const pfad = process.env.CHROMIUM_PATH;
-  const browser = await chromium.launch(pfad ? { executablePath: pfad } : {});
+  const browser = await chromium.launch({ ...(pfad ? { executablePath: pfad } : {}), ...(args ? { args } : {}) });
   const neu = browser.newContext.bind(browser);
   browser.newContext = async (opts) => { const ctx = await neu(opts); ctx.setDefaultNavigationTimeout(LADEZEIT_MS); return ctx; };
   return browser;

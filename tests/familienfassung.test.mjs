@@ -29,6 +29,7 @@ import { schulbewertungenUebernehmen } from '../werkzeug/schulbewertungen-uebern
 import { githubSpeicher } from '../src/module/github.mjs';
 import { startcodeAusstellen, ersteAnmeldung, kontoLookup } from '../src/module/konto.mjs';
 import { anmStartlink } from '../src/module/anmeldung.mjs';
+import { neuFormular, registrieren } from './erstanmeldung-hilfen.mjs';
 import { keyFingerprint } from '../src/module/krypto.mjs';
 import { appSandbox, stellbareUhr } from './app-sandbox.mjs';
 import { browserStarten, LADEZEIT_MS } from './app-hilfen.mjs';
@@ -252,7 +253,7 @@ function geraet(t, W, { name, hash = '' } = {}) {
   });
   t.diagnostic(name + ': BQ_SEED=' + S.seed);
   W.uhr.ruhe(() => S.holen('kontoLauf'));
-  const finde = (sel) => S.lauf(() => S.$('#loginBody').querySelector(sel) || S.$('#aboutBody').querySelector(sel));
+  const finde = (sel) => S.lauf(() => S.$('#loginBody').querySelector(sel) || neuFormular(G, sel) || S.$('#aboutBody').querySelector(sel));
   const G = { name, S, geteilt, anfragen, idb };
   G.im = finde;
   G.da = (sel) => !!finde(sel);
@@ -295,8 +296,7 @@ test('Sandbox: gebaute Familienfassung - anmelden, Kind anlegen, ueben, Schulbew
   assert.equal(P.S.lauf(() => P.S.holen('KONTO_UI')), true, 'Konto-Modus');
   assert.deepEqual(roh(P.S.lauf(() => P.S.holen('KONTO_SPEICHER'))), SPEICHER_FAMILIE);
   assert.equal(P.S.lauf(() => P.S.holen('APP_ACCOUNTS').users.length), 0, 'keine Konten aus konten.json');
-  P.klick('#roleAdult'); P.absenden('#loginGo');
-  P.pw = await passwortWaehlen(P);
+  P.pw = await registrieren(P);   // Einladung: ohne Rollenwahl zum Passwort
   await P.wartenAuf('#recCode'); P.klick('#recGo'); await P.wartenAuf('#welcomeGo'); P.klick('#welcomeGo');
   await P.sync();
   P.kennung = P.liste()[0].id;
@@ -309,8 +309,7 @@ test('Sandbox: gebaute Familienfassung - anmelden, Kind anlegen, ueben, Schulbew
   await P.wartenAuf('#kQr');
   const code = P.im('#kCode').textContent;
   const K = geraet(t, W, { name: 'Kathies iPad', hash: link(anmStartlink('http://127.0.0.1/', { anmeldename: 'kathie', code, fingerabdruck: fp })) });
-  K.klick('#roleStudent'); K.absenden('#loginGo');
-  await passwortWaehlen(K);
+  await registrieren(K);
   await K.wartenAuf('#kidWait');
   await W.uhr.vor(1000); await P.sync(); await W.uhr.vor(1000);
   K.klick('#kidWaitAgain'); await K.wartenAuf('#welcomeGo'); await W.uhr.vor(1000); K.klick('#welcomeGo');
@@ -377,8 +376,7 @@ test('Sandbox: gebaute Familienfassung - anmelden, Kind anlegen, ueben, Schulbew
   await P.wartenAuf('#kKind2Form'); P.tippe('#kKindLogin', 'ben'); P.absenden('#kKindGo');
   await P.wartenAuf('#kQr');
   const B = geraet(t, W, { name: 'Bens Tablet', hash: link(anmStartlink('http://127.0.0.1/', { anmeldename: 'ben', code: P.im('#kCode').textContent, fingerabdruck: fp })) });
-  B.klick('#roleStudent'); B.absenden('#loginGo');
-  await passwortWaehlen(B);
+  await registrieren(B);
   await B.wartenAuf('#kidWait');
   await W.uhr.vor(1000); await P.sync(); await W.uhr.vor(1000);
   B.klick('#kidWaitAgain'); await B.wartenAuf('#welcomeGo'); await W.uhr.vor(1000); B.klick('#welcomeGo');
@@ -433,8 +431,7 @@ test('Sandbox: gebaute Familienfassung - anmelden, Kind anlegen, ueben, Schulbew
 test('Sandbox: "nicht uebernommen" zaehlt nur Gefaelschtes und Eintraege ohne Berechtigung', async (t) => {
   const W = await welt();
   const P = geraet(t, W, { name: 'Peters Laptop', hash: await W.startlink('peter') });
-  P.klick('#roleAdult'); P.absenden('#loginGo');
-  await passwortWaehlen(P);
+  await registrieren(P);
   await P.wartenAuf('#recCode'); P.klick('#recGo'); await P.wartenAuf('#welcomeGo'); P.klick('#welcomeGo');
   await P.sync();
   const zeile = () => P.S.lauf(() => P.S.holen('kontoZeileHTML')());
@@ -477,8 +474,10 @@ test('Browser: Huelle -> Familienpasswort -> die Familienfassung startet mit der
     await page.click('#oeffnen');
     await page.waitForSelector('#login:not([hidden])', { timeout: 30000 });
     assert.equal(await page.locator('#home').isVisible(), false, 'ohne Anmeldung keine Startseite');
-    assert.ok(await page.locator('#kontoToken').isVisible(), 'Zugang zum Speicher einmal je Geraet');
-    assert.match(await page.locator('#kontoTokenBox summary').textContent(), /Storage access/);
+    // Aufgabe "Erstanmeldung per QR-Code" (B2): ohne Zugangscode zuerst nur "Geraet verbinden"
+    assert.ok(await page.locator('#verbinden').isVisible(), 'Geraet verbinden: einmal je Geraet');
+    assert.match(await page.locator('#loginBody h2').first().textContent(), /Connect this device|Gerät verbinden/);   // Sprache des Geraets
+    assert.equal(await page.locator('#roleStudent').count(), 0, 'noch keine Rollenwahl');
     assert.deepEqual(github, [], 'ohne Zugang fragt die App GitHub nicht');
     const r = await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).map((k) => [k, localStorage.getItem(k)])));
     for (const [k, v] of Object.entries(alt)) assert.equal(r[k], v, 'unveraendert: ' + k);

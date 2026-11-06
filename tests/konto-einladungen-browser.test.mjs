@@ -11,7 +11,7 @@ import { appServer, browserStarten } from './app-hilfen.mjs';
 import { githubNachbau } from './module/github-nachbau.mjs';
 import { githubSpeicher } from '../src/module/github.mjs';
 import { startcodeAusstellen, ersteAnmeldung } from '../src/module/konto.mjs';
-import { anmStartlink } from '../src/module/anmeldung.mjs';
+import { anmEinladungslink } from '../src/module/anmeldung.mjs';
 import { qrSvg } from '../src/module/qrcode.mjs';
 import { keyFingerprint } from '../src/module/krypto.mjs';
 
@@ -39,17 +39,16 @@ async function geraet() {
   page.on('pageerror', (e) => fehler.push(e.message));
   return { ctx, page, fehler };
 }
-async function zugang(page) { await page.locator('#kontoToken').fill(TOKEN); await page.locator('#kontoTokenGo').click(); await page.waitForSelector('#kontoTokenForm', { state: 'detached' }); }
+/* Einladung geoeffnet (Aufgabe "Erstanmeldung per QR-Code"): Passwortformular ohne Rollenwahl, Merkpasswort, absenden */
+async function registrieren(page) { await page.waitForSelector('#kontoNeuForm', { state: 'visible', timeout: 30000 }); await page.locator('#kontoNeuUse').click(); await page.locator('#kontoNeuGo').click(); }
 const attr = (page, sel) => page.locator(sel).evaluate((e) => ({ autocomplete: e.getAttribute('autocomplete'), name: e.getAttribute('name'), type: e.type }));
 
 test('Browser: Kind anlegen -> Start-QR-Code -> Kind wartet und geht von selbst weiter; Schluessel erneuern (Felder); Schliessen ohne Abmelden', async () => {
   const P = await geraet();
-  const linkP = anmStartlink(server.url, { anmeldename: 'peter.a', code: startP.code, fingerabdruck: startP.fingerabdruck });
+  // die Einladung des Admins: Zugangscode und Startlink in einem Link
+  const linkP = anmEinladungslink(server.url, { zugang: TOKEN, anmeldename: 'peter.a', code: startP.code, fingerabdruck: startP.fingerabdruck });
   await P.page.goto(linkP);
-  await zugang(P.page);
-  await P.page.locator('#roleAdult').click();
-  await P.page.locator('#loginGo').click();
-  await P.page.locator('#pwUse').click(); await P.page.locator('#setPwGo').click();
+  await registrieren(P.page);
   await P.page.waitForSelector('#recGo', { timeout: 30000 }); await P.page.locator('#recGo').click();
   await P.page.locator('#welcomeGo').click();
   await P.page.waitForSelector('#parentLeave');
@@ -68,18 +67,16 @@ test('Browser: Kind anlegen -> Start-QR-Code -> Kind wartet und geht von selbst 
   assert.ok(box.width >= 200 && Math.abs(box.width - box.height) < 2, 'QR-Code gross genug und quadratisch: ' + JSON.stringify(box));
   const code = (await P.page.locator('#kCode').textContent()).trim();
   const pub = await P.page.evaluate(() => new Promise((res) => { const r = indexedDB.open('bq2_konto', 1); r.onsuccess = () => { const q = r.result.transaction('schluessel').objectStore('schluessel').getAll(); q.onsuccess = () => { res(q.result[0].pub); r.result.close(); }; }; }));
-  const linkK = anmStartlink(server.url, { anmeldename: 'kathie', code, fingerabdruck: await keyFingerprint(pub) });
+  // der QR-Code traegt auch den Zugangscode des Elterngeraets: das Kindergeraet ist damit gleich verbunden
+  const linkK = anmEinladungslink(server.url, { zugang: TOKEN, anmeldename: 'kathie', code, fingerabdruck: await keyFingerprint(pub) });
   const d = await P.page.locator('#kQr path').getAttribute('d');
-  assert.equal(d, /<path fill="#000" d="([^"]*)"/.exec(qrSvg(linkK, { ecc: 'M', rand: 4 }))[1], 'der QR-Code traegt den Startlink mit Peters Pruefwoertern');
+  assert.equal(d, /<path fill="#000" d="([^"]*)"/.exec(qrSvg(linkK, { ecc: 'M', rand: 4 }))[1], 'der QR-Code traegt Zugangscode und Startlink mit Peters Pruefwoertern');
   assert.match(await P.page.locator('#kQrStatus').textContent(), /Warte auf die erste Anmeldung/);
 
-  // das Kind: QR-Link -> Zugang -> Student -> Passwort -> wartet -> geht von selbst weiter (Takte beider Geraete)
+  // das Kind: QR-Link -> verbunden, ohne Rollenwahl zum Passwort -> wartet -> geht von selbst weiter (Takte beider Geraete)
   const K = await geraet();
   await K.page.goto(linkK);
-  await zugang(K.page);
-  await K.page.locator('#roleStudent').click();
-  await K.page.locator('#loginGo').click();
-  await K.page.locator('#pwUse').click(); await K.page.locator('#setPwGo').click();
+  await registrieren(K.page);
   await K.page.waitForSelector('#welcomeGo', { timeout: 60000 });
   await K.page.locator('#welcomeGo').click();
   await K.page.waitForSelector('#home:not([hidden])');

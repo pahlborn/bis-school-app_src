@@ -22,6 +22,8 @@ import { startcodeAusstellen, ersteAnmeldung, anmelden as kontoAnmelden, kontoLo
 import { anmStartlink } from '../src/module/anmeldung.mjs';
 import { kindAnlegen, abgleichMitVerbindungen } from '../src/module/einladung.mjs';
 import { testinstanzUmwandeln, ersatzLesen } from '../werkzeug/testinstanz.mjs';
+import { githubSpeicher } from '../src/module/github.mjs';
+import { githubNachbau } from './module/github-nachbau.mjs';
 
 const RUNDEN = 1000;                                          // nur fuer Konten, die das Werkzeug anlegt (Aussteller)
 const warte = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -67,7 +69,18 @@ function geraet(t, welt, { name, hash = '', speicher = {}, extra = {}, anpassen,
   G.liste = () => JSON.parse(S.ablage.get(praefix + 'kontoListe') || '[]');
   G.offen = () => S.lauf(() => [...S.holen('kontoOffen').keys()]);
   G.ablageText = () => [...S.ablage].map(([k, v]) => k + '=' + v).join('\n');
+  /* das Passwortformular einer Einladung (fest im HTML, ausserhalb von #loginBody; Aufgabe "Erstanmeldung per QR-Code") */
+  G.neu = (sel) => S.lauf(() => { const w = S.$('#kontoNeu'); if (!w || !w.parentNode || w.hidden) return null; return sel ? w.querySelector(sel) : w; });
+  G.neuText = () => S.lauf(() => { const w = G.neu(); return w ? w.textContent : ''; });
   return G;
+}
+/* Einladung geoeffnet: das Passwortformular erscheint ohne Rollenwahl; Merkpasswort uebernehmen (oder pw) und absenden */
+async function registrieren(G, pw) {
+  await G.warten(() => !!G.neu('#kontoNeuForm'), 'Passwortformular der Einladung');
+  G.S.lauf(() => { if (pw) G.neu('#kontoNeuPw').value = pw; else G.neu('#kontoNeuUse').click(); });
+  const wert = G.S.lauf(() => G.neu('#kontoNeuPw').value);
+  G.S.lauf(() => { const f = G.neu('#kontoNeuForm'); f.dispatchEvent({ type: 'submit', target: f, currentTarget: f, preventDefault() {}, stopPropagation() {} }); });
+  return wert;
 }
 
 /* Rollenwahl, Name und Passwort/Startcode, "Log in" */
@@ -122,21 +135,24 @@ test('1 Erwachsener: Startlink -> eigenes Passwort -> Wiederherstellungscode (Pa
   const A = geraet(t, W.w, { name: 'Peters Laptop', hash: link.slice(link.indexOf('#')) });
   assert.equal(A.wert('KONTO_UI'), true, 'Testbau mit Speicher, ohne konten.json: Konto-Modus');
 
-  // der Startlink fuehrt zur Rollenwahl (Rolle zuerst), danach ist das Formular ausgefuellt
-  assert.ok(A.da('#roleAdult') && A.da('#roleStudent'), 'Rollenwahl');
-  assert.equal(A.da('#kontoTokenForm'), false, 'simulierter Speicher braucht keinen Zugangsschluessel');
-  assert.ok(/recovery code/.test(A.text()) && !/only works on this device/.test(A.text()), 'Hilfe auf der Anmeldeseite passt zum Konto-Modus');
-  A.klick('#roleAdult');
-  assert.equal(A.im('#loginUser').value, 'peter.a'); assert.equal(A.im('#loginPw').value, code);
-  A.absenden('#loginGo');
-  await A.wartenAuf('#setPwForm');
-  assert.ok(A.text().includes('Es gilt auf allen Geräten'), 'Passwort gilt auf allen Geraeten (DE fuer Erwachsene)');
-  assert.equal(A.im('input[autocomplete="username"]').value, 'peter.a', 'Passwortspeicher: Anmeldename im Formular');
-  assert.equal(A.S.lauf(() => A.S.$('#loginBody').querySelectorAll('input[autocomplete="new-password"]').length), 2);
-  const pw = await passwortWaehlen(A);
+  // Aufgabe "Erstanmeldung per QR-Code": der Startlink fuehrt OHNE Rollenwahl zum Passwort (die Rolle steht im Startcode);
+  // der Anmeldename steht fest, ein einziges Feld "new-password" (fest im HTML), die Regeln stehen am Feld
+  await A.warten(() => !!A.neu('#kontoNeuForm'), 'Passwortformular');
+  assert.equal(A.da('#roleAdult') || A.da('#roleStudent'), false, 'keine Rollenwahl');
+  assert.equal(A.da('#verbinden'), false, 'simulierter Speicher braucht keinen Zugangscode');
+  const n = A.neu('#kontoNeuName'), f = A.neu('#kontoNeuPw');
+  assert.deepEqual([n.value, n.getAttribute('autocomplete'), n.getAttribute('readonly') !== null, n.getAttribute('name')], ['peter.a', 'username', true, 'username']);
+  assert.deepEqual([f.getAttribute('autocomplete'), f.getAttribute('type'), f.getAttribute('name')], ['new-password', 'password', 'new-password']);
+  assert.match(f.getAttribute('passwordrules'), /minlength: 12/);
+  assert.ok(A.neuText().includes('Mindestens 12 Zeichen') && A.neuText().includes('Es gilt auf allen Ihren Geräten'), 'Regeln am Feld, DE fuer Erwachsene');
+  assert.equal(A.S.lauf(() => A.S.$('#login').querySelectorAll('input[autocomplete="new-password"]').length), 1, 'nur dieses eine Formular');
+  assert.equal(A.S.lauf(() => A.S.$('#login').querySelectorAll('input[autocomplete="current-password"]').length), 0, 'kein Anmeldeformular daneben');
+  assert.equal(A.neu('#kontoNeuGo').disabled, true, '"Anmelden" erst, wenn die Regeln erfuellt sind');
+  const pw = await registrieren(A);
 
   // Wiederherstellungscode: angezeigt, eigener Eintrag im Passwortspeicher, als Datei ueber das Teilen-Menue
   await A.wartenAuf('#recCode');
+  assert.equal(A.neu(), null, 'nach dem Absenden ist das Passwortformular weg (dann bietet der Passwortspeicher an)');
   const rc = A.im('#recCode').textContent;
   assert.match(rc, /^[A-HJ-NP-Z2-9]{4}(-[A-HJ-NP-Z2-9]{4}){4}$/, 'Code ' + rc);
   const nutzer = A.im('#recForm input[autocomplete="username"]'), feld = A.im('#recForm input[autocomplete="new-password"]');
@@ -348,32 +364,60 @@ test('3b Fehler beim ersten Mal: abgelaufener oder fremder Startcode, kein Speic
   assert.match(sc.fingerabdruck, /^[a-z]+(-[a-z]+){5}$/);
   const falsch = sc.fingerabdruck.split('-').reverse().join('-');
   const link = (fp) => { const l = anmStartlink('http://127.0.0.1/', { anmeldename: 'tom.c', code: sc.code, fingerabdruck: fp }); return l.slice(l.indexOf('#')); };
+  // (seit "Erstanmeldung per QR-Code" sagt das die App schon beim Oeffnen des Links - bevor jemand ein Passwort waehlt)
   const C = geraet(t, W.w, { name: 'Geraet mit falschem QR', hash: link(falsch) });
-  C.klick('#roleAdult'); C.absenden('#loginGo');
-  await passwortWaehlen(C);
-  assert.match(await C.meldung('#setPwMsg'), /stammt nicht von der Person/);
+  await C.warten(() => C.da('#loginMeldung'), 'Meldung');
+  assert.match(C.im('#loginMeldung').textContent, /does not come from the person who gave you the QR code/);
+  assert.equal(C.neu(), null, 'kein Passwortformular');
   assert.equal(await W.z.directory(await kontoLookup('tom.c')), null, 'nichts eingerichtet');
   const D = geraet(t, W.w, { name: 'Geraet mit richtigem QR', hash: link(sc.fingerabdruck) });
-  D.klick('#roleAdult'); D.absenden('#loginGo');
-  await passwortWaehlen(D);
+  await registrieren(D);
   await D.wartenAuf('#recCode');
   assert.ok((await W.z.directory(await kontoLookup('tom.c'))) !== null, 'mit richtigem Fingerabdruck eingerichtet (Code galt weiter)');
 });
 
-test('4 Testinstanz: ohne Zugangsschluessel fragt die Anmeldeseite einmal danach', async (t) => {
-  const A = geraet(t, null, { name: 'iPad ohne Zugang', anpassen: (h) => h.replace('/*BQ_SPEICHER*/null', () => JSON.stringify({ art: 'github', repo: 'pahlborn/bis-school-app-testdaten', wurzel: '' })) });
-  assert.equal(A.wert('KONTO_UI'), true);
-  assert.ok(A.da('#kontoTokenForm'), 'Feld fuer den Zugang');
-  A.klick('#roleAdult'); A.tippe('#loginUser', 'peter.a'); A.tippe('#loginPw', 'irgendwas-langes-1'); A.absenden('#loginGo');
-  assert.equal(A.im('#loginMsg').textContent, 'Die App erreicht ihren Speicher gerade nicht. Bitte später erneut versuchen.');
-  A.klick('#loginBack');
-  A.tippe('#kontoToken', 'kein token'); A.absenden('#kontoTokenGo');
-  assert.equal(A.im('#kontoTokenMsg').textContent, 'This key does not look right. Please check it.');
-  assert.equal(A.S.ablage.get('bqt_gh'), undefined);
-  A.tippe('#kontoToken', ' github_pat_' + 'A1b2C3d4'.repeat(10) + ' '); A.absenden('#kontoTokenGo');
-  assert.equal(A.S.ablage.get('bqt_gh'), 'github_pat_' + 'A1b2C3d4'.repeat(10), 'gespeichert unter bqt_gh');
-  assert.equal(A.da('#kontoTokenForm'), false, 'danach nicht mehr gefragt');
-  assert.ok(A.da('#roleAdult'));
+test('4 Testinstanz: ohne Zugangscode zuerst nur "Geraet verbinden" (B2); Link oder Code einfuegen; ✅/❌ nach einer Anfrage (B4); danach "Wer bist du?"', async (t) => {
+  const TOKEN = 'github_pat_' + 'A1b2C3d4'.repeat(10), REPO = 'pahlborn/bis-school-app-testdaten';
+  const N = await githubNachbau({ token: TOKEN, repos: [REPO] });
+  try {
+    // ein Konto im Test-Repo (sonst ist es kein Speicher dieser App)
+    const zw = githubSpeicher({ repo: REPO, token: TOKEN, basis: N.basis }).geraet('d_Werkzeug1');
+    const sa = await startcodeAusstellen({ zugang: zw, aussteller: null, anmeldename: 'admin', art: 'admin', now: Date.now() });
+    await ersteAnmeldung({ zugang: zw, code: sa.code, passwort: 'Werkzeug-Admin-Passwort-1', now: Date.now(), runden: RUNDEN });
+    const sp = JSON.stringify({ art: 'github', repo: REPO, wurzel: '', basis: N.basis });
+    const A = geraet(t, null, { name: 'iPad ohne Zugang', anpassen: (h) => h.replace('/*BQ_SPEICHER*/null', () => sp), extra: { fetch: (a, o) => fetch(a, o) } });
+    assert.equal(A.wert('KONTO_UI'), true);
+    // nur "Geraet verbinden": QR-Code scannen oder Link einfuegen - keine Rollenwahl, kein Anmeldeformular
+    assert.ok(A.da('#verbinden') && A.da('#verbScan') && A.da('#verbLink'), 'Geraet verbinden');
+    assert.equal(A.da('#roleAdult') || A.da('#roleStudent') || A.da('#loginForm'), false, 'zuerst nur verbinden');
+    assert.match(A.text(), /Once per device – it works for everyone who logs in here\./, 'Begriff Zugangscode (B3), Satz "einmal je Geraet"');
+    assert.match(A.text(), /access code/); assert.doesNotMatch(A.text(), /access key|Storage access/);
+    for (const [eingabe, meldung] of [['kein token', /not a Big Quest link or access code/], ['https://big-quest.github.io/#zugang=' + TOKEN, /another version of Big Quest/]]) {
+      A.tippe('#verbLink', eingabe); A.absenden('#verbGo');
+      assert.match(A.im('#verbMsg').textContent, meldung, eingabe);
+    }
+    // falscher Code: eine Anfrage, ❌, nichts behalten
+    const vorher = N.zaehler.anfragen;
+    A.tippe('#verbLink', 'github_pat_FALSCH_' + 'x'.repeat(30)); A.absenden('#verbGo');
+    await A.warten(() => A.da('#verbMeldung'), 'Meldung');
+    assert.equal(A.im('#verbMeldung').textContent, '❌ The access code does not work or has expired. Please ask for a new invitation.');
+    assert.equal(N.zaehler.anfragen - vorher, 1, 'eine Anfrage');
+    assert.equal(A.S.ablage.get('bqt_gh'), undefined, 'nicht behalten');
+    // kein Netz
+    N.stoerung({ abbruch: true });
+    A.tippe('#verbLink', TOKEN); A.absenden('#verbGo');
+    await A.warten(() => /No connection/.test(A.im('#verbMeldung')?.textContent || ''), 'kein Netz');
+    assert.equal(A.S.ablage.get('bqt_gh'), undefined);
+    // der richtige Code (ganzer Link, vom Mailprogramm umbrochen): ✅ Geraet verbunden -> "Wer bist du?" (beide Rollen gleich)
+    const l = 'http://127.0.0.1/#zugang=' + TOKEN;
+    A.tippe('#verbLink', ' ' + l.slice(0, 30) + '\n' + l.slice(30)); A.absenden('#verbGo');
+    await A.warten(() => A.da('#roleAdult'), 'Wer bist du?');
+    assert.equal(A.im('#loginMeldung').textContent, '✅ Device connected.');
+    assert.equal(A.S.ablage.get('bqt_gh'), TOKEN, 'gespeichert unter bqt_gh');
+    assert.equal(A.im('#roleStudent').className, A.im('#roleAdult').className, 'beide Rollen gleich gestaltet');
+    assert.equal(A.da('#verbinden'), false, 'danach nicht mehr gefragt');
+    assert.equal(A.S.lauf(() => A.S.holen('location').hash), '', 'nichts in der Adresse');
+  } finally { await N.schliessen(); }
 });
 
 test('5 Kathies App und der Testbau mit konten.json bleiben beim alten Weg; kein Konto-Modul im Live-Bau', async (t) => {

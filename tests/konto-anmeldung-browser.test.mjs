@@ -48,27 +48,24 @@ const imElternbereich = (page) => page.waitForSelector('#about:not([hidden])');
 
 test('Browser: Startlink -> Zugang -> Rolle -> eigenes Passwort -> Wiederherstellungscode (Passwortspeicher, Datei) -> Elternbereich; Schluessel nicht exportierbar; Neuladen bleibt angemeldet; Abmelden', async () => {
   const { ctx, page, fehler } = await geraet();
+  // ein Startlink OHNE Zugangscode auf einem Geraet ohne Zugangscode: zuerst "Geraet verbinden" - danach geht es mit dem
+  // Startlink weiter (Aufgabe "Erstanmeldung per QR-Code")
   await page.goto(server.url + '#start=peter.a/' + code);
-  await page.waitForSelector('#login:not([hidden])');
+  await page.waitForSelector('#verbinden');
   assert.equal(await page.evaluate(() => location.hash), '', 'Startcode sofort aus der Adresse entfernt');
-  // Zugang zum Testspeicher, einmal je Geraet
-  await page.locator('#kontoToken').fill(TOKEN);
-  await page.locator('#kontoTokenGo').click();
-  await page.waitForSelector('#kontoTokenForm', { state: 'detached' });
-  await page.locator('#roleAdult').click();
-  assert.deepEqual(await attr(page, '#loginUser'), { autocomplete: 'username', name: null, type: 'text', value: 'peter.a', readOnly: false });
-  const pwFeld = await attr(page, '#loginPw');
-  assert.equal(pwFeld.autocomplete, 'current-password'); assert.equal(pwFeld.type, 'password'); assert.equal(pwFeld.value, code);
-  await page.locator('#loginGo').click();
-
-  // eigenes Passwort: Anmeldename (versteckt) + zweimal "new-password" -> der Passwortspeicher speichert "peter.a"
-  await page.waitForSelector('#setPwForm');
-  const u = await attr(page, '#setPwForm input[autocomplete="username"]');
-  assert.equal(u.value, 'peter.a'); assert.equal(u.name, 'username');
-  assert.equal(await page.locator('#setPwForm input[autocomplete="new-password"]').count(), 2);
-  await page.locator('#pwUse').click();
-  const pw = await page.locator('#newPw1').inputValue();
-  await page.locator('#setPwGo').click();
+  await page.locator('#verbLink').fill(TOKEN);
+  await page.locator('#verbGo').click();
+  // eigenes Passwort ohne Rollenwahl: Anmeldename fest, ein Feld "new-password" (fest im HTML) -> der Passwortspeicher speichert "peter.a"
+  await page.waitForSelector('#kontoNeuForm', { state: 'visible', timeout: 30000 });
+  assert.equal(await page.evaluate(() => location.hash), '', 'Zugangscode und Startcode wieder aus der Adresse');
+  assert.match(await page.locator('#kontoNeuOk').textContent(), /^✅ (Device connected|Gerät verbunden)\.$/);
+  const u = await attr(page, '#kontoNeuName');
+  assert.deepEqual([u.value, u.name, u.autocomplete, u.readOnly], ['peter.a', 'username', 'username', true]);
+  assert.equal(await page.locator('input[autocomplete="new-password"]').count(), 1);
+  assert.equal(await page.locator('input[type="password"]').count(), 1, 'nur dieses eine Passwortfeld in der Seite');
+  await page.locator('#kontoNeuUse').click();
+  const pw = await page.locator('#kontoNeuPw').inputValue();
+  await page.locator('#kontoNeuGo').click();
 
   // Wiederherstellungscode: sichtbar, eigener Eintrag im Passwortspeicher, als Datei
   await page.waitForSelector('#recCode', { timeout: 30000 });
@@ -113,8 +110,8 @@ test('Browser: Startlink -> Zugang -> Rolle -> eigenes Passwort -> Wiederherstel
   // anderes Geraet: Zugang, Name + Passwort; danach "Passwort vergessen?" mit dem Code
   const B = await geraet();
   await B.page.goto(server.url);
-  await B.page.waitForSelector('#kontoTokenForm');
-  await B.page.locator('#kontoToken').fill(TOKEN); await B.page.locator('#kontoTokenGo').click();
+  await B.page.waitForSelector('#verbinden');
+  await B.page.locator('#verbLink').fill(TOKEN); await B.page.locator('#verbGo').click();
   await B.page.locator('#roleAdult').click();
   await B.page.locator('#loginUser').fill('peter.a'); await B.page.locator('#loginPw').fill(pw);
   await B.page.locator('#loginGo').click();
