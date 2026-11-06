@@ -210,7 +210,7 @@ test('Browser: die veroeffentlichte Testfassung aktualisiert sich selbst, ohne S
     await page.waitForURL(/:\d+\/\?v=8$/, { timeout: 20000 });
     await page.waitForSelector('#login:not([hidden])');
     assert.ok(await page.evaluate(() => [...document.scripts].some((x) => x.textContent.includes('const APP_VERSION={"n":8,'))), 'jetzt v8');
-    assert.ok(await page.locator('#kontoTokenForm').isVisible(), 'Anmeldeseite der Testinstanz (Zugang zum Test-Repo)');
+    assert.ok(await page.locator('#verbinden').isVisible(), 'Anmeldeseite der Testinstanz: zuerst Geraet verbinden (Zugangscode zum Test-Repo)');
     const r = await page.evaluate(() => ({ gelesen: [...new Set(window.__gelesen || [])], schluessel: Object.keys(localStorage).filter((k) => /schluessel/i.test(k)) }));
     assert.deepEqual(r.schluessel, [], 'kein Schluessel auf dem Geraet');
     assert.deepEqual(r.gelesen.filter((k) => /schluessel/i.test(k) || !k.startsWith('bqt')), [], 'nur bqt gelesen, kein Schluessel');

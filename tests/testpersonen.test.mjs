@@ -11,7 +11,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { TESTPERSONEN, FAMILIENNAMEN_VERBOTEN, STARTCODE_RESERVE_MS, testpersonenLauf, geheimnisse } from '../werkzeug/testpersonen.mjs';
 import { TESTINSTANZ } from '../werkzeug/testinstanz.mjs';
-import { KONTO_STARTCODE_MS, kontoLookup, ersteAnmeldung, anmelden, wiederherstellen } from '../src/module/konto.mjs';
+import { KONTO_STARTCODE_MS, kontoLookup, ersteAnmeldung, anmelden, wiederherstellen, startcodeAnsehen } from '../src/module/konto.mjs';
+import { anmEinladungslink, anmEinladungLesen, anmQr } from '../src/module/anmeldung.mjs';
 import { lokalerSpeicher } from '../src/module/speicher.mjs';
 import { githubSpeicher } from '../src/module/github.mjs';
 import { pwWeak } from '../src/module/passwort.mjs';
@@ -158,6 +159,42 @@ jedeWelt('Schutz: fremde Konten ohne lokales Passwort und ein geaendertes Passwo
     assert.ok(gemerkt.admin && gemerkt.admin.passwort, 'Admin-Passwort gemerkt');
     assert.equal((await anmelden({ zugang: z, anmeldename: 'admin', passwort: gemerkt.admin.passwort, runden: R })).kennung, gemerkt.admin.kennung);
   } finally { fs.rmSync(neu, { recursive: true, force: true }); }
+});
+
+jedeWelt('Einladungen (Aufgabe "Erstanmeldung per QR-Code"): je Person eine HTML-Datei mit QR-Code und Link (Zugangscode + Startcode), nur lokal; Kinder ohne E-Mail; benutzte Codes ohne Datei', async (W, ordner) => {
+  const ZC = 'github_pat_ZUGANGSCODE_' + 'w4'.repeat(20);
+  const r = await L(W, ordner, true, { zugangscode: ZC });
+  const dir = path.join(ordner, 'einladungen'), dateien = fs.readdirSync(dir).sort();
+  assert.deepEqual(dateien, ['Big-Quest-Einladung-jonas.sonnental.html', 'Big-Quest-Einladung-jonas.wellenberg.html', 'Big-Quest-invitation-lehrkraft.html',
+    'Geraet-verbinden-admin.html', 'Geraet-verbinden-mira.sonnental.html', 'Geraet-verbinden-mira.wellenberg.html', 'QR-zum-Zeigen-lio.sonnental.html', 'QR-zum-Zeigen-lio.wellenberg.html']);
+  assert.deepEqual([...r.einladungen].sort(), dateien);
+  assert.equal(r.aus.includes(ZC), false, 'Zugangscode nie in der Ausgabe');
+  assert.match(r.aus, /Einladungen \(8, nur auf diesem Rechner/);
+  const st = lesen(ordner).personen, lies = (f) => fs.readFileSync(path.join(dir, f), 'utf8');
+  // Erwachsene: E-Mail-Entwurf mit Link und QR-Code; der Link traegt Zugangscode, Startcode und die Pruefwoerter des Ausstellers
+  const mail = lies('Big-Quest-Einladung-jonas.sonnental.html');
+  const link = anmEinladungslink(TESTINSTANZ.adresse, { zugang: ZC, anmeldename: 'jonas.sonnental', code: st['jonas.sonnental'].startcode.code, fingerabdruck: st['jonas.sonnental'].startcode.fp });
+  assert.ok(mail.includes('href="' + link.replace(/&/g, '&amp;') + '"'), 'Link');
+  assert.ok(mail.includes(/<path fill="#000" d="([^"]*)"/.exec(anmQr(link, 'x'))[1]), 'QR-Code traegt genau diesen Link');
+  for (const s of ['tippen Sie auf den Link', 'gilt 7 Tage', 'nur für eine Anmeldung']) assert.ok(mail.includes(s), s);
+  assert.ok(lies('Big-Quest-invitation-lehrkraft.html').includes('tap the link'), 'Lehrkraft: Englisch');
+  // der Link oeffnet die Registrierung: Pruefwoerter passen (der Code bleibt gueltig)
+  const e = anmEinladungLesen(link.slice(link.indexOf('#')));
+  assert.equal(e.zugang, ZC);
+  assert.equal((await startcodeAnsehen({ zugang: W.geraet('d_Jonas'), code: e.start.code, fingerabdruck: e.start.fingerabdruck, now: W.uhr.t })).anmeldename, 'jonas.sonnental');
+  // Kinder: keine E-Mail, eine Seite zum Zeigen; Werkzeug-Konten: nur "Geraet verbinden" (kein Passwort in der Datei)
+  assert.match(lies('QR-zum-Zeigen-lio.sonnental.html'), /Nicht verschicken/);
+  const verb = lies('Geraet-verbinden-mira.sonnental.html');
+  assert.ok(verb.includes('#zugang=' + ZC + '"') && !verb.includes('start='), 'nur der Zugangscode');
+  assert.equal(verb.includes(st['mira.sonnental'].passwort), false, 'kein Passwort in der Datei');
+  // ein benutzter Startcode: beim naechsten Lauf keine Einladung mehr fuer diese Person
+  await ersteAnmeldung({ zugang: W.geraet('d_JS'), code: st['jonas.sonnental'].startcode.code, passwort: 'Koala-Bread-Cliff-5502', now: W.uhr.t, runden: R });
+  await L(W, ordner, true, { zugangscode: ZC });
+  assert.equal(fs.existsSync(path.join(dir, 'Big-Quest-Einladung-jonas.sonnental.html')), false);
+  // ohne Zugangscode (z. B. Tests): keine Einladungen; testpersonen.txt nennt, wo der Zugangscode liegt (ohne ihn)
+  const txt = fs.readFileSync(path.join(ordner, 'testpersonen.txt'), 'utf8');
+  assert.match(txt.split('\n')[2], /^Zugangscode \(verbindet ein Geraet, einmal je Geraet - nicht das Passwort einer Person\): steht in %LOCALAPPDATA%\\bis-school-app\\testdaten-token\.txt/);
+  assert.equal(txt.includes(ZC), false);
 });
 
 test('Ausgabe: ein Geheimnis in der Ausgabe wird nicht ausgegeben (Gegenprobe der Pruefung)', async () => {

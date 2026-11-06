@@ -411,6 +411,39 @@ async function ktoNeustart(zugang, s, inhalt, sig, passwort, runden, rand) {
   return ktoKonto(basis, inhalt.anmeldename, schluessel, n, pub);
 }
 
+/* ---------- look at a start code without using it (task "Erstanmeldung per QR-Code", 06.11.) ----------
+   Opening the link of an invitation shows at once what it is for: the login name and the kind of account (no role
+   choice), a new account or a child's new password - or that the code is used up, withdrawn or expired, before anybody
+   chooses a password. The storage hands out an invitation only once (invite.get), so it is put back right away with the
+   validity it had left (like ersteAnmeldung does after a failed try).
+   fingerabdruck: as in ersteAnmeldung - another issuer -> error "fingerabdruck" (the code stays valid).
+   -> { anmeldename, art, gueltigBis, neu } or error startcode-ungueltig / startcode-abgelaufen / fingerabdruck (or a
+   storage error: offline, zugang, limit) */
+export async function startcodeAnsehen({ zugang, code, fingerabdruck, now } = {}) {
+  ktoZugang(zugang);
+  if (!Number.isFinite(now)) throw ktoFalsch('"now" fehlt.');
+  if (typeof code !== 'string' || !KTO_CODE.test(code)) throw ktoFehler('startcode-ungueltig');
+  const s = await ktoStart(code);
+  let gespeichert;
+  try {
+    gespeichert = await zugang.invite.get(s.id);
+  } catch (err) {
+    if (err && err.code === 'unbekannt') throw ktoFehler('startcode-ungueltig');
+    if (err && err.code === 'abgelaufen') throw ktoFehler('startcode-abgelaufen');
+    throw err;
+  }
+  const gelesen = await ktoStartLesen(s, gespeichert);
+  if (!gelesen) throw ktoFehler('startcode-ungueltig');      // not a start code of this app: not put back
+  const inhalt = gelesen.inhalt;
+  if (now >= inhalt.gueltigBis) throw ktoFehler('startcode-abgelaufen');
+  await zugang.invite.put(s.id, gespeichert, { gueltigMs: Math.min(KONTO_STARTCODE_MS, inhalt.gueltigBis - now) });
+  if (fingerabdruck !== undefined && fingerabdruck !== null) {
+    const fp = inhalt.aussteller === null ? null : await keyFingerprint(inhalt.aussteller.pub);
+    if (!fp || ktoFp(fingerabdruck) !== fp) throw ktoFehler('fingerabdruck');
+  }
+  return { anmeldename: inhalt.anmeldename, art: inhalt.art, gueltigBis: inhalt.gueltigBis, neu: inhalt.neu === true };
+}
+
 /* ---------- first login with the start code ---------- */
 /* code + own password -> new person keys, account in the directory, the start code is used up.
    fingerabdruck: the issuer's fingerprint from the start QR code (task "Einladungen", US6.5) - if given and the signed

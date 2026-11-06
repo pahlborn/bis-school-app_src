@@ -24,7 +24,16 @@
 //     (anmAbgleich, anmKindAnlegen, anmElternEinladen, anmKindNeu, anmZurueckziehen, anmGeraete, anmGeraetEntfernen,
 //     anmErneuern, anmKindBereit, anmQr ...) - thin wrappers of modules einladung, geraete, konto and qrcode.
 
-import { KONTO_ARTEN, kontoName, kontoLookup, ersteAnmeldung, anmelden, wiederherstellen, schluesselErneuern, kontoFingerabdruck } from './konto.mjs';
+//   Task "Erstanmeldung per QR-Code" (06.11.; Vorgabe Peter): the invitation (QR code and link, e-mail) carries the access
+//     code of the device AND the start link: <address>#zugang=<access code>&start=<name>/<code>[/<fingerprint>]
+//     (anmEinladungslink / anmEinladungLesen; "#start=..." alone and "#zugang=..." alone stay valid). Opening it: the app
+//     removes both from the address at once, checks the access code with one request (anmZugangUebernehmen: it always
+//     replaces an older one - only when it works), then looks at the start code without using it (anmLinkPruefen ->
+//     register, log in because the account exists, or an error). "Connect this device" without a link: scan the QR code
+//     in the app (module qrlesen) or paste the link or only the code (anmEingefuegt). Terms (B3): "Zugangscode" /
+//     "access code" connects a device, "Passwort" belongs to a person.
+
+import { KONTO_ARTEN, kontoName, kontoLookup, ersteAnmeldung, anmelden, wiederherstellen, schluesselErneuern, kontoFingerabdruck, startcodeAnsehen, kontoStand } from './konto.mjs';
 import { githubSpeicher, githubTokenLesen, githubTokenSpeichern } from './github.mjs';
 import { verbindungen, kindAnlegen, elternteilEinladen, kindPasswortNeu, einladungZurueckziehen, abgleichMitVerbindungen, anmeldenameVorschlag, kindLokalEntfernen } from './einladung.mjs';
 import { meineGeraete, geraetEntfernen } from './geraete.mjs';
@@ -32,6 +41,7 @@ import { GERAETEABGLEICH_SPEICHER } from './geraeteabgleich.mjs';
 import { bereichName, schluesselLesen } from './bereiche.mjs';
 import { zulassungAus, aktiveMitglieder } from './zulassung.mjs';
 import { qrSvg } from './qrcode.mjs';
+import { qrLesen, QRL_HINWEIS } from './qrlesen.mjs';
 import { kindDatenExport, kindDatenLoeschen, kontoDatenLoeschen } from './kinddaten.mjs';
 import { deriveSchool } from './ableitung.mjs';
 
@@ -71,6 +81,145 @@ export function anmStartlink(adresse, { anmeldename, code, fingerabdruck = null 
   if (!n || typeof code !== 'string' || !ANM_STARTCODE.test(code)) throw new Error('anmeldung: Name oder Startcode ungueltig.');
   if (fingerabdruck !== null && !anmFp(fingerabdruck)) throw new Error('anmeldung: Fingerabdruck ungueltig.');
   return String(adresse || '').split('#')[0] + '#start=' + encodeURIComponent(n) + '/' + code + (fingerabdruck ? '/' + fingerabdruck : '');
+}
+
+/* ---------- invitation with access code (task "Erstanmeldung per QR-Code", 06.11.) ---------- */
+/* an access code as the storage takes it (module github: printable characters, no space) */
+export const ANM_ZUGANG = /^[\x21-\x7e]{8,255}$/;
+/* "#zugang=<code>", "#start=<name>/<code>[/<fp>]" or both joined by "&" -> { zugang (or null), start (or null) };
+   anything else (other parts, a part twice, a broken value) -> null */
+export function anmEinladungLesen(hash) {
+  const h = String(hash === undefined || hash === null ? '' : hash);
+  if (!h.startsWith('#') || h.length < 2) return null;
+  const werte = {};
+  for (const teil of h.slice(1).split('&')) {
+    const i = teil.indexOf('=');
+    if (i <= 0) return null;
+    const k = teil.slice(0, i);
+    if ((k !== 'zugang' && k !== 'start') || Object.prototype.hasOwnProperty.call(werte, k)) return null;
+    werte[k] = teil.slice(i + 1);
+  }
+  let zugang = null, start = null;
+  if (werte.zugang !== undefined) {
+    try { zugang = decodeURIComponent(werte.zugang); } catch (e) { return null; }
+    if (!ANM_ZUGANG.test(zugang)) return null;
+  }
+  if (werte.start !== undefined) {
+    start = anmStartlinkLesen('#start=' + werte.start);
+    if (!start) return null;
+  }
+  return zugang || start ? { zugang, start } : null;
+}
+/* the link of an invitation: access code and/or start link (same start link format as anmStartlink) */
+export function anmEinladungslink(adresse, { zugang = null, anmeldename, code = null, fingerabdruck = null } = {}) {
+  const teile = [];
+  if (zugang !== null && zugang !== undefined) {
+    if (typeof zugang !== 'string' || !ANM_ZUGANG.test(zugang)) throw new Error('anmeldung: Zugangscode ungueltig.');
+    teile.push('zugang=' + encodeURIComponent(zugang));
+  }
+  if (code !== null && code !== undefined) teile.push(anmStartlink('', { anmeldename, code, fingerabdruck }).slice(1));
+  if (!teile.length) throw new Error('anmeldung: Zugangscode oder Startcode fehlt.');
+  return String(adresse || '').split('#')[0] + '#' + teile.join('&');
+}
+/* the address of the app without "#...", "?..." and "index.html" (to compare links) */
+const anmBasis = (a) => String(a || '').split('#')[0].split('?')[0].replace(/index\.html$/i, '').replace(/\/+$/, '').toLowerCase();
+/* "Connect this device": a pasted text or a scanned QR code -> { zugang, start } (whole link, or only the access code),
+   { fremd: true } for a link of another address (another version of the app: test, family), or null.
+   Line breaks and spaces (a link wrapped by the mail program) do not count. */
+export function anmEingefuegt(text, adresse) {
+  const roh = String(text === undefined || text === null ? '' : text).trim(), t = roh.replace(/\s+/g, '');
+  if (!t) return null;
+  const i = t.indexOf('#');
+  if (i >= 0) {
+    if (i > 0 && adresse !== undefined && anmBasis(t.slice(0, i)) !== anmBasis(adresse)) return /^https?:\/\//i.test(t) ? { fremd: true } : null;
+    return anmEinladungLesen(t.slice(i));
+  }
+  if (/^https?:\/\//i.test(t) || /[=&/]/.test(t) || /\s/.test(roh)) return null;          // only the code: one word
+  return ANM_ZUGANG.test(t) ? { zugang: t, start: null } : null;
+}
+/* checks an access code with the storage - one request.
+   -> 'ok' | 'falsch' (wrong or expired: GitHub does not tell which) | 'offline' | 'limit'.
+   A storage without access code (tests: the simulation) -> 'ok'. */
+export async function anmZugangPruefen({ speicher, token, fetch, geraet = 'd_Pruefen' } = {}) {
+  if (speicher && typeof speicher.geraet === 'function') return 'ok';
+  if (!speicher || speicher.art !== 'github') return 'falsch';
+  let z;
+  try {
+    z = githubSpeicher({ repo: speicher.repo, token: String(token || '').trim(), wurzel: speicher.wurzel || '', ...(speicher.basis ? { basis: speicher.basis } : {}), ...(fetch ? { fetch } : {}) }).geraet(geraet);
+  } catch (err) { return 'falsch'; }
+  try { return (await z.verbunden()) ? 'ok' : 'falsch'; }
+  catch (err) {
+    const c = err && err.code;
+    if (c === 'offline' || c === 'limit') return c;
+    if (c === 'zugang' || c === 'ungueltig') return 'falsch';
+    throw err;
+  }
+}
+/* takes an access code: checked first; only one that works is stored - it then always replaces an older one. A code
+   that does not work is not kept (an older one stays as it was). -> the result of anmZugangPruefen */
+export async function anmZugangUebernehmen({ ablage, speicher, token, fetch, geraet } = {}) {
+  const t = String(token === undefined || token === null ? '' : token).trim();
+  if (!ANM_ZUGANG.test(t)) return 'falsch';
+  const r = await anmZugangPruefen({ speicher, token: t, fetch, geraet });
+  if (r === 'ok' && speicher && speicher.art === 'github') githubTokenSpeichern(ablage, t);
+  return r;
+}
+/* the start link of an invitation, before anybody types a password (one look at the code, it stays valid):
+   -> { art: 'registrieren', anmeldename, rolle, neu }  the code works: choose the own password (neu: a child's new one)
+      { art: 'anmelden', anmeldename, rolle }          the code is used up or expired, the account exists: the same link
+                                                        connects a device again (Safari forgets a page after ~7 days)
+      { art: 'fehler', code }                          startcode-ungueltig / startcode-abgelaufen / fingerabdruck
+   rolle = kind of account (admin, teacher, parent, child). Errors of the storage (offline, zugang, limit) are thrown. */
+export async function anmLinkPruefen({ zugang, start, now } = {}) {
+  try {
+    const s = await startcodeAnsehen({ zugang, code: start.code, fingerabdruck: start.fingerabdruck || undefined, now });
+    return { art: 'registrieren', anmeldename: s.anmeldename, rolle: s.art, neu: s.neu };
+  } catch (err) {
+    const c = err && err.code;
+    if (c === 'startcode-ungueltig' || c === 'startcode-abgelaufen') {
+      const st = await kontoStand({ zugang, anmeldename: start.anmeldename });
+      return st ? { art: 'anmelden', anmeldename: start.anmeldename, rolle: st.art } : { art: 'fehler', code: c };
+    }
+    if (c === 'fingerabdruck') return { art: 'fehler', code: c };
+    throw err;
+  }
+}
+/* a name for this device in "Meine Geraete": browser and Home Screen app are two devices (own storage) -> "iPhone (Safari)"
+   / "iPhone (App)"; ua = navigator.userAgent, touch = more than one touch point (iPad with a Mac user agent) */
+export function anmGeraetName({ ua = '', touch = false, standalone = false } = {}) {
+  const u = String(ua || '');
+  const os = /iPad/.test(u) || (/Macintosh/.test(u) && touch) ? 'iPad' : /iPhone/.test(u) ? 'iPhone' : /Android/.test(u) ? 'Android' : /Macintosh|Mac OS X/.test(u) ? 'Mac' : /Windows/.test(u) ? 'Windows' : /CrOS/.test(u) ? 'Chromebook' : /Linux/.test(u) ? 'Linux' : '';
+  const br = /Edg\//.test(u) ? 'Edge' : /CriOS|Chrome\//.test(u) ? 'Chrome' : /FxiOS|Firefox\//.test(u) ? 'Firefox' : /Safari\//.test(u) ? 'Safari' : '';
+  const wie = standalone ? 'App' : br;
+  return os && wie ? `${os} (${wie})` : os || wie;
+}
+/* the invitation as an e-mail draft (an HTML file the grown-up sends himself): QR code and link, valid 7 days, once.
+   qr = the QR code as SVG (anmQr); bis = end of validity (ms); sprache 'de' | 'en'. -> { betreff, html, dateiname } */
+export function anmEinladungMail({ link, qr, anmeldename, bis, sprache = 'de' } = {}) {
+  const n = kontoName(anmeldename);
+  if (!n || typeof link !== 'string' || !link || typeof qr !== 'string' || !qr || !Number.isFinite(bis)) throw new Error('anmeldung: Einladung unvollstaendig.');
+  const de = sprache !== 'en', T = 'title';   // (the builds of the test instance and the family version look for the app's own <title> - only once)
+  const x = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const d = new Date(bis), p = (z) => String(z).padStart(2, '0');
+  const datum = de ? `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}, ${p(d.getHours())}:${p(d.getMinutes())} Uhr` : `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}, ${(d.getHours() % 12) || 12}:${p(d.getMinutes())} ${d.getHours() < 12 ? 'AM' : 'PM'}`;
+  const betreff = de ? `Big Quest – Ihre Einladung (${n})` : `Big Quest – your invitation (${n})`;
+  const absaetze = de ? [
+    `Sie sind zu <b>Big Quest</b> eingeladen. Ihr Anmeldename: <b>${x(n)}</b>.`,
+    '<b>Lesen Sie dies auf dem iPhone oder iPad selbst, tippen Sie auf den Link:</b>',
+    `<a href="${x(link)}">Big Quest öffnen und anmelden</a><br><span style="font-size:.75rem;word-break:break-all;color:#556">${x(link)}</span>`,
+    '<b>Sonst:</b> Den QR-Code mit der Kamera des Geräts scannen, auf dem Sie Big Quest nutzen möchten.',
+    'Danach legen Sie Ihr eigenes Passwort fest – Ihr Gerät schlägt ein starkes vor und merkt es sich.',
+    `Die Einladung gilt 7 Tage (bis ${x(datum)}) und nur für eine Anmeldung. Ein weiteres Gerät verbinden Sie später mit demselben Link oder QR-Code. Bitte nicht weitergeben.`
+  ] : [
+    `You are invited to <b>Big Quest</b>. Your login name: <b>${x(n)}</b>.`,
+    '<b>If you are reading this on your iPhone or iPad, tap the link:</b>',
+    `<a href="${x(link)}">Open Big Quest and log in</a><br><span style="font-size:.75rem;word-break:break-all;color:#556">${x(link)}</span>`,
+    '<b>Otherwise:</b> scan the QR code with the camera of the device you want to use Big Quest on.',
+    'Then you choose your own password – your device suggests a strong one and remembers it.',
+    `The invitation works for 7 days (until ${x(datum)}) and for one sign-up. You can connect another device later with the same link or QR code. Please do not pass it on.`
+  ];
+  const html = `<!doctype html>\n<html lang="${de ? 'de' : 'en'}">\n<head><meta charset="utf-8"><${T}>${x(betreff)}</${T}></head>\n<body style="font-family:-apple-system,system-ui,sans-serif;max-width:34rem;margin:1.5rem auto;padding:0 1rem;color:#1d2433">\n<p style="font-size:.85rem;color:#556">${de ? 'Betreff' : 'Subject'}: ${x(betreff)}</p>\n${absaetze.slice(0, 3).map((a) => `<p>${a}</p>`).join('\n')}\n<div style="width:240px;margin:1rem 0">${qr}</div>\n${absaetze.slice(3).map((a) => `<p>${a}</p>`).join('\n')}\n</body>\n</html>\n`;
+  return { betreff, html, dateiname: (de ? 'Big-Quest-Einladung-' : 'Big-Quest-invitation-') + n + '.html' };
 }
 
 /* user name of the recovery code's own entry in the password manager */
@@ -160,6 +309,8 @@ export function anmZugang(speicher, { ablage, geraet, fetch } = {}) {
 export function anmTokenNoetig(speicher, ablage) {
   return !!speicher && speicher.art === 'github' && !githubTokenLesen(ablage);
 }
+/* the access code of this device (for the QR code of an invitation and "Connect another device"); null without one */
+export const anmZugangscode = (speicher, ablage) => (speicher && speicher.art === 'github' ? githubTokenLesen(ablage) : null);
 /* stores the access key (trimmed); a broken one -> error (without the value) */
 export function anmTokenSpeichern(ablage, token) {
   githubTokenSpeichern(ablage, token);
@@ -213,6 +364,9 @@ export const anmErneuern = ({ zugang, anmeldename, passwort, neuesPasswort }) =>
 export const anmFingerabdruck = (pub) => kontoFingerabdruck(pub);
 /* the QR code of a start link as SVG */
 export const anmQr = (text, titel) => qrSvg(text, { ecc: 'M', rand: 4, titel });
+/* a QR code in a camera picture (module qrlesen, jsQR) -> its text or null; the licence notice for "About the app" */
+export const anmQrLesen = (rgba, breite, hoehe) => qrLesen(rgba, breite, hoehe);
+export const ANM_QR_LESER = QRL_HINWEIS;
 /* may a child practise on this device? Only once a parent's device took it in: the child holds the current key of its
    learning area (concept 10.3; before that its events would come before the device is registered there). Reads the key
    entries of that area once (one request). -> true / false; a storage error -> false (try again later) */

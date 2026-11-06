@@ -6,7 +6,11 @@
 //   node werkzeug/testpersonen.mjs --anlegen    legt an, was fehlt; abgelaufene Startcodes werden neu ausgestellt
 //   weitere Schalter: --repo owner/name, --wurzel <ordner im Repo>
 //
-// Der Token kommt aus %LOCALAPPDATA%\bis-school-app\testdaten-token.txt (anderer Pfad: BQ_GH_TOKEN_DATEI).
+// Der Token kommt aus %LOCALAPPDATA%\bis-school-app\testdaten-token.txt (anderer Pfad: BQ_GH_TOKEN_DATEI). Er ist zugleich der
+// Zugangscode der Geraete (Aufgabe "Erstanmeldung per QR-Code", 06.11.): Mit --anlegen schreibt das Werkzeug je Person eine
+// Einladung als HTML-Datei (QR-Code und Link mit Zugangscode und Startcode) NUR lokal nach ...\testinstanz\einladungen\ -
+// nie ins Repo, nie in die Ausgabe. Peter verschickt sie selbst. Erwachsene: E-Mail-Entwurf; Kinder: keine E-Mail, eine
+// Seite mit dem QR-Code zum Zeigen; Konten des Werkzeugs (ohne Startcode): "Geraet verbinden" (nur der Zugangscode).
 //
 // Wer was bekommt (Ausstellerkette wie im Konto-Modul: Admin -> Erwachsene, Elternteil -> Kind):
 //  - admin, mira.sonnental, mira.wellenberg: legt das Werkzeug selbst an (Passwort + Wiederherstellungscode in der
@@ -25,7 +29,7 @@ import { fileURLToPath } from 'node:url';
 import { PBKDF2_ROUNDS } from '../src/module/krypto.mjs';
 import { pwSuggest } from '../src/module/passwort.mjs';
 import { kontoLookup, startcodeAusstellen, ersteAnmeldung, anmelden } from '../src/module/konto.mjs';
-import { anmStartlink } from '../src/module/anmeldung.mjs';
+import { anmStartlink, anmEinladungslink, anmEinladungMail, anmQr } from '../src/module/anmeldung.mjs';
 import { ablageOrdner } from './schluesselablage.mjs';
 import { TESTINSTANZ } from './testinstanz.mjs';
 
@@ -95,7 +99,7 @@ export async function testpersonenAnlegen({ zugang, now, anlegen = false, stand 
       const aussteller = offen[p.von];
       if (!aussteller) throw new Error(`Aussteller ${p.von} fuer ${p.name} fehlt.`);
       const sc = await startcodeAusstellen({ zugang, aussteller, anmeldename: p.name, art: p.art, now, ...zr });
-      st.personen[p.name] = { kennung: sc.kennung, startcode: { code: sc.code, gueltigBis: sc.gueltigBis, ausgestellt: now }, von: p.von };
+      st.personen[p.name] = { kennung: sc.kennung, startcode: { code: sc.code, gueltigBis: sc.gueltigBis, ausgestellt: now, fp: sc.fingerabdruck }, von: p.von };
       await merken(st);
       status = (alt.startcode ? 'Startcode neu' : 'Startcode ausgestellt') + ', gueltig bis ' + tag(sc.gueltigBis);
     }
@@ -109,6 +113,7 @@ export function uebersichtText(stand, { repo, wurzel, jetzt }) {
   const z = [
     'Big Quest Testinstanz - Testpersonen (NUR auf diesem Rechner; nicht weitergeben ausser an die Testperson)',
     `Stand: ${tag(jetzt)}   Daten: ${repo}${wurzel ? '/' + wurzel : ''}   App: ${TESTINSTANZ.adresse}`,
+    'Zugangscode (verbindet ein Geraet, einmal je Geraet - nicht das Passwort einer Person): steht in ' + ZUGANG_DATEI_TEXT + '; die Einladungen in einladungen\\ enthalten ihn schon.',
     'Gleiche Vornamen in beiden Familien - Nachname und (bei den Kindern) Geburtsdatum unterscheiden sie.',
     ''
   ];
@@ -127,6 +132,44 @@ export function uebersichtText(stand, { repo, wurzel, jetzt }) {
   return z.join('\n') + '\n';
 }
 
+/* wo der Zugangscode liegt (fuer die Zeile oben in testpersonen.txt; ohne den Code selbst) */
+const ZUGANG_DATEI_TEXT = '%LOCALAPPDATA%\\bis-school-app\\testdaten-token.txt';
+
+/**
+ * Einladungen als HTML-Dateien (Aufgabe "Erstanmeldung per QR-Code"): je Person mit gueltigem Startcode eine Datei mit
+ * QR-Code und Link (Zugangscode + Startlink mit Pruefwoertern des Ausstellers); Konten des Werkzeugs: "Geraet verbinden"
+ * (nur der Zugangscode - Anmeldename und Passwort stehen in testpersonen.txt). Benutzte Startcodes: keine Datei mehr.
+ * Schreibt nur in ordner (vorher alte .html dort weg). -> Dateinamen (ohne Geheimnisse)
+ */
+export async function einladungenSchreiben({ stand, ordner, zugangscode, adresse = TESTINSTANZ.adresse }) {
+  await fs.mkdir(ordner, { recursive: true });
+  for (const f of await fs.readdir(ordner)) if (f.endsWith('.html')) await fs.rm(path.join(ordner, f));
+  const namen = [];
+  for (const p of TESTPERSONEN) {
+    const s = stand.personen[p.name] || {};
+    let datei, html;
+    if (s.startcode) {
+      const link = anmEinladungslink(adresse, { zugang: zugangscode, anmeldename: p.name, code: s.startcode.code, fingerabdruck: s.startcode.fp || null });
+      if (p.art === 'child') {
+        datei = 'QR-zum-Zeigen-' + p.name + '.html';
+        html = seite(`Big Quest – QR-Code für ${p.name}`, `<p><b>Nicht verschicken</b> – Kinder bekommen keine E-Mail. Auf dem Gerät des Kindes die Kamera auf den Code richten (oder in Big Quest „📷 QR-Code scannen“), dann zusammen ein Passwort wählen. Gilt einmal, bis ${tag(s.startcode.gueltigBis)}.</p><div style="width:280px">${anmQr(link, 'Start-QR-Code')}</div><p style="font-size:.8rem;word-break:break-all;color:#556">${esc(link)}</p>`);
+      } else {
+        const m = anmEinladungMail({ link, qr: anmQr(link, 'Einladung'), anmeldename: p.name, bis: s.startcode.gueltigBis, sprache: p.art === 'teacher' ? 'en' : 'de' });
+        datei = m.dateiname; html = m.html;
+      }
+    } else if (p.werkzeug && s.passwort) {
+      const link = anmEinladungslink(adresse, { zugang: zugangscode });
+      datei = 'Geraet-verbinden-' + p.name + '.html';
+      html = seite(`Big Quest – Gerät verbinden (${p.name})`, `<p>Für ein neues Gerät oder die App auf dem Home-Bildschirm: Big Quest öffnen, „📷 QR-Code scannen“ – oder diesen Link öffnen bzw. einfügen. Danach mit <b>${esc(p.name)}</b> und dem Passwort aus testpersonen.txt anmelden. Der Code verbindet nur das Gerät; er ist kein Passwort.</p><p><a href="${esc(link)}">Gerät verbinden</a></p><div style="width:240px">${anmQr(link, 'Gerät verbinden')}</div>`);
+    } else continue;
+    await fs.writeFile(path.join(ordner, datei), html, { mode: 0o600 });
+    namen.push(datei);
+  }
+  return namen;
+}
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const seite = (titel, body) => `<!doctype html>\n<html lang="de">\n<head><meta charset="utf-8"><title>${esc(titel)}</title></head>\n<body style="font-family:-apple-system,system-ui,sans-serif;max-width:34rem;margin:1.5rem auto;padding:0 1rem;color:#1d2433">\n<h1 style="font-size:1.2rem">${esc(titel)}</h1>\n${body}\n</body>\n</html>\n`;
+
 /** alle Geheimnisse des Stands (fuer die Pruefung der Ausgabe) */
 export const geheimnisse = (stand) => Object.values(stand.personen || {}).flatMap((s) => [s.passwort, s.wiederherstellungscode, s.startcode && s.startcode.code]).filter((x) => typeof x === 'string' && x);
 
@@ -134,7 +177,7 @@ export const geheimnisse = (stand) => Object.values(stand.personen || {}).flatMa
  * Ein Lauf mit lokaler Ablage: Stand lesen, anlegen/zeigen, Stand und Uebersicht schreiben (nur bei anlegen).
  * ausgabe(text) bekommt die Zeilen fuer die Konsole - ohne Geheimnisse (wird hier geprueft).
  */
-export async function testpersonenLauf({ zugang, now = Date.now(), anlegen = false, ordner = lokalerOrdner(), repo = TESTINSTANZ.repoDaten, wurzel = TESTINSTANZ.wurzelDaten, runden, rand, ausgabe = console.log } = {}) {
+export async function testpersonenLauf({ zugang, now = Date.now(), anlegen = false, ordner = lokalerOrdner(), repo = TESTINSTANZ.repoDaten, wurzel = TESTINSTANZ.wurzelDaten, runden, rand, ausgabe = console.log, zugangscode = null } = {}) {
   const standDatei = path.join(ordner, 'testpersonen.json'), textDatei = path.join(ordner, 'testpersonen.txt');
   let stand = {};
   try { stand = JSON.parse(await fs.readFile(standDatei, 'utf8')); } catch (e) { if (e.code !== 'ENOENT') throw e; }
@@ -148,14 +191,17 @@ export async function testpersonenLauf({ zugang, now = Date.now(), anlegen = fal
   };
   const r = await testpersonenAnlegen({ zugang, now, anlegen, stand, merken: anlegen ? merken : async () => {}, ...(runden ? { runden } : {}), ...(rand ? { rand } : {}) });
   if (anlegen) await merken(r.stand);
+  // Einladungen (QR-Code + Link mit Zugangscode) - nur mit Zugangscode und nur beim Anlegen
+  const einladungen = anlegen && zugangscode ? await einladungenSchreiben({ stand: r.stand, ordner: path.join(ordner, 'einladungen'), zugangscode }) : [];
   sag(`Testpersonen in ${repo}${wurzel ? '/' + wurzel : ''}${anlegen ? '' : ' (nur angesehen, nichts geschrieben)'}:`);
   for (const z of r.zeilen) sag(`  ${z.name.padEnd(BREIT)} ${ARTEN[z.art].padEnd(10)} Familie ${z.familie}  ${z.status}`);
   sag(anlegen ? `Startcodes, Passwoerter, Wiederherstellungscodes: ${textDatei}` : 'Anlegen mit: node werkzeug/testpersonen.mjs --anlegen');
+  if (einladungen.length) sag(`Einladungen (${einladungen.length}, nur auf diesem Rechner; Peter verschickt sie selbst): ${path.join(ordner, 'einladungen')}`);
   const text = zeilenAus.join('\n');
-  const geheim = geheimnisse(r.stand).filter((g) => text.includes(g));
+  const geheim = [...geheimnisse(r.stand), ...(zugangscode ? [zugangscode] : [])].filter((g) => text.includes(g));
   if (geheim.length) throw new Error('Ausgabe enthielte ' + geheim.length + ' Geheimnis(se) - nicht ausgegeben.');
   ausgabe(text);
-  return { ...r, standDatei, textDatei };
+  return { ...r, standDatei, textDatei, einladungen };
 }
 
 async function main() {
@@ -172,7 +218,7 @@ async function main() {
   const { githubSpeicher } = await import('../src/module/github.mjs');
   try {
     const zugang = githubSpeicher({ repo, token, wurzel }).geraet('d_Werkzeug1');
-    await testpersonenLauf({ zugang, anlegen: args.includes('--anlegen'), repo, wurzel, ausgabe: (t) => console.log(schwaerzen(t)) });
+    await testpersonenLauf({ zugang, anlegen: args.includes('--anlegen'), repo, wurzel, zugangscode: token, ausgabe: (t) => console.log(schwaerzen(t)) });
   } catch (e) { throw new Error(schwaerzen((e && e.code ? e.code + ': ' : '') + (e && e.message))); }
 }
 

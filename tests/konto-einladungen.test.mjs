@@ -25,6 +25,7 @@ import { startcodeAusstellen, ersteAnmeldung, anmelden as kontoAnmelden, kontoLo
 import { anmStartlink } from '../src/module/anmeldung.mjs';
 import { qrSvg } from '../src/module/qrcode.mjs';
 import { keyFingerprint } from '../src/module/krypto.mjs';
+import { neuFormular, registrieren, linkMeldung } from './erstanmeldung-hilfen.mjs';
 
 const RUNDEN = 1000;
 const warte = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -49,7 +50,7 @@ function geraet(t, welt, { name, hash = '', ua = UA.ipad, speicher = {}, anpasse
   });
   t.diagnostic(name + ': BQ_SEED=' + S.seed);
   const G = { S, name };
-  const finde = (sel) => S.lauf(() => S.$('#loginBody').querySelector(sel) || S.$('#aboutBody').querySelector(sel));
+  const finde = (sel) => S.lauf(() => S.$('#loginBody').querySelector(sel) || neuFormular(G, sel) || S.$('#aboutBody').querySelector(sel));
   G.im = finde;
   G.da = (sel) => !!finde(sel);
   G.text = () => S.lauf(() => S.$('#loginBody').textContent);
@@ -93,10 +94,9 @@ async function passwortWaehlen(G) {
   G.absenden('#setPwGo');
   return pw;
 }
-/* Erwachsener mit Startlink (Rolle, Passwort, Code, Willkommen) -> { pw, code } */
+/* Erwachsener mit Startlink (Passwort ohne Rollenwahl, Code, Willkommen) -> { pw, code } */
 async function erwachsenStart(G) {
-  G.klick('#roleAdult'); G.absenden('#loginGo');
-  const pw = await passwortWaehlen(G);
+  const pw = await registrieren(G);
   await G.wartenAuf('#recCode');
   const rc = G.im('#recCode').textContent;
   G.klick('#recGo'); await G.wartenAuf('#welcomeGo'); G.klick('#welcomeGo');
@@ -145,8 +145,7 @@ async function kindAnlegen(P, vorname, erwarteterName) {
 }
 /* das Kind meldet sich mit dem QR-Link an, waehlt ein Passwort und wartet auf die Eltern -> Passwort */
 async function kindStart(K, P) {
-  K.klick('#roleStudent'); K.absenden('#loginGo');
-  const pw = await passwortWaehlen(K);
+  const pw = await registrieren(K);
   await K.wartenAuf('#kidWait');
   assert.equal(K.sitzung(), null, 'noch nicht angemeldet: wartet');
   await P.sync();                                                       // = Takt des QR-Codes auf dem Elterngeraet
@@ -231,9 +230,9 @@ test('1 Familie: Kind anlegen (Start-QR), Kind wartet bis zur Aufnahme; zweiter 
   await P.warten(() => !/Offene Einladungen/.test(P.abschnitt('family') || ''), 'Liste leer');
   for (const [q, n] of [[bq, 'ben'], [lq, 'lena']]) {
     const X = geraet(t, W.w, { name: 'Geraet ' + n, hash: link(q.link) });
-    X.klick('#roleStudent'); X.absenden('#loginGo');
-    await passwortWaehlen(X);
-    assert.equal(await X.meldung('#setPwMsg'), 'This start code does not work (any more). Please ask for a new one.', n + ': zurueckgezogen');
+    // (seit "Erstanmeldung per QR-Code" gleich beim Oeffnen des Links, vor jedem Passwort; Geraetesprache Deutsch)
+    assert.equal(await linkMeldung(X), '❌ Dieser Startcode gilt nicht (mehr). Bitte einen neuen geben lassen.', n + ': zurueckgezogen');
+    assert.equal(neuFormular(X), null, n + ': kein Passwortformular');
   }
 
   // Passwort des Kindes neu setzen: neuer Start-QR-Code, Kathie meldet sich auf einem neuen Geraet an - alles noch da
@@ -312,8 +311,9 @@ test('2 Meine Geraete: Liste; Kindergeraet entfernen -> "Jetzt neues Passwort fu
 
   P.einstellungen('geraete');
   const g = P.abschnitt('devices');
-  assert.match(g, /Meine Geräte[\s\S]*Windows · Chrome \(dieses Gerät\)[\s\S]*iPhone · Safari/, g);
-  assert.match(g, /Geräte von Kathie[\s\S]*iPad · Safari[\s\S]*iPhone · Safari/, g);
+  // Geraetenamen (Aufgabe "Erstanmeldung per QR-Code"): Browser und Home-Bildschirm-App verstaendlich getrennt
+  assert.match(g, /Meine Geräte[\s\S]*Windows \(Chrome\) \(dieses Gerät\)[\s\S]*iPhone \(Safari\)/, g);
+  assert.match(g, /Geräte von Kathie[\s\S]*iPad \(Safari\)[\s\S]*iPhone \(Safari\)/, g);
   const d = (G) => JSON.parse(G.S.ablage.get('bq2_evDevice'));
   assert.equal(P.da(`[data-kweg="${P.kennung}|${d(P)}"]`), false, 'dieses Geraet: kein "Entfernen" (das ist "Abmelden")');
 
@@ -322,7 +322,7 @@ test('2 Meine Geraete: Liste; Kindergeraet entfernen -> "Jetzt neues Passwort fu
   const vorher = P.antworten(kid);
   P.klick(`[data-kweg="${kid}|${d(K2)}"]`);
   await P.wartenAuf('#kWegJa');
-  assert.match(P.eltern(), /„iPhone · Safari“ von Kathie entfernen\?/);
+  assert.match(P.eltern(), /„iPhone \(Safari\)“ von Kathie entfernen\?/);
   P.klick('#kWegJa');
   await P.wartenAuf('#kNeuJa');
   assert.match(P.eltern(), /Jetzt neues Passwort für Kathie\?/);
@@ -336,18 +336,18 @@ test('2 Meine Geraete: Liste; Kindergeraet entfernen -> "Jetzt neues Passwort fu
   assert.match(P.eltern(), /Neues Passwort für Kathie/);
   P.klick('#kQrFertig');
   P.einstellungen('geraete');
-  assert.match(P.abschnitt('devices'), /Geräte von Kathie[\s\S]*iPhone · Safari[\s\S]*entfernt am/);
+  assert.match(P.abschnitt('devices'), /Geräte von Kathie[\s\S]*iPhone \(Safari\)[\s\S]*entfernt am/);
 
   // eigenes Geraet entfernen: aktuelles + neues Passwort -> neuer Schluessel, neuer Code
   P.klick(`[data-kweg="${P.kennung}|${d(P2)}"]`);
   await P.wartenAuf('#kErnForm');
-  assert.match(P.eltern(), /Eigenes Gerät entfernen[\s\S]*„iPhone · Safari“ wird entfernt/);
+  assert.match(P.eltern(), /Eigenes Gerät entfernen[\s\S]*„iPhone \(Safari\)“ wird entfernt/);
   P.tippe('#kErnAlt', P.pw); P.klick('#kErnUse'); const neuPw = P.im('#kErnNeu1').value; P.absenden('#kErnGo');
   await P.wartenAuf('#kCodeBox #recCode');
   P.klick('#recGo');
   await P.sync();
   P.einstellungen('geraete');
-  assert.match(P.abschnitt('devices').split('Geräte von')[0], /Meine Geräte[\s\S]*iPhone · Safari[\s\S]*entfernt am/);
+  assert.match(P.abschnitt('devices').split('Geräte von')[0], /Meine Geräte[\s\S]*iPhone \(Safari\)[\s\S]*entfernt am/);
   // das entfernte iPhone sieht nichts Neues mehr
   ueben(K1, 1); await K1.sync(); await P.sync(); await P2.sync();
   assert.equal(P.antworten(kid).length, vorher.length + 2);
