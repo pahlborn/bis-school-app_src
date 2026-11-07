@@ -1,7 +1,8 @@
 // Aufgabe "Einladungen - Oberflaeche" im Browser (Chromium): nur die Bedienwege - ⚙ oeffnen, Abschnitt "Familie"
 // aufklappen, Kind anlegen, Start-QR-Code sichtbar und mit dem richtigen Startlink, das Kind wartet und geht von selbst
 // weiter (echte Zeitgeber: QR-Code-Takt der Eltern, Warte-Takt des Kindes), Felder fuer den Passwortspeicher beim
-// Schluessel-Erneuern, "Schliessen" ohne Abmelden. Die Logik mit mehreren Geraeten: tests/konto-einladungen.test.mjs.
+// Schluessel-Erneuern, Start direkt in den Erwachsenenbereich auf dem eigenen Geraet und Abmelden. Die Logik mit
+// mehreren Geraeten: tests/konto-einladungen.test.mjs.
 // Speicher: der nachgebaute GitHub-Server (Weg der Testinstanz).
 //   node --test tests/konto-einladungen-browser.test.mjs
 
@@ -43,7 +44,7 @@ async function geraet() {
 async function registrieren(page) { await page.waitForSelector('#kontoNeuForm', { state: 'visible', timeout: 30000 }); await page.locator('#kontoNeuUse').click(); await page.locator('#kontoNeuGo').click(); }
 const attr = (page, sel) => page.locator(sel).evaluate((e) => ({ autocomplete: e.getAttribute('autocomplete'), name: e.getAttribute('name'), type: e.type }));
 
-test('Browser: Kind anlegen -> Start-QR-Code -> Kind wartet und geht von selbst weiter; Schluessel erneuern (Felder); Schliessen ohne Abmelden', async () => {
+test('Browser: Kind anlegen -> Start-QR-Code -> Kind wartet und geht von selbst weiter; Schluessel erneuern (Felder); eigenes Geraet startet direkt im Erwachsenenbereich', async () => {
   const P = await geraet();
   // die Einladung des Admins: Zugangscode und Startlink in einem Link
   const linkP = anmEinladungslink(server.url, { zugang: TOKEN, anmeldename: 'peter.a', code: startP.code, fingerabdruck: startP.fingerabdruck });
@@ -51,7 +52,7 @@ test('Browser: Kind anlegen -> Start-QR-Code -> Kind wartet und geht von selbst 
   await registrieren(P.page);
   await P.page.waitForSelector('#recGo', { timeout: 30000 }); await P.page.locator('#recGo').click();
   await P.page.locator('#welcomeGo').click();
-  await P.page.waitForSelector('#parentLeave');
+  await P.page.waitForSelector('#parentClose');
 
   // ⚙ -> Abschnitt "Familie" aufklappen -> Kind anlegen
   await P.page.locator('#pSettings').click();
@@ -94,11 +95,12 @@ test('Browser: Kind anlegen -> Start-QR-Code -> Kind wartet und geht von selbst 
   assert.equal(await P.page.locator('#kErnForm input[autocomplete="new-password"]').count(), 2);
   await P.page.locator('#kBack').click();
 
-  // Schliessen: auf Peters eigenem Geraet (kein Kind hier) ohne Erinnerung zur Anmeldeseite; angemeldet geblieben
-  await P.page.locator('#parentLeave').click();
+  // eigenes Geraet: nach dem Neuladen direkt wieder im Erwachsenenbereich
+  await P.page.reload();
+  await P.page.waitForSelector('#parentClose');
+  // Abmelden: danach zur Anmeldung
+  await P.page.locator('#parentClose').click();
   await P.page.waitForSelector('#login:not([hidden])');
-  await P.page.locator('#roleAdult').click();
-  await P.page.waitForSelector('#parentLeave');
   assert.deepEqual(P.fehler, []); assert.deepEqual(K.fehler, []);
   await P.ctx.close(); await K.ctx.close();
 });

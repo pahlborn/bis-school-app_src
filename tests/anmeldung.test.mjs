@@ -1,5 +1,5 @@
 // Login (S3, Peter 30.10.): role first, then user name + password; start code on first login, then an
-// own password; children stay logged in, grown-ups are logged out when leaving. Real clicks.
+// own password; children stay logged in, grown-ups log out only with "Log out". Real clicks.
 //   node --test tests/anmeldung.test.mjs
 
 import { test, before, after } from 'node:test';
@@ -77,8 +77,15 @@ test('with accounts the app starts with the login: role choice, no list of names
   const { ctx, page, fehler } = await oeffnen({ viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true });
   assert.ok(await sichtbar(page, '#login')); assert.equal(await sichtbar(page, '#home'), false);
   assert.ok(await sichtbar(page, '#roleStudent')); assert.ok(await sichtbar(page, '#roleAdult'));
+  assert.equal((await page.textContent('#login h1')).trim(), 'Welcome to Big Quest');
+  assert.equal(await page.locator('#login .hero .eyebrow').count(), 0, 'no class line on the login page');
+  assert.equal(await page.locator('#loginBody h2').count(), 0, 'no separate role question');
+  assert.equal((await page.textContent('#roleStudent')).trim(), "I'm a student");
+  assert.equal((await page.textContent('#roleAdult')).trim(), "I'm a parent or teacher");
   assert.equal((await page.textContent('#loginVersion')).trim(), 'Entwicklungsstand', 'version on the login page (unbuilt here)');
-  const text = await page.evaluate(() => document.body.innerText.toLowerCase());
+  const text = await page.evaluate(() => document.querySelector('#login').innerText);
+  assert.ok(!text.includes('Grade 3'), 'no class reference on the login page');
+  assert.ok(!text.includes('Who is logging in?'), 'no extra role heading');
   for (const n of ['mia', 'papa', 'frau']) assert.ok(!text.includes(n), 'no user names shown: ' + n);
   await page.locator('.login-help summary').click();
   // A2 (02.11.): the login help is in US English only
