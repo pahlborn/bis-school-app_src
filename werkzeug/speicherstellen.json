@@ -39,6 +39,7 @@
     { "key": "session", "bereich": "geraet", "abgleich": "lokal", "sicherung": false },
     { "key": "sessionPrev", "bereich": "geraet", "abgleich": "lokal", "sicherung": false },
     { "key": "adultSession", "bereich": "geraet", "abgleich": "lokal", "sicherung": false },
+    { "key": "adultUnlock", "bereich": "geraet", "abgleich": "lokal", "sicherung": false, "hinweis": "Merker fuer Kindergeraete: Erwachsenenbereich nach dem Weglegen beim naechsten Oeffnen wieder sperren (Login/Erwachsenenbereich, 07.11.)" },
     { "key": "pw_", "praefix": true, "bereich": "geraet", "abgleich": "lokal", "sicherung": false },
     { "key": "parentPin", "bereich": "geraet", "abgleich": "lokal", "sicherung": false, "hinweis": "alte Eltern-PIN: nur ohne Konten (unbebauter Stand, Tests); mit Konten loescht dropOldKeys sie beim Start (04.11.). focus/focusOn/focusOff (alte Fokus-Form) gibt es nicht mehr - dropOldKeys loescht sie beim Start in jedem Kind-Bereich" },
     { "key": "muted", "bereich": "geraet", "abgleich": "letzte-gilt", "sicherung": false, "hinweis": "heute je Geraet; ab Stufe 2 je Person: Kind profile_set muted (3b-1b-4), Erwachsene person_set muted (3b-1c)" },
