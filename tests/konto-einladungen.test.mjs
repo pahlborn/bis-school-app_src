@@ -1,7 +1,7 @@
 // Aufgabe "Einladungen - Oberflaeche" (Stufe 3b/4; Konzept 10.2-10.4, US9.5-US9.7): die Oberflaeche des Testbaus fuer
 // "Kind anlegen" (Start-QR-Code), "Zweiten Elternteil einladen" (QR mit Fingerabdruck), "Einladung zurueckziehen",
 // "Passwort des Kindes neu setzen", "Meine Geraete" mit "Geraet entfernen" und "Schluessel erneuern" - und die Korrektur
-// zu #134: "Schliessen" laesst Erwachsene angemeldet, am Kindergeraet einmal die Erinnerung ans Abmelden.
+// zu #134/#149: kein "Schliessen" mehr; auf dem Kindergeraet endet der Erwachsenenbereich beim Weglegen der App.
 // Mehrere echte App-Instanzen (Testbau in der Node-Sandbox) mit eigenem localStorage teilen nur den simulierten Speicher.
 // Bedient wird mit Klicks auf die Knoepfe der App und Eingaben in ihre Felder. Zeitgeber laufen in der Sandbox nicht: was
 // in der App der Takt (QR-Code alle 4 s, sonst jede Minute) ausloest, ruft der Test als kontoAbgleich() der App auf.
@@ -10,7 +10,7 @@
 //     ohne Datenverlust (Zaehlprobe); Schluessel erneuern -> der andere Elternteil sieht die neuen Pruefwoerter
 //   2 Meine Geraete: Liste (Name, dieses Geraet), Kindergeraet entfernen -> "Jetzt neues Passwort fuer ...?"; eigenes
 //     Geraet entfernen mit neuem Schluessel; was das entfernte Geraet danach schickt, zaehlt nicht
-//   3 Schliessen / Abmelden (Konzept 10.4)
+//   3 Erwachsenenbereich / Abmelden (Konzept 10.4)
 //   4 Kathies App (Live-Bau) und Testbau mit konten.json: nichts davon
 //   node --test tests/konto-einladungen.test.mjs
 
@@ -161,7 +161,8 @@ test('1 Familie: Kind anlegen (Start-QR), Kind wartet bis zur Aufnahme; zweiter 
   const W = await welt();
   const P = await peter(t, W);
   assert.equal(P.erwachsen().user, 'peter.a');
-  assert.ok(P.da('#parentLeave') && P.da('#parentClose'), 'Kopf: Schliessen und Abmelden');
+  assert.equal(P.da('#parentLeave'), false, 'kein Schliessen mehr');
+  assert.ok(P.da('#parentClose'), 'Kopf: nur Abmelden');
 
   // ⚙ Familie: noch kein Kind, Knopf "Kind anlegen", "Zweiten Elternteil einladen"
   P.einstellungen('familie');
@@ -363,17 +364,13 @@ test('2 Meine Geraete: Liste; Kindergeraet entfernen -> "Jetzt neues Passwort fu
   for (const G of [P, K1, P3]) assert.deepEqual(G.wert('kontoFehlerListe'), [], G.name + ': keine Fehler');
 });
 
-test('3 Schliessen laesst Erwachsene angemeldet (Schluessel bleiben); am Kindergeraet einmal die Erinnerung ans Abmelden; Abmelden loescht nur den Schluessel des Erwachsenen', async (t) => {
+test('3 Eigene Geraete bleiben bis Abmelden im Erwachsenenbereich; auf dem Kindergeraet endet der Erwachsenenbereich beim Weglegen', async (t) => {
   const W = await welt();
   const P = await peter(t, W);
-  // eigenes Geraet ohne Kind: Schliessen -> Anmeldeseite, keine Erinnerung; "Parent / Teacher" -> wieder drin
-  P.klick('#parentLeave');
-  assert.equal(P.da('#kErinnerung'), false, 'kein Kindergeraet: keine Erinnerung');
-  assert.equal(P.erwachsen(), null);
+  assert.equal(P.da('#parentLeave'), false, 'kein Schliessen am eigenen Geraet');
+  assert.equal(P.erwachsen().user, 'peter.a');
   assert.ok(P.S.ablage.get('bq2_adultSession'), 'angemeldet geblieben');
   assert.deepEqual(P.offen(), [P.kennung], 'Schluessel bleibt');
-  P.klick('#roleAdult');
-  assert.equal(P.erwachsen().user, 'peter.a', 'ohne Passwort zurueck im Elternbereich');
 
   // Kindergeraet: Kathie uebt, Peter meldet sich dort an
   const kq = await kindAnlegen(P, 'Kathie', 'kathie');
@@ -385,21 +382,20 @@ test('3 Schliessen laesst Erwachsene angemeldet (Schluessel bleiben); am Kinderg
   K.tippe('#loginUser', 'peter.a'); K.tippe('#loginPw', P.pw); K.absenden('#loginGo');
   await K.warten(() => K.erwachsen(), 'Peter am Kindergeraet');
   assert.deepEqual(K.offen().sort(), [kid, P.kennung].sort());
-  K.klick('#parentLeave');
-  assert.ok(K.da('#kErinnerung'), 'Erinnerung ans Abmelden');
-  assert.match(K.eltern(), /Auf diesem Gerät übt auch ein Kind\. Bitte melden Sie sich ab/);
-  K.klick('#kErBleiben');
+  K.S.lauf(() => K.S.holen('adultHideOnChildDevice')());
   assert.equal(K.S.zustand().screen, 'home', 'zurueck bei Kathie');
   assert.equal(K.sitzung().id, kid);
   assert.deepEqual(K.offen().sort(), [kid, P.kennung].sort(), 'Peter bleibt angemeldet (Schluessel bleiben)');
+  assert.ok(K.S.ablage.get('bq2_adultSession'), 'Erwachsenensitzung bleibt auf dem Geraet');
   K.klick('#adultBtn');
-  assert.equal(K.erwachsen().user, 'peter.a', 'ohne Passwort wieder im Elternbereich');
-  K.klick('#parentLeave');
-  assert.equal(K.da('#kErinnerung'), false, 'nur einmal erinnert');
-  assert.equal(K.S.zustand().screen, 'home');
-  // Abmelden aus der Erinnerung: Peters Schluessel weg, Kathie bleibt
-  K.klick('#adultBtn'); K.S.lauf(() => K.S.holen('kontoErinnert').clear());
-  K.klick('#parentLeave'); K.klick('#kErAbmelden');
+  await K.wartenAuf('#loginForm');
+  assert.equal(K.im('#loginUser').value, 'peter.a', 'Name steht schon da');
+  assert.match(K.im('#loginMeldung').textContent, /Face ID|Passwort/, 'Rueckkehr nur mit Face ID oder Passwort');
+  assert.equal(K.erwachsen(), null, 'nicht direkt wieder im Erwachsenenbereich');
+  K.tippe('#loginPw', P.pw); K.absenden('#loginGo');
+  await K.warten(() => K.erwachsen(), 'Peter wieder im Elternbereich');
+  // Abmelden: Peters Schluessel weg, Kathie bleibt
+  K.klick('#parentClose');
   assert.deepEqual(K.offen(), [kid], 'nur Kathies Schluessel bleibt');
   assert.equal(K.S.ablage.get('bq2_adultSession'), undefined);
   assert.equal(K.sitzung().id, kid, 'Kathie bleibt angemeldet');

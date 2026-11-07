@@ -99,7 +99,7 @@ test('A Einladung per Link: Adresse leer, alter Zugangscode ersetzt, ohne Rollen
   assert.equal(await zaehle(A.page, '#kontoNeu'), 0, 'nach dem Absenden ist das Formular weg (dann bietet der Passwortspeicher an)');
   await A.page.locator('#recGo').click();
   await A.page.locator('#welcomeGo').click();
-  await A.page.waitForSelector('#parentLeave');
+  await A.page.waitForSelector('#parentClose');
 
   // ⚙ Meine Geraete: "Weiteres Geraet verbinden" zeigt einen QR-Code mit dem Zugangscode (nur Zugangscode, kein Startcode)
   await A.page.locator('#pSettings').click();
@@ -136,7 +136,7 @@ test('A Einladung per Link: Adresse leer, alter Zugangscode ersetzt, ohne Rollen
   assert.deepEqual(await keinCodeInFeldern(B.page), []);
   await B.page.locator('#loginPw').fill('Tiger-Lamp-River-4271-Moss');
   await B.page.locator('#loginGo').click();
-  await B.page.waitForSelector('#parentLeave');
+  await B.page.waitForSelector('#parentClose');
   assert.deepEqual(B.fehler, []);
 
   // falscher Zugangscode im Link: ❌, nichts behalten, kein Formular

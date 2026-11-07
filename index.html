@@ -133,6 +133,7 @@ button{font:inherit;color:inherit}
 .school-ask{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .profile-dlg .row > .btn{flex:1 1 100px}
 .login-body{display:flex;flex-direction:column;gap:14px;background:var(--surface);border:2px solid var(--line);border-radius:22px;padding:20px;margin-top:8px}
+.login-copy{display:grid;gap:4px;margin-top:8px;color:var(--muted);text-align:center}.login-copy p{margin:0}
 .login-roles{display:flex;flex-direction:column;gap:12px}
 .login-roles .btn{min-height:64px;font-size:1.2rem}
 .login-form{display:flex;flex-direction:column;gap:12px}
@@ -589,8 +590,8 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
   <!-- LOGIN (S3): role, then user name and password - like the school platform -->
   <section id="login" class="screen" hidden>
     <div class="hero">
-      <div class="eyebrow">Grade 3 · <span class="long">International Baccalaureate</span><span class="short">IB</span> Primary Years Programme</div>
-      <h1>Grade 3 – Big Quest</h1>
+      <h1>Welcome to Big Quest</h1>
+      <div id="loginHeroCopy" class="login-copy" hidden></div>
     </div>
     <div id="loginBody" class="login-body"></div>
     <!-- First login with an invitation (task "Erstanmeldung per QR-Code", 06.11.; test build with accounts only): the
@@ -730,7 +731,7 @@ const TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4
    bq2_<id>__<key>; passwords under bq2_pw_<id>. Before (and as a fallback if the move on this device
    failed): the FIRST student account used bq2_<key>, every other one bq2_<user>__<key>. Device-wide keys
    stay shared. */
-const GLOBAL_KEYS=/^(session|sessionPrev|adultSession|pw_.+|parentPin|muted|parentLang|migr|kidsHere|lastSeen|conceptSeen|glance|evDevice|personEvents|kontoListe)$/;
+const GLOBAL_KEYS=/^(session|sessionPrev|adultSession|adultUnlock|pw_.+|parentPin|muted|parentLang|migr|kidsHere|lastSeen|conceptSeen|glance|evDevice|personEvents|kontoListe)$/;
 let ID_STORAGE=false;
 /* account for a stored reference {id} or {user} (id first: login names may change, IDs never do) */
 function accByRef(r){
@@ -4725,7 +4726,13 @@ function applyParentRoute(){
   const r=parentRoute(); if(!r) return false;
   setParentView(r);
   if(state.screen==='about' && state.aboutTab==='sheets' && parentAccess){ renderSheets(); window.scrollTo(0,0); }
-  else { pendingRoute=r; openAbout('sheets'); if(parentAccess) pendingRoute=null; }
+  else {
+    pendingRoute=r;
+    if(!(accountsOn() && !adultUser && adultResume())){
+      openAbout('sheets');
+      if(parentAccess) pendingRoute=null;
+    }
+  }
   scrollToRouteSec(r);
   return true;
 }
@@ -4820,13 +4827,30 @@ function parentLock(){
   if(accountsOn()) adultUser=null;
   if(state.aboutTab==='sheets') $('#aboutBody').innerHTML='';
 }
+function adultUnlockRequired(){
+  if(!accountsOn()) return false;
+  if(!store.get('adultUnlock',false)) return false;
+  if(!studentSession() || !store.get('adultSession',null)){ store.del('adultUnlock'); return false; }
+  return true;
+}
+function adultUnlockLoginOpts(){
+  if(!adultUnlockRequired()) return null;
+  const de=store.get('parentLang','de')!=='en', a=accByRef(store.get('adultSession',null));
+  return {
+    ...(a ? {name:a.user} : {}),
+    meldung:de?'Bitte mit Face ID oder Passwort zurueck in den Erwachsenenbereich.':'Please use Face ID or your password to return to the grown-ups area.'
+  };
+}
+function showAdultLogin(){ showLogin('adult', adultUnlockLoginOpts()||undefined); }
 /* Grown-ups stay logged in (Peter, 31.10.): no timer and no log-out when the iPad sleeps or the app is
    closed – an iPad is personal anyway. Only "Log out" ends it. Stored on the device like the child's
    session; the start code / own password protects the first login. */
 function adultResume(){
   if(!accountsOn()) return false;
+  if(adultUnlockRequired()) return false;
   const s=store.get('adultSession',null), a=accByRef(s), u=a && a.role!=='student' ? a : null;
   if(!u){ if(s) store.del('adultSession'); return false; }
+  store.del('adultUnlock');
   loginDone(u); return true;
 }
 const FLAG_DE='<svg class="flagsvg" viewBox="0 0 30 18" aria-hidden="true"><rect width="30" height="6" fill="#000"/><rect y="6" width="30" height="6" fill="#DD0000"/><rect y="12" width="30" height="6" fill="#FFCE00"/></svg>', FLAG_US='<svg class="flagsvg" viewBox="0 0 38 20" aria-hidden="true"><rect width="38" height="20" fill="#fff"/><rect y="0.00" width="38" height="1.54" fill="#B22234"/><rect y="3.08" width="38" height="1.54" fill="#B22234"/><rect y="6.15" width="38" height="1.54" fill="#B22234"/><rect y="9.23" width="38" height="1.54" fill="#B22234"/><rect y="12.31" width="38" height="1.54" fill="#B22234"/><rect y="15.38" width="38" height="1.54" fill="#B22234"/><rect y="18.46" width="38" height="1.54" fill="#B22234"/><rect width="15.2" height="10.77" fill="#3C3B6E"/><circle cx="1.6" cy="1.5" r=".6" fill="#fff"/><circle cx="4.6" cy="1.5" r=".6" fill="#fff"/><circle cx="7.6" cy="1.5" r=".6" fill="#fff"/><circle cx="10.6" cy="1.5" r=".6" fill="#fff"/><circle cx="13.6" cy="1.5" r=".6" fill="#fff"/><circle cx="1.6" cy="4.1" r=".6" fill="#fff"/><circle cx="4.6" cy="4.1" r=".6" fill="#fff"/><circle cx="7.6" cy="4.1" r=".6" fill="#fff"/><circle cx="10.6" cy="4.1" r=".6" fill="#fff"/><circle cx="13.6" cy="4.1" r=".6" fill="#fff"/><circle cx="1.6" cy="6.7" r=".6" fill="#fff"/><circle cx="4.6" cy="6.7" r=".6" fill="#fff"/><circle cx="7.6" cy="6.7" r=".6" fill="#fff"/><circle cx="10.6" cy="6.7" r=".6" fill="#fff"/><circle cx="13.6" cy="6.7" r=".6" fill="#fff"/><circle cx="1.6" cy="9.3" r=".6" fill="#fff"/><circle cx="4.6" cy="9.3" r=".6" fill="#fff"/><circle cx="7.6" cy="9.3" r=".6" fill="#fff"/><circle cx="10.6" cy="9.3" r=".6" fill="#fff"/><circle cx="13.6" cy="9.3" r=".6" fill="#fff"/></svg>';
@@ -4935,7 +4959,7 @@ function parentHeaderHTML(){
   // Concept "Elternbereich" 5.1 (B1): child, flags, ? help, ⚙ settings, log out. The version is in ⚙ "About the app",
   // test children are chosen in the child list (B5).
   const onSet=state.pview==='settings', onHelp=state.pview==='help';
-  let h=`<header class="phdr"><div class="phdr-row"><span class="phdr-who">👪 ${who}</span>${kidChip}<span class="phdr-act">${flagsHTML()}<button type="button" class="btn small phdr-icon${onHelp?' primary':''}" id="pHelp" aria-label="${de?'Hilfe':'Help'}" title="${de?'Hilfe':'Help'}" aria-pressed="${onHelp}">?</button><button type="button" class="btn small phdr-icon${onSet?' primary':''}" id="pSettings" aria-label="${de?'Einstellungen':'Settings'}" title="${de?'Einstellungen':'Settings'}" aria-pressed="${onSet}">⚙️</button>${KONTO_UI?`<button class="btn small" id="parentLeave" type="button">${de?'Schließen':'Close'}</button>`:''}<button class="btn small" id="parentClose" type="button">${close}</button></span></div>`;
+  let h=`<header class="phdr"><div class="phdr-row"><span class="phdr-who">👪 ${who}</span>${kidChip}<span class="phdr-act">${flagsHTML()}<button type="button" class="btn small phdr-icon${onHelp?' primary':''}" id="pHelp" aria-label="${de?'Hilfe':'Help'}" title="${de?'Hilfe':'Help'}" aria-pressed="${onHelp}">?</button><button type="button" class="btn small phdr-icon${onSet?' primary':''}" id="pSettings" aria-label="${de?'Einstellungen':'Settings'}" title="${de?'Einstellungen':'Settings'}" aria-pressed="${onSet}">⚙️</button><button class="btn small" id="parentClose" type="button">${close}</button></span></div>`;
   if(accountsOn() && kid && isTestUser(kid)) h+=`<div class="phdr-row phdr-test">🧪 <b>${de?'Hier stehen Testdaten.':'You are looking at test data.'}</b><button type="button" class="btn small primary" id="pPlayTest">▶ ${de?'Als Testkind spielen':'Play as test child'}</button>${store.get('sessionPrev',null)?`<button type="button" class="btn small" id="pRealData">${de?'Zurück zu echten Daten':'Back to real data'}</button>`:''}</div>`;
   // task "Abgleich in der App": the line of the sync (accounts in the storage only; bound in kontoBinden)
   if(KONTO_UI && adultUser) h+=`<div class="phdr-row phdr-sync small" id="kSync" role="status">${kontoZeileHTML()}</div>`;
@@ -4961,7 +4985,7 @@ async function pbkdf2Hex(text, salt){
 /* password rules: module src/module/passwort.mjs (PW_WORDS, PW_BASES, pwSuggest, pwWeak) */
 const pwStrongText = adult => adult ? (store.get('parentLang','de')!=='en' ? 'Bitte mindestens 12 Zeichen oder den Vorschlag nehmen.' : 'Please use at least 12 characters or take the suggestion.') : 'A strong password keeps your things safe. Try the suggestion or make it longer.';
 const LOGIN_TXT={
-  who:'Who is logging in?', student:'🎒 Student', adult:'👪 Parent / Teacher',
+  who:'Who is logging in?', student:'🎒 Student', adult:'👪 Parent / Teacher', pickStudent:"I'm a student", pickAdult:"I'm a parent or teacher",
   user:'User name', pw:'Password or start code', go:'Log in', back:'← Back',
   wrong:'User name or password is not right.', wait:'Please wait a moment and try again.',
   setTitle:'Choose your own password', setInfo:'You logged in with your start code. Choose a password you can remember. It works on this device.',
@@ -4986,7 +5010,14 @@ const LOGIN_DE={...LOGIN_TXT, user:'Benutzername', pw:'Passwort oder Startcode',
   forgot:'Passwort vergessen?',
   fremd:'Diese Fassung ist mit einem anderen Speicher verbunden – dort gibt es keine Konten. Bitte beim Admin nachfragen.'};
 const loginTxt = adult => adult && store.get('parentLang','de')!=='en' ? LOGIN_DE : LOGIN_TXT;
-function showLogin(role){ $('#loginBody').innerHTML=''; renderLogin(role); show('login'); }
+const LOGIN_HERO_COPY={line1:'', line2:''};
+function renderLoginHero(){
+  const box=$('#loginHeroCopy'); if(!box) return;
+  const lines=[LOGIN_HERO_COPY.line1, LOGIN_HERO_COPY.line2].map(x=>String(x||'').trim()).filter(Boolean);
+  box.hidden=!lines.length;
+  box.innerHTML=lines.map(line=>`<p>${esc(line)}</p>`).join('');
+}
+function showLogin(role, opts){ $('#loginBody').innerHTML=''; renderLogin(role, opts); show('login'); }
 /* Start link (S11 Stufe 1): ".../#start=<name>.<code>" fills in the login once; the code is removed from
    the address right away so it does not stay in the browser history. */
 let startPrefill=null;
@@ -5061,15 +5092,15 @@ function openGuide(kind){
 /* Short help on the login screen: the app (and its guides in "About") is not open yet here. */
 /* A2 (Peter, 02.11.): the help on the login page in US English only - no mix of languages. */
 const LOGIN_HELP=`<details class="login-help"><summary>❓ Help</summary>
-<p><b>Students:</b> Tap 🎒 Student. Tap your name under “Who's here?” or type it, then enter your password. The first time, use the start code (or the link or QR code) from your grown-up. Then choose a strong password: three words and a number work well. Let the iPad remember it.</p>
-<p><b>Parents and teachers:</b> Tap 👪 Parent / Teacher. The first time, enter your user name and start code (or open the start link or QR code). Then choose your own password: at least 12 characters, or take the app's suggestion of three words and a number. Save it in your password manager. For now, the password only works on this device. Parents see only their own children. Teachers see a child only with the parents' permission.</p>
+<p><b>Students:</b> Tap <b>I'm a student</b>. Tap your name under “Who's here?” or type it, then enter your password. The first time, use the start code (or the link or QR code) from your grown-up. Then choose a strong password: three words and a number work well. Let the iPad remember it.</p>
+<p><b>Parents and teachers:</b> Tap <b>I'm a parent or teacher</b>. The first time, enter your user name and start code (or open the start link or QR code). Then choose your own password: at least 12 characters, or take the app's suggestion of three words and a number. Save it in your password manager. For now, the password only works on this device. Parents see only their own children. Teachers see a child only with the parents' permission.</p>
 <p><b>Forgot your password?</b> Students: ask your parents. Grown-ups: your start code still works; if not, the admin can give you a new one. After 5 wrong tries, wait 30 seconds.</p>
 <p>After logging in, students tap “❓ Help”. Grown-ups find their guide in the grown-ups area.</p></details>`;
 /* the same help with accounts in the storage (test build, KONTO_UI): one password for all devices, recovery code */
 const LOGIN_HELP_KONTO=`<details class="login-help"><summary>❓ Help</summary>
 <p><b>The first time:</b> open the link of your invitation or scan its QR code. The device connects by itself (“✅ Device connected”), your user name is already there, and you choose your own password – your device can suggest a strong one and remember it. On a device without the link, tap “📷 Scan QR code” or paste the link. The access code connects a device – once per device, for everyone who logs in there. It is not anyone’s password.</p>
-<p><b>Students:</b> Tap 🎒 Student. Tap your name under “Who's here?” or type it, then enter your password. Let the iPad remember it. On another iPad, use the same user name and password.</p>
-<p><b>Parents and teachers:</b> Tap 👪 Parent / Teacher, then your user name and password. After your first password you get a recovery code: save it – in your password manager and as a file. On another device, use the same user name and password.</p>
+<p><b>Students:</b> Tap <b>I'm a student</b>. Tap your name under “Who's here?” or type it, then enter your password. Let the iPad remember it. On another iPad, use the same user name and password.</p>
+<p><b>Parents and teachers:</b> Tap <b>I'm a parent or teacher</b>, then your user name and password. After your first password you get a recovery code: save it – in your password manager and as a file. On another device, use the same user name and password.</p>
 <p><b>Forgot your password?</b> Students: ask your parents for a new start code. Grown-ups: tap “Forgot your password?” and enter your recovery code. An invitation works once and for 7 days; the same link connects another device later. After 5 wrong tries, wait 30 seconds.</p>
 <p>After logging in, students tap “❓ Help”. Grown-ups find their guide in the grown-ups area.</p></details>`;
 /* "Who's here?" (S11 Stufe 1, P3): on a device where children have logged in before, they pick themselves
@@ -5084,16 +5115,17 @@ function whosHereHTML(){
    name filled in (invitation link used again) */
 function renderLogin(role, opts){
   const b=$('#loginBody'), T=loginTxt(role==='adult'), o=opts||{};
+  renderLoginHero();
   kontoNeuWeg(); if(KONTO_UI) kameraStopp();
   const zeile=o.meldung?`<p class="kverb" id="loginMeldung" role="status">${esc(o.meldung)}</p>`:'';
   if(!role){
     // task "Erstanmeldung per QR-Code" (B2): a device without access code first only connects - then "Who is logging in?"
     if(KONTO_UI && anmTokenNoetig(KONTO_SPEICHER, localStorage)) return renderVerbinden(o.meldung);
     // the version in short form on the login page (Peter, 01.11.); both roles look the same (B2: nothing preselected)
-    b.innerHTML=`${zeile}<h2>${T.who}</h2><div class="login-roles"><button class="btn${KONTO_UI?'':' primary'}" id="roleStudent" type="button">${T.student}</button><button class="btn" id="roleAdult" type="button">${T.adult}</button></div>${KONTO_UI?LOGIN_HELP_KONTO:LOGIN_HELP}<p class="small app-version" id="loginVersion">${esc(versionLabel())}</p>`;
+    b.innerHTML=`${zeile}<div class="login-roles"><button class="btn${KONTO_UI?'':' primary'}" id="roleStudent" type="button">${T.pickStudent}</button><button class="btn" id="roleAdult" type="button">${T.pickAdult}</button></div>${KONTO_UI?LOGIN_HELP_KONTO:LOGIN_HELP}<p class="small app-version" id="loginVersion">${esc(versionLabel())}</p>`;
     $('#roleStudent').addEventListener('click',()=>renderLogin('student'));
     // accounts in the storage: a grown-up who only closed the grown-ups area is still logged in (concept 10.4)
-    $('#roleAdult').addEventListener('click',()=>{ if(KONTO_UI && adultResume()) return; renderLogin('adult'); });
+    $('#roleAdult').addEventListener('click',()=>{ if(KONTO_UI && adultResume()) return; renderLogin('adult', adultUnlockLoginOpts()||undefined); });
     return;
   }
   b.innerHTML=`${zeile}<h2>${role==='student'?T.student:T.adult}</h2>${role==='student'?whosHereHTML():''}<form id="loginForm" class="login-form"><div class="field"><label for="loginUser">${T.user}</label><input id="loginUser" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><div class="field"><label for="loginPw">${T.pw}</label><input id="loginPw" type="password" autocomplete="current-password" required></div><button class="btn primary" id="loginGo" type="submit">${T.go}</button><p id="loginMsg" class="small" role="status"></p></form>${KONTO_UI?`<button class="btn small" id="loginForgot" type="button">${T.forgot}</button>`:''}<button class="btn small" id="loginBack" type="button">${T.back}</button>${KONTO_UI?LOGIN_HELP_KONTO:LOGIN_HELP}`;
@@ -5160,7 +5192,7 @@ function loginDone(u, welcomed){
   $('#loginBody').innerHTML='';
   const seen=store.get('lastSeen',{}); seen[u.id]=new Date().toISOString(); store.set('lastSeen',seen);
   if(u.role==='student'){ pendingRoute=null; store.set('session',sessionOf(u)); const here=store.get('kidsHere',[]); if(!here.includes(u.id)) store.set('kidsHere',here.concat([u.id])); adultUser=null; if(welcomed){ store.set('greetDay',dayKey()); eventHook('day_flag',{flag:'greetDay', day:dayKey()}); } renderHome(); show('home'); }
-  else { store.set('adultSession',sessionOf(u)); adultUser={user:u.user, role:u.role, admin:!!u.admin}; parentAccess=true; state.psubj=null; state.popen=state.popenBy!==u.id ? [] : state.popen||[]; state.popenBy=u.id; const r=takePendingRoute();   /* another person starts with all chapters closed - an open chapter of the one before does not count as read (3b-2a; live since 04.11., Peter) */ openAbout('sheets'); scrollToRouteSec(r); }
+  else { store.set('adultSession',sessionOf(u)); store.del('adultUnlock'); adultUser={user:u.user, role:u.role, admin:!!u.admin}; parentAccess=true; state.psubj=null; state.popen=state.popenBy!==u.id ? [] : state.popen||[]; state.popenBy=u.id; const r=takePendingRoute();   /* another person starts with all chapters closed - an open chapter of the one before does not count as read (3b-2a; live since 04.11., Peter) */ openAbout('sheets'); scrollToRouteSec(r); }
 }
 /* ---------- login with accounts in the storage (stage 3b, task "Anmeldung im Testbau"; concept 10.2-10.6) ----------
    Only in the test build with a storage and without konten.json (KONTO_UI); Kathie's app never gets here. The accounts
@@ -5168,7 +5200,7 @@ function loginDone(u, welcomed){
    ups have a recovery code. The device keeps: the list of accounts that logged in here (bq2_kontoListe: id, login name, kind
    of account - no password, no key) and a copy of the person keys that cannot be exported (IndexedDB bq2_konto) until
    "Log out". Children, partners and grants come with task "Einladungen"; syncing with the storage is a task of its own. */
-const kontoOffen=new Map(), kontoFehlerListe=[], kontoAlt=new Map(), kontoErinnert=new Set();
+const kontoOffen=new Map(), kontoFehlerListe=[], kontoAlt=new Map();
 let kontoZug=null, kontoLinkFp=null, kontoBlatt=null;
 function kontoListe(){ try{ return anmListe(JSON.parse(localStorage.getItem('bq2_kontoListe')||'[]')); }catch(e){ return []; } }
 /* the accounts of this device in the form of konten.json (called once at the start, for APP_ACCOUNTS) */
@@ -5509,7 +5541,7 @@ function renderKontoVergessen(meldung){
   $('#loginBody').innerHTML=`<h2>${T.forgot}</h2><p class="small">${de?'Geben Sie Ihren Benutzernamen und Ihren Wiederherstellungscode ein. Danach wählen Sie ein neues Passwort und bekommen einen neuen Code.':'Enter your user name and your recovery code. Then you choose a new password and get a new code.'}</p><form id="forgotForm" class="login-form"><div class="field"><label for="forgotUser">${T.user}</label><input id="forgotUser" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><div class="field"><label for="forgotCode">${de?'Wiederherstellungscode':'Recovery code'}</label><input id="forgotCode" type="password" autocomplete="current-password" autocapitalize="characters" autocorrect="off" spellcheck="false" required></div><button class="btn primary" id="forgotGo" type="submit">${de?'Weiter':'Continue'}</button><p id="forgotMsg" class="small" role="status">${meldung?esc(meldung):''}</p></form><button class="btn small" id="forgotBack" type="button">${T.back}</button>`;
   // the password manager fills in the code's own entry "<name> (Wiederherstellungscode)": back to the login name
   const nf=$('#forgotUser'); nf.addEventListener('change',()=>{ nf.value=anmNameAusEintrag(nf.value); });
-  $('#forgotBack').addEventListener('click',()=>renderLogin('adult'));
+  $('#forgotBack').addEventListener('click',()=>renderLogin('adult', adultUnlockLoginOpts()||undefined));
   $('#forgotForm').addEventListener('submit',e=>{
     e.preventDefault();
     const n=anmName(anmNameAusEintrag($('#forgotUser').value)), c=$('#forgotCode').value.trim(), m=$('#forgotMsg');
@@ -5798,17 +5830,23 @@ function renderKontoWarten(id, weiter){
   lb.querySelector('#kidWaitBack').addEventListener('click',()=>{ aus=true; kontoAbmelden(id); renderLogin(); });
   setTimeout(takt, KONTO_WARTEN_MS);
 }
-/* ---------- grown-ups area: leave without logging out (concept 10.4; correction of #134) ---------- */
-/* "Close": the grown-up stays logged in (session and key stay) until "Log out". On a device a child uses too, the app
-   reminds him once to log out. */
-function kontoBereichVerlassen(){
-  const a=adultUser && accByRef({user:adultUser.user});
-  if(a && !kontoErinnert.has(a.id) && kontoListe().some(e=>e.art==='child')){ kontoErinnert.add(a.id); kontoBlatt={art:'erinnerung'}; renderSheets(); window.scrollTo(0,0); return; }
-  kontoBlatt=null; pendingRoute=null; restoreRealChild(); parentLock(); renderParentGate();
+/* ---------- grown-ups area on a child's device ---------- */
+/* Peter, 06.11.: on a device where a child is logged in, putting the app away ends only the grown-ups area.
+   The grown-up stays signed in on the device, but has to return with Face ID or password. */
+function adultHideOnChildDevice(){
+  if(!KONTO_UI || !adultUser || !studentSession()) return false;
+  store.set('adultUnlock', true);
+  kontoBlatt=null;
+  parentLock();
+  renderHome();
+  show('home');
+  window.scrollTo(0,0);
+  return true;
 }
 /* "Log out" of a grown-up: his session and his key copy leave this device; a child logged in here stays */
 function parentAbmelden(){
   pendingRoute=null;
+  store.del('adultUnlock');
   if(accountsOn()){ if(KONTO_UI){ kontoBlatt=null; if(adultUser) kontoAbmelden((accByRef({user:adultUser.user})||{}).id); } store.del('adultSession'); restoreRealChild(); }
   parentLock(); renderParentGate();
 }
@@ -5844,7 +5882,6 @@ function kontoGeraeteHTML(){
 const kontoHinweisNamen = de => de?'3 bis 20 Zeichen: kleine Buchstaben, Ziffern, Punkt oder Bindestrich.':'3 to 20 characters: small letters, digits, dot or hyphen.';
 function kontoBlattHTML(){
   const de=PL()==='de', b=kontoBlatt, back=`<button type="button" class="btn small" id="kBack">${de?'← Zurück':'← Back'}</button>`, msg='<p id="kMsg" class="small" role="status"></p>';
-  if(b.art==='erinnerung') return `<div class="pcard" id="kErinnerung"><h2>${de?'Sie sind noch angemeldet':'You are still logged in'}</h2><p>${de?'Auf diesem Gerät übt auch ein Kind. Bitte melden Sie sich ab, wenn Sie fertig sind – sonst kann hier jeder den Elternbereich öffnen.':'A child uses this device too. Please log out when you are done – otherwise anyone here can open the grown-ups area.'}</p><p><button type="button" class="btn primary" id="kErAbmelden">${de?'Abmelden':'Log out'}</button> <button type="button" class="btn" id="kErBleiben">${de?'Angemeldet bleiben':'Stay logged in'}</button></p></div>`;
   if(b.art==='kind1') return back+`<h2 class="psubjtitle">➕ ${de?'Kind anlegen':'Add a child'}</h2><form id="kKindForm" class="login-form"><div class="field"><label for="kKindName">${de?'Vorname des Kindes':'Child’s first name'}</label><input id="kKindName" maxlength="40" autocomplete="off" required></div><button class="btn primary" id="kKindWeiter" type="submit">${de?'Weiter':'Next'}</button>${msg}</form>`;
   if(b.art==='kind2') return back+`<h2 class="psubjtitle">➕ ${de?'Kind anlegen':'Add a child'}</h2><p class="small">${de?`Mit diesem Anmeldenamen meldet sich ${esc(b.anzeige)} an. Sie können ihn ändern – ${kontoHinweisNamen(true)}`:`${esc(b.anzeige)} logs in with this name. You can change it – ${kontoHinweisNamen(false)}`}</p><form id="kKind2Form" class="login-form"><div class="field"><label for="kKindLogin">${de?'Anmeldename':'Login name'}</label><input id="kKindLogin" value="${esc(b.login)}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><button class="btn primary" id="kKindGo" type="submit">${de?'Start-QR-Code erstellen':'Create start QR code'}</button>${msg}</form>`;
   if(b.art==='eltern') return back+`<h2 class="psubjtitle">➕ ${de?'Zweiten Elternteil einladen':'Invite the second parent'}</h2><p class="small">${de?'Er sieht danach dieselben Kinder wie Sie. Wählen Sie seinen Anmeldenamen – ':'They then see the same children as you. Choose their login name – '}${kontoHinweisNamen(de)}</p><form id="kElternForm" class="login-form"><div class="field"><label for="kElternLogin">${de?'Anmeldename':'Login name'}</label><input id="kElternLogin" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><button class="btn primary" id="kElternGo" type="submit">${de?'Einladung erstellen':'Create invitation'}</button>${msg}</form>`;
@@ -5994,7 +6031,6 @@ function kontoOhne(lk, f){ try{ const o=JSON.parse(localStorage.getItem(lk)||'nu
 function kontoOhneEintraege(lk, weg){ try{ const l=JSON.parse(localStorage.getItem(lk)||'null'); if(Array.isArray(l)){ const n=l.filter(v=>!(v && typeof v==='object' && weg(v))); if(n.length!==l.length) localStorage.setItem(lk, JSON.stringify(n)); } }catch(e){} }
 function kontoBinden(body){
   const de=PL()==='de', q=s=>body.querySelector(s), an=(s,f)=>{ const e=q(s); if(e) e.addEventListener('click',f); }, form=(s,f)=>{ const e=q(s); if(e) e.addEventListener('submit',ev=>{ ev.preventDefault(); if(parentAccess) f(); }); };
-  an('#parentLeave',()=>{ if(parentAccess) kontoBereichVerlassen(); });
   const zs=q('#kSync'); if(zs) kontoZeileBinden(zs);
   form('#kTokenForm',()=>{
     const m=q('#kMsg'), e=anmEingefuegt(q('#kTokenNeuWert').value, location.href);
@@ -6007,8 +6043,6 @@ function kontoBinden(body){
     });
   });
   an('#kBack',()=>kontoBlattZeigen(null));
-  an('#kErAbmelden',parentAbmelden);
-  an('#kErBleiben',()=>{ kontoBlatt=null; kontoBereichVerlassen(); });
   an('#kKindAnlegen',()=>kontoBlattZeigen({art:'kind1'}));
   an('#kElternEinladen',()=>kontoBlattZeigen({art:'eltern'}));
   an('#kErneuern',()=>kontoBlattZeigen({art:'erneuern'}));
@@ -6108,6 +6142,7 @@ function renderTestBar(){
 }
 function logout(){
   if(KONTO_UI) kontoAlleAbmelden();   // log out = the copies of the person keys leave this device (concept 10.4)
+  store.del('adultUnlock');
   store.del('adultSession');
   if(adultUser){ adultUser=null; parentLock(); }
   try{ localStorage.removeItem('bq2_session'); }catch(e){}
@@ -6393,8 +6428,8 @@ function calendarText(days,time,text,now=new Date()){
 function bindParentSettings(){
   const de=PL()==='de';
   bindStoryCap(); bindProfileAdmin(); bindMySchoolAdmin(); bindVersionAdmin(); addAdultInfo($('#aboutBody'));
-  // "Log out" ends it (Peter, 31.10.): no timer, no log-out in the background. With accounts in the storage (test build)
-  // "Close" leaves the area and the grown-up stays logged in (concept 10.4; kontoBereichVerlassen).
+  // "Log out" ends it (Peter, 31.10./06.11.): no timer; only on a child's device does putting the app away end the
+  // grown-ups area, while the grown-up stays signed in on the device.
   ['#parentClose','#parentClose2'].forEach(sel=>{ const pc=$(sel); if(pc) pc.addEventListener('click',parentAbmelden); });
   if($('#reminderForm')) $('#reminderForm').addEventListener('submit',e=>{
     e.preventDefault();if(!parentAccess) return;
@@ -6520,30 +6555,30 @@ const sourcesHTML=(lang='en')=>{ const de=lang==='de', G=SOURCE_GROUPS[de?'de':'
 const KONTO_GUIDE={
   kid:[['The very first time:','your grown-up shows you a QR code. Scan it with the camera (or in Big Quest: “📷 Scan QR code”). Your name is already there – then you choose your own password. Take the idea with three words and a number, like <i>Tiger-Lamp-River-4271</i>. Let the iPad remember it – then Face ID fills it in for you. A short password does not work: a strong one keeps your things safe. On another iPad, use the same user name and password.']],
   adultDe:[['Einmal einrichten:','den Link Ihrer Einladung öffnen oder ihren QR-Code mit der Kamera scannen: Das Gerät wird verbunden („✅ Gerät verbunden“), Ihr Anmeldename steht schon da. Dann ein eigenes Passwort festlegen – Ihr Gerät schlägt ein starkes vor und merkt es sich. Danach den Wiederherstellungscode sichern: im Passwortspeicher und als Datei. Freiwillig: Teilen → „Zum Home-Bildschirm“. Die App dort hat einen eigenen Speicher und fragt einmal nach dem Zugangscode: „📷 QR-Code scannen“ (Einladung, oder ⚙️ → „📱 Meine Geräte“ → „Weiteres Gerät verbinden“) oder den Link einfügen.'],
-    ['Anmelden:','„👪 Parent / Teacher“, Benutzername und Passwort – der Passwortspeicher schlägt beides vor. Auf weiteren Geräten genauso; ein neues Gerät verbinden Sie einmal mit dem Link oder QR-Code der Einladung. Der Zugangscode verbindet nur das Gerät, er ist nicht Ihr Passwort.'],
+    ['Anmelden:','"I\'m a parent or teacher", Benutzername und Passwort – der Passwortspeicher schlägt beides vor. Auf weiteren Geräten genauso; ein neues Gerät verbinden Sie einmal mit dem Link oder QR-Code der Einladung. Der Zugangscode verbindet nur das Gerät, er ist nicht Ihr Passwort.'],
     ['Kind anmelden:','unter ⚙️ → „👪 Familie“ → „Kind anlegen“: Die App zeigt einen Start-QR-Code. Auf dem Gerät des Kindes die Kamera darauf richten (oder in Big Quest „📷 QR-Code scannen“) und zusammen ein Merkpasswort wählen. Auf weiteren Geräten: Benutzername und Passwort. Passwort vergessen? Dort „Neues Passwort“ – der Lernstand bleibt. Geschwister am selben Gerät wählen sich unter „Who\'s here?“ aus. Geräte entfernen und den Schlüssel erneuern: ⚙️ → „📱 Meine Geräte“.'],
     ['Passwort vergessen:','Auf der Anmeldeseite „Passwort vergessen?“ tippen, den Wiederherstellungscode eingeben und ein neues Passwort wählen – danach den neuen Code wieder sichern. Ohne Code hilft der Admin. Nach 5 Fehlversuchen 30 Sekunden warten. Startcodes, Startlinks und den Wiederherstellungscode nicht weitergeben.']],
   adultEn:[['Set up once:','open the link of your invitation or scan its QR code with the camera: the device gets connected (“✅ Device connected”) and your login name is already there. Then choose your own password – your device suggests a strong one and remembers it. Next, save the recovery code: in the password manager and as a file. Optional: Share → “Add to Home Screen”. The app there has its own storage and asks once for the access code: “📷 Scan QR code” (the invitation, or ⚙️ → “📱 My devices” → “Connect another device”) or paste the link.'],
-    ['Log in:','“👪 Parent / Teacher”, username and password – the password manager suggests both. The same on other devices; connect a new device once with the link or QR code of the invitation. The access code only connects the device; it is not your password.'],
+    ['Log in:','"I\'m a parent or teacher", username and password – the password manager suggests both. The same on other devices; connect a new device once with the link or QR code of the invitation. The access code only connects the device; it is not your password.'],
     ['Log in your child:','under ⚙️ → “👪 Family” → “Add a child”: the app shows a start QR code. On your child’s device, point the camera at it (or tap “📷 Scan QR code” in Big Quest) and choose a memorable password together. On other devices: username and password. Forgot the password? There, “New password” – the progress stays. Siblings on the same device pick themselves under “Who\'s here?”. Remove devices and renew your key: ⚙️ → “📱 My devices”.'],
     ['Forgot your password?','On the login page tap “Forgot your password?”, enter your recovery code and choose a new password – then save the new code again. Without the code, the admin can help. After 5 wrong tries, wait 30 seconds. Keep start codes, start links and the recovery code private.']],
-  teacherDe:[['Anmelden:','Beim ersten Mal den Link der Einladung vom Admin öffnen oder ihren QR-Code scannen: Das Gerät wird verbunden, Ihr Anmeldename steht schon da. Dann ein eigenes Passwort festlegen (Ihr Gerät schlägt ein starkes vor) und den Wiederherstellungscode sichern – im Passwortspeicher und als Datei. Danach: „👪 Parent / Teacher“, Benutzername und Passwort; ein weiteres Gerät einmal mit demselben Link verbinden.'],
+  teacherDe:[['Anmelden:','Beim ersten Mal den Link der Einladung vom Admin öffnen oder ihren QR-Code scannen: Das Gerät wird verbunden, Ihr Anmeldename steht schon da. Dann ein eigenes Passwort festlegen (Ihr Gerät schlägt ein starkes vor) und den Wiederherstellungscode sichern – im Passwortspeicher und als Datei. Danach: "I\'m a parent or teacher", Benutzername und Passwort; ein weiteres Gerät einmal mit demselben Link verbinden.'],
     ['Passwort vergessen:','Auf der Anmeldeseite „Passwort vergessen?“ tippen und den Wiederherstellungscode eingeben; danach den neuen Code wieder sichern. Ohne Code hilft der Admin. Nach 5 Fehlversuchen 30 Sekunden warten.']],
-  teacherEn:[['Log in:','The first time, open the link of the invitation from the admin or scan its QR code: the device gets connected and your login name is already there. Then choose your own password (your device suggests a strong one) and save the recovery code – in the password manager and as a file. After that: “👪 Parent / Teacher”, username and password; connect another device once with the same link.'],
+  teacherEn:[['Log in:','The first time, open the link of the invitation from the admin or scan its QR code: the device gets connected and your login name is already there. Then choose your own password (your device suggests a strong one) and save the recovery code – in the password manager and as a file. After that: "I\'m a parent or teacher", username and password; connect another device once with the same link.'],
     ['Forgot your password?','On the login page tap “Forgot your password?” and enter your recovery code; then save the new code again. Without the code, the admin can help. After 5 wrong tries, wait 30 seconds.']],
   adminDe:[['Konten und Startcodes','für Erwachsene stellen Sie aus, vorerst mit dem Werkzeug auf Ihrem Rechner. Es legt je Person eine Einladung als E-Mail-Entwurf an (QR-Code und Link mit Zugangscode und Startcode); Sie verschicken sie selbst. Eine Einladung gilt einmal und 7 Tage; derselbe Link verbindet später weitere Geräte.']],
   adminEn:[['Accounts and start codes','for grown-ups are issued by you, for now with the tool on your computer. It makes an invitation per person as an e-mail draft (QR code and link with access code and start code); you send it yourself. An invitation works once and for 7 days; the same link connects more devices later.']]
 };
 const kontoTexte = (text, ersatz) => KONTO_UI ? anmPunkteErsetzen(text, ersatz) : text;
 const GUIDE_KID=kontoTexte(`<div class="quick"><b>Quick guide</b><ol>
-<li>Tap <b>🎒 Student</b>. Tap your name under “Who's here?” – or type it. Then your password.</li>
+<li>Tap <b>I'm a student</b>. Tap your name under “Who's here?” – or type it. Then your password.</li>
 <li>Tap <b>Practise Today</b> – or a subject.</li>
 <li>Stuck? Tap <b>“Show me how”</b>. That is never a mistake.</li>
 <li>Finished? Tap <b>Log out</b> if someone else wants this iPad.</li>
 </ol></div>
 <p class="small">Hello, explorer! Here is how Big Quest works.</p>
 <ol class="steps">
-<li><b>Log in:</b> tap 🎒 Student. If your name is under “Who's here?”, tap it – otherwise type your user name. Then type your password. Keep it a secret! Your password is only for you. Don’t tell friends. Your grown-ups can help if you forget it.</li>
+<li><b>Log in:</b> tap <b>I'm a student</b>. If your name is under “Who's here?”, tap it – otherwise type your user name. Then type your password. Keep it a secret! Your password is only for you. Don’t tell friends. Your grown-ups can help if you forget it.</li>
 <li><b>The very first time:</b> your grown-up gives you a start code – sometimes as a link or a QR code to scan. Then you choose your own password. Take the idea with three words and a number, like <i>Tiger-Lamp-River-4271</i>. Let the iPad remember it – then Face ID fills it in for you. A short password does not work: a strong one keeps your things safe.</li>
 <li><b>Practise Today:</b> 8 questions from your focus topics. Or tap a subject and choose a quest.</li>
 <li><b>Oops, a mistake?</b> No problem! You get a tip and try again. Tap “Show me how” whenever you want – that is not a mistake. Still stuck? “Show me the answer” shows the solution.</li>
@@ -6560,8 +6595,8 @@ const GO = (sec, label) => `<a class="pgo" href="#eltern/einstellungen/${sec}" d
 const GO_EN = (sec, label) => `<a class="pgo" href="#eltern/einstellungen/${sec}" data-pgoto="${sec}">⚙️ → “${label}”</a>`;
 const GUIDE_ADULT_DE=kontoTexte(`<h3 class="pguide-h">Hilfe für Eltern</h3><ol class="steps">
 <li><b>Einmal einrichten:</b> Seite in Safari öffnen, Familienpasswort eingeben. Dann Teilen → „Zum Home-Bildschirm“. Künftig nur über das Symbol öffnen.</li>
-<li><b>Anmelden:</b> „👪 Parent / Teacher“, Benutzername und Startcode – oder Startlink bzw. QR-Code öffnen. Dann ein eigenes Passwort wählen: am einfachsten den Vorschlag übernehmen und im Passwortspeicher sichern. Es gilt nur auf diesem Gerät.</li>
-<li><b>Kind anmelden:</b> „🎒 Student“ mit dem Startcode des Kindes. Zusammen ein Merkpasswort wählen und im Passwortspeicher sichern. Geschwister am selben Gerät wählen sich unter „Who's here?“ aus.</li>
+<li><b>Anmelden:</b> "I'm a parent or teacher", Benutzername und Startcode – oder Startlink bzw. QR-Code öffnen. Dann ein eigenes Passwort wählen: am einfachsten den Vorschlag übernehmen und im Passwortspeicher sichern. Es gilt nur auf diesem Gerät.</li>
+<li><b>Kind anmelden:</b> "I'm a student" mit dem Startcode des Kindes. Zusammen ein Merkpasswort wählen und im Passwortspeicher sichern. Geschwister am selben Gerät wählen sich unter „Who's here?“ aus.</li>
 <li><b>Nachsehen:</b> Der Lernstand liegt nur auf dem Gerät, auf dem Ihr Kind übt. Mit mehreren Kindern wählen Sie oben aus. <b>Danach abmelden</b> – dann ist dort wieder Ihr Kind angemeldet.</li>
 <li><b>Sichern:</b> einmal im Monat, auf dem Gerät des Kindes: ${GO('sicherung','💾 Sicherung & Daten')}.</li>
 <li><b>Freigaben:</b> Eine Lehrkraft oder der Admin sieht Ihr Kind nur mit Ihrer Freigabe – dann mit Vor- und Nachnamen, Geburtsdatum, Klasse und Schule, aber ohne Emoji und Einstellungen: ${GO('freigaben','🔐 Zugriff & Freigaben')}.</li>
@@ -6569,15 +6604,15 @@ const GUIDE_ADULT_DE=kontoTexte(`<h3 class="pguide-h">Hilfe für Eltern</h3><ol 
 </ol>`, KONTO_GUIDE.adultDe);
 const GUIDE_ADULT_EN=kontoTexte(`<h3 class="pguide-h">Help for parents</h3><ol class="steps">
 <li><b>Set up once:</b> open the page in Safari and enter the family password. Then Share → “Add to Home Screen”. From then on, open it with the icon.</li>
-<li><b>Log in:</b> “👪 Parent / Teacher”, username and start code – or open the start link or QR code. Then choose your own password: easiest is to take the suggestion and save it in the password manager. It works only on this device.</li>
-<li><b>Log in your child:</b> “🎒 Student” with your child’s start code. Choose a memorable password together and save it in the password manager. Siblings on the same device pick themselves under “Who's here?”.</li>
+<li><b>Log in:</b> "I'm a parent or teacher", username and start code – or open the start link or QR code. Then choose your own password: easiest is to take the suggestion and save it in the password manager. It works only on this device.</li>
+<li><b>Log in your child:</b> "I'm a student" with your child’s start code. Choose a memorable password together and save it in the password manager. Siblings on the same device pick themselves under “Who's here?”.</li>
 <li><b>Take a look:</b> the progress is only on the device where your child practices. With several children, choose at the top. <b>Log out afterwards</b> – your child is then logged in there again.</li>
 <li><b>Back up:</b> once a month, on your child’s device: ${GO_EN('sicherung','💾 Backup & data')}.</li>
 <li><b>Grants:</b> a teacher or the admin sees your child only with your grant – then with first and last name, date of birth, class and school, but without emoji and settings: ${GO_EN('freigaben','🔐 Access & grants')}.</li>
 <li><b>Forgot your password?</b> The start code keeps working; otherwise the admin gives you a new one. After 5 wrong tries, wait 30 seconds. Keep the family password, start codes and start links private.</li>
 </ol>`, KONTO_GUIDE.adultEn);
 const GUIDE_TEACHER_DE=kontoTexte(`<h3 class="pguide-h">Hilfe für Lehrkräfte</h3><ol class="steps">
-<li><b>Anmelden:</b> „👪 Parent / Teacher“, Benutzername und Startcode vom Admin – oder Startlink bzw. QR-Code. Dann ein eigenes Passwort wählen.</li>
+<li><b>Anmelden:</b> "I'm a parent or teacher", Benutzername und Startcode vom Admin – oder Startlink bzw. QR-Code. Dann ein eigenes Passwort wählen.</li>
 <li><b>Einblick nur mit Freigabe:</b> Nennen Sie den Eltern Ihren Anmeldenamen. Sie geben Einblick, befristet und im gewählten Umfang. Schuldaten sehen Sie nur, wenn die Eltern sie freigeben.</li>
 <li><b>Ansehen:</b> auf dem Gerät, auf dem das Kind übt. Sie können nur lesen, nichts ändern. Oben stehen Vor- und Nachname des Kindes, damit Sie wissen, mit wem Sie arbeiten; heißen zwei Kinder gleich, auch das Geburtsdatum. Klasse und Schule stehen dabei, wenn die Familie sie eingetragen hat. Emoji und Einstellungen sehen Sie nicht.</li>
 <li><b>Protokoll:</b> Die Eltern sehen, wann Sie die Übersicht angesehen haben.</li>
@@ -6585,7 +6620,7 @@ const GUIDE_TEACHER_DE=kontoTexte(`<h3 class="pguide-h">Hilfe für Lehrkräfte</
 <li><b>Passwort vergessen:</b> Der Startcode gilt weiter; sonst gibt der Admin einen neuen. Nach 5 Fehlversuchen 30 Sekunden warten.</li>
 </ol>`, KONTO_GUIDE.teacherDe);
 const GUIDE_TEACHER_EN=kontoTexte(`<h3 class="pguide-h">Help for teachers</h3><ol class="steps">
-<li><b>Log in:</b> “👪 Parent / Teacher”, username and start code from the admin – or the start link or QR code. Then choose your own password.</li>
+<li><b>Log in:</b> "I'm a parent or teacher", username and start code from the admin – or the start link or QR code. Then choose your own password.</li>
 <li><b>Access only with a grant:</b> tell the parents your login name. They give you access, for a limited time and to the extent they choose. You see school ratings only if the parents allow it.</li>
 <li><b>Look:</b> on the device where the child practices. You can only look; nothing can be changed. The child’s first and last name are shown at the top, so you know whom you are working with; if two children have the same name, the date of birth too. The class and school are shown if the family entered them. You do not see the emoji or settings.</li>
 <li><b>Log:</b> the parents see when you looked at the overview.</li>
@@ -6846,7 +6881,7 @@ function openAbout(tab, open){
   state.aboutTab=tab||'info'; state.aboutSub=null;
   // With accounts there is no grown-ups tab for children: grown-ups log in openly instead.
   $('#tabSheets').hidden=accountsOn() && !adultUser;
-  if(state.aboutTab==='sheets' && accountsOn() && !adultUser){ showLogin('adult'); return; }
+  if(state.aboutTab==='sheets' && accountsOn() && !adultUser){ showAdultLogin(); return; }
   aboutChrome();
   if(state.aboutTab==='sheets') renderSheets();
   else renderAboutPage(open);
@@ -7063,7 +7098,7 @@ $('#sheetPdf').addEventListener('click',sharePdf);
 $('#sheetPrint').addEventListener('click',()=>{ closeSheetDlg(); setTimeout(()=>window.print(),50); });
 $('#sheetClose').addEventListener('click',closeSheetDlg);
 $('#aboutBtn').addEventListener('click',()=>openAbout());
-$('#adultBtn').addEventListener('click',()=>{ if(!adultResume()) showLogin('adult'); });
+$('#adultBtn').addEventListener('click',()=>{ if(!adultResume()) showAdultLogin(); });
 $('#guideBtn').addEventListener('click',()=>openGuide('kid'));
 document.addEventListener('click',e=>{ const b=e.target.closest && e.target.closest('.info-btn'); if(b){ e.preventDefault(); e.stopPropagation(); openHelp(b.dataset.help); } },true);
 $('#helpClose').addEventListener('click',closeHelp);
@@ -7075,8 +7110,9 @@ $('#tabEn').addEventListener('click',()=>setLang('en'));
 $('#tabInfo').addEventListener('click',()=>openAbout('info'));
 $('#tabSheets').addEventListener('click',()=>openAbout('sheets'));
 // No log-out in the background (Peter, 31.10.): an iPad is personal; only stop a running recording.
-// Task "Abgleich in der App": coming back fetches; going into the background sends own entries not sent yet.
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){ checkForUpdate(); if(KONTO_UI) kontoAbgleich(); } if(document.hidden){ recStop(); if(KONTO_UI && kontoStatus.neu) kontoAbgleich(); }});
+// Peter, 06.11.: on a child's device, putting the app away ends the grown-ups area; on return the child sees the home
+// screen again, and the grown-up returns with Face ID or password.
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){ checkForUpdate(); if(KONTO_UI) kontoAbgleich(); } if(document.hidden){ recStop(); if(KONTO_UI && kontoStatus.neu) kontoAbgleich(); adultHideOnChildDevice(); }});
 window.addEventListener('hashchange',()=>{
   if(applyParentRoute()) return;
   // browser back out of ⚙ to a page without a route: back to the overview of the grown-ups area
@@ -7086,6 +7122,7 @@ window.addEventListener('hashchange',()=>{
 
 function boot(data){
   cleanStoredPrivate();
+  renderLoginHero();
   // the person keys kept on this device (IndexedDB) back into memory; then the children of the parents here, a sync and
   // one every minute (task "Einladungen - Oberflaeche")
   if(KONTO_UI) kontoSchluesselLaden().then(()=>{ const vor=kontoKinderText(); kontoKontenAuffrischen(); kontoNeuZeichnen(vor!==kontoKinderText()); kontoAbgleich(); kontoTaktStarten(); });
