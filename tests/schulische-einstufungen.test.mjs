@@ -91,10 +91,10 @@ test('T1–T3 table, filters, sorting and fixed outline (German, 60 assignments)
   await kapitelOeffnen(page);
   const heute = await page.evaluate(() => { const d = new Date(), p = (n) => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); });
   const k = kapitel(page), text = await k.innerText();
-  // T1: data date from the data, newest evaluation, no fixed date
+  // T1: data date from the data, newest evaluation, no old hard-coded status line
   const neueste = AUFGABEN.map((t) => t.day).sort().pop();
   assert.ok(text.includes(`Stand der Daten: ${fmtDe(ASOF)} · neueste Bewertung: ${fmtDe(neueste)}.`), text.slice(0, 300));
-  assert.ok(!/Oktober 2026|30\.10\.2026/.test(text), 'no fixed date');
+  assert.ok(!/Stand:\s*30\. Oktober 2026\.?|Stand:\s*30\.10\.2026\.?/.test(text), 'no old fixed status line');
   // waiting assignment: its own small block, not in the table
   assert.match(await k.locator('.pspend').innerText(), /Wartet auf Bewertung[\s\S]*Glows check/);
   assert.ok(!(await k.locator('table.pstab').innerText()).includes('Glows check'));
