@@ -144,10 +144,12 @@ test('Browser: Startlink -> Zugang -> Rolle -> eigenes Passwort -> Wiederherstel
   await togglePruefen(B.page, 'newPw1', 'Otter-Cake-Moss-1234', 'new-password');
   await togglePruefen(B.page, 'newPw2', 'Otter-Cake-Moss-1234', 'new-password');
   await B.page.locator('#pwUse').click(); await B.page.locator('#setPwGo').click();
-  await B.page.waitForSelector('#recCode', { timeout: 30000 });
-  assert.notEqual((await B.page.locator('#recCode').textContent()).trim(), rc, 'neuer Code');
-  await B.page.locator('#recGo').click();
   await imElternbereich(B.page);
+  assert.equal(await B.page.locator('#loginBody #recCode').count(), 0, 'kein Rueckfall auf die Login-Seite');
+  await B.page.waitForSelector('#aboutBody #recCode', { timeout: 30000 });
+  assert.notEqual((await B.page.locator('#aboutBody #recCode').textContent()).trim(), rc, 'neuer Code');
+  await B.page.locator('#aboutBody #recGo').click();
+  await B.page.waitForSelector('#aboutBody #recCode', { state: 'detached', timeout: 30000 });
   assert.deepEqual(B.fehler, []);
   await B.ctx.close();
 });

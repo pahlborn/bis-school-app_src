@@ -310,13 +310,16 @@ test('3 Passwort vergessen (Erwachsene): Wiederherstellungscode -> neues Passwor
   B.tippe('#forgotUser', 'lehrkraft (Wiederherstellungscode)'); B.tippe('#forgotCode', code1.toLowerCase().replace(/-/g, ' '));
   B.absenden('#forgotGo');
   const pw2 = await passwortWaehlen(B);
-  await B.wartenAuf('#recCode');
-  const code2 = B.im('#recCode').textContent;
+  await B.warten(() => !!B.erwachsen(), 'direkter Login nach Wiederherstellung');
+  const code2 = B.S.lauf(() => B.S.$('#aboutBody #recCode').textContent);
   assert.notEqual(code2, code1, 'sofort ein neuer Code');
-  assert.equal(B.im('#recForm input[autocomplete="username"]').value, 'lehrkraft (Wiederherstellungscode)', 'derselbe eigene Eintrag bekommt den neuen Code');
-  B.klick('#recGo');
+  assert.equal(B.S.lauf(() => B.S.$('#aboutBody #recForm input[autocomplete="username"]').value), 'lehrkraft (Wiederherstellungscode)', 'derselbe eigene Eintrag bekommt den neuen Code');
+  assert.equal(B.da('#forgotForm'), false, 'kein Rueckfall in Passwort vergessen');
+  assert.equal(B.da('#setPwForm'), false, 'kein weiterer Zwischenschritt auf der Login-Seite');
   assert.equal(B.erwachsen().user, 'lehrkraft', 'danach angemeldet');
   assert.deepEqual(B.liste().map((e) => e.id), [kennung], 'dieselbe Person');
+  B.S.lauf(() => B.S.$('#aboutBody #recGo').click());
+  await B.warten(() => !B.S.$('#aboutBody #recCode'), 'Code-Hinweis ausgeblendet');
 
   // drittes Geraet: altes Passwort nein, neues ja; alter Code nein
   const C = geraet(t, W.w, { name: 'Schul-PC' });

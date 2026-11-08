@@ -4850,6 +4850,7 @@ function renderSheets(){
   const body=$('#aboutBody'), lang=PL(), T=PT[lang], de=lang==='de', teacher=isTeacher(), open=state.popen||(state.popen=[]), kidOk=!accountsOn() || !!viewedKid();
   const secHTML = list => '<div class="psecs">'+list.map(([id,title,b])=>`<details class="psec" data-psec="${id}"${open.includes(id)?' open':''}><summary>${title}</summary><div class="psec-body">${b}</div></details>`).join('')+'</div>';
   let html=parentHeaderHTML();
+  if(KONTO_UI) html+=kontoCodeHinweisHTML();
   if(KONTO_UI && kontoBlatt) html+=kontoBlattHTML();   // a step of family/devices (task "Einladungen - Oberflaeche")
   else if(state.pview==='settings') html+=settingsViewHTML(secHTML);
   else if(state.pview==='help') html+=helpViewHTML();
@@ -4894,6 +4895,7 @@ function renderSheets(){
   bindGrants(body);
   bindSchoolList(body);
   bindParentSettings();
+  if(KONTO_UI) kontoCodeHinweisBinden();
   if(KONTO_UI) kontoBinden(body);
 }
 
@@ -5601,14 +5603,14 @@ async function kontoMerken(k){
 /* the recovery code (grown-ups): shown once, saved as an own entry in the password manager and as a file (concept 10.6) */
 /* ziel: where it is shown (the login page; after new keys the grown-ups area, task "Einladungen - Oberflaeche");
    vorab: a line above the code (e.g. the new fingerprint) */
-function renderKontoCode(a, code, weiter, ziel, vorab){
-  const de=store.get('parentLang','de')!=='en', Z=ziel||$('#loginBody'), q=s=>Z.querySelector(s);
-  Z.innerHTML=`<h2>${de?'Ihr Wiederherstellungscode':'Your recovery code'}</h2>${vorab||''}<p class="small">${de?'Mit diesem Code wählen Sie ein neues Passwort, falls Sie Ihres vergessen. Er wird nur jetzt angezeigt. Bitte sichern Sie ihn – im Passwortspeicher und zusätzlich als Datei.':'With this code you choose a new password if you forget yours. It is shown only now. Please save it – in your password manager and also as a file.'}</p><p class="rec-code" id="recCode">${esc(code)}</p><form id="recForm" class="login-form"><div class="field"><label for="recUser">${de?'Eintrag im Passwortspeicher':'Entry in the password manager'}</label><input id="recUser" name="username" autocomplete="username" value="${esc(anmCodeEintrag(a.user, de?'de':'en'))}" readonly></div><div class="field"><label for="recPw">${de?'Wiederherstellungscode':'Recovery code'}</label><input id="recPw" name="password" type="password" autocomplete="new-password" value="${esc(code)}" readonly></div><button class="btn primary" id="recSave" type="submit">🔑 ${de?'Im Passwortspeicher sichern':'Save in the password manager'}</button></form><button class="btn" id="recFile" type="button">📄 ${de?'Als Datei sichern':'Save as a file'}</button><p id="recMsg" class="small" role="status"></p><button class="btn" id="recGo" type="button">${de?'Weiter':'Continue'}</button>`;
+function renderKontoCode(a, code, weiter, ziel, vorab, opts){
+  const o=opts||{}, de=store.get('parentLang','de')!=='en', Z=ziel||$('#loginBody'), q=s=>Z.querySelector(s);
+  Z.innerHTML=`<h2>${de?'Ihr Wiederherstellungscode':'Your recovery code'}</h2>${vorab||''}<p class="small">${de?'Mit diesem Code wählen Sie ein neues Passwort, falls Sie Ihres vergessen. Er wird nur jetzt angezeigt. Bitte sichern Sie ihn – im Passwortspeicher und zusätzlich als Datei.':'With this code you choose a new password if you forget yours. It is shown only now. Please save it – in your password manager and also as a file.'}</p><p class="rec-code" id="recCode">${esc(code)}</p><form id="recForm" class="login-form"><div class="field"><label for="recUser">${de?'Eintrag im Passwortspeicher':'Entry in the password manager'}</label><input id="recUser" name="username" autocomplete="username" value="${esc(anmCodeEintrag(a.user, de?'de':'en'))}" readonly></div><div class="field"><label for="recPw">${de?'Wiederherstellungscode':'Recovery code'}</label><input id="recPw" name="password" type="password" autocomplete="new-password" value="${esc(code)}" readonly></div><button class="btn primary" id="recSave" type="submit">🔑 ${de?'Im Passwortspeicher sichern':'Save in the password manager'}</button></form><button class="btn" id="recFile" type="button">📄 ${de?'Als Datei sichern':'Save as a file'}</button><p id="recMsg" class="small" role="status"></p><button class="btn" id="recGo" type="button">${esc(o.weiterText || (de?'Weiter':'Continue'))}</button>`;
   // the form leaves the page after "submit": that is when the password manager offers to save the entry
   q('#recForm').addEventListener('submit',e=>{ e.preventDefault(); const f=q('#recForm'); if(!f) return; f.insertAdjacentHTML('afterend',`<p class="small" id="recSaved">✓ ${de?'Ihr Passwortspeicher bietet jetzt an, den Eintrag zu sichern. Falls nicht: den Code als Datei sichern.':'Your password manager now offers to save the entry. If it does not, save the code as a file.'}</p>`); f.remove(); });
   q('#recFile').addEventListener('click',()=>kontoCodeTeilen(a, code, de, q('#recMsg')));
   q('#recGo').addEventListener('click',weiter);
-  q('#recSave').focus();
+  if(o.focus!==false) q('#recSave').focus();
 }
 async function kontoCodeTeilen(a, code, de, msgEl){
   const msg=msgEl||$('#recMsg'), d=anmCodeDatei({anmeldename:a.user, code, datum:dayKey(), sprache:de?'de':'en'}), file=new File([d.text], d.name, {type:'text/plain'});
@@ -5643,7 +5645,8 @@ async function kontoWiederPasswort(u, pw){
     const k=await anmWiederherstellen({zugang:z, anmeldename:u.user, code:u.wieder.code, neuesPasswort:pw});
     loginFails=0;
     const a=await kontoAngemeldet(k);
-    renderKontoCode(a, k.wiederherstellungscode, ()=>loginDone(a));
+    kontoCodeHinweis=k.wiederherstellungscode ? {user:a.user, code:k.wiederherstellungscode} : null;
+    loginDone(a);
   }catch(err){
     if(err && err.code==='anmeldung'){ loginFails++; if(loginFails>=5){ loginBlockedUntil=Date.now()+30000; loginFails=0; } return renderKontoVergessen(de?'Benutzername oder Wiederherstellungscode stimmt nicht.':'User name or recovery code is not right.'); }
     msg.textContent=kontoFehlerText(err, T, true); btn.disabled=false;
@@ -5683,6 +5686,19 @@ function kontoAlleAbmelden(){ kontoOffen.clear(); kontoAlt.clear(); kontoBlatt=n
    in the grown-ups area (problems in plain words, entries not taken over as a number with ⓘ); a child sees nothing. */
 const KONTO_TAKT_MS=30000, KONTO_SENDEN_MS=30000, KONTO_QR_MS=4000, KONTO_WARTEN_MS=5000;
 const kontoGesehen=new Set(), kontoMeldungen=[];
+let kontoCodeHinweis=null;
+function kontoCodeHinweisHTML(){
+  if(!kontoCodeHinweis || !adultUser || adultUser.user!==kontoCodeHinweis.user) return '';
+  return '<section class="kmeld kmeld-ok" id="kCodeHinweis"><div id="kCodeHinweisBox"></div></section>';
+}
+function kontoCodeHinweisBinden(){
+  const box=$('#kCodeHinweisBox');
+  if(!box || !kontoCodeHinweis || !adultUser || adultUser.user!==kontoCodeHinweis.user) return;
+  const de=PL()==='de';
+  renderKontoCode({user:kontoCodeHinweis.user}, kontoCodeHinweis.code, ()=>{ kontoCodeHinweis=null; renderSheets(); }, box,
+    `<p class="kverb">✓ ${de?'Passwort geändert. Sie sind jetzt angemeldet.':'Password changed. You are now logged in.'}</p><p class="small">${de?'Bitte sichern Sie jetzt den neuen Wiederherstellungscode oder tippen Sie auf „Später“.':'Please save the new recovery code now or tap “Later”.'}</p>`,
+    {weiterText:de?'Später':'Later', focus:false});
+}
 let kontoLauf=null, kontoNochmal=false, kontoBericht=null, kontoTaktAn=false;
 /* an opened account as the modules want it (login name, stand, ursprung; after the first login where it belongs; alt) */
 function kontoKonto(id){
@@ -6017,7 +6033,7 @@ function kontoQrTakt(id){
     kontoQrStatus(); kontoQrTakt(id);
   }, KONTO_QR_MS);
 }
-function kontoBlattZeigen(b){ kontoBlatt=b; renderSheets(); window.scrollTo(0,0); if(b && b.art==='qr') kontoQrTakt(b.id); }
+function kontoBlattZeigen(b){ if(b && b.art==='code') kontoCodeHinweis=null; kontoBlatt=b; renderSheets(); window.scrollTo(0,0); if(b && b.art==='qr') kontoQrTakt(b.id); }
 function kontoFehler(err){
   const de=PL()==='de', c=err && err.code;
   if(c==='name-vergeben') return de?'Dieser Anmeldename ist schon vergeben. Bitte einen anderen wählen.':'This login name is taken. Please choose another one.';
