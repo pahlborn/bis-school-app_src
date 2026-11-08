@@ -36,7 +36,7 @@ import { browserStarten, LADEZEIT_MS } from './app-hilfen.mjs';
 import { githubNachbau } from './module/github-nachbau.mjs';
 import { TEST_PW } from './hilfen.mjs';
 
-const VERSION = { n: 998, hash: 'fam1234', date: '05.11.2026 21:00', draft: false };
+const VERSION = { major: 0, minor: 998, patch: 0, kanal: 'beta', hash: 'fam1234', date: '05.11.2026 21:00', draft: false };
 const lies = (rel) => fs.readFileSync(path.join(WURZEL, rel), 'utf8');
 const WOERTER = woerterLesen(lies(QUELLEN.woerter));
 const SCHULE = JSON.parse(lies('werkzeug/schuldaten.json'));
@@ -77,7 +77,7 @@ test('Bau: Suchlauf bestanden, fuenf Dateien, Huelle mit Tresor, im Tresor der u
   assert.equal(APP.split(SPEICHER_ZEILE).length, 2, 'mit dem Familien-Repo verbunden');
   assert.deepEqual(SPEICHER_FAMILIE, { art: 'github', repo: 'pahlborn/bis-school-app-familie', wurzel: '' });
   assert.ok(APP.includes(TOKEN_ZEILE_FAMILIE));
-  assert.ok(APP.includes('const APP_VERSION={"n":998,"hash":"fam1234"'), 'Version eingesetzt');
+  assert.ok(APP.includes('const APP_VERSION={"major":0,"minor":998,"patch":0,"kanal":"beta","hash":"fam1234"'), 'Version eingesetzt');
   assert.ok(APP.includes("localStorage.getItem('bq_schluessel')") && APP.split('bq_schluessel').length === 2, 'Familienschluessel genau einmal (Selbst-Aktualisierung)');
   assert.match(APP, /const GLOBAL_KEYS=\/\^\(abgleich\|abgleichVerworfen\|geraetEntfernen\|gh\|session\|/);
   for (const k of ["'bqf_session'", "'bqf_kontoListe'", "'bqf_abgleich'", "'bqf_evDevice'", "'bqf_gh'", "'bqUpdateTo'"]) assert.ok(APP.includes(k), k);

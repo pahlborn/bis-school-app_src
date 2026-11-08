@@ -10,9 +10,10 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { distBauen } from '../werkzeug/bauen.mjs';
 import { veroeffentlichen } from '../werkzeug/veroeffentlichen.mjs';
+import { versionText } from '../werkzeug/version.mjs';
 import { TEST_PW } from './hilfen.mjs';
 
-const V = { n: 7, hash: 'abc1234', date: '2026-11-03 16:00', draft: false };
+const V = { major: 0, minor: 7, patch: 0, kanal: 'beta', hash: 'abc1234', date: '2026-11-03 16:00', draft: false };
 const git = (cwd, ...a) => execFileSync('git', a, { cwd, encoding: 'utf8' }).trim();
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'bq-veroeff-'));
 let dist;
@@ -35,7 +36,7 @@ test('gepruefte Huelle wird kopiert und mit Version committet; zweiter Lauf tut 
   const z = zielRepo();
   const r = await veroeffentlichen({ dist, ziel: z, text: 'Probe', ohnePush: true, version: V });
   assert.equal(r.geaendert, true);
-  assert.equal(git(z, 'log', '-1', '--format=%s'), 'Big Quest v7: Probe');
+  assert.equal(git(z, 'log', '-1', '--format=%s'), `Big Quest ${versionText(V, { mitEntwurf: false })}: Probe`);
   assert.equal(fs.readFileSync(path.join(z, 'index.html'), 'utf8'), fs.readFileSync(path.join(dist, 'index.html'), 'utf8'));
   const r2 = await veroeffentlichen({ dist, ziel: z, ohnePush: true, version: V });
   assert.equal(r2.geaendert, false);
@@ -52,9 +53,9 @@ test('neue Fassung gleicher Groesse mit alter Aenderungszeit wird trotzdem veroe
   // its index and does not look at the content (copyFileSync keeps the time of the source file)
   const alt = fs.statSync(path.join(z, 'index.html'));
   fs.utimesSync(f2, alt.atime, alt.mtime);
-  const r = await veroeffentlichen({ dist: d2, ziel: z, text: 'zweite', ohnePush: true, version: { ...V, n: 8 } });
+  const r = await veroeffentlichen({ dist: d2, ziel: z, text: 'zweite', ohnePush: true, version: { ...V, minor: 8 } });
   assert.equal(r.geaendert, true, 'the change was noticed');
-  assert.equal(git(z, 'log', '-1', '--format=%s'), 'Big Quest v8: zweite');
+  assert.equal(git(z, 'log', '-1', '--format=%s'), 'Big Quest V 0.8 (Betaversion): zweite');
   assert.ok(fs.readFileSync(path.join(z, 'index.html')).equals(fs.readFileSync(f2)));
 });
 

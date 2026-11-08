@@ -462,7 +462,7 @@ test('accounts file is checked; the build puts accounts only into the vault, nev
   assert.throws(() => kontenPruefen({ users: KONTEN.users }), /Version 2/);
   assert.match(codeErzeugen(), /^[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}$/);
   const ziel = await fs.mkdtemp(path.join(os.tmpdir(), 'bq-konten-'));
-  await distBauen(TEST_PW, { ziel, konten: KONTEN, schule: null, version: { n: 1, hash: 'abcdef1', date: '31.10.2026 08:00', draft: false } });
+  await distBauen(TEST_PW, { ziel, konten: KONTEN, schule: null, version: { major: 0, minor: 1, patch: 0, kanal: 'beta', hash: 'abcdef1', date: '31.10.2026 08:00', draft: false } });
   const html = await fs.readFile(path.join(ziel, 'index.html'), 'utf8');
   const klar = Buffer.from(await entschluesseln(tresorAusHuelle(html), TEST_PW)).toString('utf8');
   assert.ok(klar.includes('"user":"papa"'));

@@ -22,7 +22,7 @@ import { entschluesseln, tresorAusHuelle } from '../werkzeug/kern.mjs';
 import { TEST_PW } from './hilfen.mjs';
 import { browserStarten } from './app-hilfen.mjs';
 
-const V = { n: 7, hash: 'abc1234', date: '05.11.2026 10:00', draft: false };
+const V = { major: 0, minor: 7, patch: 0, kanal: 'beta', hash: 'abc1234', date: '05.11.2026 10:00', draft: false };
 const S = schriftenLesen(WURZEL);
 const q = await quellenLesen();
 const QUELLTEXT = fs.readFileSync(path.join(WURZEL, QUELLEN.app), 'utf8');
