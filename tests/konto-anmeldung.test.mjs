@@ -452,12 +452,14 @@ test('5 Kathies App und der Testbau mit konten.json bleiben beim alten Weg; kein
 test('6 Konto-Modus: Anleitungen und Willkommen sprechen von einem Passwort fuer alle Geraete und vom Wiederherstellungscode', async (t) => {
   const A = geraet(t, lokalerSpeicher(), { name: 'Anleitungen' });
   const g = (n) => A.S.lauf(() => A.S.holen(n));
+  const loginHelp = A.S.lauf(() => A.S.holen('LOGIN_HELP_KONTO'));
   const alle = ['GUIDE_KID', 'GUIDE_ADULT_DE', 'GUIDE_ADULT_EN', 'GUIDE_TEACHER_DE', 'GUIDE_TEACHER_EN', 'GUIDE_ADMIN_DE', 'GUIDE_ADMIN_EN'].map((n) => [n, g(n)]);
   for (const [n, txt] of alle) {
     assert.ok(!/Der Startcode gilt weiter|start code keeps working|nur auf diesem Gerät\.|only on this device\.|works only on this device|Familienpasswort eingeben|enter the family password/.test(txt), n + ': alter Weg erwaehnt');
   }
-  for (const n of ['GUIDE_ADULT_DE', 'GUIDE_TEACHER_DE']) assert.ok(g(n).includes('Wiederherstellungscode') && g(n).includes('Passwort vergessen?'), n);
-  for (const n of ['GUIDE_ADULT_EN', 'GUIDE_TEACHER_EN']) assert.ok(g(n).includes('recovery code') && g(n).includes('Forgot your password?'), n);
+  for (const n of ['GUIDE_ADULT_DE', 'GUIDE_TEACHER_DE']) assert.ok(g(n).includes('Wiederherstellungscode') && g(n).includes('Passwort vergessen?') && g(n).includes('sofort wieder angemeldet') && !g(n).includes('den neuen Code wieder sichern'), n);
+  for (const n of ['GUIDE_ADULT_EN', 'GUIDE_TEACHER_EN']) assert.ok(g(n).includes('recovery code') && g(n).includes('Forgot your password?') && g(n).includes('logged in right away') && !g(n).includes('save the new code again'), n);
+  assert.ok(loginHelp.includes('logged in right away') && !loginHelp.includes('save the new code again'), 'Login-Hilfe zeigt den neuen Weg');
   assert.ok(g('GUIDE_KID').includes('On another iPad, use the same user name and password.'));
   assert.ok(!/recovery|Wiederherstellung/i.test(g('GUIDE_KID')), 'Kinderhilfe ohne Erwachsenen-Themen');
   assert.ok(g('GUIDE_ADMIN_DE').includes('gilt einmal und 7 Tage'));
