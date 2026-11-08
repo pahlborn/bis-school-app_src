@@ -71,6 +71,8 @@ test('T11 ⚙ → Über die App: intro, important note with responsibility, priv
   assert.match(t, /Konten und Rechte:[\s\S]*Leseaufnahmen:/);
   assert.match(await d.locator('details[data-about="imprint"]').innerText(), /Wird ergänzt\./);
   assert.ok(await d.locator('#versionInfo').isVisible(), 'version');
+  assert.match(t, /Betafassungen tragen sichtbar „\(Betaversion\)“\./);
+  assert.match(t, /Finale Freigaben erscheinen später als „V 1\.0\.0“\./);
   assert.equal(await page.locator('#aboutBody h2', { hasText: 'Über diese Anwendung' }).count(), 0, 'no second page title inside the section');
   // English
   await page.locator('.phdr [data-plang="en"]').click();
@@ -80,6 +82,8 @@ test('T11 ⚙ → Über die App: intro, important note with responsibility, priv
   assert.ok(te.includes('Please note.') && te.includes(VERANTWORTUNG_EN));
   assert.deepEqual(await en.locator('details.about-sec > summary').allInnerTexts(), ['Privacy', 'Legal notice']);
   assert.match(te, /To be added\./);
+  assert.match(te, /Beta releases visibly carry “\(Beta version\)”\./);
+  assert.match(te, /Final releases later appear as “V 1\.0\.0”\./);
   // teacher: "about the app" too
   const l = await oeffnen(browser, server);
   await kindDann(l.page, 'frau');
@@ -105,12 +109,12 @@ test('T12 release notes: only the admin sees them; Epic / User Story / Bugfix ar
   const da = await ueberDieApp(a.page);
   assert.ok(await da.locator('#releaseDocs').isVisible(), 'admin sees release notes');
   const ta = await da.locator('#releaseDocs').innerText();
-  for (const x of ['Releasedokumentation', 'Epic', 'User Story', 'Bugfix', 'Releasedokumentation ist jetzt direkt im Admin-Bereich sichtbar.']) assert.ok(ta.includes(x), x);
+  for (const x of ['Releasedokumentation', 'Nur für den Admin sichtbar', 'Epic', 'User Story', 'Bugfix', 'Releasedokumentation ist jetzt direkt im Admin-Bereich sichtbar.']) assert.ok(ta.includes(x), x);
   await a.page.locator('.phdr [data-plang="en"]').click();
   const ea = await a.page.locator('#aboutBody details.psec[data-psec="aboutapp"]');
   await ea.evaluate((e) => { e.open = true; e.querySelectorAll('details').forEach((x) => { x.open = true; }); });
   const te = await ea.innerText();
-  for (const x of ['Release notes', 'Epic', 'User Story', 'Bugfix', 'Release notes are now visible directly in the admin area.']) assert.ok(te.includes(x), x);
+  for (const x of ['Release notes', 'Visible only to the admin', 'Epic', 'User Story', 'Bugfix', 'Release notes are now visible directly in the admin area.']) assert.ok(te.includes(x), x);
 
   const leer = await oeffnen(browser, server);
   await kindDann(leer.page, 'chef');
