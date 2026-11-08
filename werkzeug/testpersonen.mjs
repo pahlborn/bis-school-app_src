@@ -2,8 +2,11 @@
 // im Verzeichnis des Test-Repos (Konto-Modul, Stufe 3b). Startcodes, Passwoerter und Wiederherstellungscodes stehen
 // NUR lokal (%LOCALAPPDATA%\bis-school-app\testinstanz\), nie im Repo, nie in der Ausgabe.
 //
-//   node werkzeug/testpersonen.mjs              zeigt den Stand (liest nur)
-//   node werkzeug/testpersonen.mjs --anlegen    legt an, was fehlt; abgelaufene Startcodes werden neu ausgestellt
+//   node werkzeug/testpersonen.mjs                                         zeigt den Stand (liest nur)
+//   node werkzeug/testpersonen.mjs --anlegen                               legt an, was fehlt; abgelaufene Startcodes werden neu ausgestellt
+//   node werkzeug/testpersonen.mjs --reset                                 zeigt nur, was im Testdaten-Repo und lokal geloescht wuerde
+//   node werkzeug/testpersonen.mjs --reset --bestaetigen pahlborn/bis-school-app-testdaten
+//                                                                        setzt die Testinstanz wirklich zurueck
 //   weitere Schalter: --repo owner/name, --wurzel <ordner im Repo>
 //
 // Der Token kommt aus %LOCALAPPDATA%\bis-school-app\testdaten-token.txt (anderer Pfad: BQ_GH_TOKEN_DATEI). Er ist zugleich der
@@ -52,9 +55,160 @@ const BREIT = Math.max(...TESTPERSONEN.map((p) => p.name.length));
 /* ein Startcode, der in weniger als einem Tag ablaeuft, wird neu ausgestellt */
 export const STARTCODE_RESERVE_MS = 24 * 3600 * 1000;
 const ARTEN = { admin: 'Admin', teacher: 'Lehrkraft', parent: 'Elternteil', child: 'Kind' };
+const RESET_ORDNER = Object.freeze(['directory', 'events', 'invites', 'keys']);
+const RESET_ERLAUBTE_WURZELDATEIEN = Object.freeze(['README.md']);
+export const RESET_BESTAETIGUNG = TESTINSTANZ.repoDaten;
+const RESET_VERSUCHE = 4;
 
 export const lokalerOrdner = () => path.join(ablageOrdner(), 'testinstanz');
 const tag = (ms) => new Date(ms).toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+const resetZiel = (repo, wurzel) => repo + (wurzel ? '/' + wurzel : '');
+
+function resetNurTestinstanz(repo, wurzel) {
+  if (repo !== TESTINSTANZ.repoDaten || wurzel !== TESTINSTANZ.wurzelDaten) {
+    throw new Error(`Reset nur fuer ${resetZiel(TESTINSTANZ.repoDaten, TESTINSTANZ.wurzelDaten)} erlaubt, nicht fuer ${resetZiel(repo, wurzel)}.`);
+  }
+}
+function resetGitHub({ repo, token, basis = 'https://api.github.com', fetch: holer = globalThis.fetch, zweig = 'main' } = {}) {
+  if (typeof repo !== 'string' || !repo) throw new Error('Reset: repo fehlt.');
+  if (typeof token !== 'string' || !token.trim()) throw new Error('Reset: Token fehlt.');
+  if (typeof basis !== 'string' || !/^https?:\/\/[^\s/?#]+$/.test(basis.replace(/\/+$/, ''))) throw new Error('Reset: GitHub-Basis ungueltig.');
+  if (typeof holer !== 'function') throw new Error('Reset: fetch fehlt.');
+  const api = basis.replace(/\/+$/, '') + '/repos/' + repo;
+  const pfad = (p) => api + '/contents' + (p ? '/' + p.split('/').map(encodeURIComponent).join('/') : '');
+  const json = async (methode, url, body) => {
+    let res;
+    try {
+      res = await holer(url, {
+        method: methode,
+        headers: {
+          Accept: 'application/vnd.github+json',
+          Authorization: 'Bearer ' + token,
+          'X-GitHub-Api-Version': '2022-11-28',
+          ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
+        cache: 'no-store',
+      });
+    } catch {
+      throw new Error('Reset: GitHub nicht erreichbar.');
+    }
+    let daten = null;
+    try { daten = await res.json(); } catch { daten = null; }
+    if (res.status === 401 || res.status === 403) throw new Error('Reset: Kein Zugriff auf das Testdaten-Repo.');
+    if (res.status >= 500 || res.status === 0) throw new Error('Reset: GitHub-Fehler ' + res.status + '.');
+    return { status: res.status, daten };
+  };
+  return {
+    async ordner(p) {
+      const r = await json('GET', pfad(p) + '?ref=' + encodeURIComponent(zweig));
+      if (r.status === 404) return [];
+      if (r.status !== 200 || !Array.isArray(r.daten)) throw new Error('Reset: Unerwartete Antwort beim Lesen von ' + (p || '(Wurzel)') + '.');
+      return r.daten;
+    },
+    async baum(sha, name) {
+      const r = await json('GET', api + '/git/trees/' + sha + '?recursive=1');
+      if (r.status !== 200 || !r.daten || !Array.isArray(r.daten.tree) || r.daten.truncated === true) throw new Error('Reset: Baum fuer ' + name + ' ungueltig.');
+      return r.daten.tree;
+    },
+    async loeschen(p, sha) {
+      const r = await json('DELETE', pfad(p), { message: 'bq: ' + p, sha, branch: zweig });
+      if (r.status === 200 || r.status === 204) return true;
+      if (r.status === 404 || r.status === 409 || r.status === 422) return false;
+      throw new Error('Reset: Unerwartete Antwort beim Loeschen von ' + p + '.');
+    },
+  };
+}
+async function lokalerResetBestand(ordner = lokalerOrdner()) {
+  const dateien = [];
+  for (const name of ['testpersonen.json', 'testpersonen.txt']) {
+    try { await fs.stat(path.join(ordner, name)); dateien.push(name); }
+    catch (e) { if (e.code !== 'ENOENT') throw e; }
+  }
+  const einladungOrdner = path.join(ordner, 'einladungen');
+  let einladungen = [];
+  try { einladungen = (await fs.readdir(einladungOrdner)).filter((n) => n.endsWith('.html')).sort(); }
+  catch (e) { if (e.code !== 'ENOENT') throw e; }
+  return { ordner, dateien, einladungen };
+}
+async function lokalerResetLoeschen(ordner = lokalerOrdner()) {
+  const bestand = await lokalerResetBestand(ordner);
+  let geloescht = 0;
+  for (const name of bestand.dateien) {
+    await fs.rm(path.join(ordner, name), { force: true });
+    geloescht++;
+  }
+  for (const name of bestand.einladungen) {
+    await fs.rm(path.join(ordner, 'einladungen', name), { force: true });
+    geloescht++;
+  }
+  if (bestand.einladungen.length) {
+    try {
+      if ((await fs.readdir(path.join(ordner, 'einladungen'))).length === 0) await fs.rmdir(path.join(ordner, 'einladungen'));
+    } catch (e) { if (e.code !== 'ENOENT') throw e; }
+  }
+  return { ...bestand, geloescht };
+}
+const resetZaehlerText = (zaehler) => RESET_ORDNER.map((name) => `${name} ${zaehler[name] || 0}`).join(', ');
+
+export async function testdatenBestand({ repo = TESTINSTANZ.repoDaten, wurzel = TESTINSTANZ.wurzelDaten, token, basis, fetch: holer, zweig = 'main', ordner = lokalerOrdner() } = {}) {
+  resetNurTestinstanz(repo, wurzel);
+  const gh = resetGitHub({ repo, token, basis, fetch: holer, zweig });
+  const wurzelListe = await gh.ordner(wurzel);
+  const extra = wurzelListe.filter((e) => !RESET_ORDNER.includes(e.name) && !RESET_ERLAUBTE_WURZELDATEIEN.includes(e.name));
+  if (extra.length) throw new Error(`Reset: Unerwartete Eintraege in ${resetZiel(repo, wurzel)}: ${extra.map((e) => `${e.type || '?'} ${e.name}`).join(', ')}.`);
+  const zaehler = Object.fromEntries(RESET_ORDNER.map((name) => [name, 0]));
+  const repoDateien = [];
+  for (const name of RESET_ORDNER) {
+    const eintrag = wurzelListe.find((e) => e.name === name);
+    if (!eintrag) continue;
+    if (eintrag.type !== 'dir' || typeof eintrag.sha !== 'string' || !eintrag.sha) throw new Error(`Reset: ${name} ist kein lesbarer Ordner in ${resetZiel(repo, wurzel)}.`);
+    const baum = await gh.baum(eintrag.sha, name);
+    for (const e of baum) {
+      if (!e || e.type !== 'blob' || typeof e.path !== 'string' || typeof e.sha !== 'string') continue;
+      repoDateien.push({ ordner: name, pfad: path.posix.join(name, e.path), sha: e.sha });
+      zaehler[name]++;
+    }
+  }
+  return { ziel: resetZiel(repo, wurzel), repo, wurzel, zaehler, repoDateien, lokal: await lokalerResetBestand(ordner) };
+}
+
+export async function testpersonenReset({ repo = TESTINSTANZ.repoDaten, wurzel = TESTINSTANZ.wurzelDaten, token, basis, fetch: holer, zweig = 'main', ordner = lokalerOrdner(), bestaetigen = '', ausgabe = console.log } = {}) {
+  const sag = [];
+  const melde = (text) => sag.push(text);
+  const zusammenfassung = async () => testdatenBestand({ repo, wurzel, token, basis, fetch: holer, zweig, ordner });
+  const vor = await zusammenfassung();
+  melde(`Reset-Ziel: ${vor.ziel}`);
+  melde(`Repo-Dateien: ${resetZaehlerText(vor.zaehler)} (gesamt ${vor.repoDateien.length})`);
+  melde(`Lokal: ${vor.lokal.dateien.length} Datei(en), ${vor.lokal.einladungen.length} Einladung(en) in ${vor.lokal.ordner}`);
+  if (bestaetigen !== RESET_BESTAETIGUNG) {
+    melde(`Nichts geloescht. Zum Reset erneut mit --reset --bestaetigen ${RESET_BESTAETIGUNG} aufrufen.`);
+    const text = sag.join('\n');
+    ausgabe(text);
+    return { ausgefuehrt: false, bestand: vor, bestaetigung: RESET_BESTAETIGUNG, text };
+  }
+  const gh = resetGitHub({ repo, token, basis, fetch: holer, zweig });
+  let repoGeloescht = 0;
+  for (let r = 0; r < RESET_VERSUCHE; r++) {
+    const bestand = await zusammenfassung();
+    if (!bestand.repoDateien.length) break;
+    let offen = 0;
+    for (const f of bestand.repoDateien) {
+      if (await gh.loeschen(path.posix.join(wurzel, f.pfad), f.sha)) repoGeloescht++;
+      else offen++;
+    }
+    if (!offen) break;
+    if (r === RESET_VERSUCHE - 1) throw new Error('Reset: Repo-Dateien liessen sich nicht vollstaendig loeschen. Bitte erneut pruefen.');
+  }
+  const lokal = await lokalerResetLoeschen(ordner);
+  const nach = await zusammenfassung();
+  if (nach.repoDateien.length) throw new Error('Reset: Nachkontrolle findet noch Repo-Dateien im Testdaten-Repo.');
+  melde(`Reset fertig: Repo ${repoGeloescht} Datei(en) geloescht, lokal ${lokal.geloescht}.`);
+  melde(`Nachkontrolle: ${resetZaehlerText(nach.zaehler)}; lokal ${nach.lokal.dateien.length} Datei(en), ${nach.lokal.einladungen.length} Einladung(en).`);
+  const text = sag.join('\n');
+  ausgabe(text);
+  return { ausgefuehrt: true, vorher: vor, nachher: nach, geloescht: { repo: repoGeloescht, lokal: lokal.geloescht }, text };
+}
 
 /**
  * Legt an, was fehlt (anlegen = true), oder zeigt nur den Stand. Liest und schreibt nur ueber "zugang" (Speicher-
@@ -207,16 +361,21 @@ export async function testpersonenLauf({ zugang, now = Date.now(), anlegen = fal
 async function main() {
   const args = process.argv.slice(2);
   const opt = (n, d) => { const i = args.indexOf(n); return i >= 0 && args[i + 1] ? args[i + 1] : d; };
-  const bekannt = ['--anlegen', '--repo', '--wurzel'];
-  const fremd = args.filter((a, i) => a.startsWith('--') && !bekannt.includes(a) && !['--repo', '--wurzel'].includes(args[i - 1]));
+  const bekannt = ['--anlegen', '--reset', '--repo', '--wurzel', '--bestaetigen'];
+  const fremd = args.filter((a, i) => a.startsWith('--') && !bekannt.includes(a) && !['--repo', '--wurzel', '--bestaetigen'].includes(args[i - 1]));
   if (fremd.length) throw new Error('Unbekannter Schalter: ' + fremd.join(' '));
+  if (args.includes('--anlegen') && args.includes('--reset')) throw new Error('--anlegen und --reset gehen nicht zusammen.');
   const repo = opt('--repo', TESTINSTANZ.repoDaten), wurzel = opt('--wurzel', TESTINSTANZ.wurzelDaten);
   const tokenDatei = process.env.BQ_GH_TOKEN_DATEI || path.join(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'), 'bis-school-app', 'testdaten-token.txt');
   let token;
   try { token = (await fs.readFile(tokenDatei, 'utf8')).trim(); } catch (e) { throw new Error('Token-Datei fehlt: ' + tokenDatei); }
   const schwaerzen = (t) => (token ? String(t).split(token).join('[TOKEN]') : String(t));
-  const { githubSpeicher } = await import('../src/module/github.mjs');
   try {
+    if (args.includes('--reset')) {
+      await testpersonenReset({ repo, wurzel, token, bestaetigen: opt('--bestaetigen', ''), ausgabe: (t) => console.log(schwaerzen(t)) });
+      return;
+    }
+    const { githubSpeicher } = await import('../src/module/github.mjs');
     const zugang = githubSpeicher({ repo, token, wurzel }).geraet('d_Werkzeug1');
     await testpersonenLauf({ zugang, anlegen: args.includes('--anlegen'), repo, wurzel, zugangscode: token, ausgabe: (t) => console.log(schwaerzen(t)) });
   } catch (e) { throw new Error(schwaerzen((e && e.code ? e.code + ': ' : '') + (e && e.message))); }

@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { TESTPERSONEN, FAMILIENNAMEN_VERBOTEN, STARTCODE_RESERVE_MS, testpersonenLauf, geheimnisse } from '../werkzeug/testpersonen.mjs';
+import { TESTPERSONEN, FAMILIENNAMEN_VERBOTEN, STARTCODE_RESERVE_MS, RESET_BESTAETIGUNG, testdatenBestand, testpersonenLauf, testpersonenReset, geheimnisse } from '../werkzeug/testpersonen.mjs';
 import { TESTINSTANZ } from '../werkzeug/testinstanz.mjs';
 import { KONTO_STARTCODE_MS, kontoLookup, ersteAnmeldung, anmelden, wiederherstellen, startcodeAnsehen } from '../src/module/konto.mjs';
 import { anmEinladungslink, anmEinladungLesen, anmQr } from '../src/module/anmeldung.mjs';
@@ -21,9 +21,10 @@ import { githubNachbau } from './module/github-nachbau.mjs';
 const R = 1000;                                                  // PBKDF2-Runden im Test (das Werkzeug: 600 000)
 const T0 = Date.UTC(2026, 10, 4, 17, 0, 0), TAG = 864e5;
 const REPO = TESTINSTANZ.repoDaten;
+const FAMILIE_REPO = 'pahlborn/bis-school-app-familie';
 const TOKEN = 'github_pat_TESTPERSONEN_' + 'k3'.repeat(20);
 let N, lauf = 0;
-before(async () => { N = await githubNachbau({ token: TOKEN, repos: [REPO] }); });
+before(async () => { N = await githubNachbau({ token: TOKEN, repos: [REPO, FAMILIE_REPO] }); });
 after(async () => { await N.schliessen(); });
 
 const WELTEN = {
@@ -210,4 +211,76 @@ test('Ausgabe: ein Geheimnis in der Ausgabe wird nicht ausgegeben (Gegenprobe de
     assert.deepEqual(aus, []);
     assert.ok(await kontoLookup('lio.sonnental'));
   } finally { fs.rmSync(ordner, { recursive: true, force: true }); }
+});
+
+test('Reset: Vorschau zeigt nur die Testinstanz, Reset leert Repo und lokale Startdaten; zweiter Lauf bleibt stabil; Familien-Repo bleibt unberuehrt', async () => {
+  const N2 = await githubNachbau({ token: TOKEN, repos: [REPO, FAMILIE_REPO] });
+  const ordner = fs.mkdtempSync(path.join(os.tmpdir(), 'bq-tp-reset-'));
+  try {
+    N2.dateien(REPO).set('README.md', '# Testdaten\n');
+    const zugang = githubSpeicher({ repo: REPO, token: TOKEN, basis: N2.basis }).geraet('d_reset1');
+    await testpersonenLauf({ zugang, now: T0, anlegen: true, ordner, runden: R, ausgabe: () => {} });
+    const st = lesen(ordner).personen;
+    const lern = 'kind:lern:' + st['lio.sonnental'].kennung;
+    const person = 'person:' + st.admin.kennung;
+    await zugang.put(lern, 'd_reset1', { nr: 1, inhalt: { typ: 'antwort', wert: 1 } });
+    await zugang.putKey(lern, st['lio.sonnental'].kennung, { k: 1 });
+    await zugang.put(person, 'd_reset1', { nr: 1, inhalt: { typ: 'device_added' } });
+    await zugang.putKey(person, st.admin.kennung, { k: 2 });
+    N2.dateien(FAMILIE_REPO).set('directory/kathie.json', '{"echt":true}');
+
+    const aus = [];
+    const vor = await testpersonenReset({ repo: REPO, token: TOKEN, basis: N2.basis, ordner, ausgabe: (t) => aus.push(t) });
+    assert.equal(vor.ausgefuehrt, false);
+    assert.equal(vor.bestaetigung, RESET_BESTAETIGUNG);
+    assert.match(aus.join('\n'), /Reset-Ziel: pahlborn\/bis-school-app-testdaten/);
+    assert.match(aus.join('\n'), /Nichts geloescht\. Zum Reset erneut mit --reset --bestaetigen pahlborn\/bis-school-app-testdaten aufrufen\./);
+    const bestand = await testdatenBestand({ repo: REPO, token: TOKEN, basis: N2.basis, ordner });
+    assert.equal(bestand.zaehler.directory, 3, 'drei Werkzeug-Konten');
+    assert.equal(bestand.zaehler.invites, 5, 'fuenf offene Startcodes');
+    assert.equal(bestand.zaehler.events, 2, 'Geraetebindung und Lerndaten');
+    assert.equal(bestand.zaehler.keys, 2, 'Schluessel zu beiden Bereichen');
+    assert.ok(fs.existsSync(path.join(ordner, 'testpersonen.json')));
+    assert.ok(fs.existsSync(path.join(ordner, 'einladungen')) === false, 'ohne Zugangscode noch keine Einladungen');
+
+    const reset = await testpersonenReset({ repo: REPO, token: TOKEN, basis: N2.basis, ordner, bestaetigen: RESET_BESTAETIGUNG, ausgabe: () => {} });
+    assert.equal(reset.ausgefuehrt, true);
+    assert.equal(reset.geloescht.repo, 12);
+    assert.equal(reset.nachher.repoDateien.length, 0);
+    assert.deepEqual([...N2.dateien(REPO).keys()], ['README.md']);
+    assert.equal(fs.existsSync(path.join(ordner, 'testpersonen.json')), false);
+    assert.equal(fs.existsSync(path.join(ordner, 'testpersonen.txt')), false);
+    assert.equal(N2.dateien(FAMILIE_REPO).get('directory/kathie.json'), '{"echt":true}', 'anderes Repo unveraendert');
+
+    const nochmal = await testpersonenReset({ repo: REPO, token: TOKEN, basis: N2.basis, ordner, bestaetigen: RESET_BESTAETIGUNG, ausgabe: () => {} });
+    assert.equal(nochmal.ausgefuehrt, true);
+    assert.equal(nochmal.geloescht.repo, 0);
+    assert.equal(nochmal.geloescht.lokal, 0);
+    assert.equal(nochmal.nachher.repoDateien.length, 0);
+  } finally {
+    fs.rmSync(ordner, { recursive: true, force: true });
+    await N2.schliessen();
+  }
+});
+
+test('Reset: Schutz gegen falsches Ziel-Repo und unerwartete Datenbasis', async () => {
+  const N2 = await githubNachbau({ token: TOKEN, repos: [REPO, FAMILIE_REPO] });
+  const ordner = fs.mkdtempSync(path.join(os.tmpdir(), 'bq-tp-reset-guard-'));
+  try {
+    N2.dateien(FAMILIE_REPO).set('directory/kathie.json', '{"echt":true}');
+    await assert.rejects(
+      testpersonenReset({ repo: FAMILIE_REPO, token: TOKEN, basis: N2.basis, ordner, bestaetigen: FAMILIE_REPO, ausgabe: () => {} }),
+      /Reset nur fuer pahlborn\/bis-school-app-testdaten erlaubt/
+    );
+    N2.dateien(REPO).set('schuldaten/kathie.json', '{"echt":true}');
+    await assert.rejects(
+      testdatenBestand({ repo: REPO, token: TOKEN, basis: N2.basis, ordner }),
+      /Unerwartete Eintraege in pahlborn\/bis-school-app-testdaten: dir schuldaten/
+    );
+    assert.equal(N2.dateien(REPO).get('schuldaten/kathie.json'), '{"echt":true}', 'nichts still geloescht');
+    assert.equal(N2.dateien(FAMILIE_REPO).get('directory/kathie.json'), '{"echt":true}', 'anderes Repo bleibt unveraendert');
+  } finally {
+    fs.rmSync(ordner, { recursive: true, force: true });
+    await N2.schliessen();
+  }
 });
