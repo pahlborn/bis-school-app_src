@@ -215,6 +215,9 @@ button{font:inherit;color:inherit}
 .about-sec>summary::after,.psec>summary::after{content:"›";font-size:1.4rem;color:var(--muted);transition:transform .15s}
 .about-sec[open]>summary::after,.psec[open]>summary::after{transform:rotate(90deg)}
 .about-sec-body,.psec-body{padding:0 16px 12px}
+.release-group+.release-group{margin-top:12px}
+.release-group h3{margin:0 0 6px;font-size:1rem}
+.release-group ul{margin:0;padding-left:20px}
 .psecs{display:flex;flex-direction:column;gap:8px;margin:14px 0}
 .psheet{border:2px solid var(--line);border-radius:14px;margin:8px 0;background:var(--surface)}
 .psheet>summary{cursor:pointer;min-height:48px;padding:8px 12px;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
@@ -694,6 +697,8 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 /*BQ_MODULE*/
 /* Set by the build (werkzeug/version.mjs) inside the encrypted vault; null when opened unbuilt. */
 const APP_VERSION=/*BQ_VERSION*/null;
+/* Set by the build (werkzeug/releases.mjs) inside the encrypted vault; null when opened unbuilt. */
+const APP_RELEASES=/*BQ_RELEASES*/null;
 /* Set by the build from werkzeug/konten.json (S3 login); null = no accounts, app runs without login. */
 /* Accounts v2 (S11 Stufe 1): normAccounts and the rules who sees which child are in module src/module/rechte.mjs. */
 /* Stage 3b, task "Anmeldung im Testbau": the storage of the accounts (module konto). Set only for the test build -
@@ -3689,13 +3694,43 @@ function saveMySchoolDlg(){
   const s=$('#savedNote'); s.hidden=false;
   if(savedTimer) clearTimeout(savedTimer); savedTimer=setTimeout(hideSaved,4000);
 }
-/* Version (S7): the child sees only a small "v17" at the end of About; adults see number,
-   build time and commit, and can check on request whether a newer version is published. */
-const versionLabel = () => APP_VERSION ? 'v'+APP_VERSION.n+(APP_VERSION.draft?'-entwurf':'') : 'Entwicklungsstand';
+/* Version (S7): the visible version comes from the maintained release number (beta/final),
+   build time and commit stay as metadata for grown-ups and for live checks. */
+const versionModern=v=>!!v&&Number.isInteger(v.major)&&Number.isInteger(v.minor)&&Number.isInteger(v.patch)&&(v.kanal==='beta'||v.kanal==='final');
+const versionLegacy=v=>!!v&&Number.isInteger(v.n)&&v.n>=1;
+const versionRaw=v=>!v?'':versionModern(v)?`${v.major}.${v.minor}.${v.patch}${v.kanal==='beta'?'-beta':''}`:(versionLegacy(v)?`legacy-${v.n}`:'');
+const versionNumber=v=>versionModern(v)?(v.kanal==='beta'&&v.patch===0?`${v.major}.${v.minor}`:`${v.major}.${v.minor}.${v.patch}`):(versionLegacy(v)?String(v.n):'');
+const versionLabel=(v=APP_VERSION,de=PL()==='de')=>!v?'Entwicklungsstand':versionModern(v)?`V ${versionNumber(v)}${v.kanal==='beta'?(de?' (Betaversion)':' (Beta version)'):''}${v.draft?(de?' - Entwurf':' - draft'):''}`:(versionLegacy(v)?`v${v.n}${v.draft?(de?'-entwurf':'-draft'):''}`:'Entwicklungsstand');
+const versionCompare=(a,b)=>{ if(versionModern(a)&&versionModern(b)){ for(const [x,y] of [[a.major,b.major],[a.minor,b.minor],[a.patch,b.patch],[(a.kanal==='final'?1:0),(b.kanal==='final'?1:0)]]){ if(x<y) return -1; if(x>y) return 1; } return 0; } if(versionLegacy(a)&&versionLegacy(b)){ if(a.n<b.n) return -1; if(a.n>b.n) return 1; return 0; } return null; };
+const versionSameRelease=(a,b)=>!!a&&!!b&&versionCompare(a,b)===0;
+const versionSameBuild=(a,b)=>versionSameRelease(a,b)&&a.hash===b.hash&&a.date===b.date&&!!a.draft===!!b.draft;
+const versionHasNewerBuild=(a,b)=>{ const cmp=versionCompare(a,b); return cmp!==null&&!!a&&!!b&&(cmp>0||(cmp===0&&a.hash&&b.hash&&a.hash!==b.hash)); };
+const versionKey=v=>`${versionRaw(v)}${v&&v.hash?'-'+v.hash:''}`;
 const appVersionLine = () => `<p class="small app-version">${esc(versionLabel())}</p>`;
+const releaseList = () => Array.isArray(APP_RELEASES) ? APP_RELEASES : [];
+const releaseText = (v, de) => !v || typeof v!=='object' ? '' : String(de ? (v.de||v.en||'') : (v.en||v.de||'')).trim();
+const releaseItems = (list, de) => (Array.isArray(list) ? list : []).map(v=>releaseText(v, de)).filter(Boolean);
+function releaseGroupHTML(title, items){
+  return items.length ? `<div class="release-group"><h3>${title}</h3><ul>${items.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>` : '';
+}
+function releaseEntryHTML(entry, de){
+  const version=entry && entry.version ? String(entry.version) : versionLabel(), date=entry && entry.date ? String(entry.date) : '';
+  const head=[version, date ? (de?'gebaut ':'built ')+date : ''].filter(Boolean).join(' · ');
+  const body=releaseGroupHTML('Epic', releaseItems(entry && entry.epics, de))
+    +releaseGroupHTML('User Story', releaseItems(entry && entry.stories, de))
+    +releaseGroupHTML('Bugfix', releaseItems(entry && entry.bugfixes, de));
+  return `<details class="about-sec release-entry"><summary>${esc(head)}</summary><div class="about-sec-body">${body||`<p class="small">${de?'Keine Einträge.':'No entries.'}</p>`}</div></details>`;
+}
+function releaseAdminHTML(){
+  if(!(adultUser && adultUser.admin)) return '';
+  const de=PL()==='de', list=releaseList();
+  return `<div id="releaseDocs"><h2>${de?'Releasedokumentation':'Release notes'}</h2><p class="small">${de?'Nur für den Admin sichtbar. Kurz notiert ist, was sich in dieser Fassung für die Nutzung geändert hat.':'Visible only to the admin. It briefly notes what changed for day-to-day use in this version.'}</p>`
+    +(list.length ? `<div class="about-menu">${list.map(entry=>releaseEntryHTML(entry, de)).join('')}</div>` : `<p class="small">${de?'Noch keine Releaseeinträge hinterlegt.':'No release entries have been added yet.'}</p>`)
+    +`</div>`;
+}
 function versionAdminHTML(){
   const v=APP_VERSION, de=PL()==='de';
-  return `<h2>${de?'App-Version':'App version'}</h2><p id="versionInfo">${v?`<b>${esc(versionLabel())}</b> · ${de?'gebaut':'built'} ${esc(v.date)} · ${esc(v.hash)}`:(de?'Entwicklungsstand (nicht gebaut)':'Development build (not built)')}</p><p><button class="btn small" id="checkUpdate" type="button">${de?'Nach neuer Version suchen':'Check for a new version'}</button></p><p id="updateMessage" class="small" role="status"></p>`;
+  return `<h2>${de?'App-Version':'App version'}</h2><p id="versionInfo">${v?`<b>${esc(versionLabel(v,de))}</b> · ${de?'gebaut':'built'} ${esc(v.date)} · ${esc(v.hash)}`:(de?'Entwicklungsstand (nicht gebaut)':'Development build (not built)')}</p><p><button class="btn small" id="checkUpdate" type="button">${de?'Nach neuer Version suchen':'Check for a new version'}</button></p><p id="updateMessage" class="small" role="status"></p>`;
 }
 async function publishedVersion(){
   const key=localStorage.getItem('bq_schluessel'); if(!key) throw new Error('no key');
@@ -3717,10 +3752,10 @@ async function checkForUpdate(){
   updateCheckedAt=Date.now();
   try{
     const p=await publishedVersion();
-    if(!p || p.n<=APP_VERSION.n) return;
+    if(!p || !versionHasNewerBuild(p,APP_VERSION)) return;
     let tried=null; try{ tried=sessionStorage.getItem('bqUpdateTo'); }catch(e){}
-    if(tried && +tried>=p.n) return;                     // already tried this session: no reload loop
-    pendingUpdate=p.n;
+    if(tried && tried===versionKey(p)) return;          // already tried this session: no reload loop
+    pendingUpdate=versionKey(p);
     if(['home','login','subject'].includes(state.screen)) applyUpdate();
   }catch(e){ /* offline or not logged in: try again later */ }
 }
@@ -3729,7 +3764,7 @@ function applyUpdate(){
   const n=pendingUpdate; pendingUpdate=null;
   try{ sessionStorage.setItem('bqUpdateTo',String(n)); }catch(e){}
   const note=$('#homeNote'); if(note && state.screen==='home'){ note.hidden=false; note.textContent='✨ New version – updating …'; }
-  setTimeout(()=>location.replace(location.pathname+'?v='+n),400);
+  setTimeout(()=>location.replace(location.pathname+'?v='+encodeURIComponent(n)),400);
 }
 function bindVersionAdmin(){
   const b=$('#checkUpdate'); if(!b) return;
@@ -3737,8 +3772,8 @@ function bindVersionAdmin(){
     const msg=$('#updateMessage'), de=PL()==='de'; msg.textContent=de?'Prüfe …':'Checking …';
     try{
       const p=await publishedVersion(), v=APP_VERSION;
-      if(p && v && p.n===v.n && p.hash===v.hash && p.date===v.date) msg.textContent=de?'Aktuell – auf diesem Gerät läuft die neueste Version.':'Up to date – this device runs the latest version.';
-      else if(p) msg.textContent=de?'Neuer Stand v'+p.n+' verfügbar – App schließen und neu öffnen.':'Version v'+p.n+' is available – close the app completely and reopen it.';
+      if(versionSameBuild(p,v)) msg.textContent=de?'Aktuell – auf diesem Gerät läuft die neueste Version.':'Up to date – this device runs the latest version.';
+      else if(p) msg.textContent=de?`Neuer Stand ${versionLabel(p,true)} verfügbar – App schließen und neu öffnen.`:`Version ${versionLabel(p,false)} is available – close the app completely and reopen it.`;
       else msg.textContent=de?'Die veröffentlichte Seite nennt keine Version.':'The published page shows no version.';
     }catch(e){ msg.textContent=de?'Prüfung nicht möglich (keine Verbindung oder auf diesem Gerät nicht angemeldet).':'Check not possible (no connection, or not signed in on this device).'; }
   });
@@ -4691,7 +4726,7 @@ function aboutAppHTML(){
     // third-party code in the test build (task "Erstanmeldung per QR-Code"): the QR reader of "Connect this device"
     +(KONTO_UI && typeof ANM_QR_LESER!=='undefined'?sec(de?'Fremde Programmteile':'Third-party components', `<p>${de?'Den QR-Code beim Verbinden eines Geräts liest':'The QR code when connecting a device is read by'} <b>${esc(ANM_QR_LESER.name)} ${esc(ANM_QR_LESER.version)}</b> (Cosmo Wolfe ${de?'und Mitwirkende':'and contributors'}) – ${esc(ANM_QR_LESER.lizenz)}. ${de?'Unverändert in die App eingebettet; das Kamerabild bleibt auf dem Gerät, kein fremder Server.':'Embedded in the app unchanged; the camera picture stays on the device, no third-party server.'} <a href="${esc(ANM_QR_LESER.url)}" target="_blank" rel="noopener">${esc(ANM_QR_LESER.url)}</a> · <a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener">Apache License 2.0</a></p>`, 'lizenzen'):'')
     +sec(de?'Impressum':'Legal notice', `<p>${de?'Wird ergänzt.':'To be added.'}</p>`, 'imprint')
-    +`</div>`+versionAdminHTML();
+    +`</div>`+versionAdminHTML()+releaseAdminHTML();
 }
 /* accounts in the storage (family build): export and deletion in plain words; removing old versions from GitHub's
    history is the admin's job by hand (guide in the source repository, docs/endgueltig-loeschen.md) */

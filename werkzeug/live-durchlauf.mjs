@@ -4,8 +4,8 @@
 // Die neuen Passwoerter gelten nur im voruebergehenden Profil.
 //
 //   $env:CHROMIUM_PATH = "...\chromium-1223\chrome-win64\chrome.exe"
-//   node werkzeug/live-durchlauf.mjs            (erwartet die Version des Quellstands)
-//   node werkzeug/live-durchlauf.mjs v103       (oder eine bestimmte Version)
+//   node werkzeug/live-durchlauf.mjs                                (erwartet die sichtbare Version des Quellstands)
+//   node werkzeug/live-durchlauf.mjs "V 0.148.1 (Betaversion)"     (oder eine bestimmte sichtbare Version)
 
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -14,9 +14,9 @@ import { chromium } from 'playwright';
 import { b64, ITERATIONEN } from './kern.mjs';
 import { quellenLesen, VEROEFFENTLICHT, WURZEL } from './bauen.mjs';
 import { ablageOrdner, lesen } from './schluesselablage.mjs';
-import { versionErmitteln } from './version.mjs';
+import { versionErmitteln, versionText } from './version.mjs';
 
-const V = process.argv[2] || 'v' + versionErmitteln(WURZEL).n;
+const V = process.argv[2] || versionText(versionErmitteln(WURZEL), { mitEntwurf: false });
 const codes = {};
 for (const l of (await fs.readFile(path.join(ablageOrdner(), 'startcodes.txt'), 'utf8')).split('\n')) { const m = l.trim().split(/\s+/); if (m.length >= 3) codes[m[1]] = m[2]; }
 for (const u of ['kathie', 'peter']) if (!codes[u]) throw new Error('Startcode fehlt fuer ' + u + ' (startcodes.txt)');
@@ -38,7 +38,7 @@ try {
   const page = await ctx.newPage(); const errors = []; page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(VEROEFFENTLICHT + '?t=' + Date.now());
   await page.waitForSelector('#login:not([hidden])');
-  assert.match(await page.textContent('#loginVersion'), new RegExp('^' + V + '\\b'), 'live version');
+  assert.equal((await page.textContent('#loginVersion')).trim(), V, 'live version');
   await page.locator('.login-help summary').click();
   assert.ok(/your start code still works/.test(await page.textContent('.login-help')), 'login help (English)');
   await login(page, 'student', 'kathie', 'Live-Probe-Tiger-4271');

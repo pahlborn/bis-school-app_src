@@ -25,7 +25,7 @@ import { appSandbox } from './app-sandbox.mjs';
 import { browserStarten, LADEZEIT_MS } from './app-hilfen.mjs';
 import { githubNachbau } from './module/github-nachbau.mjs';
 
-const VERSION = { n: 999, hash: 'abc1234', date: '04.11.2026 18:00', draft: false };
+const VERSION = { major: 0, minor: 999, patch: 0, kanal: 'beta', hash: 'abc1234', date: '04.11.2026 18:00', draft: false };
 const lies = (rel) => fs.readFileSync(path.join(WURZEL, rel), 'utf8');
 const WOERTER = woerterLesen(lies(QUELLEN.woerter));
 const SCHULE = JSON.parse(lies('werkzeug/schuldaten.json'));
@@ -44,7 +44,7 @@ before(async () => {
   APP = fs.readFileSync(path.join(ZIEL, 'index.html'), 'utf8');
   MANIFEST = fs.readFileSync(path.join(ZIEL, 'manifest.webmanifest'), 'utf8');
   KONTEXT = { woerter: WOERTER, auchVerboten: ERSATZ.auchVerboten, schule: SCHULE, konten: KONTEN, salt: SALT };
-  // Test-Repo im Nachbau: Admin (vom Werkzeug) -> Elternteil -> Startcodes fuer zwei Testkinder (wie werkzeug/testpersonen.mjs)
+  // Test-Repo im Nachbau: Admin (vom Werkzeug) -> Elternteil -> Startcodes fuer zwei Testkinder (fuer die Einladungslogik, unabhaengig vom Minimalset des Werkzeugs)
   N = await githubNachbau({ token: TOKEN, repos: [REPO] });
   const z = githubSpeicher({ repo: REPO, token: TOKEN, basis: N.basis }).geraet('d_Werkzeug1');
   const jetzt = Date.now();
@@ -78,7 +78,7 @@ test('Bau: Suchlauf bestanden, fuenf Dateien, App im Klartext = umgewandelter Te
   assert.deepEqual(SPEICHER_TESTINSTANZ, { art: 'github', repo: 'pahlborn/bis-school-app-testdaten', wurzel: '' });
   assert.deepEqual(funde(APP), []);
   assert.ok(APP.startsWith('<!DOCTYPE html>') || APP.startsWith('<!doctype html>'), 'die App selbst, keine Huelle');
-  assert.ok(APP.includes('const APP_VERSION={"n":999,"hash":"abc1234"'), 'Version eingesetzt');
+  assert.ok(APP.includes('const APP_VERSION={"major":0,"minor":999,"patch":0,"kanal":"beta","hash":"abc1234"'), 'Version eingesetzt');
   assert.match(APP, /<title>[^<]* \(Test\)<\/title>/);
   assert.equal(JSON.parse(MANIFEST).name, 'Big Quest Test');
   assert.equal(JSON.parse(MANIFEST).start_url, './index.html');

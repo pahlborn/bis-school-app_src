@@ -238,7 +238,7 @@ test('T6 the child sees none of it; a teacher only with the grant "school data" 
 test('T7 no fixed dates: the concept page is as of the build of the version; the home page names no date', async () => {
   const html = (await appLesen()).toString('utf8');
   for (const w of ['Stand: 30. Oktober 2026', 'Last updated: 30 October 2026', 'updated 30 October']) assert.ok(!html.includes(w), w);
-  const s = await appServer({ anpassen: (a) => a.replace('/*BQ_VERSION*/null', JSON.stringify({ n: 150, hash: 'abc1234', date: '04.12.2026 18:05', draft: false })) });
+  const s = await appServer({ anpassen: (a) => a.replace('/*BQ_VERSION*/null', JSON.stringify({ major: 0, minor: 150, patch: 0, kanal: 'beta', hash: 'abc1234', date: '04.12.2026 18:05', draft: false })) });
   try {
     const { ctx, page, fehler } = await appOeffnen(browser, s.url);
     await page.locator('#aboutBtn').click();

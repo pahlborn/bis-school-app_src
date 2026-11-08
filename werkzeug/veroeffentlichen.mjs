@@ -11,7 +11,7 @@
 //  - ausserhalb des Tresors ein verbotenes Wort steht,
 //  - der Quellstand nicht eingecheckte Aenderungen hat (Version "-entwurf"),
 //  - das Ziel-Repo nicht sauber ist.
-// Danach: Commit "Big Quest vN: <text>", Push, Pruefung "nicht mehr ahead" (der Push meldet Fehler sonst nur auf stderr).
+// Danach: Commit "Big Quest V ...: <text>", Push, Pruefung "nicht mehr ahead" (der Push meldet Fehler sonst nur auf stderr).
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -54,7 +54,7 @@ export async function veroeffentlichen({ quelle = WURZEL, dist = null, ziel, tex
   const neu = fs.readFileSync(path.join(distOrdner, 'index.html')), zielDatei = path.join(ziel, 'index.html');
   if (fs.existsSync(zielDatei) && fs.readFileSync(zielDatei).equals(neu)) return { version: versionText(v), geaendert: false };
   fs.writeFileSync(zielDatei, neu);
-  const nachricht = `Big Quest v${v.n}${text ? ': ' + text : ''}`;
+  const nachricht = `Big Quest ${versionText(v, { mitEntwurf: false })}${text ? ': ' + text : ''}`;
   git(ziel, 'add', 'index.html');
   git(ziel, 'commit', '-q', '-m', nachricht);
   if (!ohnePush) {

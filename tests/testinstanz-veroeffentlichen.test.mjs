@@ -15,11 +15,12 @@ import { execFileSync } from 'node:child_process';
 import { WURZEL, QUELLEN, testinstanzBauen } from '../werkzeug/bauen.mjs';
 import { VERSION_AUS_KLARTEXT } from '../werkzeug/testinstanz.mjs';
 import { testinstanzVeroeffentlichen, testinstanzLiveVergleichen, DATEIEN } from '../werkzeug/testinstanz-veroeffentlichen.mjs';
+import { versionText } from '../werkzeug/version.mjs';
 import { woerterLesen } from '../werkzeug/kern.mjs';
 import { browserStarten, LADEZEIT_MS } from './app-hilfen.mjs';
 
-const V = { n: 7, hash: 'abc1234', date: '04.11.2026 19:00', draft: false };
-const V8 = { n: 8, hash: 'bcd2345', date: '04.11.2026 20:00', draft: false };
+const V = { major: 0, minor: 7, patch: 0, kanal: 'beta', hash: 'abc1234', date: '04.11.2026 19:00', draft: false };
+const V8 = { major: 0, minor: 8, patch: 0, kanal: 'beta', hash: 'bcd2345', date: '04.11.2026 20:00', draft: false };
 const git = (cwd, ...a) => execFileSync('git', a, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 const ORDNER = fs.mkdtempSync(path.join(os.tmpdir(), 'bq-ti-veroeff-'));
 let n = 0;
@@ -58,11 +59,11 @@ function distMit(aendern, { datei = 'index.html', von = DIST } = {}) {
 const nurReadme = (z) => assert.deepEqual(fs.readdirSync(z).filter((f) => f !== '.git'), ['README.md'], 'nichts kopiert');
 const gleich = (a, b, f) => assert.ok(fs.readFileSync(path.join(a, f)).equals(fs.readFileSync(path.join(b, f))), f);
 
-test('gepruefte Testinstanz: alle fuenf Dateien kopiert, Commit "Big Quest Test v7: Probe"; zweiter Lauf tut nichts', async () => {
+test('gepruefte Testinstanz: alle fuenf Dateien kopiert, Commit mit sichtbarer Version; zweiter Lauf tut nichts', async () => {
   const z = zielRepo();
   const r = await testinstanzVeroeffentlichen({ dist: DIST, ziel: z, text: 'Probe', ohnePush: true, version: V });
   assert.equal(r.geaendert, true);
-  assert.equal(git(z, 'log', '-1', '--format=%s'), 'Big Quest Test v7: Probe');
+  assert.equal(git(z, 'log', '-1', '--format=%s'), `Big Quest Test ${versionText(V, { mitEntwurf: false })}: Probe`);
   assert.deepEqual(DATEIEN, ['index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png']);
   for (const f of DATEIEN) gleich(DIST, z, f);
   assert.deepEqual(git(z, 'show', '--name-only', '--format=', 'HEAD').split('\n').sort(), [...DATEIEN].sort());
@@ -71,7 +72,7 @@ test('gepruefte Testinstanz: alle fuenf Dateien kopiert, Commit "Big Quest Test 
   assert.equal(r2.geaendert, false);
   // naechste Version: nur geaenderte Dateien, neue Nachricht
   const r3 = await testinstanzVeroeffentlichen({ dist: DIST8, ziel: z, ohnePush: true, version: V8 });
-  assert.equal(r3.nachricht, 'Big Quest Test v8');
+  assert.equal(r3.nachricht, `Big Quest Test ${versionText(V8, { mitEntwurf: false })}`);
   assert.deepEqual(git(z, 'show', '--name-only', '--format=', 'HEAD').split('\n'), ['index.html']);
 });
 
@@ -83,14 +84,30 @@ test('mit Pull und Push gegen ein lokales "big-quest-test.github.io.git": kommt 
   git(b, 'push', '-q');
   const r = await testinstanzVeroeffentlichen({ dist: DIST8, ziel: a, text: 'erste Fassung', version: V8 });
   assert.equal(r.geaendert, true);
-  assert.equal(git(bare, 'log', '-1', '--format=%s'), 'Big Quest Test v8: erste Fassung');
+  assert.equal(git(bare, 'log', '-1', '--format=%s'), `Big Quest Test ${versionText(V8, { mitEntwurf: false })}: erste Fassung`);
   assert.equal(git(bare, 'log', '-2', '--format=%s').split('\n')[1], 'README', 'fremder Commit vorher geholt, nicht ueberschrieben');
   assert.equal(git(a, 'rev-list', '--count', '@{u}..HEAD'), '0');
   // b hat v8 noch nicht lokal: der Pull holt sie, danach wird die aeltere v7 abgelehnt, nichts committet
   const vorher = git(bare, 'rev-parse', 'HEAD');
-  await assert.rejects(testinstanzVeroeffentlichen({ dist: DIST, ziel: b, version: V }), /schon v8 - aeltere Fassung v7/);
+  await assert.rejects(testinstanzVeroeffentlichen({ dist: DIST, ziel: b, version: V }), /schon V 0\.8 \(Betaversion\) - aeltere Fassung V 0\.7 \(Betaversion\)/);
   assert.equal(git(bare, 'rev-parse', 'HEAD'), vorher);
   assert.equal(git(b, 'status', '--porcelain'), '');
+});
+
+test('Umstellung von altem vN-Schema auf die neue Betaversion bleibt veroeffentlichbar und traegt weiter eine Legacy-Zaehlung fuer alte Clients', async () => {
+  const z = zielRepo();
+  const legacy = fs.readFileSync(path.join(DIST, 'index.html'), 'utf8').replace(/const APP_VERSION=\{[^}]*\};/, 'const APP_VERSION={"n":152,"hash":"legacy12","date":"04.11.2026 18:30","draft":false};');
+  fs.writeFileSync(path.join(z, 'index.html'), legacy);
+  git(z, 'add', 'index.html');
+  git(z, 'commit', '-q', '-m', 'legacy testinstanz');
+
+  const distNeu = tmp('dist-migration');
+  const V_NEU = { ...V8, n: 153 };
+  await testinstanzBauen({ ziel: distNeu, version: V_NEU });
+
+  const r = await testinstanzVeroeffentlichen({ dist: distNeu, ziel: z, ohnePush: true, version: V_NEU });
+  assert.equal(r.geaendert, true);
+  assert.match(fs.readFileSync(path.join(z, 'index.html'), 'utf8'), /const APP_VERSION=\{"n":153,"major":0,"minor":8/);
 });
 
 test('Suchlauf vor dem Kopieren: Schuldaten, Konten, Familienpasswort, Kathies Speicher, verbotene Woerter, Aktualisierung mit Schluessel -> Abbruch, nichts kopiert', async () => {
@@ -127,7 +144,7 @@ test('Suchlauf vor dem Kopieren: Schuldaten, Konten, Familienpasswort, Kathies S
 test('Entwurf, veraltetes dist-test (anderer Commit) und fehlende Dateien brechen ab, ohne zu kopieren', async () => {
   const z = zielRepo();
   await assert.rejects(testinstanzVeroeffentlichen({ dist: DIST, ziel: z, ohnePush: true, version: { ...V, draft: true } }), /nicht eingecheckte/);
-  await assert.rejects(testinstanzVeroeffentlichen({ dist: DIST, ziel: z, ohnePush: true, version: V8 }), /dist-test\/ passt nicht zum Quellstand \(gebaut v7 abc1234, Quelle v8 bcd2345\)/);
+  await assert.rejects(testinstanzVeroeffentlichen({ dist: DIST, ziel: z, ohnePush: true, version: V8 }), /dist-test\/ passt nicht zum Quellstand \(gebaut V 0\.7 \(Betaversion\) abc1234, Quelle V 0\.8 \(Betaversion\) bcd2345\)/);
   await assert.rejects(testinstanzVeroeffentlichen({ dist: DIST, ziel: z, ohnePush: true, version: { ...V, hash: 'fff0000' } }), /passt nicht zum Quellstand/);
   const ohneIcon = distMit((h) => h); fs.rmSync(path.join(ohneIcon, 'icon-512.png'));
   await assert.rejects(testinstanzVeroeffentlichen({ dist: ohneIcon, ziel: z, ohnePush: true, version: V }), /unvollstaendig \(icon-512\.png\)/);
@@ -174,7 +191,7 @@ test('Live-Pruefung: gleich, anders, nicht erreichbar (Version im Klartext, ohne
   try {
     assert.equal((await testinstanzLiveVergleichen(V, s.url + '/ti/')).ergebnis, 'gleich');
     const anders = await testinstanzLiveVergleichen(V8, s.url + '/ti/');
-    assert.equal(anders.ergebnis, 'anders'); assert.equal(anders.text, 'v7 abc1234 04.11.2026 19:00');
+    assert.equal(anders.ergebnis, 'anders'); assert.equal(anders.text, 'V 0.7 (Betaversion) abc1234 04.11.2026 19:00');
     assert.equal((await testinstanzLiveVergleichen(V, s.url + '/fehlt/')).ergebnis, 'nicht erreichbar');
     assert.equal((await testinstanzLiveVergleichen(V, 'http://127.0.0.1:9/nix/')).ergebnis, 'nicht erreichbar');
   } finally { s.close(); }
@@ -206,10 +223,10 @@ test('Browser: die veroeffentlichte Testfassung aktualisiert sich selbst, ohne S
     // die Testinstanz startet mit der Anmeldung (mit dem Test-Repo verbunden) - auch dort aktualisiert sie sich
     await page.goto(s.url + '/', { waitUntil: 'domcontentloaded', timeout: LADEZEIT_MS });
     await page.waitForSelector('#login:not([hidden])');
-    assert.ok((await page.content()).includes('const APP_VERSION={"n":7,'), 'geoeffnet: v7');
-    await page.waitForURL(/:\d+\/\?v=8$/, { timeout: 20000 });
+    assert.ok((await page.content()).includes('const APP_VERSION={"major":0,"minor":7,'), 'geoeffnet: V 0.7');
+    await page.waitForURL(/:\d+\/\?v=0\.8\.0-beta-bcd2345$/, { timeout: 20000 });
     await page.waitForSelector('#login:not([hidden])');
-    assert.ok(await page.evaluate(() => [...document.scripts].some((x) => x.textContent.includes('const APP_VERSION={"n":8,'))), 'jetzt v8');
+    assert.ok(await page.evaluate(() => [...document.scripts].some((x) => x.textContent.includes('const APP_VERSION={"major":0,"minor":8,'))), 'jetzt V 0.8');
     assert.ok(await page.locator('#verbinden').isVisible(), 'Anmeldeseite der Testinstanz: zuerst Geraet verbinden (Zugangscode zum Test-Repo)');
     const r = await page.evaluate(() => ({ gelesen: [...new Set(window.__gelesen || [])], schluessel: Object.keys(localStorage).filter((k) => /schluessel/i.test(k)) }));
     assert.deepEqual(r.schluessel, [], 'kein Schluessel auf dem Geraet');
