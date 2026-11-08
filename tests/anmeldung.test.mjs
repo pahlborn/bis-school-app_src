@@ -91,6 +91,7 @@ test('with accounts the app starts with the login: role choice, no list of names
   // A2 (02.11.): the login help is in US English only
   const hilfe = await page.textContent('.login-help');
   assert.match(hilfe, /your start code still works/);
+  assert.match(hilfe, /tap the eye in the password field/);
   assert.equal((await page.textContent('.login-help summary')).trim(), '❓ Help');
   assert.ok(!/[äöüß„]|\b(Hilfe|Erwachsene|Kinder|Passwort|Eltern|Lehrkr|Startcode|Benutzername)\b/.test(hilfe), 'no German in the login help');
   assert.ok(!/\b(colour|favourite|practise|recognise)\b/i.test(hilfe), 'US spelling');
