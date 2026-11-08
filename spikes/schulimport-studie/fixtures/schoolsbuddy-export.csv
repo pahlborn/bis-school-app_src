@@ -1,0 +1,5 @@
+pupil_id,pupil_name,dob,report_date,assessment_id,assessment_date,subject,assessment_name,criterion_code,grade,status,teacher_comment,next_step
+sb-pupil-201,Mira Sonnental,,2026-11-07,sb-math-01,2026-10-29,math,Number sense checkpoint,M-N1,M,graded,Places numbers correctly on the line.,Explain why 900 can be split in different ways.
+sb-pupil-201,Mira Sonnental,,2026-11-07,sb-math-01,2026-10-29,math,Number sense checkpoint,M-N4,C,graded,Places numbers correctly on the line.,Explain why 900 can be split in different ways.
+sb-pupil-202,Noah Berg,,2026-11-07,sb-eng-01,2026-10-31,english,Opinion writing,E-S1,C,graded,States the opinion clearly.,Add one stronger example.
+sb-pupil-202,Noah Berg,,2026-11-07,sb-eng-01,2026-10-31,english,Opinion writing,E-S2,M,graded,States the opinion clearly.,Add one stronger example.

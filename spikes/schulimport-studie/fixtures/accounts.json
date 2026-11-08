@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "children": [
+    {
+      "accountId": "child-mira-2017",
+      "login": "mira.sonnental",
+      "firstName": "Mira",
+      "lastName": "Sonnental",
+      "birthDate": "2017-05-14"
+    },
+    {
+      "accountId": "child-mira-2016",
+      "login": "mira.sonnental.zwei",
+      "firstName": "Mira",
+      "lastName": "Sonnental",
+      "birthDate": "2016-09-03"
+    },
+    {
+      "accountId": "child-noah-2017",
+      "login": "noah.berg",
+      "firstName": "Noah",
+      "lastName": "Berg",
+      "birthDate": "2017-11-21"
+    }
+  ]
+}

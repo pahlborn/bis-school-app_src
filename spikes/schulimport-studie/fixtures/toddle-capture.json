@@ -1,0 +1,54 @@
+{
+  "source": "toddle",
+  "captureMode": "browser-session-cdp",
+  "capturedAt": "2026-11-08T09:15:00Z",
+  "asOf": "2026-11-07",
+  "student": {
+    "sourceId": "toddle-learner-101",
+    "firstName": "Mira",
+    "lastName": "Sonnental",
+    "birthDate": "2017-05-14"
+  },
+  "entries": [
+    {
+      "taskId": "tdl-math-01",
+      "day": "2026-10-27",
+      "area": "math",
+      "title": "Mastering Basic Numbers and Calculations",
+      "standards": [
+        { "code": "M-N1", "rating": "C" },
+        { "code": "M-N2", "rating": "M" }
+      ],
+      "quests": ["round", "wordprob"],
+      "focusNext": ["wordprob"],
+      "good": {
+        "de": "Rundet auf Zehner sicher und begruendet den Ueberschlag.",
+        "en": "Rounds to the nearest ten confidently and explains the estimate."
+      },
+      "next": {
+        "de": "Zahlen in Sachaufgaben genauer lesen.",
+        "en": "Read the numbers in word problems more carefully."
+      }
+    },
+    {
+      "taskId": "tdl-eng-02",
+      "day": "2026-10-15",
+      "area": "english",
+      "title": "Persuade for the Park",
+      "standards": [
+        { "code": "E-S1", "rating": "C" },
+        { "code": "E-S2", "rating": "M" }
+      ],
+      "quests": ["opinion", "examples"],
+      "focusNext": ["examples"],
+      "good": {
+        "de": "Die Meinung steht klar am Anfang und Ende.",
+        "en": "The opinion is clear at the start and the end."
+      },
+      "next": {
+        "de": "Beispiele persoenlicher machen.",
+        "en": "Make the examples more personal."
+      }
+    }
+  ]
+}
