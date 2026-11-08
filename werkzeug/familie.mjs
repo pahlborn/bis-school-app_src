@@ -86,7 +86,7 @@ function texte(x, min, out = new Set()) {
   return out;
 }
 
-/** Namen der Testpersonen: Anmeldenamen mit Punkt (mira.sonnental ...) und die Namen, die sie eintragen ("Lio Sonnental") */
+/** Namen der vorangelegten Testpersonen: Anmeldenamen mit Punkt und die Namen, die sie in der App sehen */
 export function testpersonenNamen() {
   const login = TESTPERSONEN.map((p) => p.name).filter((n) => n.includes('.'));
   const anzeige = TESTPERSONEN.map((p) => String(p.eintragen || '').split(',')[0].trim()).filter((n) => n.includes(' '));

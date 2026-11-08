@@ -44,7 +44,7 @@ before(async () => {
   APP = fs.readFileSync(path.join(ZIEL, 'index.html'), 'utf8');
   MANIFEST = fs.readFileSync(path.join(ZIEL, 'manifest.webmanifest'), 'utf8');
   KONTEXT = { woerter: WOERTER, auchVerboten: ERSATZ.auchVerboten, schule: SCHULE, konten: KONTEN, salt: SALT };
-  // Test-Repo im Nachbau: Admin (vom Werkzeug) -> Elternteil -> Startcodes fuer zwei Testkinder (wie werkzeug/testpersonen.mjs)
+  // Test-Repo im Nachbau: Admin (vom Werkzeug) -> Elternteil -> Startcodes fuer zwei Testkinder (fuer die Einladungslogik, unabhaengig vom Minimalset des Werkzeugs)
   N = await githubNachbau({ token: TOKEN, repos: [REPO] });
   const z = githubSpeicher({ repo: REPO, token: TOKEN, basis: N.basis }).geraet('d_Werkzeug1');
   const jetzt = Date.now();
