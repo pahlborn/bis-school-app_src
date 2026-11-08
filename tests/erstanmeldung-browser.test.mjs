@@ -60,11 +60,23 @@ async function geraet(b = browser, vorher = {}) {
 const zaehle = (page, sel) => page.locator(sel).count();
 /* kein Feld ausser "Link einfuegen" traegt den Zugangscode; kein Passwortfeld ist vorbelegt */
 const keinCodeInFeldern = (page) => page.evaluate((t) => [...document.querySelectorAll('input')].filter((i) => i.id !== 'verbLink' && (i.value.includes(t) || (i.type === 'password' && i.value))).map((i) => i.id), TOKEN);
+async function togglePruefen(page, id, wert) {
+  const feld = page.locator('#' + id), knopf = page.locator(`[data-pw-toggle="${id}"]`);
+  await feld.fill(wert);
+  assert.equal(await feld.getAttribute('autocomplete'), 'new-password');
+  assert.equal(await feld.getAttribute('type'), 'password');
+  await knopf.click();
+  assert.equal(await feld.getAttribute('type'), 'text');
+  assert.equal(await feld.inputValue(), wert, 'Wert bleibt bei ' + id);
+  await knopf.click();
+  assert.equal(await feld.getAttribute('type'), 'password');
+  assert.equal(await feld.inputValue(), wert, 'Wert bleibt verdeckt bei ' + id);
+}
 
 test('A Einladung per Link: Adresse leer, alter Zugangscode ersetzt, ohne Rollenwahl zum Passwort (fest im HTML, Regeln, Knopf); Link wiederverwenden; falscher Zugangscode; E-Mail-Entwurf', async () => {
   // fest im HTML: das Passwortfeld steht so in der ausgelieferten Seite (nicht vom Skript nachgesetzt)
   const html = fs.readFileSync(path.join(WURZEL, 'index.html'), 'utf8');
-  assert.match(html, /<form id="kontoNeuForm"[^>]*>\s*<div class="field"><label[^>]*>[^<]*<\/label><input id="kontoNeuName" name="username" type="text" autocomplete="username"[^>]*readonly><\/div>\s*<div class="field"><label[^>]*>[^<]*<\/label><input id="kontoNeuPw" name="new-password" type="password" autocomplete="new-password" passwordrules="minlength: 12;[^"]*"/);
+  assert.match(html, /<form id="kontoNeuForm"[^>]*>\s*<div class="field"><label[^>]*>[^<]*<\/label><input id="kontoNeuName" name="username" type="text" autocomplete="username"[^>]*readonly><\/div>\s*<div class="field"><label[^>]*>[^<]*<\/label><span class="pw-wrap"><input id="kontoNeuPw" name="new-password" type="password" autocomplete="new-password" passwordrules="minlength: 12;[^"]*"[^>]*><button type="button" class="pw-toggle" data-pw-toggle="kontoNeuPw"/);
 
   const sc = await startcodeAusstellen({ zugang: Z, aussteller: admin, anmeldename: 'jonas.sonnental', art: 'parent', now: Date.now() });
   const link = anmEinladungslink(server.url, { zugang: TOKEN, anmeldename: 'jonas.sonnental', code: sc.code, fingerabdruck: sc.fingerabdruck });
@@ -91,6 +103,9 @@ test('A Einladung per Link: Adresse leer, alter Zugangscode ersetzt, ohne Rollen
   assert.equal(await go.isDisabled(), true, 'bekanntes Passwort');
   await A.page.locator('#kontoNeuPw').fill('jonas123456789');
   assert.equal(await go.isDisabled(), true, 'Vorname plus Ziffern');
+  await togglePruefen(A.page, 'kontoNeuPw', 'Tiger-Lamp-River-4271-Moss');
+  await A.page.locator('#kontoNeuPw').fill('');
+  assert.equal(await go.isDisabled(), true, 'nach dem Leeren wieder aus');
   // wie der Passwortspeicher: Wert ohne "input"-Ereignis -> die App merkt es trotzdem (regelmaessige Pruefung)
   await A.page.locator('#kontoNeuPw').evaluate((e) => { e.value = 'Tiger-Lamp-River-4271-Moss'; });
   await A.page.waitForFunction(() => !document.querySelector('#kontoNeuGo').disabled, null, { timeout: 3000 });

@@ -82,6 +82,12 @@ button{font:inherit;color:inherit}
 .field{display:flex;flex-direction:column;gap:6px}
 .field label{font-family:var(--display);font-weight:600}
 .field input{font:inherit;font-size:1.1rem;padding:12px 14px;border-radius:14px;border:2px solid var(--line);background:var(--surface);color:var(--ink);width:100%}
+.pw-wrap{position:relative;display:flex;align-items:center}
+.pw-wrap input{padding-right:58px}
+.pw-toggle{position:absolute;right:6px;top:50%;transform:translateY(-50%);display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border:0;border-radius:12px;background:transparent;color:var(--muted);cursor:pointer}
+.pw-toggle svg{width:22px;height:22px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.pw-toggle[aria-pressed="true"]{color:var(--accent)}
+.pw-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .worlds{display:flex;flex-direction:column;gap:12px}
 .world{display:grid;grid-template-columns:56px 1fr auto;align-items:center;gap:14px;text-align:left;width:100%;padding:14px 16px;border-radius:20px;border:2px solid var(--line);background:var(--surface);cursor:pointer;box-shadow:var(--shadow);transition:transform .08s,box-shadow .08s}
 .world:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.12)}
@@ -607,7 +613,7 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
       <p id="kontoNeuInfo" class="small"></p>
       <form id="kontoNeuForm" class="login-form" action="#" method="post">
         <div class="field"><label for="kontoNeuName" id="kontoNeuNameL">User name</label><input id="kontoNeuName" name="username" type="text" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" readonly></div>
-        <div class="field"><label for="kontoNeuPw" id="kontoNeuPwL">Password</label><input id="kontoNeuPw" name="new-password" type="password" autocomplete="new-password" passwordrules="minlength: 12; required: lower; required: upper; required: digit;" required></div>
+        <div class="field"><label for="kontoNeuPw" id="kontoNeuPwL">Password</label><span class="pw-wrap"><input id="kontoNeuPw" name="new-password" type="password" autocomplete="new-password" passwordrules="minlength: 12; required: lower; required: upper; required: digit;" required><button type="button" class="pw-toggle" data-pw-toggle="kontoNeuPw" aria-controls="kontoNeuPw" aria-pressed="false"></button></span></div>
         <p id="kontoNeuRegeln" class="small pw-regeln"></p>
         <p class="pw-suggest"><span id="kontoNeuIdeeL">Idea</span>: <b id="kontoNeuSugg"></b> <button type="button" class="btn small" id="kontoNeuUse">Use it</button></p>
         <button class="btn primary" id="kontoNeuGo" type="submit" disabled>Log in</button>
@@ -728,6 +734,45 @@ const uniq = a => a.filter((v,i)=>a.indexOf(v)===i);
 const pad = n => String(n).padStart(2,'0');
 const fmt = n => Number(n).toLocaleString('en-GB');
 const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function pwIconHTML(offen){
+  return offen
+    ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 10.7a3 3 0 0 0 4.1 4.1"/><path d="M9.9 5.2A10.7 10.7 0 0 1 12 5c5.2 0 9.3 4.3 10 7-.2.8-.8 2-1.9 3.2"/><path d="M6.2 6.2C4.6 7.4 3.4 9 3 12c.7 2.7 4.8 7 9 7 1.2 0 2.2-.2 3.2-.6"/></svg>'
+    : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>';
+}
+function pwToggleText(offen, feld){
+  const de=PL()==='de';
+  const wort=feld && feld.inputMode==='numeric' ? (de?'PIN':'PIN') : (de?'Passwort':'password');
+  return offen ? (de?`${wort} verbergen`:`Hide ${wort}`) : (de?`${wort} zeigen`:`Show ${wort}`);
+}
+function pwFeldHTML(id, label, attrs=''){
+  return `<div class="field"><label for="${id}">${label}</label><span class="pw-wrap"><input id="${id}" type="password"${attrs}><button type="button" class="pw-toggle" data-pw-toggle="${id}" aria-controls="${id}" aria-pressed="false"></button></span></div>`;
+}
+function pwToggleSetzen(btn, feld){
+  if(!btn || !feld) return;
+  const offen=feld.type==='text';
+  btn.setAttribute('aria-pressed', String(offen));
+  const text=pwToggleText(offen, feld);
+  btn.setAttribute('aria-label', text);
+  btn.title=text;
+  btn.innerHTML=pwIconHTML(offen);
+}
+function bindPasswordToggles(wurzel=document){
+  if(!wurzel || !wurzel.querySelectorAll) return;
+  wurzel.querySelectorAll('[data-pw-toggle]').forEach(btn=>{
+    const feld=document.getElementById(btn.dataset.pwToggle);
+    if(!feld) return;
+    if(btn.dataset.pwGebunden==='1'){ pwToggleSetzen(btn, feld); return; }
+    btn.dataset.pwGebunden='1';
+    pwToggleSetzen(btn, feld);
+    btn.addEventListener('click',()=>{
+      const start=feld.selectionStart, ende=feld.selectionEnd;
+      feld.type=feld.type==='password' ? 'text' : 'password';
+      pwToggleSetzen(btn, feld);
+      try{ feld.focus({preventScroll:true}); }catch(e){ feld.focus(); }
+      if(typeof start==='number' && typeof ende==='number') feld.setSelectionRange(start, ende);
+    });
+  });
+}
 const round10 = n => Math.round(n/10)*10, round100 = n => Math.round(n/100)*100;
 const STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7.1L12 17.3 5.7 21l1.7-7.1L2 9.2l7.1-.6z"/></svg>';
 const TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
@@ -5163,7 +5208,8 @@ function renderLogin(role, opts){
     $('#roleAdult').addEventListener('click',()=>{ if(KONTO_UI && adultResume()) return; renderLogin('adult', adultUnlockLoginOpts()||undefined); });
     return;
   }
-  b.innerHTML=`${zeile}<h2>${role==='student'?T.student:T.adult}</h2>${role==='student'?whosHereHTML():''}<form id="loginForm" class="login-form"><div class="field"><label for="loginUser">${T.user}</label><input id="loginUser" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><div class="field"><label for="loginPw">${T.pw}</label><input id="loginPw" type="password" autocomplete="current-password" required></div><button class="btn primary" id="loginGo" type="submit">${T.go}</button><p id="loginMsg" class="small" role="status"></p></form>${KONTO_UI?`<button class="btn small" id="loginForgot" type="button">${T.forgot}</button>`:''}<button class="btn small" id="loginBack" type="button">${T.back}</button>${KONTO_UI?LOGIN_HELP_KONTO:LOGIN_HELP}`;
+  b.innerHTML=`${zeile}<h2>${role==='student'?T.student:T.adult}</h2>${role==='student'?whosHereHTML():''}<form id="loginForm" class="login-form"><div class="field"><label for="loginUser">${T.user}</label><input id="loginUser" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required></div>${pwFeldHTML('loginPw', T.pw, ' autocomplete="current-password" required')}<button class="btn primary" id="loginGo" type="submit">${T.go}</button><p id="loginMsg" class="small" role="status"></p></form>${KONTO_UI?`<button class="btn small" id="loginForgot" type="button">${T.forgot}</button>`:''}<button class="btn small" id="loginBack" type="button">${T.back}</button>${KONTO_UI?LOGIN_HELP_KONTO:LOGIN_HELP}`;
+  bindPasswordToggles(b);
   b.querySelectorAll('[data-kidpick]').forEach(x=>x.addEventListener('click',()=>{ $('#loginUser').value=x.dataset.kidpick; $('#loginPw').value=''; $('#loginPw').focus(); }));
   $('#loginBack').addEventListener('click',()=>{ if(studentSession()){ $('#loginBody').innerHTML=''; renderHome(); show('home'); } else renderLogin(); });
   if(KONTO_UI) $('#loginForgot').addEventListener('click',()=>{ if(role==='student') $('#loginMsg').textContent=T.forgotKid; else renderKontoVergessen(); });
@@ -5196,9 +5242,10 @@ function renderSetPassword(u, renew){
   const title=renew?(adult?(de?'Bitte ein stärkeres Passwort wählen':'Please choose a stronger password'):'Time for a stronger password!'):u.wieder?(de?'Neues Passwort wählen':'Choose a new password'):T.setTitle;
   const info=renew?(adult?(de?'Ihr bisheriges Passwort ist kürzer als 12 Zeichen oder leicht zu erraten. Einmal neu wählen – danach geht es wie gewohnt weiter.':'Your current password is shorter than 12 characters or easy to guess. Choose a new one once – then everything works as before.'):'Your password should be longer so nobody can guess it. Take the suggestion – your iPad can remember it for you.'):u.wieder?(de?'Wählen Sie ein neues Passwort. Es gilt danach auf allen Ihren Geräten. Anschließend bekommen Sie einen neuen Wiederherstellungscode.':'Choose a new password. It then works on all your devices. Afterwards you get a new recovery code.'):u.konto?T.setInfoKonto:T.setInfo;
   const sugg=pwSuggest();
-  $('#loginBody').innerHTML=`<h2>${title}</h2><p class="small">${info}</p><form id="setPwForm" class="login-form"><input class="sr" type="text" name="username" autocomplete="username" value="${esc(u.user)}" readonly tabindex="-1" aria-hidden="true"><p class="pw-suggest">${adult?(de?'Vorschlag':'Suggestion'):'Idea'}: <b id="pwSugg">${esc(sugg)}</b> <button type="button" class="btn small" id="pwUse">${adult?(de?'Übernehmen':'Use it'):'Use it'}</button> <button type="button" class="btn small" id="pwAnother">${adult?(de?'Anderer Vorschlag':'Another one'):'Another one'}</button></p><div class="field"><label for="newPw1">${T.pw1}</label><input id="newPw1" type="password" autocomplete="new-password" required></div><div class="field"><label for="newPw2">${T.pw2}</label><input id="newPw2" type="password" autocomplete="new-password" required></div><button class="btn primary" id="setPwGo" type="submit">${T.save}</button><p id="setPwMsg" class="small" role="status"></p></form>${u.konto||u.wieder?`<button class="btn small" id="setPwBack" type="button">${T.back}</button>`:''}`;
+  $('#loginBody').innerHTML=`<h2>${title}</h2><p class="small">${info}</p><form id="setPwForm" class="login-form"><input class="sr" type="text" name="username" autocomplete="username" value="${esc(u.user)}" readonly tabindex="-1" aria-hidden="true"><p class="pw-suggest">${adult?(de?'Vorschlag':'Suggestion'):'Idea'}: <b id="pwSugg">${esc(sugg)}</b> <button type="button" class="btn small" id="pwUse">${adult?(de?'Übernehmen':'Use it'):'Use it'}</button> <button type="button" class="btn small" id="pwAnother">${adult?(de?'Anderer Vorschlag':'Another one'):'Another one'}</button></p>${pwFeldHTML('newPw1', T.pw1, ' autocomplete="new-password" required')}${pwFeldHTML('newPw2', T.pw2, ' autocomplete="new-password" required')}<button class="btn primary" id="setPwGo" type="submit">${T.save}</button><p id="setPwMsg" class="small" role="status"></p></form>${u.konto||u.wieder?`<button class="btn small" id="setPwBack" type="button">${T.back}</button>`:''}`;
+  bindPasswordToggles($('#loginBody'));
   if(u.konto||u.wieder) $('#setPwBack').addEventListener('click',()=>{ if(u.wieder) renderKontoVergessen(); else renderLogin(adult?'adult':'student'); });
-  $('#pwUse').addEventListener('click',()=>{ const v=$('#pwSugg').textContent; $('#newPw1').value=v; $('#newPw2').value=v; $('#newPw1').type='text'; });
+  $('#pwUse').addEventListener('click',()=>{ const v=$('#pwSugg').textContent; $('#newPw1').value=v; $('#newPw2').value=v; $('#newPw1').type='text'; pwToggleSetzen($('[data-pw-toggle="newPw1"]'), $('#newPw1')); });
   $('#pwAnother').addEventListener('click',()=>{ $('#pwSugg').textContent=pwSuggest(); });
   $('#setPwForm').addEventListener('submit',async e=>{
     e.preventDefault(); const p1=$('#newPw1').value, p2=$('#newPw2').value, msg=$('#setPwMsg');
@@ -5413,6 +5460,7 @@ function kontoNeuZeigen(r){
   const kind=r.rolle==='child', T=loginTxt(!kind), de=!kind && store.get('parentLang','de')!=='en';
   $('#loginBody').innerHTML='';
   const q=id=>document.getElementById(id), name=q('kontoNeuName'), pw=q('kontoNeuPw'), go=q('kontoNeuGo'), regeln=q('kontoNeuRegeln');
+  bindPasswordToggles(w);
   q('kontoNeuOk').hidden=!r.ok; q('kontoNeuOk').textContent=r.ok||'';
   q('kontoNeuTitel').textContent=kind?(r.neu?'Choose a new password':'Welcome! Choose your password'):de?'Willkommen – eigenes Passwort festlegen':'Welcome – choose your own password';
   q('kontoNeuInfo').textContent=kind
@@ -5430,7 +5478,7 @@ function kontoNeuZeigen(r){
   let pause=false;
   const pruefen=()=>{ if(!kontoNeuDa()) return; const gut=!pwWeak(pw.value, r.anmeldename); go.disabled=pause || !gut; regeln.classList.toggle('ok', gut); };
   pw.addEventListener('input',pruefen); pw.addEventListener('change',pruefen);
-  q('kontoNeuUse').addEventListener('click',()=>{ pw.value=q('kontoNeuSugg').textContent; pw.type='text'; pruefen(); });
+  q('kontoNeuUse').addEventListener('click',()=>{ pw.value=q('kontoNeuSugg').textContent; pw.type='text'; pwToggleSetzen(w.querySelector('[data-pw-toggle="kontoNeuPw"]'), pw); pruefen(); });
   if(kontoNeuTakt) clearInterval(kontoNeuTakt);
   kontoNeuTakt=setInterval(pruefen, 400);
   q('kontoNeuForm').addEventListener('submit',async ev=>{
@@ -5573,7 +5621,8 @@ async function kontoCodeTeilen(a, code, de, msgEl){
 /* "Forgot your password?" (grown-ups, US9.4): recovery code -> new password -> new recovery code */
 function renderKontoVergessen(meldung){
   const de=store.get('parentLang','de')!=='en', T=loginTxt(true), falsch=de?'Benutzername oder Wiederherstellungscode stimmt nicht.':'User name or recovery code is not right.';
-  $('#loginBody').innerHTML=`<h2>${T.forgot}</h2><p class="small">${de?'Geben Sie Ihren Benutzernamen und Ihren Wiederherstellungscode ein. Danach wählen Sie ein neues Passwort und bekommen einen neuen Code.':'Enter your user name and your recovery code. Then you choose a new password and get a new code.'}</p><form id="forgotForm" class="login-form"><div class="field"><label for="forgotUser">${T.user}</label><input id="forgotUser" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><div class="field"><label for="forgotCode">${de?'Wiederherstellungscode':'Recovery code'}</label><input id="forgotCode" type="password" autocomplete="current-password" autocapitalize="characters" autocorrect="off" spellcheck="false" required></div><button class="btn primary" id="forgotGo" type="submit">${de?'Weiter':'Continue'}</button><p id="forgotMsg" class="small" role="status">${meldung?esc(meldung):''}</p></form><button class="btn small" id="forgotBack" type="button">${T.back}</button>`;
+  $('#loginBody').innerHTML=`<h2>${T.forgot}</h2><p class="small">${de?'Geben Sie Ihren Benutzernamen und Ihren Wiederherstellungscode ein. Danach wählen Sie ein neues Passwort und bekommen einen neuen Code.':'Enter your user name and your recovery code. Then you choose a new password and get a new code.'}</p><form id="forgotForm" class="login-form"><div class="field"><label for="forgotUser">${T.user}</label><input id="forgotUser" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required></div>${pwFeldHTML('forgotCode', de?'Wiederherstellungscode':'Recovery code', ' autocomplete="current-password" autocapitalize="characters" autocorrect="off" spellcheck="false" required')}<button class="btn primary" id="forgotGo" type="submit">${de?'Weiter':'Continue'}</button><p id="forgotMsg" class="small" role="status">${meldung?esc(meldung):''}</p></form><button class="btn small" id="forgotBack" type="button">${T.back}</button>`;
+  bindPasswordToggles($('#loginBody'));
   // the password manager fills in the code's own entry "<name> (Wiederherstellungscode)": back to the login name
   const nf=$('#forgotUser'); nf.addEventListener('change',()=>{ nf.value=anmNameAusEintrag(nf.value); });
   $('#forgotBack').addEventListener('click',()=>renderLogin('adult', adultUnlockLoginOpts()||undefined));
@@ -5938,13 +5987,13 @@ function kontoBlattHTML(){
   if(b.art==='frageneu') return `<h2 class="psubjtitle">${de?`Jetzt neues Passwort für ${esc(b.name)}?`:`New password for ${esc(b.name)} now?`}</h2><p>${de?`Das Gerät ist entfernt. Bis ${esc(b.name)} ein neues Passwort hat, kann es noch lesen, was es schon hatte. Mit dem neuen Passwort ist auch das vorbei; der Lernstand bleibt erhalten.`:`The device is removed. Until ${esc(b.name)} has a new password, it can still read what it already had. A new password ends that; the progress stays.`}</p><p><button type="button" class="btn primary" id="kNeuJa">${de?'Ja, Start-QR-Code zeigen':'Yes, show start QR code'}</button> <button type="button" class="btn" id="kNeuSpaeter">${de?'Später':'Later'}</button></p>${msg}`;
   if(b.art==='erneuern'){
     const sugg=pwSuggest();
-    return back+`<h2 class="psubjtitle">🔑 ${b.geraet?(de?'Eigenes Gerät entfernen':'Remove own device'):(de?'Schlüssel erneuern':'Renew key')}</h2><p class="small">${b.geraet?(de?`„${esc(b.gname)}“ wird entfernt. Damit es nichts Neues mehr lesen kann, bekommen Sie dabei einen neuen Schlüssel.`:`“${esc(b.gname)}” is removed. So that it cannot read anything new, you get a new key with it.`):''} ${de?'Sie wählen ein neues Passwort und bekommen einen neuen Wiederherstellungscode. Auf Ihren anderen Geräten melden Sie sich danach mit dem neuen Passwort neu an – bis dahin sehen sie nichts Neues.':'You choose a new password and get a new recovery code. Then log in again with the new password on your other devices – until then they see nothing new.'}</p><form id="kErnForm" class="login-form"><input class="sr" type="text" name="username" autocomplete="username" value="${esc(adultUser?adultUser.user:'')}" readonly tabindex="-1" aria-hidden="true"><div class="field"><label for="kErnAlt">${de?'Aktuelles Passwort':'Current password'}</label><input id="kErnAlt" type="password" autocomplete="current-password" required></div><p class="pw-suggest">${de?'Vorschlag':'Suggestion'}: <b id="kErnSugg">${esc(sugg)}</b> <button type="button" class="btn small" id="kErnUse">${de?'Übernehmen':'Use it'}</button> <button type="button" class="btn small" id="kErnAnother">${de?'Anderer Vorschlag':'Another one'}</button></p><div class="field"><label for="kErnNeu1">${de?'Neues Passwort':'New password'}</label><input id="kErnNeu1" type="password" autocomplete="new-password" required></div><div class="field"><label for="kErnNeu2">${de?'Passwort wiederholen':'Repeat password'}</label><input id="kErnNeu2" type="password" autocomplete="new-password" required></div><button class="btn primary" id="kErnGo" type="submit">${b.geraet?(de?'Entfernen und Schlüssel erneuern':'Remove and renew key'):(de?'Schlüssel erneuern':'Renew key')}</button>${msg}</form>`;
+    return back+`<h2 class="psubjtitle">🔑 ${b.geraet?(de?'Eigenes Gerät entfernen':'Remove own device'):(de?'Schlüssel erneuern':'Renew key')}</h2><p class="small">${b.geraet?(de?`„${esc(b.gname)}“ wird entfernt. Damit es nichts Neues mehr lesen kann, bekommen Sie dabei einen neuen Schlüssel.`:`“${esc(b.gname)}” is removed. So that it cannot read anything new, you get a new key with it.`):''} ${de?'Sie wählen ein neues Passwort und bekommen einen neuen Wiederherstellungscode. Auf Ihren anderen Geräten melden Sie sich danach mit dem neuen Passwort neu an – bis dahin sehen sie nichts Neues.':'You choose a new password and get a new recovery code. Then log in again with the new password on your other devices – until then they see nothing new.'}</p><form id="kErnForm" class="login-form"><input class="sr" type="text" name="username" autocomplete="username" value="${esc(adultUser?adultUser.user:'')}" readonly tabindex="-1" aria-hidden="true">${pwFeldHTML('kErnAlt', de?'Aktuelles Passwort':'Current password', ' autocomplete="current-password" required')}<p class="pw-suggest">${de?'Vorschlag':'Suggestion'}: <b id="kErnSugg">${esc(sugg)}</b> <button type="button" class="btn small" id="kErnUse">${de?'Übernehmen':'Use it'}</button> <button type="button" class="btn small" id="kErnAnother">${de?'Anderer Vorschlag':'Another one'}</button></p>${pwFeldHTML('kErnNeu1', de?'Neues Passwort':'New password', ' autocomplete="new-password" required')}${pwFeldHTML('kErnNeu2', de?'Passwort wiederholen':'Repeat password', ' autocomplete="new-password" required')}<button class="btn primary" id="kErnGo" type="submit">${b.geraet?(de?'Entfernen und Schlüssel erneuern':'Remove and renew key'):(de?'Schlüssel erneuern':'Renew key')}</button>${msg}</form>`;
   }
   if(b.art==='code') return `<div id="kCodeBox"></div>`;
   // task "Familienfassung bauen": export and deletion (module kinddaten; concept 13, US12.1/12.2)
   if(b.art==='export') return back+`<h2 class="psubjtitle">📄 ${de?`Daten von ${esc(b.name)}`:`Data of ${esc(b.name)}`}</h2><p class="small">${de?`Alles, was zu ${esc(b.name)} gespeichert ist – Stand nach dem letzten Abgleich. Die lesbare Seite öffnet jeder Browser; die Datei enthält dasselbe für Programme.`:`Everything stored about ${esc(b.name)} – as of the last sync. Any browser opens the readable page; the file holds the same for programs.`}</p><p><button type="button" class="btn primary" id="kExHtml">📄 ${de?'Lesbare Seite sichern':'Save readable page'}</button> <button type="button" class="btn" id="kExJson">🗂️ ${de?'Datei (JSON) sichern':'Save file (JSON)'}</button></p>${msg}`;
   if(b.art==='loeschkind') return back+`<h2 class="psubjtitle">🗑️ ${de?`${esc(b.name)} löschen`:`Delete ${esc(b.name)}`}</h2><p>${de?`Gelöscht wird alles von ${esc(b.name)}: Lernstand, Profil, Schulbewertungen, Freigaben, Geräte und Leseaufnahmen – im Speicher und auf diesem Gerät. Die anderen Geräte räumen beim nächsten Abgleich auf; ${esc(b.name)} kann sich danach nicht mehr anmelden. Das lässt sich nicht rückgängig machen.`:`Everything of ${esc(b.name)} is deleted: progress, profile, school ratings, grants, devices and recordings – in the storage and on this device. The other devices clean up with their next sync; ${esc(b.name)} can no longer log in. This cannot be undone.`}</p><p class="small">${de?'Tipp: vorher „📄 Daten“ sichern.':'Tip: save “📄 Data” first.'}</p><form id="kLoeschForm" class="login-form"><div class="field"><label for="kLoeschName">${de?`Zur Bestätigung den Anmeldenamen eintippen: <b>${esc(b.login)}</b>`:`To confirm, type the login name: <b>${esc(b.login)}</b>`}</label><input id="kLoeschName" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><button class="btn primary" id="kLoeschGo" type="submit">${de?'Endgültig löschen':'Delete for good'}</button>${msg}</form>`;
-  if(b.art==='loeschkonto') return back+`<h2 class="psubjtitle">🗑️ ${de?'Mein Konto löschen':'Delete my account'}</h2><p>${b.letzter?(de?'Sie sind der einzige Elternteil. Gelöscht werden Ihr Konto, die Familie und jedes Kind mit allen Daten – im Speicher und auf diesem Gerät.':'You are the only parent. Your account, the family and every child with all data are deleted – in the storage and on this device.'):(de?'Sie verlassen die Familie, Ihr Konto wird gelöscht. Die Kinder bleiben beim anderen Elternteil.':'You leave the family and your account is deleted. The children stay with the other parent.')} ${de?'Das lässt sich nicht rückgängig machen.':'This cannot be undone.'}</p>${b.letzter?`<p class="small">${de?'Tipp: vorher je Kind „📄 Daten“ sichern.':'Tip: save “📄 Data” of each child first.'}</p>`:''}<form id="kKlForm" class="login-form"><input class="sr" type="text" name="username" autocomplete="username" value="${esc(adultUser?adultUser.user:'')}" readonly tabindex="-1" aria-hidden="true"><div class="field"><label for="kKlPw">${de?'Ihr Passwort':'Your password'}</label><input id="kKlPw" type="password" autocomplete="current-password" required></div><button class="btn primary" id="kKlGo" type="submit">${de?'Endgültig löschen':'Delete for good'}</button>${msg}</form>`;
+  if(b.art==='loeschkonto') return back+`<h2 class="psubjtitle">🗑️ ${de?'Mein Konto löschen':'Delete my account'}</h2><p>${b.letzter?(de?'Sie sind der einzige Elternteil. Gelöscht werden Ihr Konto, die Familie und jedes Kind mit allen Daten – im Speicher und auf diesem Gerät.':'You are the only parent. Your account, the family and every child with all data are deleted – in the storage and on this device.'):(de?'Sie verlassen die Familie, Ihr Konto wird gelöscht. Die Kinder bleiben beim anderen Elternteil.':'You leave the family and your account is deleted. The children stay with the other parent.')} ${de?'Das lässt sich nicht rückgängig machen.':'This cannot be undone.'}</p>${b.letzter?`<p class="small">${de?'Tipp: vorher je Kind „📄 Daten“ sichern.':'Tip: save “📄 Data” of each child first.'}</p>`:''}<form id="kKlForm" class="login-form"><input class="sr" type="text" name="username" autocomplete="username" value="${esc(adultUser?adultUser.user:'')}" readonly tabindex="-1" aria-hidden="true">${pwFeldHTML('kKlPw', de?'Ihr Passwort':'Your password', ' autocomplete="current-password" required')}<button class="btn primary" id="kKlGo" type="submit">${de?'Endgültig löschen':'Delete for good'}</button>${msg}</form>`;
   if(b.art==='token') return back+`<h2 class="psubjtitle">📲 ${de?'Gerät neu verbinden':'Connect this device again'}</h2><p class="small">${de?'Fügen Sie den Link aus Ihrer Einladung ein – oder nur den Zugangscode. Er gilt für dieses Gerät und für alle, die sich hier anmelden; Ihre Daten bleiben, wie sie sind.':'Paste the link from your invitation – or just the access code. It is for this device and everyone who logs in here; your data stays as it is.'}</p><form id="kTokenForm" class="login-form" autocomplete="off"><div class="field"><label for="kTokenNeuWert">${de?'Link oder Zugangscode':'Link or access code'}</label><input id="kTokenNeuWert" type="text" inputmode="url" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><button class="btn primary" id="kTokenGo" type="submit">${de?'Verbinden':'Connect'}</button>${msg}</form>`;
   return back;
 }
@@ -6066,6 +6115,7 @@ function kontoOhne(lk, f){ try{ const o=JSON.parse(localStorage.getItem(lk)||'nu
 function kontoOhneEintraege(lk, weg){ try{ const l=JSON.parse(localStorage.getItem(lk)||'null'); if(Array.isArray(l)){ const n=l.filter(v=>!(v && typeof v==='object' && weg(v))); if(n.length!==l.length) localStorage.setItem(lk, JSON.stringify(n)); } }catch(e){} }
 function kontoBinden(body){
   const de=PL()==='de', q=s=>body.querySelector(s), an=(s,f)=>{ const e=q(s); if(e) e.addEventListener('click',f); }, form=(s,f)=>{ const e=q(s); if(e) e.addEventListener('submit',ev=>{ ev.preventDefault(); if(parentAccess) f(); }); };
+  bindPasswordToggles(body);
   const zs=q('#kSync'); if(zs) kontoZeileBinden(zs);
   form('#kTokenForm',()=>{
     const m=q('#kMsg'), e=anmEingefuegt(q('#kTokenNeuWert').value, location.href);
@@ -6135,7 +6185,7 @@ function kontoBinden(body){
   });
   an('#kNeuJa',()=>kontoKindNeuStarten(kontoBlatt.kind));
   an('#kNeuSpaeter',()=>kontoBlattZeigen(null));
-  an('#kErnUse',()=>{ const v=q('#kErnSugg').textContent; q('#kErnNeu1').value=v; q('#kErnNeu2').value=v; q('#kErnNeu1').type='text'; });
+  an('#kErnUse',()=>{ const v=q('#kErnSugg').textContent; q('#kErnNeu1').value=v; q('#kErnNeu2').value=v; q('#kErnNeu1').type='text'; pwToggleSetzen(q('[data-pw-toggle="kErnNeu1"]'), q('#kErnNeu1')); });
   an('#kErnAnother',()=>{ q('#kErnSugg').textContent=pwSuggest(); });
   form('#kErnForm',()=>{
     const b=kontoBlatt, alt=q('#kErnAlt').value, p1=q('#kErnNeu1').value, p2=q('#kErnNeu2').value, m=q('#kMsg'), user=adultUser.user;
