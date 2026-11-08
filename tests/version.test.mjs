@@ -13,6 +13,7 @@ import { WURZEL, QUELLEN, distBauen, liveVergleichen, appZusammensetzen } from '
 import { schuleLesen } from '../werkzeug/schule.mjs';
 import { entschluesseln, tresorAusHuelle, ohneTresor } from '../werkzeug/kern.mjs';
 import { versionErmitteln, versionEinsetzen, versionAuslesen, berlinZeit, MARKE } from '../werkzeug/version.mjs';
+import { MARKE as RELEASE_MARKE, releaseEinsetzen, releaseEintraege } from '../werkzeug/releases.mjs';
 import { TEST_PW } from './hilfen.mjs';
 import { kontenEinsetzen, kontenLesen } from '../werkzeug/konten.mjs';
 import { browserStarten, appOeffnen, elternOeffnen, elternSeite } from './app-hilfen.mjs';
@@ -50,15 +51,24 @@ test('the app contains the version marker exactly once; inserting and reading ba
   assert.throws(() => versionEinsetzen(MARKE + MARKE, V), /genau einmal/);
 });
 
+test('the app contains the release marker exactly once; inserting the current release works', () => {
+  assert.equal(appQuelle.toString('utf8').split(RELEASE_MARKE).length, 2);
+  const mit = releaseEinsetzen(appQuelle, V).toString('utf8');
+  assert.ok(mit.includes('const APP_RELEASES=' + JSON.stringify(releaseEintraege(V)) + ';'));
+  assert.throws(() => releaseEinsetzen('ohne Marke', V), /genau einmal/);
+  assert.throws(() => releaseEinsetzen(RELEASE_MARKE + RELEASE_MARKE, V), /genau einmal/);
+});
+
 test('dist: vault holds the app with version byte for byte; shell and manifest contain no version data', async () => {
   const ziel = await tmp();
   const r = await distBauen(TEST_PW, { ziel, version: V });
   const html = await fs.readFile(path.join(ziel, 'index.html'), 'utf8');
   const klar = Buffer.from(await entschluesseln(tresorAusHuelle(html), TEST_PW));
   assert.ok(klar.equals(appZusammensetzen(appQuelle, V, await kontenLesen(), await schuleLesen())));
+  assert.ok(klar.toString('utf8').includes('const APP_RELEASES=' + JSON.stringify(releaseEintraege(V)) + ';'), 'release notes set');
   assert.deepEqual(r.version, V);
   const offen = ohneTresor(html) + await fs.readFile(path.join(ziel, 'manifest.webmanifest'), 'utf8');
-  for (const x of ['a1b2c3d', '30.10.2026 14:05', 'v13', 'APP_VERSION']) assert.ok(!offen.includes(x), x);
+  for (const x of ['a1b2c3d', '30.10.2026 14:05', 'v13', 'APP_VERSION', 'APP_RELEASES', releaseEintraege(V)[0].epics[0].de]) assert.ok(!offen.includes(x), x);
 });
 
 // ---- browser: what child and adults see, and the update check ----

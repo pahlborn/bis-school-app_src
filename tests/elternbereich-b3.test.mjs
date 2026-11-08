@@ -10,14 +10,29 @@ import assert from 'node:assert/strict';
 import { browserStarten, appServer, appOeffnen, klick } from './app-hilfen.mjs';
 import { konto, kontenServer, oeffnen, anmelden, passwortSetzen } from './konten-hilfen.mjs';
 
-const C = { mia: 'ABCD-EFGH', papa: 'PAPA-2345', frau: 'TEAC-HER2' };
-let browser, server, ohneKonten;
+const C = { mia: 'ABCD-EFGH', papa: 'PAPA-2345', frau: 'TEAC-HER2', chef: 'CHEF-2345' };
+const RELEASES = [{
+  version: 'v152',
+  date: '08.11.2026 18:40',
+  epics: [{ de: 'Releasedokumentation ist jetzt direkt im Admin-Bereich sichtbar.', en: 'Release notes are now visible directly in the admin area.' }],
+  stories: [{ de: 'Der Admin sieht jede Fassung gegliedert nach Epic, User Story und Bugfix.', en: 'The admin sees each version grouped by epic, user story and bugfix.' }],
+  bugfixes: [{ de: 'Fehlende Einträge zeigen nur einen ruhigen Hinweis.', en: 'Missing entries only show a calm note.' }]
+}];
+const mitReleases = (app) => app.replace('const APP_RELEASES=/*BQ_RELEASES*/null;', 'const APP_RELEASES=' + JSON.stringify(RELEASES) + ';');
+let browser, server, serverMitRelease, ohneKonten;
 before(async () => {
-  server = await kontenServer({ users: [await konto('mia', 'student', C.mia), await konto('papa', 'parent', C.papa, { kinder: ['mia'] }), await konto('frau', 'teacher', C.frau)] });
+  const users = [
+    await konto('mia', 'student', C.mia),
+    await konto('papa', 'parent', C.papa, { kinder: ['mia'] }),
+    await konto('frau', 'teacher', C.frau),
+    await konto('chef', 'parent', C.chef, { admin: true })
+  ];
+  server = await kontenServer({ users });
+  serverMitRelease = await kontenServer({ users }, { anpassen: mitReleases });
   ohneKonten = await appServer();
   browser = await browserStarten();
 });
-after(async () => { await browser?.close(); server?.close(); ohneKonten?.close(); });
+after(async () => { await browser?.close(); server?.close(); serverMitRelease?.close(); ohneKonten?.close(); });
 
 async function kindDann(page, wer) {
   await anmelden(page, 'student', 'mia', C.mia); await passwortSetzen(page, 'Tiger-Lamp-River-4271');
@@ -72,6 +87,38 @@ test('T11 ⚙ → Über die App: intro, important note with responsibility, priv
   assert.ok((await dl.innerText()).includes(VERANTWORTUNG_DE));
   assert.deepEqual([...fehler, ...l.fehler], []);
   await ctx.close(); await l.ctx.close();
+});
+
+test('T12 release notes: only the admin sees them; Epic / User Story / Bugfix are clear; missing entries stay calm', async () => {
+  const p = await oeffnen(browser, serverMitRelease);
+  await kindDann(p.page, 'papa');
+  const dp = await ueberDieApp(p.page);
+  assert.equal(await dp.locator('#releaseDocs').count(), 0, 'parent does not see release notes');
+
+  const l = await oeffnen(browser, serverMitRelease);
+  await kindDann(l.page, 'frau');
+  const dl = await ueberDieApp(l.page);
+  assert.equal(await dl.locator('#releaseDocs').count(), 0, 'teacher does not see release notes');
+
+  const a = await oeffnen(browser, serverMitRelease);
+  await kindDann(a.page, 'chef');
+  const da = await ueberDieApp(a.page);
+  assert.ok(await da.locator('#releaseDocs').isVisible(), 'admin sees release notes');
+  const ta = await da.locator('#releaseDocs').innerText();
+  for (const x of ['Releasedokumentation', 'Epic', 'User Story', 'Bugfix', 'Releasedokumentation ist jetzt direkt im Admin-Bereich sichtbar.']) assert.ok(ta.includes(x), x);
+  await a.page.locator('.phdr [data-plang="en"]').click();
+  const ea = await a.page.locator('#aboutBody details.psec[data-psec="aboutapp"]');
+  await ea.evaluate((e) => { e.open = true; e.querySelectorAll('details').forEach((x) => { x.open = true; }); });
+  const te = await ea.innerText();
+  for (const x of ['Release notes', 'Epic', 'User Story', 'Bugfix', 'Release notes are now visible directly in the admin area.']) assert.ok(te.includes(x), x);
+
+  const leer = await oeffnen(browser, server);
+  await kindDann(leer.page, 'chef');
+  const dLeer = await ueberDieApp(leer.page);
+  assert.match(await dLeer.locator('#releaseDocs').innerText(), /Noch keine Releaseeinträge hinterlegt\./);
+
+  assert.deepEqual([...p.fehler, ...l.fehler, ...a.fehler, ...leer.fehler], []);
+  await p.ctx.close(); await l.ctx.close(); await a.ctx.close(); await leer.ctx.close();
 });
 
 test('T11 ⓘ of the assessment names the responsibility; the info page outside the grown-ups area keeps note and privacy', async () => {

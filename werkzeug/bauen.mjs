@@ -21,6 +21,7 @@ import {
   ohneTresor, woerterLesen, verboteneTreffer, unb64
 } from './kern.mjs';
 import { versionErmitteln, versionEinsetzen, versionAuslesen, versionText } from './version.mjs';
+import { RELEASE_NOTES, releaseEinsetzen } from './releases.mjs';
 import { kontenLesen, kontenEinsetzen } from './konten.mjs';
 import { schuleLesen, schuleEinsetzen } from './schule.mjs';
 import { moduleEinsetzen } from './module.mjs';
@@ -28,10 +29,10 @@ import { TESTINSTANZ, ersatzLesen, testinstanzUmwandeln, testinstanzManifest, te
 import { FAMILIE, familieUmwandeln, familiePruefen } from './familie.mjs';
 import { schriftenLesen, schriftenEinsetzen, schriftenPruefen } from './schriften.mjs';
 
-/** The app as it goes into the vault: version, accounts (S3/S11), school data by ID (S11 P2) and the embedded fonts
- *  (werkzeug/schriften.mjs - nothing is loaded from Google Fonts any more). */
-export function appZusammensetzen(app, version, konten, schule, schriften = schriftenLesen(WURZEL)) {
-  return schriftenEinsetzen(schuleEinsetzen(kontenEinsetzen(versionEinsetzen(app, version), konten), konten ? schule : null, konten), schriften);
+/** The app as it goes into the vault: version, release notes, accounts (S3/S11), school data by ID (S11 P2)
+ *  and the embedded fonts (werkzeug/schriften.mjs - nothing is loaded from Google Fonts any more). */
+export function appZusammensetzen(app, version, konten, schule, schriften = schriftenLesen(WURZEL), releases = RELEASE_NOTES) {
+  return schriftenEinsetzen(schuleEinsetzen(kontenEinsetzen(releaseEinsetzen(versionEinsetzen(app, version), version, releases), konten), konten ? schule : null, konten), schriften);
 }
 
 export const WURZEL = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');

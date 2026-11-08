@@ -215,6 +215,9 @@ button{font:inherit;color:inherit}
 .about-sec>summary::after,.psec>summary::after{content:"›";font-size:1.4rem;color:var(--muted);transition:transform .15s}
 .about-sec[open]>summary::after,.psec[open]>summary::after{transform:rotate(90deg)}
 .about-sec-body,.psec-body{padding:0 16px 12px}
+.release-group+.release-group{margin-top:12px}
+.release-group h3{margin:0 0 6px;font-size:1rem}
+.release-group ul{margin:0;padding-left:20px}
 .psecs{display:flex;flex-direction:column;gap:8px;margin:14px 0}
 .psheet{border:2px solid var(--line);border-radius:14px;margin:8px 0;background:var(--surface)}
 .psheet>summary{cursor:pointer;min-height:48px;padding:8px 12px;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
@@ -694,6 +697,8 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 /*BQ_MODULE*/
 /* Set by the build (werkzeug/version.mjs) inside the encrypted vault; null when opened unbuilt. */
 const APP_VERSION=/*BQ_VERSION*/null;
+/* Set by the build (werkzeug/releases.mjs) inside the encrypted vault; null when opened unbuilt. */
+const APP_RELEASES=/*BQ_RELEASES*/null;
 /* Set by the build from werkzeug/konten.json (S3 login); null = no accounts, app runs without login. */
 /* Accounts v2 (S11 Stufe 1): normAccounts and the rules who sees which child are in module src/module/rechte.mjs. */
 /* Stage 3b, task "Anmeldung im Testbau": the storage of the accounts (module konto). Set only for the test build -
@@ -3693,6 +3698,27 @@ function saveMySchoolDlg(){
    build time and commit, and can check on request whether a newer version is published. */
 const versionLabel = () => APP_VERSION ? 'v'+APP_VERSION.n+(APP_VERSION.draft?'-entwurf':'') : 'Entwicklungsstand';
 const appVersionLine = () => `<p class="small app-version">${esc(versionLabel())}</p>`;
+const releaseList = () => Array.isArray(APP_RELEASES) ? APP_RELEASES : [];
+const releaseText = (v, de) => !v || typeof v!=='object' ? '' : String(de ? (v.de||v.en||'') : (v.en||v.de||'')).trim();
+const releaseItems = (list, de) => (Array.isArray(list) ? list : []).map(v=>releaseText(v, de)).filter(Boolean);
+function releaseGroupHTML(title, items){
+  return items.length ? `<div class="release-group"><h3>${title}</h3><ul>${items.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>` : '';
+}
+function releaseEntryHTML(entry, de){
+  const version=entry && entry.version ? String(entry.version) : versionLabel(), date=entry && entry.date ? String(entry.date) : '';
+  const head=[version, date ? (de?'gebaut ':'built ')+date : ''].filter(Boolean).join(' · ');
+  const body=releaseGroupHTML('Epic', releaseItems(entry && entry.epics, de))
+    +releaseGroupHTML('User Story', releaseItems(entry && entry.stories, de))
+    +releaseGroupHTML('Bugfix', releaseItems(entry && entry.bugfixes, de));
+  return `<details class="about-sec release-entry"><summary>${esc(head)}</summary><div class="about-sec-body">${body||`<p class="small">${de?'Keine Einträge.':'No entries.'}</p>`}</div></details>`;
+}
+function releaseAdminHTML(){
+  if(!(adultUser && adultUser.admin)) return '';
+  const de=PL()==='de', list=releaseList();
+  return `<div id="releaseDocs"><h2>${de?'Releasedokumentation':'Release notes'}</h2><p class="small">${de?'Nur für den Admin sichtbar. Kurz notiert ist, was sich in dieser Fassung für die Nutzung geändert hat.':'Visible only to the admin. It briefly notes what changed for day-to-day use in this version.'}</p>`
+    +(list.length ? `<div class="about-menu">${list.map(entry=>releaseEntryHTML(entry, de)).join('')}</div>` : `<p class="small">${de?'Noch keine Releaseeinträge hinterlegt.':'No release entries have been added yet.'}</p>`)
+    +`</div>`;
+}
 function versionAdminHTML(){
   const v=APP_VERSION, de=PL()==='de';
   return `<h2>${de?'App-Version':'App version'}</h2><p id="versionInfo">${v?`<b>${esc(versionLabel())}</b> · ${de?'gebaut':'built'} ${esc(v.date)} · ${esc(v.hash)}`:(de?'Entwicklungsstand (nicht gebaut)':'Development build (not built)')}</p><p><button class="btn small" id="checkUpdate" type="button">${de?'Nach neuer Version suchen':'Check for a new version'}</button></p><p id="updateMessage" class="small" role="status"></p>`;
@@ -4691,7 +4717,7 @@ function aboutAppHTML(){
     // third-party code in the test build (task "Erstanmeldung per QR-Code"): the QR reader of "Connect this device"
     +(KONTO_UI && typeof ANM_QR_LESER!=='undefined'?sec(de?'Fremde Programmteile':'Third-party components', `<p>${de?'Den QR-Code beim Verbinden eines Geräts liest':'The QR code when connecting a device is read by'} <b>${esc(ANM_QR_LESER.name)} ${esc(ANM_QR_LESER.version)}</b> (Cosmo Wolfe ${de?'und Mitwirkende':'and contributors'}) – ${esc(ANM_QR_LESER.lizenz)}. ${de?'Unverändert in die App eingebettet; das Kamerabild bleibt auf dem Gerät, kein fremder Server.':'Embedded in the app unchanged; the camera picture stays on the device, no third-party server.'} <a href="${esc(ANM_QR_LESER.url)}" target="_blank" rel="noopener">${esc(ANM_QR_LESER.url)}</a> · <a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener">Apache License 2.0</a></p>`, 'lizenzen'):'')
     +sec(de?'Impressum':'Legal notice', `<p>${de?'Wird ergänzt.':'To be added.'}</p>`, 'imprint')
-    +`</div>`+versionAdminHTML();
+    +`</div>`+versionAdminHTML()+releaseAdminHTML();
 }
 /* accounts in the storage (family build): export and deletion in plain words; removing old versions from GitHub's
    history is the admin's job by hand (guide in the source repository, docs/endgueltig-loeschen.md) */
