@@ -18,7 +18,7 @@
 //    verschluesselte Huelle = Kathies App),
 //  - das Ziel schon eine neuere Version hat (Geraete aktualisieren nur auf hoehere Nummern),
 //  - das Ziel-Repo nicht sauber ist.
-// Danach: Commit "Big Quest Test vN: <text>", Push, Pruefung "nicht mehr ahead" (Fehler meldet git sonst nur auf stderr).
+// Danach: Commit "Big Quest Test V ...: <text>", Push, Pruefung "nicht mehr ahead" (Fehler meldet git sonst nur auf stderr).
 // Ausgaben nur in ASCII (Windows-Konsole).
 
 import fs from 'node:fs';
@@ -27,7 +27,7 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { WURZEL, ICONS, testinstanzKontext } from './bauen.mjs';
 import { TESTINSTANZ, testinstanzPruefen } from './testinstanz.mjs';
-import { versionErmitteln, versionAuslesen, versionText } from './version.mjs';
+import { versionErmitteln, versionAuslesen, versionIstNeuer, versionQuelleGleich, versionStandGleich, versionText } from './version.mjs';
 
 export const DATEIEN = ['index.html', 'manifest.webmanifest', ...ICONS];
 export const ZIEL_REPO = /[/:\\]big-quest-test[/\\]big-quest-test\.github\.io(?:\.git)?[/\\]?$/;
@@ -70,10 +70,10 @@ export async function testinstanzVorPruefen({ quelle = WURZEL, dist, ziel, versi
   if (funde.length) throw new Error('Suchlauf Testinstanz, nichts kopiert:\n  - ' + funde.join('\n  - '));
 
   const gebaut = versionAuslesen(app);
-  if (!gebaut || gebaut.n !== version.n || gebaut.hash !== version.hash || !!gebaut.draft)
+  if (!gebaut || !versionQuelleGleich(gebaut, version))
     throw new Error(`dist-test/ passt nicht zum Quellstand (gebaut ${gebaut ? versionText(gebaut) + ' ' + gebaut.hash : 'ohne Version'}, Quelle ${versionText(version)} ${version.hash}) - erst node werkzeug/testinstanz.mjs`);
   const vorher = versionAuslesen(zielApp);
-  if (vorher && vorher.n > gebaut.n) throw new Error(`Im Ziel liegt schon v${vorher.n} - aeltere Fassung v${gebaut.n} wird nicht veroeffentlicht (Geraete aktualisieren nur auf hoehere Nummern).`);
+  if (vorher && versionIstNeuer(vorher, gebaut)) throw new Error(`Im Ziel liegt schon ${versionText(vorher)} - aeltere Fassung ${versionText(gebaut)} wird nicht veroeffentlicht (Geraete aktualisieren nur auf neuere Staende).`);
   if (git(ziel, 'status', '--porcelain')) throw new Error('Ziel-Repo hat lokale Aenderungen - erst klaeren.');
   return { app, version: gebaut };
 }
@@ -91,7 +91,7 @@ export async function testinstanzVeroeffentlichen({ quelle = WURZEL, dist = null
   const anders = DATEIEN.filter((d) => { const z = path.join(ziel, d); return !fs.existsSync(z) || !fs.readFileSync(z).equals(fs.readFileSync(path.join(distOrdner, d))); });
   if (!anders.length) return { version: versionText(v), geaendert: false };
   for (const d of anders) fs.writeFileSync(path.join(ziel, d), fs.readFileSync(path.join(distOrdner, d)));
-  const nachricht = `Big Quest Test v${v.n}${text ? ': ' + text : ''}`;
+  const nachricht = `Big Quest Test ${versionText(v, { mitEntwurf: false })}${text ? ': ' + text : ''}`;
   git(ziel, 'add', '--', ...anders);
   if (!git(ziel, 'diff', '--cached', '--name-only')) return { version: versionText(v), geaendert: false };   // nur Zeilenenden anders
   git(ziel, 'commit', '-q', '-m', nachricht);
@@ -118,7 +118,7 @@ export async function testinstanzLiveVergleichen(gebaut, url = TESTINSTANZ_URL) 
     return { ergebnis: 'nicht erreichbar', grund: e.message };
   }
   const v = versionAuslesen(html);
-  const gleich = v && v.n === gebaut.n && v.hash === gebaut.hash && v.date === gebaut.date && !!v.draft === !!gebaut.draft;
+  const gleich = versionStandGleich(v, gebaut);
   return gleich ? { ergebnis: 'gleich', veroeffentlicht: v } : { ergebnis: 'anders', veroeffentlicht: v, text: v ? versionText(v) + ' ' + v.hash + ' ' + v.date : 'ohne Version' };
 }
 

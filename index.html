@@ -3689,13 +3689,20 @@ function saveMySchoolDlg(){
   const s=$('#savedNote'); s.hidden=false;
   if(savedTimer) clearTimeout(savedTimer); savedTimer=setTimeout(hideSaved,4000);
 }
-/* Version (S7): the child sees only a small "v17" at the end of About; adults see number,
-   build time and commit, and can check on request whether a newer version is published. */
-const versionLabel = () => APP_VERSION ? 'v'+APP_VERSION.n+(APP_VERSION.draft?'-entwurf':'') : 'Entwicklungsstand';
+/* Version (S7): the visible version comes from the maintained release number (beta/final),
+   build time and commit stay as metadata for grown-ups and for live checks. */
+const versionRaw=v=>!v?'':`${v.major}.${v.minor}.${v.patch}${v.kanal==='beta'?'-beta':''}`;
+const versionNumber=v=>v.kanal==='beta'&&v.patch===0?`${v.major}.${v.minor}`:`${v.major}.${v.minor}.${v.patch}`;
+const versionLabel=(v=APP_VERSION,de=PL()==='de')=>v?`V ${versionNumber(v)}${v.kanal==='beta'?(de?' (Betaversion)':' (Beta version)'):''}${v.draft?(de?' - Entwurf':' - draft'):''}`:'Entwicklungsstand';
+const versionCompare=(a,b)=>{ for(const [x,y] of [[a.major,b.major],[a.minor,b.minor],[a.patch,b.patch],[(a.kanal==='final'?1:0),(b.kanal==='final'?1:0)]]){ if(x<y) return -1; if(x>y) return 1; } return 0; };
+const versionSameRelease=(a,b)=>!!a&&!!b&&versionCompare(a,b)===0;
+const versionSameBuild=(a,b)=>versionSameRelease(a,b)&&a.hash===b.hash&&a.date===b.date&&!!a.draft===!!b.draft;
+const versionHasNewerBuild=(a,b)=>!!a&&!!b&&(versionCompare(a,b)>0||(versionSameRelease(a,b)&&a.hash&&b.hash&&a.hash!==b.hash));
+const versionKey=v=>`${versionRaw(v)}${v&&v.hash?'-'+v.hash:''}`;
 const appVersionLine = () => `<p class="small app-version">${esc(versionLabel())}</p>`;
 function versionAdminHTML(){
   const v=APP_VERSION, de=PL()==='de';
-  return `<h2>${de?'App-Version':'App version'}</h2><p id="versionInfo">${v?`<b>${esc(versionLabel())}</b> · ${de?'gebaut':'built'} ${esc(v.date)} · ${esc(v.hash)}`:(de?'Entwicklungsstand (nicht gebaut)':'Development build (not built)')}</p><p><button class="btn small" id="checkUpdate" type="button">${de?'Nach neuer Version suchen':'Check for a new version'}</button></p><p id="updateMessage" class="small" role="status"></p>`;
+  return `<h2>${de?'App-Version':'App version'}</h2><p id="versionInfo">${v?`<b>${esc(versionLabel(v,de))}</b> · ${de?'gebaut':'built'} ${esc(v.date)} · ${esc(v.hash)}`:(de?'Entwicklungsstand (nicht gebaut)':'Development build (not built)')}</p><p><button class="btn small" id="checkUpdate" type="button">${de?'Nach neuer Version suchen':'Check for a new version'}</button></p><p id="updateMessage" class="small" role="status"></p>`;
 }
 async function publishedVersion(){
   const key=localStorage.getItem('bq_schluessel'); if(!key) throw new Error('no key');
@@ -3717,10 +3724,10 @@ async function checkForUpdate(){
   updateCheckedAt=Date.now();
   try{
     const p=await publishedVersion();
-    if(!p || p.n<=APP_VERSION.n) return;
+    if(!p || !versionHasNewerBuild(p,APP_VERSION)) return;
     let tried=null; try{ tried=sessionStorage.getItem('bqUpdateTo'); }catch(e){}
-    if(tried && +tried>=p.n) return;                     // already tried this session: no reload loop
-    pendingUpdate=p.n;
+    if(tried && tried===versionKey(p)) return;          // already tried this session: no reload loop
+    pendingUpdate=versionKey(p);
     if(['home','login','subject'].includes(state.screen)) applyUpdate();
   }catch(e){ /* offline or not logged in: try again later */ }
 }
@@ -3729,7 +3736,7 @@ function applyUpdate(){
   const n=pendingUpdate; pendingUpdate=null;
   try{ sessionStorage.setItem('bqUpdateTo',String(n)); }catch(e){}
   const note=$('#homeNote'); if(note && state.screen==='home'){ note.hidden=false; note.textContent='✨ New version – updating …'; }
-  setTimeout(()=>location.replace(location.pathname+'?v='+n),400);
+  setTimeout(()=>location.replace(location.pathname+'?v='+encodeURIComponent(n)),400);
 }
 function bindVersionAdmin(){
   const b=$('#checkUpdate'); if(!b) return;
@@ -3737,8 +3744,8 @@ function bindVersionAdmin(){
     const msg=$('#updateMessage'), de=PL()==='de'; msg.textContent=de?'Prüfe …':'Checking …';
     try{
       const p=await publishedVersion(), v=APP_VERSION;
-      if(p && v && p.n===v.n && p.hash===v.hash && p.date===v.date) msg.textContent=de?'Aktuell – auf diesem Gerät läuft die neueste Version.':'Up to date – this device runs the latest version.';
-      else if(p) msg.textContent=de?'Neuer Stand v'+p.n+' verfügbar – App schließen und neu öffnen.':'Version v'+p.n+' is available – close the app completely and reopen it.';
+      if(versionSameBuild(p,v)) msg.textContent=de?'Aktuell – auf diesem Gerät läuft die neueste Version.':'Up to date – this device runs the latest version.';
+      else if(p) msg.textContent=de?`Neuer Stand ${versionLabel(p,true)} verfügbar – App schließen und neu öffnen.`:`Version ${versionLabel(p,false)} is available – close the app completely and reopen it.`;
       else msg.textContent=de?'Die veröffentlichte Seite nennt keine Version.':'The published page shows no version.';
     }catch(e){ msg.textContent=de?'Prüfung nicht möglich (keine Verbindung oder auf diesem Gerät nicht angemeldet).':'Check not possible (no connection, or not signed in on this device).'; }
   });

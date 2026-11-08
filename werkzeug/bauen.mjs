@@ -20,7 +20,7 @@ import {
   entschluesseln, entschluesselnMitSchluessel, huelleBauen, tresorAusHuelle,
   ohneTresor, woerterLesen, verboteneTreffer, unb64
 } from './kern.mjs';
-import { versionErmitteln, versionEinsetzen, versionAuslesen, versionText } from './version.mjs';
+import { versionErmitteln, versionEinsetzen, versionAuslesen, versionStandGleich, versionText } from './version.mjs';
 import { kontenLesen, kontenEinsetzen } from './konten.mjs';
 import { schuleLesen, schuleEinsetzen } from './schule.mjs';
 import { moduleEinsetzen } from './module.mjs';
@@ -239,7 +239,7 @@ export async function liveVergleichen(gebaut, schluesselBytes, url = VEROEFFENTL
   } catch {
     return { ergebnis: 'nicht erreichbar', grund: 'Schluessel oeffnet die Seite nicht' };
   }
-  const gleich = v && v.n === gebaut.n && v.hash === gebaut.hash && v.date === gebaut.date && !!v.draft === !!gebaut.draft;
+  const gleich = versionStandGleich(v, gebaut);
   return gleich ? { ergebnis: 'gleich', veroeffentlicht: v } : { ergebnis: 'anders', veroeffentlicht: v, text: v ? versionText(v) : 'ohne Version' };
 }
 
