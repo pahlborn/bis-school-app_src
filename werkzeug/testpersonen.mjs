@@ -1,6 +1,7 @@
-// Testpersonen fuer die Testinstanz (Stufe 3c): zwei Familien mit gleichen Namen, eine Lehrkraft, ein Admin -
-// im Verzeichnis des Test-Repos (Konto-Modul, Stufe 3b). Startcodes, Passwoerter und Wiederherstellungscodes stehen
-// NUR lokal (%LOCALAPPDATA%\bis-school-app\testinstanz\), nie im Repo, nie in der Ausgabe.
+// Testpersonen fuer die naechste Probe der Testinstanz (Stufe 3c): nur ein Admin und zwei unabhaengige Elternteile.
+// Kathie wird absichtlich NICHT hier angelegt; Peter legt sie spaeter selbst in der App an. Startcodes, Passwoerter
+// und Wiederherstellungscodes stehen NUR lokal (%LOCALAPPDATA%\bis-school-app\testinstanz\), nie im Repo, nie in
+// der Ausgabe.
 //
 //   node werkzeug/testpersonen.mjs              zeigt den Stand (liest nur)
 //   node werkzeug/testpersonen.mjs --anlegen    legt an, was fehlt; abgelaufene Startcodes werden neu ausgestellt
@@ -12,15 +13,12 @@
 // nie ins Repo, nie in die Ausgabe. Peter verschickt sie selbst. Erwachsene: E-Mail-Entwurf; Kinder: keine E-Mail, eine
 // Seite mit dem QR-Code zum Zeigen; Konten des Werkzeugs (ohne Startcode): "Geraet verbinden" (nur der Zugangscode).
 //
-// Wer was bekommt (Ausstellerkette wie im Konto-Modul: Admin -> Erwachsene, Elternteil -> Kind):
-//  - admin, mira.sonnental, mira.wellenberg: legt das Werkzeug selbst an (Passwort + Wiederherstellungscode in der
-//    lokalen Datei). Das ist noetig, weil nur ein angemeldeter Admin bzw. Elternteil Startcodes unterschreiben kann.
-//    Auf dem Geraet: Anmeldung mit Name und Passwort (Weg "weiteres Geraet").
-//  - lehrkraft, jonas.sonnental, jonas.wellenberg: Startcode vom Admin;  lio.sonnental / lio.wellenberg: Startcode von
-//    mira.sonnental / mira.wellenberg. Auf dem Geraet: erste Anmeldung mit dem Startcode, eigenes Passwort.
-// Nur Fantasienamen (Peter, 06.11.). Gleiche Vornamen in beiden Familien: unterscheiden lassen sie sich ueber den
-// Nachnamen und (bei den Kindern) das Geburtsdatum - die Person traegt beides in der App selbst ein; die Datei nennt,
-// was sie eintragen soll.
+// Wer was bekommt (Ausstellerkette wie im Konto-Modul: Admin -> Erwachsene):
+//  - admin: legt das Werkzeug selbst an (Passwort + Wiederherstellungscode in der lokalen Datei). Das ist noetig,
+//    weil nur ein angemeldeter Admin Startcodes unterschreiben kann. Auf dem Geraet: Anmeldung mit Name und Passwort
+//    (Weg "weiteres Geraet").
+//  - peter.ahlborn, jonas.testpapa: Startcode vom Admin. Auf dem Geraet: erste Anmeldung mit dem Startcode,
+//    eigenes Passwort. Weitere Kinder oder eine Lehrkraft gehoeren nicht zu diesem Minimalset.
 
 import fs from 'node:fs/promises';
 import os from 'node:os';
@@ -36,17 +34,12 @@ import { TESTINSTANZ } from './testinstanz.mjs';
 /* Reihenfolge = Reihenfolge des Anlegens (Aussteller zuerst) */
 export const TESTPERSONEN = Object.freeze([
   { name: 'admin', art: 'admin', von: null, werkzeug: true, familie: '-', eintragen: 'Admin' },
-  { name: 'lehrkraft', art: 'teacher', von: 'admin', familie: '-', eintragen: 'Lehrkraft' },
-  { name: 'mira.sonnental', art: 'parent', von: 'admin', werkzeug: true, familie: 'A', eintragen: 'Mira Sonnental' },
-  { name: 'jonas.sonnental', art: 'parent', von: 'admin', familie: 'A', eintragen: 'Jonas Sonnental' },
-  { name: 'lio.sonnental', art: 'child', von: 'mira.sonnental', familie: 'A', eintragen: 'Lio Sonnental, Geburtsdatum 14.05.2017' },
-  { name: 'mira.wellenberg', art: 'parent', von: 'admin', werkzeug: true, familie: 'B', eintragen: 'Mira Wellenberg' },
-  { name: 'jonas.wellenberg', art: 'parent', von: 'admin', familie: 'B', eintragen: 'Jonas Wellenberg' },
-  { name: 'lio.wellenberg', art: 'child', von: 'mira.wellenberg', familie: 'B', eintragen: 'Lio Wellenberg, Geburtsdatum 03.09.2017' }
+  { name: 'peter.ahlborn', art: 'parent', von: 'admin', familie: 'A', eintragen: 'Peter Ahlborn' },
+  { name: 'jonas.testpapa', art: 'parent', von: 'admin', familie: 'B', eintragen: 'Jonas Testpapa' }
 ].map((p) => Object.freeze(p)));
 
-/* nur Fantasienamen (Peter, 06.11.): keine Namen der Familie - weder als Anmeldename noch als eingetragener Name */
-export const FAMILIENNAMEN_VERBOTEN = Object.freeze(['kathie', 'peter', 'anna']);
+/* gehoert fuer die naechste Probe absichtlich NICHT zum vorangelegten Minimalset */
+export const NICHT_VORANGELEGT = Object.freeze(['kathie', 'anna', 'lehrkraft']);
 const BREIT = Math.max(...TESTPERSONEN.map((p) => p.name.length));
 
 /* ein Startcode, der in weniger als einem Tag ablaeuft, wird neu ausgestellt */
@@ -114,7 +107,7 @@ export function uebersichtText(stand, { repo, wurzel, jetzt }) {
     'Big Quest Testinstanz - Testpersonen (NUR auf diesem Rechner; nicht weitergeben ausser an die Testperson)',
     `Stand: ${tag(jetzt)}   Daten: ${repo}${wurzel ? '/' + wurzel : ''}   App: ${TESTINSTANZ.adresse}`,
     'Zugangscode (verbindet ein Geraet, einmal je Geraet - nicht das Passwort einer Person): steht in ' + ZUGANG_DATEI_TEXT + '; die Einladungen in einladungen\\ enthalten ihn schon.',
-    'Gleiche Vornamen in beiden Familien - Nachname und (bei den Kindern) Geburtsdatum unterscheiden sie.',
+    'Minimalset fuer die naechste Probe: nur admin, peter.ahlborn und jonas.testpapa; Kathie legt Peter spaeter selbst in der App an.',
     ''
   ];
   const ein = ' '.repeat(BREIT + 1);
