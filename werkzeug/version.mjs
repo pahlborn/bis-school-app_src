@@ -21,6 +21,8 @@ export const MARKE = '/*BQ_VERSION*/null';
 export const VERSION_DATEI = 'package.json';
 const VERSION_RE = /^(\d+)\.(\d+)\.(\d+)(?:-(beta))?$/;
 const KANAL_ORDNUNG = { beta: 0, final: 1 };
+const versionModern = (v) => !!v && Number.isInteger(v.major) && Number.isInteger(v.minor) && Number.isInteger(v.patch) && (v.kanal === 'beta' || v.kanal === 'final');
+const versionLegacy = (v) => !!v && Number.isInteger(v.n) && v.n >= 1;
 
 function git(wurzel, args) {
   return execFileSync('git', args, { cwd: wurzel, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
@@ -47,21 +49,35 @@ export function berlinZeit(d = new Date()) {
 }
 
 export function versionRoh(v) {
+  if (!versionModern(v)) return versionLegacy(v) ? `legacy-${v.n}` : '';
   const basis = `${v.major}.${v.minor}.${v.patch}`;
   return v.kanal === 'beta' ? basis + '-beta' : basis;
 }
 
 export function versionNummer(v) {
+  if (!versionModern(v)) return versionLegacy(v) ? String(v.n) : '';
   return v.kanal === 'beta' && v.patch === 0 ? `${v.major}.${v.minor}` : `${v.major}.${v.minor}.${v.patch}`;
 }
 
 export function versionText(v, { sprache = 'de', mitEntwurf = true } = {}) {
+  if (!v) return '';
+  if (!versionModern(v)) {
+    const entwurf = mitEntwurf && v.draft ? (sprache === 'en' ? '-draft' : '-entwurf') : '';
+    return versionLegacy(v) ? `v${v.n}${entwurf}` : '';
+  }
   const beta = v.kanal === 'beta' ? (sprache === 'en' ? ' (Beta version)' : ' (Betaversion)') : '';
   const entwurf = mitEntwurf && v.draft ? (sprache === 'en' ? ' - draft' : ' - Entwurf') : '';
   return `V ${versionNummer(v)}${beta}${entwurf}`;
 }
 
 export function versionVergleich(a, b) {
+  if (!a || !b) return null;
+  if (!versionModern(a) || !versionModern(b)) {
+    if (!versionLegacy(a) || !versionLegacy(b)) return null;
+    if (a.n < b.n) return -1;
+    if (a.n > b.n) return 1;
+    return 0;
+  }
   for (const [x, y] of [[a.major, b.major], [a.minor, b.minor], [a.patch, b.patch], [KANAL_ORDNUNG[a.kanal], KANAL_ORDNUNG[b.kanal]]]) {
     if (x < y) return -1;
     if (x > y) return 1;
@@ -72,20 +88,24 @@ export function versionVergleich(a, b) {
 export const versionReleaseGleich = (a, b) => !!a && !!b && versionVergleich(a, b) === 0;
 export const versionQuelleGleich = (a, b) => versionReleaseGleich(a, b) && a.hash === b.hash && !!a.draft === !!b.draft;
 export const versionStandGleich = (a, b) => versionQuelleGleich(a, b) && a.date === b.date;
-export const versionIstNeuer = (a, b) => !!a && !!b && (versionVergleich(a, b) > 0 || (versionReleaseGleich(a, b) && !!a.hash && !!b.hash && a.hash !== b.hash));
+export const versionIstNeuer = (a, b) => {
+  const cmp = versionVergleich(a, b);
+  return cmp !== null && (cmp > 0 || (cmp === 0 && !!a.hash && !!b.hash && a.hash !== b.hash));
+};
 export const versionKennung = (v) => `${versionRoh(v)}${v.hash ? '-' + v.hash : ''}`;
 
 export function versionErmitteln(wurzel, jetzt = new Date()) {
-  let voll, status;
+  let n, voll, status;
   const quelle = versionsQuelleLesen(wurzel);
   try {
+    n = Number(git(wurzel, ['rev-list', '--count', '--first-parent', 'HEAD']));
     voll = git(wurzel, ['rev-parse', 'HEAD']);
     status = git(wurzel, ['status', '--porcelain', '--untracked-files=no']);
   } catch (e) {
     throw new Error('Version nicht ermittelbar (kein Git-Repo oder git fehlt) - nichts geschrieben.');
   }
-  if (!/^[0-9a-f]{40}$/.test(voll)) throw new Error('Version nicht ermittelbar - nichts geschrieben.');
-  return { ...quelle, hash: voll.slice(0, 7), date: berlinZeit(jetzt), draft: status !== '' };
+  if (!Number.isInteger(n) || n < 1 || !/^[0-9a-f]{40}$/.test(voll)) throw new Error('Version nicht ermittelbar - nichts geschrieben.');
+  return { ...quelle, n, hash: voll.slice(0, 7), date: berlinZeit(jetzt), draft: status !== '' };
 }
 
 /** Inserts the version into the app (Buffer or string); the marker must occur exactly once. */
@@ -93,7 +113,7 @@ export function versionEinsetzen(app, v) {
   const text = Buffer.isBuffer(app) ? app.toString('utf8') : String(app);
   const teile = text.split(MARKE);
   if (teile.length !== 2) throw new Error(`index.html muss die Versionsmarke ${MARKE} genau einmal enthalten.`);
-  const json = JSON.stringify({ major: v.major, minor: v.minor, patch: v.patch, kanal: v.kanal, hash: v.hash, date: v.date, draft: !!v.draft });
+  const json = JSON.stringify({ ...(Number.isInteger(v.n) ? { n: v.n } : {}), major: v.major, minor: v.minor, patch: v.patch, kanal: v.kanal, hash: v.hash, date: v.date, draft: !!v.draft });
   return Buffer.from(teile[0] + json + teile[1], 'utf8');
 }
 

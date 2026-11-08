@@ -94,6 +94,22 @@ test('mit Pull und Push gegen ein lokales "big-quest-test.github.io.git": kommt 
   assert.equal(git(b, 'status', '--porcelain'), '');
 });
 
+test('Umstellung von altem vN-Schema auf die neue Betaversion bleibt veroeffentlichbar und traegt weiter eine Legacy-Zaehlung fuer alte Clients', async () => {
+  const z = zielRepo();
+  const legacy = fs.readFileSync(path.join(DIST, 'index.html'), 'utf8').replace(/const APP_VERSION=\{[^}]*\};/, 'const APP_VERSION={"n":152,"hash":"legacy12","date":"04.11.2026 18:30","draft":false};');
+  fs.writeFileSync(path.join(z, 'index.html'), legacy);
+  git(z, 'add', 'index.html');
+  git(z, 'commit', '-q', '-m', 'legacy testinstanz');
+
+  const distNeu = tmp('dist-migration');
+  const V_NEU = { ...V8, n: 153 };
+  await testinstanzBauen({ ziel: distNeu, version: V_NEU });
+
+  const r = await testinstanzVeroeffentlichen({ dist: distNeu, ziel: z, ohnePush: true, version: V_NEU });
+  assert.equal(r.geaendert, true);
+  assert.match(fs.readFileSync(path.join(z, 'index.html'), 'utf8'), /const APP_VERSION=\{"n":153,"major":0,"minor":8/);
+});
+
 test('Suchlauf vor dem Kopieren: Schuldaten, Konten, Familienpasswort, Kathies Speicher, verbotene Woerter, Aktualisierung mit Schluessel -> Abbruch, nichts kopiert', async () => {
   const z = zielRepo();
   const schule = JSON.parse(lies('werkzeug/schuldaten.json'));

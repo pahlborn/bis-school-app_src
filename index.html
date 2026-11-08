@@ -3691,13 +3691,15 @@ function saveMySchoolDlg(){
 }
 /* Version (S7): the visible version comes from the maintained release number (beta/final),
    build time and commit stay as metadata for grown-ups and for live checks. */
-const versionRaw=v=>!v?'':`${v.major}.${v.minor}.${v.patch}${v.kanal==='beta'?'-beta':''}`;
-const versionNumber=v=>v.kanal==='beta'&&v.patch===0?`${v.major}.${v.minor}`:`${v.major}.${v.minor}.${v.patch}`;
-const versionLabel=(v=APP_VERSION,de=PL()==='de')=>v?`V ${versionNumber(v)}${v.kanal==='beta'?(de?' (Betaversion)':' (Beta version)'):''}${v.draft?(de?' - Entwurf':' - draft'):''}`:'Entwicklungsstand';
-const versionCompare=(a,b)=>{ for(const [x,y] of [[a.major,b.major],[a.minor,b.minor],[a.patch,b.patch],[(a.kanal==='final'?1:0),(b.kanal==='final'?1:0)]]){ if(x<y) return -1; if(x>y) return 1; } return 0; };
+const versionModern=v=>!!v&&Number.isInteger(v.major)&&Number.isInteger(v.minor)&&Number.isInteger(v.patch)&&(v.kanal==='beta'||v.kanal==='final');
+const versionLegacy=v=>!!v&&Number.isInteger(v.n)&&v.n>=1;
+const versionRaw=v=>!v?'':versionModern(v)?`${v.major}.${v.minor}.${v.patch}${v.kanal==='beta'?'-beta':''}`:(versionLegacy(v)?`legacy-${v.n}`:'');
+const versionNumber=v=>versionModern(v)?(v.kanal==='beta'&&v.patch===0?`${v.major}.${v.minor}`:`${v.major}.${v.minor}.${v.patch}`):(versionLegacy(v)?String(v.n):'');
+const versionLabel=(v=APP_VERSION,de=PL()==='de')=>!v?'Entwicklungsstand':versionModern(v)?`V ${versionNumber(v)}${v.kanal==='beta'?(de?' (Betaversion)':' (Beta version)'):''}${v.draft?(de?' - Entwurf':' - draft'):''}`:(versionLegacy(v)?`v${v.n}${v.draft?(de?'-entwurf':'-draft'):''}`:'Entwicklungsstand');
+const versionCompare=(a,b)=>{ if(versionModern(a)&&versionModern(b)){ for(const [x,y] of [[a.major,b.major],[a.minor,b.minor],[a.patch,b.patch],[(a.kanal==='final'?1:0),(b.kanal==='final'?1:0)]]){ if(x<y) return -1; if(x>y) return 1; } return 0; } if(versionLegacy(a)&&versionLegacy(b)){ if(a.n<b.n) return -1; if(a.n>b.n) return 1; return 0; } return null; };
 const versionSameRelease=(a,b)=>!!a&&!!b&&versionCompare(a,b)===0;
 const versionSameBuild=(a,b)=>versionSameRelease(a,b)&&a.hash===b.hash&&a.date===b.date&&!!a.draft===!!b.draft;
-const versionHasNewerBuild=(a,b)=>!!a&&!!b&&(versionCompare(a,b)>0||(versionSameRelease(a,b)&&a.hash&&b.hash&&a.hash!==b.hash));
+const versionHasNewerBuild=(a,b)=>{ const cmp=versionCompare(a,b); return cmp!==null&&!!a&&!!b&&(cmp>0||(cmp===0&&a.hash&&b.hash&&a.hash!==b.hash)); };
 const versionKey=v=>`${versionRaw(v)}${v&&v.hash?'-'+v.hash:''}`;
 const appVersionLine = () => `<p class="small app-version">${esc(versionLabel())}</p>`;
 function versionAdminHTML(){

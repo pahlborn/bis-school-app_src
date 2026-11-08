@@ -28,6 +28,7 @@ const appQuelle = await appLesen();
 test('version comes from package.json plus git metadata', () => {
   const v = versionErmitteln(WURZEL, new Date('2026-10-30T13:05:00Z'));
   assert.deepEqual({ major: v.major, minor: v.minor, patch: v.patch, kanal: v.kanal }, { major: 0, minor: 148, patch: 0, kanal: 'beta' });
+  assert.equal(v.n, Number(git(WURZEL, 'rev-list', '--count', '--first-parent', 'HEAD')));
   assert.equal(versionRoh(v), '0.148.0-beta');
   assert.equal(v.hash, git(WURZEL, 'rev-parse', 'HEAD').slice(0, 7));
   assert.match(v.hash, /^[0-9a-f]{7}$/);
@@ -52,6 +53,8 @@ test('version text formats beta and final releases for the UI', () => {
   assert.equal(versionText(beta(148, 0)), 'V 0.148 (Betaversion)');
   assert.equal(versionText(beta(148, 1)), 'V 0.148.1 (Betaversion)');
   assert.equal(versionText({ major: 1, minor: 0, patch: 0, kanal: 'final', hash: 'x', date: 'x', draft: false }), 'V 1.0.0');
+  assert.equal(versionText({ n: 152, hash: 'abc1234', date: 'x', draft: false }), 'v152');
+  assert.equal(versionText({ n: 152, hash: 'abc1234', date: 'x', draft: true }), 'v152-entwurf');
 });
 
 test('the app contains the version marker exactly once; inserting and reading back works', () => {
