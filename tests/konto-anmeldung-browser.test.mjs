@@ -38,6 +38,19 @@ async function geraet() {
   return { ctx, page, fehler };
 }
 const attr = (page, sel) => page.locator(sel).evaluate((e) => ({ autocomplete: e.getAttribute('autocomplete'), name: e.getAttribute('name'), type: e.type, value: e.value, readOnly: e.readOnly }));
+async function togglePruefen(page, id, wert, autocomplete) {
+  const feld = page.locator('#' + id), knopf = page.locator(`[data-pw-toggle="${id}"]`);
+  if (wert !== undefined) await feld.fill(wert);
+  if (autocomplete) assert.equal(await feld.getAttribute('autocomplete'), autocomplete, id + ' autocomplete');
+  assert.equal(await feld.getAttribute('type'), 'password', id + ' start');
+  assert.equal(await knopf.getAttribute('aria-controls'), id);
+  await knopf.click();
+  assert.equal(await feld.getAttribute('type'), 'text', id + ' sichtbar');
+  if (wert !== undefined) assert.equal(await feld.inputValue(), wert, id + ' Wert sichtbar');
+  await knopf.click();
+  assert.equal(await feld.getAttribute('type'), 'password', id + ' wieder verdeckt');
+  if (wert !== undefined) assert.equal(await feld.inputValue(), wert, id + ' Wert verdeckt');
+}
 const idb = (page) => page.evaluate(() => new Promise((res, rej) => {
   const r = indexedDB.open('bq2_konto', 1);
   r.onupgradeneeded = () => r.result.createObjectStore('schluessel', { keyPath: 'kennung' });
@@ -113,6 +126,7 @@ test('Browser: Startlink -> Zugang -> Rolle -> eigenes Passwort -> Wiederherstel
   await B.page.waitForSelector('#verbinden');
   await B.page.locator('#verbLink').fill(TOKEN); await B.page.locator('#verbGo').click();
   await B.page.locator('#roleAdult').click();
+  await togglePruefen(B.page, 'loginPw', pw, 'current-password');
   await B.page.locator('#loginUser').fill('peter.a'); await B.page.locator('#loginPw').fill(pw);
   await B.page.locator('#loginGo').click();
   await imElternbereich(B.page);
@@ -121,11 +135,14 @@ test('Browser: Startlink -> Zugang -> Rolle -> eigenes Passwort -> Wiederherstel
   await B.page.locator('#loginForgot').click();
   assert.equal((await attr(B.page, '#forgotUser')).autocomplete, 'username');
   assert.deepEqual([(await attr(B.page, '#forgotCode')).autocomplete, (await attr(B.page, '#forgotCode')).type], ['current-password', 'password']);
+  await togglePruefen(B.page, 'forgotCode', rc, 'current-password');
   await B.page.locator('#forgotUser').fill('peter.a (Wiederherstellungscode)');   // so fuellt der Passwortspeicher den eigenen Eintrag aus
   await B.page.locator('#forgotCode').fill(rc);
   await B.page.locator('#forgotGo').click();
   await B.page.waitForSelector('#setPwForm');
   assert.equal((await attr(B.page, '#setPwForm input[autocomplete="username"]')).value, 'peter.a', 'das neue Passwort gehoert zum Eintrag der Anmeldung');
+  await togglePruefen(B.page, 'newPw1', 'Otter-Cake-Moss-1234', 'new-password');
+  await togglePruefen(B.page, 'newPw2', 'Otter-Cake-Moss-1234', 'new-password');
   await B.page.locator('#pwUse').click(); await B.page.locator('#setPwGo').click();
   await B.page.waitForSelector('#recCode', { timeout: 30000 });
   assert.notEqual((await B.page.locator('#recCode').textContent()).trim(), rc, 'neuer Code');

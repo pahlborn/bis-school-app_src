@@ -43,6 +43,18 @@ async function geraet() {
 /* Einladung geoeffnet (Aufgabe "Erstanmeldung per QR-Code"): Passwortformular ohne Rollenwahl, Merkpasswort, absenden */
 async function registrieren(page) { await page.waitForSelector('#kontoNeuForm', { state: 'visible', timeout: 30000 }); await page.locator('#kontoNeuUse').click(); await page.locator('#kontoNeuGo').click(); }
 const attr = (page, sel) => page.locator(sel).evaluate((e) => ({ autocomplete: e.getAttribute('autocomplete'), name: e.getAttribute('name'), type: e.type }));
+async function togglePruefen(page, id, wert, autocomplete) {
+  const feld = page.locator('#' + id), knopf = page.locator(`[data-pw-toggle="${id}"]`);
+  await feld.fill(wert);
+  assert.equal(await feld.getAttribute('autocomplete'), autocomplete, id + ' autocomplete');
+  assert.equal(await feld.getAttribute('type'), 'password', id + ' start');
+  await knopf.click();
+  assert.equal(await feld.getAttribute('type'), 'text', id + ' sichtbar');
+  assert.equal(await feld.inputValue(), wert, id + ' Wert sichtbar');
+  await knopf.click();
+  assert.equal(await feld.getAttribute('type'), 'password', id + ' wieder verdeckt');
+  assert.equal(await feld.inputValue(), wert, id + ' Wert verdeckt');
+}
 
 test('Browser: Kind anlegen -> Start-QR-Code -> Kind wartet und geht von selbst weiter; Schluessel erneuern (Felder); eigenes Geraet startet direkt im Erwachsenenbereich', async () => {
   const P = await geraet();
@@ -93,6 +105,15 @@ test('Browser: Kind anlegen -> Start-QR-Code -> Kind wartet und geht von selbst 
   assert.deepEqual(await attr(P.page, '#kErnForm input[autocomplete="username"]'), { autocomplete: 'username', name: 'username', type: 'text' });
   assert.deepEqual(await attr(P.page, '#kErnAlt'), { autocomplete: 'current-password', name: null, type: 'password' });
   assert.equal(await P.page.locator('#kErnForm input[autocomplete="new-password"]').count(), 2);
+  await togglePruefen(P.page, 'kErnAlt', 'Werkzeug-Eltern-Passwort-1', 'current-password');
+  await togglePruefen(P.page, 'kErnNeu1', 'Otter-Cake-Moss-1234', 'new-password');
+  await togglePruefen(P.page, 'kErnNeu2', 'Otter-Cake-Moss-1234', 'new-password');
+  await P.page.locator('#kBack').click();
+
+  // Konto loeschen: Passwortfeld hat denselben Schalter
+  await P.page.locator('#kKontoLoeschen').click();
+  await P.page.waitForSelector('#kKlForm');
+  await togglePruefen(P.page, 'kKlPw', 'Werkzeug-Eltern-Passwort-1', 'current-password');
   await P.page.locator('#kBack').click();
 
   // eigenes Geraet: nach dem Neuladen direkt wieder im Erwachsenenbereich
