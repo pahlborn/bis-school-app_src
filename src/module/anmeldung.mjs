@@ -373,13 +373,15 @@ export const ANM_QR_LESER = QRL_HINWEIS;
 export async function anmKindBereit({ ablage, zugang, konto, now }) {
   if (!konto || konto.art !== 'child') return true;
   const k = verbindungen({ ablage, konto, now }).kinder.find((c) => c.id === konto.kennung);
-  if (!k) return false;
+  // After a restart the key copy may already know the child's anchor before the local connection logs are back.
+  const anker = k && k.anker ? k.anker : (konto.anker && konto.anker.role === 'parent' && konto.anker.pub ? konto.anker : null);
+  if (!anker) return false;
   const area = bereichName('kind:lern', konto.kennung);
   let st = null;
   try { st = JSON.parse(ablage.getItem(GERAETEABGLEICH_SPEICHER.staende) || '{}')[area]; } catch (e) { st = null; }
   const log = st && Array.isArray(st.log) ? st.log : [];
   try {
-    const zul = await zulassungAus(log, { area, anker: k.anker, now });
+    const zul = await zulassungAus(log, { area, anker, now });
     const s = await schluesselLesen(zugang, area, { ich: konto.kennung, meineSchluessel: konto.schluessel, mitglieder: aktiveMitglieder(zul) });
     return !!(s.aktuell && s.keys.has(s.aktuell));
   } catch (err) {

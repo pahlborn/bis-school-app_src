@@ -112,7 +112,10 @@ test('anmKindBereit: erst wenn ein Elterngeraet das Kind aufgenommen hat (aktuel
   const { startcodeAusstellen, ersteAnmeldung } = await import('../../src/module/konto.mjs');
   const { anmKindBereit, anmKindAnlegen, anmAbgleich } = await import('../../src/module/anmeldung.mjs');
   const w = lokalerSpeicher(), now = () => Date.now();
-  const ablage = (d) => { const m = new Map([['bq2_evDevice', JSON.stringify(d)]]); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => { m.set(k, String(v)); } }; };
+  const ablage = (d, init = {}) => {
+    const m = new Map([['bq2_evDevice', JSON.stringify(d)], ...Object.entries(init)]);
+    return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => { m.set(k, String(v)); }, dump: () => Object.fromEntries(m) };
+  };
   const sa = await startcodeAusstellen({ zugang: w.geraet('d_A'), aussteller: null, anmeldename: 'verwalter', art: 'admin', now: now() });
   const admin = await ersteAnmeldung({ zugang: w.geraet('d_A'), code: sa.code, passwort: 'Tiger-Lamp-River-4271', now: now(), runden: 1000 });
   const sp = await startcodeAusstellen({ zugang: w.geraet('d_A'), aussteller: admin, anmeldename: 'peter', art: 'parent', now: now() });
@@ -128,6 +131,8 @@ test('anmKindBereit: erst wenn ein Elterngeraet das Kind aufgenommen hat (aktuel
   assert.equal(await anmKindBereit({ ablage: aK, zugang: w.geraet('d_K'), konto: K, now: now() }), false, 'vor der Aufnahme: wartet');
   await sync(aP, 'd_P', P);
   assert.equal(await anmKindBereit({ ablage: aK, zugang: w.geraet('d_K'), konto: K, now: now() }), true, 'nach der Aufnahme: darf ueben');
+  const aK2 = ablage('d_K', { bq_abgleich: aK.dump().bq_abgleich });
+  assert.equal(await anmKindBereit({ ablage: aK2, zugang: w.geraet('d_K'), konto: K, now: now() }), true, 'spaeterer Start mit gemerktem Anker: kein erneutes Warten');
   const off = w.geraet('d_K'); off.offline();
   assert.equal(await anmKindBereit({ ablage: aK, zugang: off, konto: K, now: now() }), false, 'Speicher weg: (noch) nicht');
 });
