@@ -97,11 +97,12 @@ test('Browser: Kind anlegen -> Start-QR-Code -> Kind wartet und geht von selbst 
   assert.equal(await P.page.locator('#kQrWeg').count(), 0);
   await P.page.locator('#kQrFertig').click();
 
-  // ⚙ "Meine Geraete" -> Schluessel erneuern: Felder fuer den Passwortspeicher
+  // ⚙ "Meine Geraete" -> Zugang neu absichern: Felder fuer den Passwortspeicher
   await P.page.locator('details.psec[data-psec="devices"] > summary').click();
-  assert.match(await P.page.locator('details.psec[data-psec="devices"]').textContent(), /Meine Geräte[\s\S]*\(dieses Gerät\)/);
+  assert.match(await P.page.locator('details.psec[data-psec="devices"]').textContent(), /Meine Geräte[\s\S]*\(dieses Gerät\)[\s\S]*Zugang neu absichern[\s\S]*anderen Geräten melden Sie sich danach mit dem neuen Passwort neu an/);
   await P.page.locator('#kErneuern').click();
   await P.page.waitForSelector('#kErnForm');
+  assert.match(await P.page.locator('#aboutBody').textContent(), /Zugang neu absichern[\s\S]*Wiederherstellungscode[\s\S]*anderen Geräten melden Sie sich danach mit dem neuen Passwort neu an/);
   assert.deepEqual(await attr(P.page, '#kErnForm input[autocomplete="username"]'), { autocomplete: 'username', name: 'username', type: 'text' });
   assert.deepEqual(await attr(P.page, '#kErnAlt'), { autocomplete: 'current-password', name: null, type: 'password' });
   assert.equal(await P.page.locator('#kErnForm input[autocomplete="new-password"]').count(), 2);

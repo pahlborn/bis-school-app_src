@@ -458,7 +458,9 @@ test('6 Konto-Modus: Anleitungen und Willkommen sprechen von einem Passwort fuer
     assert.ok(!/Der Startcode gilt weiter|start code keeps working|nur auf diesem Gerät\.|only on this device\.|works only on this device|Familienpasswort eingeben|enter the family password/.test(txt), n + ': alter Weg erwaehnt');
   }
   for (const n of ['GUIDE_ADULT_DE', 'GUIDE_TEACHER_DE']) assert.ok(g(n).includes('Wiederherstellungscode') && g(n).includes('Passwort vergessen?') && g(n).includes('sofort wieder angemeldet') && !g(n).includes('den neuen Code wieder sichern'), n);
+  assert.ok(g('GUIDE_ADULT_DE').includes('Zugang neu absichern') && !g('GUIDE_ADULT_DE').includes('Schlüssel erneuern'));
   for (const n of ['GUIDE_ADULT_EN', 'GUIDE_TEACHER_EN']) assert.ok(g(n).includes('recovery code') && g(n).includes('Forgot your password?') && g(n).includes('logged in right away') && !g(n).includes('save the new code again'), n);
+  assert.ok(g('GUIDE_ADULT_EN').includes('secure access again') && !g('GUIDE_ADULT_EN').includes('renew your key'));
   assert.ok(loginHelp.includes('logged in right away') && !loginHelp.includes('save the new code again'), 'Login-Hilfe zeigt den neuen Weg');
   assert.ok(g('GUIDE_KID').includes('On another iPad, use the same user name and password.'));
   assert.ok(!/recovery|Wiederherstellung/i.test(g('GUIDE_KID')), 'Kinderhilfe ohne Erwachsenen-Themen');
