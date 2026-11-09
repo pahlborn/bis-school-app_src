@@ -41,16 +41,16 @@ test('T1 header on 320 px: child, flags, ?, ⚙ and log out in view; no version 
   assert.equal(await page.locator('.phdr #pVersion, .phdr #pPlayTest, .phdr .phdr-ver').count(), 0);
   assert.equal(await page.getAttribute('#pSettings', 'aria-label'), 'Einstellungen');
   assert.equal(await page.getAttribute('#pHelp', 'aria-label'), 'Hilfe');
-  // the admin: no test child button in the header either (it is in ⚙ → Konten until B5)
+  // the admin: no test child button in the header either (it is only in the test data row since B5)
   const b = await oeffnen(browser, server, { viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true });
   await anmelden(b.page, 'adult', 'chef', C.chef); await passwortSetzen(b.page, 'Moon-Glass-Paper-8812');
   await b.page.waitForSelector('#parentClose');
   // B5: "▶ Play as test child" is in the test data row, not in the header row and not in ⚙
   assert.equal(await b.page.locator('.phdr .phdr-row:first-child #pPlayTest').count(), 0);
   assert.ok(await b.page.locator('.phdr-test #pPlayTest').isVisible(), 'in the test data row');
+  assert.equal((await b.page.textContent('details.psec[data-psec="administration"] > summary')).trim(), '🛠 Administration');
   await einstellungen(b.page);
-  await b.page.locator('details.psec[data-psec="accounts"] > summary').click();
-  assert.equal(await b.page.locator('details.psec[data-psec="accounts"] #pPlayTest').count(), 0, 'not in ⚙ → Konten any more');
+  assert.equal(await b.page.locator('details.psec[data-psec="accounts"]').count(), 0, 'not in ⚙ any more');
   assert.deepEqual([...fehler, ...b.fehler], []);
   await ctx.close(); await b.ctx.close();
 });
@@ -87,11 +87,14 @@ test('T2 ⚙ per role: parent, teacher, admin see exactly their sections; overvi
   await kindDann(l.page, 'frau');
   await einstellungen(l.page);
   assert.deepEqual(await abschnitte(l.page), ['aboutapp'], 'teacher');
-  // admin (not a parent, no grant): accounts and "about the app"
+  // admin (not a parent, no grant): administration on the overview, settings only for the shown child and "about the app"
   const a = await oeffnen(browser, server);
   await kindDann(a.page, 'chef');
+  assert.ok((await abschnitte(a.page)).includes('administration'), 'admin overview');
+  await a.page.locator('details.psec[data-psec="administration"] > summary').click();
+  assert.deepEqual(await a.page.locator('details.psec[data-psec="administration"] details[data-admin] > summary').allInnerTexts(), ['Kontenübersicht', 'Versions- und Releaseinformationen']);
   await einstellungen(a.page);
-  assert.deepEqual(await abschnitte(a.page), ['settings', 'accounts', 'aboutapp'], 'admin: the test child shown (B5) has its settings');
+  assert.deepEqual(await abschnitte(a.page), ['settings', 'aboutapp'], 'admin: the test child shown (B5) has its settings');
   assert.deepEqual([...p.fehler, ...l.fehler, ...a.fehler], []);
   await p.ctx.close(); await l.ctx.close(); await a.ctx.close();
 });

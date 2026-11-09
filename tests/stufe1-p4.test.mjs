@@ -38,9 +38,9 @@ async function geraet() {
   }
   return g;
 }
-const IN_EINSTELLUNGEN = ['settings', 'backup', 'grants', 'accounts', 'aboutapp'];
+const IN_EINSTELLUNGEN = ['settings', 'backup', 'grants', 'aboutapp'];
 async function kapitel(page, id) {
-  // B1: settings, backup, grants and accounts are in ⚙
+  // B1 / 2026.0011: settings, backup, grants and aboutapp are in ⚙; administration stays on the overview.
   const inSet = !!(await page.$('#pSetBack'));
   if (IN_EINSTELLUNGEN.includes(id) && !inSet) { await page.locator('#pSettings').click(); await page.waitForSelector('#pSetBack'); }
   if (!IN_EINSTELLUNGEN.includes(id) && inSet) { await page.locator('#pSetBack').click(); await page.waitForSelector('#pSetBack', { state: 'detached' }); }
@@ -73,14 +73,14 @@ async function sicht(page) {
     name: uebersichtText.includes('Sonnenschein'),
     profil: PROFIL(uebersichtText),
     uebersicht: await n('.psubject'), schule: await n('details.psec[data-psec="school"]'), einstellungen: false,
-    sicherung: false, freigaben: false, konten: false, fokus: false, schulzeile: false
+    sicherung: false, freigaben: false, konten: await n('details.psec[data-psec="administration"] details[data-admin="accounts"]'), fokus: false, schulzeile: false
   };
   if (r.uebersicht) { await page.locator('[data-psubj="maths"]').click(); const t = await page.textContent('#aboutBody'); r.fokus = await n('[data-pfocus]'); r.schulzeile = /🏫 Schule/.test(t); r.profil = r.profil || PROFIL(t); await page.locator('#pBack').click(); }
-  // ⚙ settings (B1): the child's settings (with the profile), backup, grants, accounts
+  // ⚙ settings (B1): the child's settings (with the profile), backup and grants
   await page.locator('#pSettings').click(); await page.waitForSelector('#pSetBack');
   r.profil = r.profil || PROFIL(await page.textContent('#aboutBody'));
   r.einstellungen = await n('details.psec[data-psec="settings"]'); r.sicherung = await n('details.psec[data-psec="backup"]');
-  r.freigaben = await n('details.psec[data-psec="grants"]'); r.konten = await n('details.psec[data-psec="accounts"]');
+  r.freigaben = await n('details.psec[data-psec="grants"]');
   await page.locator('#pSetBack').click(); await page.waitForSelector('#pSetBack', { state: 'detached' });
   return r;
 }
@@ -272,8 +272,9 @@ test('Anleitungen und Freigabe-Hinweis nennen Name, Nachname und Geburtsdatum (E
 test('Admin ohne Freigabe: nur Verwaltungsangaben, keine Inhalte und keine Anzeigenamen', async () => {
   const { ctx, page } = await geraet();
   await erwachsen(page, 'chef');
-  await kapitel(page, 'accounts');
-  const t = await page.textContent('details.psec[data-psec="accounts"]');
+  await kapitel(page, 'administration');
+  await page.locator('details.psec[data-psec="administration"] details[data-admin="accounts"] > summary').click();
+  const t = await page.textContent('details.psec[data-psec="administration"] details[data-admin="accounts"]');
   for (const n of ['mia', 'lia', 'papa', 'frau', 'chef', 'fremd']) assert.ok(t.includes(n), n);
   assert.ok(!t.includes('Sonnenschein'), 'no display names');
   assert.match(t, /Zuletzt auf diesem Gerät/);

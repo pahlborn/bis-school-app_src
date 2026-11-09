@@ -3773,9 +3773,9 @@ function releaseAdminHTML(){
     +(list.length ? `<div class="about-menu">${list.map(entry=>releaseEntryHTML(entry, de)).join('')}</div>` : `<p class="small">${de?'Noch keine Releaseeinträge hinterlegt.':'No release entries have been added yet.'}</p>`)
     +`</div>`;
 }
-function versionAdminHTML(){
+function versionAdminHTML({title=true}={}){
   const v=APP_VERSION, de=PL()==='de';
-  return `<h2>${de?'App-Version':'App version'}</h2><p id="versionInfo">${v?`<b>${esc(versionLabel(v,de))}</b> · ${de?'gebaut':'built'} ${esc(v.date)} · ${esc(v.hash)}`:(de?'Entwicklungsstand (nicht gebaut)':'Development build (not built)')}</p><p class="small">${de?'Betafassungen tragen sichtbar „(Betaversion)“. Finale Freigaben erscheinen später als „V 1.0.0“.':'Beta releases visibly carry “(Beta version)”. Final releases later appear as “V 1.0.0”.'}</p><p><button class="btn small" id="checkUpdate" type="button">${de?'Nach neuer Version suchen':'Check for a new version'}</button></p><p id="updateMessage" class="small" role="status"></p>`;
+  return `${title?`<h2>${de?'App-Version':'App version'}</h2>`:''}<p id="versionInfo">${v?`<b>${esc(versionLabel(v,de))}</b> · ${de?'gebaut':'built'} ${esc(v.date)} · ${esc(v.hash)}`:(de?'Entwicklungsstand (nicht gebaut)':'Development build (not built)')}</p><p class="small">${de?'Betafassungen tragen sichtbar „(Betaversion)“. Finale Freigaben erscheinen später als „V 1.0.0“.':'Beta releases visibly carry “(Beta version)”. Final releases later appear as “V 1.0.0”.'}</p><p><button class="btn small" id="checkUpdate" type="button">${de?'Nach neuer Version suchen':'Check for a new version'}</button></p><p id="updateMessage" class="small" role="status"></p>`;
 }
 async function publishedVersion(){
   const key=localStorage.getItem('bq_schluessel'); if(!key) throw new Error('no key');
@@ -4614,7 +4614,7 @@ function grantOpened(){
 function accountsAdminHTML(){
   const de=PL()==='de', seen=store.get('lastSeen',{});
   const art=u=>[u.role==='student'?(de?'Kind':'child'):(de?'Erwachsen':'adult'), u.teacher&&(de?'Lehrkraft':'teacher'), u.admin&&'Admin', u.test&&(de?'Testkind':'test child')].filter(Boolean).join(', ');
-  return `<h2>${de?'Konten':'Accounts'}</h2><p class="phow">${de?'Nur Verwaltungsangaben – keine Inhalte. Den Lernstand eines Kindes sehen Sie nur mit Freigabe der Eltern.':'Administrative details only – no contents. You see a child’s progress only with a grant from the parents.'}</p>
+  return `<h2>${de?'Kontenübersicht':'Account overview'}</h2>
     <table class="dt"><thead><tr><th>${de?'Anmeldename':'Login name'}</th><th>${de?'Art':'Kind'}</th><th>${de?'Zuletzt auf diesem Gerät':'Last on this device'}</th></tr></thead><tbody>${APP_ACCOUNTS.users.map(u=>`<tr><td>${esc(u.user)}</td><td>${esc(art(u))}</td><td>${seen[u.id]?fmtDay(seen[u.id].slice(0,10)):'–'}</td></tr>`).join('')}</tbody></table>`;
 }
 /* ---------- backup (S11 Stufe 1, 02.11.): the child's data as a file, and back ----------
@@ -4751,27 +4751,36 @@ function settingsSecs(){
   if(!teacher && kidOk) s.push(['settings', kid?(de?'👧 Für ':'👧 For ')+esc(kid):T.settings, storyCapHTML()+reminderHTML()+profileAdminHTML()+mySchoolAdminHTML()]);
   if(canBackup()) s.push(['backup', de?'💾 Sicherung & Daten':'💾 Backup & data', backupHTML()]);
   if(canBackup()) s.push(['grants', de?'🔐 Zugriff & Freigaben':'🔐 Access & grants', grantsHTML()]);
-  if(accountsOn() && adultUser && adultUser.admin) s.push(['accounts', de?'🛠 Konten':'🛠 Accounts', accountsAdminHTML()]);
   // accounts in the storage (test build): family and devices (task "Einladungen - Oberflaeche")
   if(KONTO_UI && kontoIch()){
     if(kontoIch().art==='parent') s.push(['family', de?'👪 Familie':'👪 Family', kontoFamilieHTML()]);
-    s.push(['devices', de?'📱 Meine Geräte':'📱 My devices', kontoGeraeteHTML()]);
+    if(!(adultUser && adultUser.admin)) s.push(['devices', de?'📱 Meine Geräte':'📱 My devices', kontoGeraeteHTML()]);
   }
   s.push(['aboutapp', de?'ℹ️ Über die App':'ℹ️ About the app', aboutAppHTML()]);
   return s;
 }
+function administrationHTML(){
+  if(!(accountsOn() && adultUser && adultUser.admin)) return '';
+  const de=PL()==='de', sec=(title, body, id)=>`<details class="about-sec" data-admin="${id}"><summary>${title}</summary><div class="about-sec-body">${body}</div></details>`;
+  return `<div class="about-menu">`
+    +sec(de?'Kontenübersicht':'Account overview', accountsAdminHTML().replace(/^<h2>[^<]*<\/h2>/,''), 'accounts')
+    +(KONTO_UI && kontoIch()?sec(de?'Zugangsdaten und Geräte':'Access details and devices', kontoGeraeteHTML(), 'devices'):'')
+    +(KONTO_UI?sec(de?'Daten exportieren und löschen':'Export and delete data', kontoLoeschenInfoHTML(de), 'loeschen'):'')
+    +sec(de?'Versions- und Releaseinformationen':'Version and release information', versionAdminHTML({title:false})+releaseAdminHTML(), 'version')
+    +`</div>`;
+}
 /* ⚙ "About the app" (concept 5.8, B3): about this app and the important note, privacy, legal notice (placeholder),
    version. The texts are the same as on the info page (one place, R1); only the headings fit the section. */
 function aboutAppHTML(){
-  const lang=PL(), de=lang==='de', {main, sections}=aboutParts(lang), privacy=sections.find(s=>PRIVACY_TITLES.includes(s.title));
+  const lang=PL(), de=lang==='de', admin=!!(adultUser && adultUser.admin), {main, sections}=aboutParts(lang), privacy=sections.find(s=>PRIVACY_TITLES.includes(s.title));
   const sec=(title,body,id)=>`<details class="about-sec" data-about="${id}"><summary>${title}</summary><div class="about-sec-body">${body}</div></details>`;
   return `<div class="pabout">${main.replace(/<h2>[^<]*<\/h2>/,'')}</div><div class="about-menu">`
     +(privacy?sec(privacy.title, privacy.body, 'privacy'):'')
-    +(KONTO_UI?sec(de?'Daten exportieren und löschen':'Export and delete data', kontoLoeschenInfoHTML(de), 'loeschen'):'')
+    +(KONTO_UI && !admin?sec(de?'Daten exportieren und löschen':'Export and delete data', kontoLoeschenInfoHTML(de), 'loeschen'):'')
     // third-party code in the test build (task "Erstanmeldung per QR-Code"): the QR reader of "Connect this device"
     +(KONTO_UI && typeof ANM_QR_LESER!=='undefined'?sec(de?'Fremde Programmteile':'Third-party components', `<p>${de?'Den QR-Code beim Verbinden eines Geräts liest':'The QR code when connecting a device is read by'} <b>${esc(ANM_QR_LESER.name)} ${esc(ANM_QR_LESER.version)}</b> (Cosmo Wolfe ${de?'und Mitwirkende':'and contributors'}) – ${esc(ANM_QR_LESER.lizenz)}. ${de?'Unverändert in die App eingebettet; das Kamerabild bleibt auf dem Gerät, kein fremder Server.':'Embedded in the app unchanged; the camera picture stays on the device, no third-party server.'} <a href="${esc(ANM_QR_LESER.url)}" target="_blank" rel="noopener">${esc(ANM_QR_LESER.url)}</a> · <a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener">Apache License 2.0</a></p>`, 'lizenzen'):'')
     +sec(de?'Impressum':'Legal notice', `<p>${de?'Wird ergänzt.':'To be added.'}</p>`, 'imprint')
-    +`</div>`+versionAdminHTML()+releaseAdminHTML();
+    +`</div>`+(admin?'':versionAdminHTML())+(admin?'':releaseAdminHTML());
 }
 /* accounts in the storage (family build): export and deletion in plain words; removing old versions from GitHub's
    history is the admin's job by hand (guide in the source repository, docs/endgueltig-loeschen.md) */
@@ -4863,6 +4872,7 @@ function renderSheets(){
     const secs=[];
     secs.push(['concept', ABOUT_UI[lang].title, `<div class="about-menu">${aboutSectionsHTML(lang,null,true)}</div>`]);
     secs.push(['support', de?'🤝 So unterstützen Sie Ihr Kind':'🤝 How to support your child', supportGuideHTML()]);
+    if(accountsOn() && adultUser && adultUser.admin) secs.push(['administration', de?'🛠 Administration':'🛠 Administration', administrationHTML()]);
     if(accountsOn() && kidOk && !(viewerGrant() && !viewerGrant().scope.includes('school'))) secs.push(['school', de?'🏫 Schulische Einstufungen':'🏫 School assessments', schoolHTML()]);
     if(!teacher && kidOk) secs.push(['sheets', T.sheets, sheetsPageHTML()]);
     if(onOverview) html+=secHTML(secs);
@@ -6730,15 +6740,15 @@ const GUIDE_TEACHER_EN=kontoTexte(`<h3 class="pguide-h">Help for teachers</h3><o
 </ol>`, KONTO_GUIDE.teacherEn);
 const GUIDE_ADMIN_DE=kontoTexte(`<h3 class="pguide-h">Für den Admin</h3><ol class="steps">
 <li><b>Konten und Startcodes</b> pflegen Sie mit dem Konten-Werkzeug auf Ihrem Rechner. Neue Startcodes als Startlink oder QR-Code nur persönlich übergeben.</li>
-<li><b>Übersicht der Konten:</b> ${GO('konten','🛠 Konten')} – nur Verwaltungsangaben, keine Inhalte.</li>
-<li><b>Releasedokumentation:</b> ${GO('ueber','ℹ️ Über die App')} – nur für den Admin sichtbar, je Fassung gegliedert nach Epic, User Story und Bugfix.</li>
+<li><b>Administration:</b> auf der Übersichtsseite mit <b>Kontenübersicht</b> und <b>Versions- und Releaseinformationen</b>.</li>
+<li><b>Releasedokumentation:</b> in <b>Administration</b> unter <b>Versions- und Releaseinformationen</b> – nur für den Admin, gegliedert nach Epic, User Story und Bugfix.</li>
 <li><b>Lernstand eines Kindes:</b> nur mit Freigabe der Eltern, wie bei einer Lehrkraft – mit Vor- und Nachnamen, Geburtsdatum, Klasse und Schule, ohne Emoji und Einstellungen. Ihr eigenes Kind sehen Sie über Ihr Elternkonto.</li>
 <li><b>Testkinder:</b> oben in der Kinderauswahl unter „🧪 Testkinder“; „▶ Als Testkind spielen“ öffnet die Kinderseite mit Testdaten.</li>
 </ol>`, KONTO_GUIDE.adminDe);
 const GUIDE_ADMIN_EN=kontoTexte(`<h3 class="pguide-h">For the admin</h3><ol class="steps">
 <li><b>Accounts and start codes</b> are maintained with the account tool on your computer. Hand over new start codes as a start link or QR code in person only.</li>
-<li><b>Account overview:</b> ${GO_EN('konten','🛠 Accounts')} – administrative details only, no contents.</li>
-<li><b>Release notes:</b> ${GO_EN('ueber','ℹ️ About the app')} – visible only to the admin, grouped for each version into Epic, User Story and Bugfix.</li>
+<li><b>Administration:</b> on the overview page with <b>Account overview</b> and <b>Version and release information</b>.</li>
+<li><b>Release notes:</b> in <b>Administration</b> under <b>Version and release information</b> – only for the admin, grouped into Epic, User Story and Bugfix.</li>
 <li><b>A child’s progress:</b> only with a grant from the parents, like a teacher – with first and last name, date of birth, class and school, without emoji and settings. You see your own child through your parent account.</li>
 <li><b>Test children:</b> at the top in the child list under “🧪 Test children”; “▶ Play as test child” opens the child’s pages with test data.</li>
 </ol>`, KONTO_GUIDE.adminEn);

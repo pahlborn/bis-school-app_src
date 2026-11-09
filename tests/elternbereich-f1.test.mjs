@@ -74,8 +74,8 @@ test('T5/T7/T12 help per role: short, links into ⚙ that exist and open, no str
   await hilfe(page, 'chef');
   t = await text(page);
   assert.match(t, /Hilfe für Eltern[\s\S]*Für den Admin[\s\S]*🧪 Testkinder/);
-  // backup/grants come from the parent help; the admin part adds links to accounts and about the app.
-  await pruefen(page, 'admin', ['sicherung', 'freigaben', 'konten', 'ueber'], ['konten', 'ueber']);
+  // backup/grants come from the parent help; the admin part explains the new administration chapter in words.
+  await pruefen(page, 'admin', ['sicherung', 'freigaben'], []);
   assert.deepEqual(fehler, []);
   await ctx.close();
 });
