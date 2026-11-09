@@ -255,11 +255,13 @@ test('1 Familie: Kind anlegen (Start-QR), Kind wartet bis zur Aufnahme; zweiter 
   await assert.rejects(kontoAnmelden({ zugang: W.z, anmeldename: 'kathie', passwort: pwK }), (e) => e.code === 'anmeldung', 'altes Passwort gilt nicht mehr');
   assert.equal((await kontoAnmelden({ zugang: W.z, anmeldename: 'kathie', passwort: pwK2 })).art, 'child');
 
-  // Schluessel erneuern (Peter): falsches/gleiches Passwort -> Meldung; dann neuer Code und neue Pruefwoerter
+  // Zugang neu absichern (Peter): falsches/gleiches Passwort -> Meldung; dann neuer Code und neue Pruefwoerter
   P.klick('#kQrFertig');
   P.einstellungen('geraete');
+  assert.match(P.abschnitt('devices'), /Zugang neu absichern[\s\S]*Wiederherstellungscode[\s\S]*anderen Geräten melden Sie sich danach mit dem neuen Passwort neu an/);
   P.klick('#kErneuern');
   await P.wartenAuf('#kErnForm');
+  assert.match(P.eltern(), /Zugang neu absichern[\s\S]*Sie setzen ein neues Passwort[\s\S]*Wiederherstellungscode[\s\S]*anderen Geräten melden Sie sich danach mit dem neuen Passwort neu an/);
   assert.equal(P.im('#kErnForm input[autocomplete="username"]').value, 'peter.a');
   assert.equal(P.im('#kErnAlt').getAttribute('autocomplete'), 'current-password');
   assert.equal(P.S.lauf(() => P.S.$('#aboutBody').querySelectorAll('#kErnForm input[autocomplete="new-password"]').length), 2);
@@ -278,7 +280,7 @@ test('1 Familie: Kind anlegen (Start-QR), Kind wartet bis zur Aufnahme; zweiter 
   assert.deepEqual(P.wert('[...kontoAlt.keys()]'), [], 'alle Bereiche haben den neuen Schluessel (alt ist weg)');
   await A.sync();
   A.einstellungen('familie');
-  assert.ok(A.abschnitt('family').includes('Der andere Elternteil hat einen neuen Schlüssel. Prüfwörter: ' + fpNeu), 'Anna sieht die neuen Pruefwoerter: ' + A.abschnitt('family'));
+  assert.ok(A.abschnitt('family').includes('Der andere Elternteil hat den Zugang neu abgesichert. Prüfwörter: ' + fpNeu), 'Anna sieht die neuen Pruefwoerter: ' + A.abschnitt('family'));
   // Peters neues Passwort gilt, das alte nicht; Peter sieht weiter alles (neues Kind-Ereignis kommt an)
   await assert.rejects(kontoAnmelden({ zugang: W.z, anmeldename: 'peter.a', passwort: P.pw }), (e) => e.code === 'anmeldung');
   assert.equal((await kontoAnmelden({ zugang: W.z, anmeldename: 'peter.a', passwort: neuPw })).art, 'parent');
@@ -339,10 +341,10 @@ test('2 Meine Geraete: Liste; Kindergeraet entfernen -> "Jetzt neues Passwort fu
   P.einstellungen('geraete');
   assert.match(P.abschnitt('devices'), /Geräte von Kathie[\s\S]*iPhone \(Safari\)[\s\S]*entfernt am/);
 
-  // eigenes Geraet entfernen: aktuelles + neues Passwort -> neuer Schluessel, neuer Code
+  // eigenes Geraet entfernen: aktuelles + neues Passwort -> Zugang neu abgesichert, neuer Code
   P.klick(`[data-kweg="${P.kennung}|${d(P2)}"]`);
   await P.wartenAuf('#kErnForm');
-  assert.match(P.eltern(), /Eigenes Gerät entfernen[\s\S]*„iPhone \(Safari\)“ wird entfernt/);
+  assert.match(P.eltern(), /Eigenes Gerät entfernen[\s\S]*„iPhone \(Safari\)“ wird entfernt[\s\S]*Zugang dabei neu ab/);
   P.tippe('#kErnAlt', P.pw); P.klick('#kErnUse'); const neuPw = P.im('#kErnNeu1').value; P.absenden('#kErnGo');
   await P.wartenAuf('#kCodeBox #recCode');
   P.klick('#recGo');

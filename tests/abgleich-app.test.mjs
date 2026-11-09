@@ -485,12 +485,12 @@ test('6 Schluessel woanders erneuert -> Hinweis; entferntes Geraet -> Hinweis, n
   await P2.sync();
   P2.einstellungen();
   assert.doesNotMatch(P2.zeile(), /⚠️/);
-  // Peter erneuert seinen Schluessel auf dem Laptop
+  // Peter sichert seinen Zugang auf dem Laptop neu ab
   P.einstellungen('geraete'); P.klick('#kErneuern'); await P.wartenAuf('#kErnForm');
   P.tippe('#kErnAlt', P.pw); P.klick('#kErnUse'); const pw2 = P.im('#kErnNeu1').value; P.absenden('#kErnGo');
   await P.wartenAuf('#kCodeBox #recCode'); P.klick('#recGo');
   await W.uhr.vor(30000);
-  assert.match(P2.zeile(), /⚠️ Ihr Schlüssel wurde auf einem anderen Gerät erneuert\. Bitte melden Sie sich hier neu an\./, P2.zeile());
+  assert.match(P2.zeile(), /⚠️ Ihr Zugang wurde auf einem anderen Gerät neu abgesichert\. Bitte melden Sie sich hier neu an\./, P2.zeile());
   assert.doesNotMatch(P.zeile(), /⚠️/, 'nicht auf dem Geraet, das erneuert hat');
   P2.klick('#kNeuAnmelden');
   await P2.wartenAuf('#loginUser');
@@ -502,7 +502,7 @@ test('6 Schluessel woanders erneuert -> Hinweis; entferntes Geraet -> Hinweis, n
   await runde(K, W, 1000); await W.uhr.vor(MIN);
   assert.deepEqual(P2.antworten(K.kennung), K.antworten(K.kennung), 'das iPhone sieht wieder Neues');
 
-  // Peter entfernt das iPhone (mit neuem Schluessel)
+  // Peter entfernt das iPhone (mit neu abgesichertem Zugang)
   const altId = P2.geraetId();
   P.einstellungen('geraete');
   P.klick(`[data-kweg="${P.kennung}|${altId}"]`);
@@ -510,9 +510,9 @@ test('6 Schluessel woanders erneuert -> Hinweis; entferntes Geraet -> Hinweis, n
   P.tippe('#kErnAlt', pw2); P.klick('#kErnUse'); const pw3 = P.im('#kErnNeu1').value; P.absenden('#kErnGo');
   await P.wartenAuf('#kCodeBox #recCode'); P.klick('#recGo');
   await W.uhr.vor(MIN);
-  // (sein eigenes Geraet entfernt Peter immer mit neuem Schluessel - das iPhone liest danach nichts mehr, also auch das
-  // Entfernen nicht: es sagt "Schluessel erneuert"; beides heisst: hier neu anmelden)
-  assert.match(P2.zeile(), /⚠️ Ihr Schlüssel wurde auf einem anderen Gerät erneuert\. Bitte melden Sie sich hier neu an\./, P2.zeile());
+  // (sein eigenes Geraet entfernt Peter immer zusammen mit dem neuen Schutz - das iPhone liest danach nichts mehr, also
+  // auch das Entfernen nicht: es sagt nur "Zugang neu abgesichert"; beides heisst: hier neu anmelden)
+  assert.match(P2.zeile(), /⚠️ Ihr Zugang wurde auf einem anderen Gerät neu abgesichert\. Bitte melden Sie sich hier neu an\./, P2.zeile());
   // ohne neue Anmeldung bleibt es ausgesperrt: was es schreibt, zaehlt nicht
   P2.S.lauf(() => P2.S.holen('eventHook')('profile_set', { field: 'lastName', value: 'Vom-Alten-iPhone' }));
   await P2.sync(); await P.sync();
