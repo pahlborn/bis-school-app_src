@@ -51,7 +51,7 @@ test('Eltern, Lehrkraft und Admin sehen je ihre eigene Anleitung (DE und EN)', a
   for (const s of ['Hilfe für Lehrkräfte', 'Einblick nur mit Freigabe', 'nicht für den dienstlichen Einsatz', 'Protokoll']) assert.ok(lehrkraft.includes(s), 'teacher: ' + s);
   for (const s of ['Hilfe für Eltern', 'Kind anmelden', 'Für den Admin']) assert.ok(!lehrkraft.includes(s), 'teacher not: ' + s);
   const admin = await anleitung(page, 'chef');
-  for (const s of ['Hilfe für Eltern', 'Für den Admin', '🛠 Konten', 'Releasedokumentation', 'Epic, User Story und Bugfix', '🧪 Testkinder']) assert.ok(admin.includes(s), 'admin: ' + s);
+  for (const s of ['Hilfe für Eltern', 'Für den Admin', 'Administration', 'Kontenübersicht', 'Versions- und Releaseinformationen', 'Releasedokumentation', 'Epic, User Story und Bugfix', '🧪 Testkinder']) assert.ok(admin.includes(s), 'admin: ' + s);
   assert.deepEqual(fehler, []);
   await ctx.close();
 });

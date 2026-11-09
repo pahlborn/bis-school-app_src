@@ -107,7 +107,7 @@ export async function elternAnsichtOeffnen(page, ziel) {
 }
 
 /** Grown-ups area: overview on top, chapters (school, sheets, support, concept) open in place; settings, backup,
- *  grants, accounts and "about the app" are in ⚙, the guide ('app') is the ? help view. 'home' leaves a subject
+ *  grants and "about the app" are in ⚙, the admin chapter stays on the overview; the guide ('app') is the ? help view. 'home' leaves a subject
  *  page or a view; every other chapter is opened with real clicks (⚙ first where needed, then its title). */
 export async function elternSeite(page, seite) {
   if (seite === 'home') {

@@ -48,6 +48,12 @@ async function ueberDieApp(page) {
   await d.evaluate((e) => e.querySelectorAll('details').forEach((x) => { x.open = true; }));
   return d;
 }
+async function administration(page) {
+  const d = page.locator('#aboutBody details.psec[data-psec="administration"]');
+  await d.locator(':scope > summary').click();
+  await d.evaluate((e) => e.querySelectorAll('details').forEach((x) => { x.open = true; }));
+  return d;
+}
 const VERANTWORTUNG_DE = 'Die App weiß nicht, wer eine Aufgabe gelöst hat und mit welchen Hilfsmitteln.';
 const VERANTWORTUNG_EN = 'The app does not know who solved a task or with what help.';
 
@@ -106,20 +112,20 @@ test('T12 release notes: only the admin sees them; Epic / User Story / Bugfix ar
 
   const a = await oeffnen(browser, serverMitRelease);
   await kindDann(a.page, 'chef');
-  const da = await ueberDieApp(a.page);
-  assert.ok(await da.locator('#releaseDocs').isVisible(), 'admin sees release notes');
-  const ta = await da.locator('#releaseDocs').innerText();
+  const da = await administration(a.page);
+  assert.deepEqual(await da.locator('details[data-admin] > summary').allInnerTexts(), ['Kontenübersicht', 'Versions- und Releaseinformationen']);
+  assert.ok(await da.locator('details[data-admin="version"] #versionInfo').isVisible(), 'admin sees version info there');
+  assert.ok(await da.locator('details[data-admin="version"] #releaseDocs').isVisible(), 'admin sees release notes');
+  const ta = await da.locator('details[data-admin="version"] #releaseDocs').innerText();
   for (const x of ['Releasedokumentation', 'Nur für den Admin sichtbar', 'Epic', 'User Story', 'Bugfix', 'Releasedokumentation ist jetzt direkt im Admin-Bereich sichtbar.']) assert.ok(ta.includes(x), x);
-  await a.page.locator('.phdr [data-plang="en"]').click();
-  const ea = await a.page.locator('#aboutBody details.psec[data-psec="aboutapp"]');
-  await ea.evaluate((e) => { e.open = true; e.querySelectorAll('details').forEach((x) => { x.open = true; }); });
-  const te = await ea.innerText();
-  for (const x of ['Release notes', 'Visible only to the admin', 'Epic', 'User Story', 'Bugfix', 'Release notes are now visible directly in the admin area.']) assert.ok(te.includes(x), x);
+  const ua = await ueberDieApp(a.page);
+  assert.equal(await ua.locator('#releaseDocs').count(), 0, 'release notes moved out of about the app');
+  await a.page.locator('#pSetBack').click(); await a.page.waitForSelector('#pSetBack', { state: 'detached' });
 
   const leer = await oeffnen(browser, server);
   await kindDann(leer.page, 'chef');
-  const dLeer = await ueberDieApp(leer.page);
-  assert.match(await dLeer.locator('#releaseDocs').innerText(), /Noch keine Releaseeinträge hinterlegt\./);
+  const dLeer = await administration(leer.page);
+  assert.match(await dLeer.locator('details[data-admin="version"] #releaseDocs').innerText(), /Noch keine Releaseeinträge hinterlegt\./);
 
   assert.deepEqual([...p.fehler, ...l.fehler, ...a.fehler, ...leer.fehler], []);
   await p.ctx.close(); await l.ctx.close(); await a.ctx.close(); await leer.ctx.close();
