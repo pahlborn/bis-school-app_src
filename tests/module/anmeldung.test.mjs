@@ -107,6 +107,20 @@ test('anmVersuch: Startcode zu einem bestehenden Konto (neues Passwort eines Kin
   await assert.rejects(anmVersuch({ zugang: z, anmeldename: 'verwalter', text: 'Judoka-Anchor-Key-2947' }), (e) => e.code === 'anmeldung', 'Vorschlags-Form mit 22 Zeichen ist nie ein Startcode');
 });
 
+test('anmAdminElternEinladen: Admin stellt direkt einen Eltern-Startcode aus; der erste Login klappt', async () => {
+  const { lokalerSpeicher } = await import('../../src/module/speicher.mjs');
+  const { startcodeAusstellen, ersteAnmeldung } = await import('../../src/module/konto.mjs');
+  const { anmAdminElternEinladen } = await import('../../src/module/anmeldung.mjs');
+  const w = lokalerSpeicher(), now = Date.now();
+  const sa = await startcodeAusstellen({ zugang: w.geraet('d_A'), aussteller: null, anmeldename: 'admin', art: 'admin', now });
+  const admin = await ersteAnmeldung({ zugang: w.geraet('d_A'), code: sa.code, passwort: 'Tiger-Lamp-River-4271', now, runden: 1000 });
+  const e = await anmAdminElternEinladen({ zugang: w.geraet('d_A'), konto: admin, anmeldename: 'mira.sonnental', now: now + 1 });
+  assert.equal(e.art, 'parent');
+  const p = await ersteAnmeldung({ zugang: w.geraet('d_P'), code: e.code, passwort: 'Otter-Cake-Moss-1234', fingerabdruck: e.fingerabdruck, now: now + 2, runden: 1000 });
+  assert.deepEqual([p.art, p.anmeldename], ['parent', 'mira.sonnental']);
+  await assert.rejects(anmAdminElternEinladen({ zugang: w.geraet('d_P'), konto: p, anmeldename: 'anna.sonnental', now: now + 3 }), (err) => err.code === 'nicht-erlaubt');
+});
+
 test('anmKindBereit: erst wenn ein Elterngeraet das Kind aufgenommen hat (aktueller Schluessel des Lernbereichs); Erwachsene immer', async () => {
   const { lokalerSpeicher } = await import('../../src/module/speicher.mjs');
   const { startcodeAusstellen, ersteAnmeldung } = await import('../../src/module/konto.mjs');

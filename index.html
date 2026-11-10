@@ -82,6 +82,7 @@ button{font:inherit;color:inherit}
 .field{display:flex;flex-direction:column;gap:6px}
 .field label{font-family:var(--display);font-weight:600}
 .field input{font:inherit;font-size:1.1rem;padding:12px 14px;border-radius:14px;border:2px solid var(--line);background:var(--surface);color:var(--ink);width:100%}
+.field select{font:inherit;font-size:1.05rem;min-height:52px;padding:10px 14px;border-radius:14px;border:2px solid var(--line);background:var(--surface);color:var(--ink);width:100%}
 .pw-wrap{position:relative;display:flex;align-items:center}
 .pw-wrap input{padding-right:58px}
 .pw-toggle{position:absolute;right:6px;top:50%;transform:translateY(-50%);display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;padding:0;border:0;border-radius:12px;background:transparent;color:var(--muted);cursor:pointer}
@@ -4617,6 +4618,10 @@ function accountsAdminHTML(){
   return `<h2>${de?'Kontenübersicht':'Account overview'}</h2>
     <table class="dt"><thead><tr><th>${de?'Anmeldename':'Login name'}</th><th>${de?'Art':'Kind'}</th><th>${de?'Zuletzt auf diesem Gerät':'Last on this device'}</th></tr></thead><tbody>${APP_ACCOUNTS.users.map(u=>`<tr><td>${esc(u.user)}</td><td>${esc(art(u))}</td><td>${seen[u.id]?fmtDay(seen[u.id].slice(0,10)):'–'}</td></tr>`).join('')}</tbody></table>`;
 }
+function adminInviteHTML(){
+  const de=PL()==='de', k=kontoIch(); if(!KONTO_UI || !k || k.art!=='admin') return '';
+  return `<p class="small">${de?'Hier legen Sie nur ein Elternkonto an. Kinder und Familienverwaltung laufen danach im Elternkonto. Lehrkraft, weiterer Admin oder Kind sind hier nicht dabei.':'Here you only create a parent account. Children and family management happen later in the parent account. Teacher, another admin or a child are not part of this here.'}</p><p><button type="button" class="btn" id="kAdminElternEinladen">➕ ${de?'Elternteil einladen':'Invite a parent'}</button></p>`;
+}
 /* ---------- backup (S11 Stufe 1, 02.11.): the child's data as a file, and back ----------
    Only parents of the child. Keys are stored WITHOUT the device namespace, so a backup made now can be
    restored after the move to IDs (S11 P2). Which keys belong to a child is fixed in
@@ -4763,6 +4768,7 @@ function administrationHTML(){
   if(!(accountsOn() && adultUser && adultUser.admin)) return '';
   const de=PL()==='de', sec=(title, body, id)=>`<details class="about-sec" data-admin="${id}"><summary>${title}</summary><div class="about-sec-body">${body}</div></details>`;
   return `<div class="about-menu">`
+    +(KONTO_UI && kontoIch() && kontoIch().art==='admin' ? sec(de?'Elternteil einladen':'Invite a parent', adminInviteHTML(), 'invite-parent') : '')
     +sec(de?'Kontenübersicht':'Account overview', accountsAdminHTML().replace(/^<h2>[^<]*<\/h2>/,''), 'accounts')
     +(KONTO_UI && kontoIch()?sec(de?'Zugangsdaten und Geräte':'Access details and devices', kontoGeraeteHTML(), 'devices'):'')
     +(KONTO_UI?sec(de?'Daten exportieren und löschen':'Export and delete data', kontoLoeschenInfoHTML(de), 'loeschen'):'')
@@ -5862,7 +5868,7 @@ function kontoKontenAuffrischen(){
 /* after a sync in the background: show what is new - but never under the hands of someone filling in a form */
 function kontoNeuZeichnen(geaendert){
   if(state.screen==='about' && state.aboutTab==='sheets' && parentAccess){
-    if(kontoBlatt && kontoBlatt.art==='qr') return kontoQrStatus();
+    if(kontoBlatt && kontoBlatt.art==='qr') return void kontoQrStatus();
     if(kontoBlatt) return;
     if(geaendert) renderSheets();
     return;
@@ -5990,19 +5996,25 @@ function kontoGeraeteHTML(){
 }
 /* ---------- panels (kontoBlatt) ---------- */
 const kontoHinweisNamen = de => de?'3 bis 20 Zeichen: kleine Buchstaben, Ziffern, Punkt oder Bindestrich.':'3 to 20 characters: small letters, digits, dot or hyphen.';
+const kontoEinladungsName = b => (b && (b.display || b.name || b.login)) || '';
 function kontoBlattHTML(){
   const de=PL()==='de', b=kontoBlatt, back=`<button type="button" class="btn small" id="kBack">${de?'← Zurück':'← Back'}</button>`, msg='<p id="kMsg" class="small" role="status"></p>';
   if(b.art==='kind1') return back+`<h2 class="psubjtitle">➕ ${de?'Kind anlegen':'Add a child'}</h2><form id="kKindForm" class="login-form"><div class="field"><label for="kKindName">${de?'Vorname des Kindes':'Child’s first name'}</label><input id="kKindName" maxlength="40" autocomplete="off" required></div><button class="btn primary" id="kKindWeiter" type="submit">${de?'Weiter':'Next'}</button>${msg}</form>`;
   if(b.art==='kind2') return back+`<h2 class="psubjtitle">➕ ${de?'Kind anlegen':'Add a child'}</h2><p class="small">${de?`Mit diesem Anmeldenamen meldet sich ${esc(b.anzeige)} an. Sie können ihn ändern – ${kontoHinweisNamen(true)}`:`${esc(b.anzeige)} logs in with this name. You can change it – ${kontoHinweisNamen(false)}`}</p><form id="kKind2Form" class="login-form"><div class="field"><label for="kKindLogin">${de?'Anmeldename':'Login name'}</label><input id="kKindLogin" value="${esc(b.login)}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><button class="btn primary" id="kKindGo" type="submit">${de?'Start-QR-Code erstellen':'Create start QR code'}</button>${msg}</form>`;
   if(b.art==='eltern') return back+`<h2 class="psubjtitle">➕ ${de?'Zweiten Elternteil einladen':'Invite the second parent'}</h2><p class="small">${de?'Er sieht danach dieselben Kinder wie Sie. Wählen Sie seinen Anmeldenamen – ':'They then see the same children as you. Choose their login name – '}${kontoHinweisNamen(de)}</p><form id="kElternForm" class="login-form"><div class="field"><label for="kElternLogin">${de?'Anmeldename':'Login name'}</label><input id="kElternLogin" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><button class="btn primary" id="kElternGo" type="submit">${de?'Einladung erstellen':'Create invitation'}</button>${msg}</form>`;
+  if(b.art==='adminEltern') return back+`<h2 class="psubjtitle">➕ ${de?'Elternteil einladen':'Invite a parent'}</h2><p class="small">${de?'Rolle fest: Elternteil. Kind, Lehrkraft und weiterer Admin sind hier nicht dabei. Familien- und Kindverwaltung laufen später im Elternkonto.':'Fixed role: parent. Child, teacher and another admin are not part of this here. Family and child management happen later in the parent account.'}</p><form id="kAdminForm" class="login-form"><div class="field"><label for="kAdminLogin">${de?'Anmeldename':'Login name'}</label><input id="kAdminLogin" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required></div><div class="field"><label for="kAdminDisplay">${de?'Anzeigename (optional)':'Display name (optional)'}</label><input id="kAdminDisplay" maxlength="40" autocomplete="off"></div><div class="field"><label for="kAdminLang">${de?'Einladungssprache':'Invitation language'}</label><select id="kAdminLang"><option value="de">Deutsch</option><option value="en">English</option></select></div><button class="btn primary" id="kAdminGo" type="submit">${de?'Einladung erstellen':'Create invitation'}</button>${msg}</form>`;
   if(b.art==='qr'){
     // task "Erstanmeldung per QR-Code": the QR code carries the access code of this device, too - the other device is connected at once
     const link=anmEinladungslink(location.href, {zugang:anmZugangscode(KONTO_SPEICHER, localStorage), anmeldename:b.login, code:b.code, fingerabdruck:b.fp});
-    const titel=b.zweck==='eltern'?(de?`Einladung für ${esc(b.login)}`:`Invitation for ${esc(b.login)}`):b.zweck==='neu'?(de?`Neues Passwort für ${esc(b.name)}`:`New password for ${esc(b.name)}`):(de?`Start-QR-Code für ${esc(b.name)}`:`Start QR code for ${esc(b.name)}`);
-    const wie=b.zweck==='eltern'
+    const titel=b.zweck==='adminEltern'?(de?`Elternteil-Einladung für ${esc(kontoEinladungsName(b))}`:`Parent invitation for ${esc(kontoEinladungsName(b))}`):b.zweck==='eltern'?(de?`Einladung für ${esc(b.login)}`:`Invitation for ${esc(b.login)}`):b.zweck==='neu'?(de?`Neues Passwort für ${esc(b.name)}`:`New password for ${esc(b.name)}`):(de?`Start-QR-Code für ${esc(b.name)}`:`Start QR code for ${esc(b.name)}`);
+    const wie=b.zweck==='adminEltern'
+      ?(de?'Auf dem Gerät dieses Elternteils den QR-Code mit der Kamera öffnen oder den Link verwenden. Danach legt die Person ihr eigenes Passwort fest. Kinder und Familie kommen später im Elternkonto dazu.':'On this parent’s device, open the QR code with the camera or use the link. Then the person chooses their own password. Children and family come later in the parent account.')
+      :b.zweck==='eltern'
       ?(de?'Auf dem Gerät des anderen Elternteils die Kamera auf den Code richten (oder in Big Quest „📷 QR-Code scannen“). Dann wählt er ein eigenes Passwort. Nicht dabei? Die Einladung als E-Mail-Entwurf sichern und selbst verschicken.':'On the other parent’s device, point the camera at the code (or tap “📷 Scan QR code” in Big Quest). Then they choose their own password. Not here? Save the invitation as an e-mail draft and send it yourself.')
       :(de?`Auf dem Gerät von ${esc(b.name)} die Kamera auf den Code richten (oder in Big Quest „📷 QR-Code scannen“) und zusammen ein Passwort wählen.${b.zweck==='neu'?' Der Lernstand bleibt erhalten.':''}`:`On ${esc(b.name)}’s device, point the camera at the code (or tap “📷 Scan QR code” in Big Quest) and choose a password together.${b.zweck==='neu'?' The progress stays.':''}`);
-    return `<h2 class="psubjtitle">📷 ${titel}</h2><p class="small">${wie} ${de?'Ohne Kamera: Anmeldename und Startcode eintippen.':'Without a camera: type the login name and the start code.'}</p><div class="kqr" id="kQr">${anmQr(link, de?'Start-QR-Code':'Start QR code')}</div><p class="small">${de?'Anmeldename':'Login name'}: <b>${esc(b.login)}</b> · Startcode: <code id="kCode">${esc(b.code)}</code><br>${de?'Gilt einmal, bis':'Works once, until'} ${esc(kontoZeit(new Date(b.bis).toISOString()))}. ${de?'Nur persönlich zeigen.':'Show it in person only.'}</p><p id="kQrStatus" class="kqr-status" role="status">${kontoQrText()}</p>${b.zweck==='eltern' && !b.fertig?`<p><button type="button" class="btn" id="kQrMail">✉️ ${de?'Als E-Mail-Entwurf sichern':'Save as an e-mail draft'}</button></p>`:''}<p>${b.fertig?'':`<button type="button" class="btn" id="kQrWeg">${de?'Zurückziehen':'Withdraw'}</button> `}<button type="button" class="btn primary" id="kQrFertig">${de?'Fertig':'Done'}</button></p><p id="kMsg" class="small" role="status"></p>`;
+    const mail=(b.zweck==='eltern' || b.zweck==='adminEltern') && !b.fertig;
+    const linkBox=b.zweck==='adminEltern'?`<div class="field"><label for="kLink">${de?'Link':'Link'}</label><input id="kLink" value="${esc(link)}" readonly></div><p class="small">${de?'Einladungssprache':'Invitation language'}: <b>${b.sprache==='en'?'English':'Deutsch'}</b></p>`:'';
+    return `<h2 class="psubjtitle">📷 ${titel}</h2><p class="small">${wie} ${de?'Ohne Kamera: Anmeldename und Startcode eintippen.':'Without a camera: type the login name and the start code.'}</p><div class="kqr" id="kQr">${anmQr(link, de?'Start-QR-Code':'Start QR code')}</div><p class="small">${de?'Anmeldename':'Login name'}: <b>${esc(b.login)}</b> · Startcode: <code id="kCode">${esc(b.code)}</code><br>${de?'Gilt einmal, bis':'Works once, until'} ${esc(kontoZeit(new Date(b.bis).toISOString()))}. ${de?'Nur persönlich zeigen.':'Show it in person only.'}</p>${linkBox}<p id="kQrStatus" class="kqr-status" role="status">${kontoQrText()}</p>${mail?`<p><button type="button" class="btn" id="kQrMail">✉️ ${b.zweck==='adminEltern'?(de?'Einladung sichern':'Save invitation'):(de?'Als E-Mail-Entwurf sichern':'Save as an e-mail draft')}</button></p>`:''}<p>${b.fertig?'':`<button type="button" class="btn" id="kQrWeg">${de?'Zurückziehen':'Withdraw'}</button> `}<button type="button" class="btn primary" id="kQrFertig">${de?'Fertig':'Done'}</button></p><p id="kMsg" class="small" role="status"></p>`;
   }
   if(b.art==='verbinden'){
     const z=anmZugangscode(KONTO_SPEICHER, localStorage); if(!z) return back;
@@ -6025,25 +6037,38 @@ function kontoBlattHTML(){
 }
 function kontoQrText(){
   const de=PL()==='de', b=kontoBlatt; if(!b || b.art!=='qr') return '';
-  if(b.fertig) return b.zweck==='eltern'?(de?`✓ ${b.login} gehört jetzt zur Familie.`:`✓ ${b.login} is now part of the family.`):b.zweck==='neu'?(de?`✓ ${b.name} hat ein neues Passwort.`:`✓ ${b.name} has a new password.`):(de?`✓ ${b.name} ist angemeldet und kann loslegen.`:`✓ ${b.name} is logged in and can start.`);
+  if(b.fertig) return b.zweck==='adminEltern'?(de?`✓ ${kontoEinladungsName(b)} ist angemeldet.`:`✓ ${kontoEinladungsName(b)} is logged in.`):b.zweck==='eltern'?(de?`✓ ${b.login} gehört jetzt zur Familie.`:`✓ ${b.login} is now part of the family.`):b.zweck==='neu'?(de?`✓ ${b.name} hat ein neues Passwort.`:`✓ ${b.name} has a new password.`):(de?`✓ ${b.name} ist angemeldet und kann loslegen.`:`✓ ${b.name} is logged in and can start.`);
   if(b.weg) return de?'Diese Einladung gilt nicht mehr.':'This invitation is no longer valid.';
   return de?'⏳ Warte auf die erste Anmeldung …':'⏳ Waiting for the first login …';
 }
 /* the QR panel: status after each sync; withdrawn or expired elsewhere -> no longer valid */
-function kontoQrStatus(){
+async function kontoQrStatus(){
   const b=kontoBlatt; if(!b || b.art!=='qr') return;
-  if(!b.fertig){ const k=kontoIch(); if(k && !kontoVerb(k).offen.some(o=>o.invite===b.id)) b.weg=true; }
+  if(!b.fertig){
+    if(b.zweck==='adminEltern'){
+      try{
+        const z=kontoZugang();
+        if(z){
+          const r=await anmLinkPruefen({zugang:z, start:{anmeldename:b.login, code:b.code, fingerabdruck:b.fp||null}, now:Date.now()});
+          if(r.art==='anmelden') b.fertig=true;
+          else if(r.art==='fehler' && (r.code==='startcode-ungueltig' || r.code==='startcode-abgelaufen')) b.weg=true;
+        }
+      }catch(err){ if(!err || typeof err.code!=='string') kontoFehlerListe.push('qr-status: '+String(err&&err.message||err)); }
+    } else {
+      const k=kontoIch(); if(k && !kontoVerb(k).offen.some(o=>o.invite===b.id)) b.weg=true;
+    }
+  }
   const s=$('#aboutBody').querySelector('#kQrStatus'); if(s) s.textContent=kontoQrText();
   const w=$('#aboutBody').querySelector('#kQrWeg'); if(w && (b.fertig || b.weg)) w.remove();
 }
 function kontoQrTakt(id){
   setTimeout(async()=>{
     const b=kontoBlatt; if(!b || b.art!=='qr' || b.id!==id || b.fertig || b.weg || !parentAccess) return;
-    if(!document.hidden) await kontoAbgleich();
-    kontoQrStatus(); kontoQrTakt(id);
+    if(b.zweck!=='adminEltern' && !document.hidden) await kontoAbgleich();
+    await kontoQrStatus(); kontoQrTakt(id);
   }, KONTO_QR_MS);
 }
-function kontoBlattZeigen(b){ if(b && b.art==='code') kontoCodeHinweis=null; kontoBlatt=b; renderSheets(); window.scrollTo(0,0); if(b && b.art==='qr') kontoQrTakt(b.id); }
+function kontoBlattZeigen(b){ if(b && b.art==='code') kontoCodeHinweis=null; kontoBlatt=b; renderSheets(); window.scrollTo(0,0); if(b && b.art==='qr'){ void kontoQrStatus(); kontoQrTakt(b.id); } }
 function kontoFehler(err){
   const de=PL()==='de', c=err && err.code;
   if(c==='name-vergeben') return de?'Dieser Anmeldename ist schon vergeben. Bitte einen anderen wählen.':'This login name is taken. Please choose another one.';
@@ -6156,6 +6181,7 @@ function kontoBinden(body){
   an('#kBack',()=>kontoBlattZeigen(null));
   an('#kKindAnlegen',()=>kontoBlattZeigen({art:'kind1'}));
   an('#kElternEinladen',()=>kontoBlattZeigen({art:'eltern'}));
+  an('#kAdminElternEinladen',()=>kontoBlattZeigen({art:'adminEltern'}));
   an('#kErneuern',()=>kontoBlattZeigen({art:'erneuern'}));
   an('#kVerbindenQr',()=>kontoBlattZeigen({art:'verbinden'}));
   body.querySelectorAll('[data-kneu]').forEach(b=>b.addEventListener('click',()=>{ if(parentAccess) kontoKindNeuStarten(b.dataset.kneu); }));
@@ -6170,10 +6196,11 @@ function kontoBinden(body){
   form('#kKindForm',()=>{ const anzeige=q('#kKindName').value.trim(); if(!anzeige) return; kontoSchritt('#kKindWeiter', async()=>{ const z=kontoZugang(); if(!z) throw Object.assign(new Error('kein Zugang'),{code:'offline'}); const login=await anmNameVorschlag({zugang:z, anzeigename:anzeige}); kontoBlattZeigen({art:'kind2', anzeige, login}); }); });
   form('#kKind2Form',()=>{ const b=kontoBlatt, login=anmName(q('#kKindLogin').value); if(!login){ q('#kMsg').textContent=kontoHinweisNamen(de); return; } kontoSchritt('#kKindGo', ()=>kontoEinladen((z,me)=>anmKindAnlegen({zugang:z, ablage:localStorage, konto:me, anmeldename:login, anzeigename:b.anzeige, now:Date.now()}), {zweck:'kind', name:b.anzeige})); });
   form('#kElternForm',()=>{ const login=anmName(q('#kElternLogin').value); if(!login){ q('#kMsg').textContent=kontoHinweisNamen(de); return; } kontoSchritt('#kElternGo', ()=>kontoEinladen((z,me)=>anmElternEinladen({zugang:z, ablage:localStorage, konto:me, anmeldename:login, now:Date.now()}), {zweck:'eltern', name:login})); });
+  form('#kAdminForm',()=>{ const login=anmName(q('#kAdminLogin').value), display=q('#kAdminDisplay').value.trim().slice(0,40), sprache=q('#kAdminLang').value==='en'?'en':'de'; if(!login){ q('#kMsg').textContent=kontoHinweisNamen(de); return; } kontoSchritt('#kAdminGo', ()=>kontoEinladen((z,me)=>anmAdminElternEinladen({zugang:z, konto:me, anmeldename:login, now:Date.now()}), {zweck:'adminEltern', name:display||login, display, sprache})); });
   an('#kQrFertig',()=>kontoBlattZeigen(null));
-  // the invitation of the second parent as an e-mail draft: an HTML file with QR code and link (the grown-up sends it himself)
-  an('#kQrMail',()=>{ const b=kontoBlatt; if(!b || b.art!=='qr') return; const link=anmEinladungslink(location.href, {zugang:anmZugangscode(KONTO_SPEICHER, localStorage), anmeldename:b.login, code:b.code, fingerabdruck:b.fp}); const m=anmEinladungMail({link, qr:anmQr(link, de?'Einladung':'Invitation'), anmeldename:b.login, bis:b.bis, sprache:de?'de':'en'}); kontoDateiSichern(m.html, m.dateiname, 'text/html', de, q('#kMsg')); });
-  an('#kQrWeg',()=>{ const b=kontoBlatt; if(!b || b.art!=='qr') return; kontoSchritt('#kQrWeg', async()=>{ const z=kontoZugang(); const r=await anmZurueckziehen({zugang:z, ablage:localStorage, konto:kontoIch(), id:b.id, now:Date.now()}); await kontoAbgleich(); kontoMeldungen.push({art:'info', text:r.zurueckgezogen?(de?`Die Einladung für ${b.zweck==='eltern'?b.login:b.name} ist zurückgezogen.`:`The invitation for ${b.zweck==='eltern'?b.login:b.name} is withdrawn.`):(de?'Die Einladung war schon eingelöst oder abgelaufen.':'The invitation was already used or had expired.')}); kontoBlattZeigen(null); }); });
+  // parent invitations as an e-mail draft: an HTML file with QR code and link (the admin / grown-up sends it himself)
+  an('#kQrMail',()=>{ const b=kontoBlatt; if(!b || b.art!=='qr') return; const link=anmEinladungslink(location.href, {zugang:anmZugangscode(KONTO_SPEICHER, localStorage), anmeldename:b.login, code:b.code, fingerabdruck:b.fp}); const m=anmEinladungMail({link, qr:anmQr(link, b.zweck==='adminEltern'?'Invitation for parent':'Invitation'), anmeldename:b.login, bis:b.bis, sprache:b.zweck==='adminEltern'?(b.sprache||'de'):(de?'de':'en')}); kontoDateiSichern(m.html, m.dateiname, 'text/html', de, q('#kMsg')); });
+  an('#kQrWeg',()=>{ const b=kontoBlatt; if(!b || b.art!=='qr') return; kontoSchritt('#kQrWeg', async()=>{ const z=kontoZugang(); let r; if(b.zweck==='adminEltern') r={zurueckgezogen:await z.invite.delete(b.id)}; else { r=await anmZurueckziehen({zugang:z, ablage:localStorage, konto:kontoIch(), id:b.id, now:Date.now()}); await kontoAbgleich(); } kontoMeldungen.push({art:'info', text:r.zurueckgezogen?(de?`Die Einladung für ${kontoEinladungsName(b)} ist zurückgezogen.`:`The invitation for ${kontoEinladungsName(b)} is withdrawn.`):(de?'Die Einladung war schon eingelöst oder abgelaufen.':'The invitation was already used or had expired.')}); kontoBlattZeigen(null); }); });
   an('#kWegJa',()=>{ const b=kontoBlatt; kontoSchritt('#kWegJa', async()=>{ const z=kontoZugang(); await anmGeraetEntfernen({ablage:localStorage, zugang:z, konto:kontoIch(), person:b.kind, geraet:b.geraet, now:Date.now()}); await kontoAbgleich(); kontoBlattZeigen({art:'frageneu', kind:b.kind, name:b.name}); }); });
   body.querySelectorAll('[data-kexport]').forEach(b=>b.addEventListener('click',()=>{ if(parentAccess) kontoExport(b.dataset.kexport); }));
   body.querySelectorAll('[data-kloesch]').forEach(b=>b.addEventListener('click',()=>{
@@ -6677,8 +6704,8 @@ const KONTO_GUIDE={
     ['Passwort vergessen:','Auf der Anmeldeseite „Passwort vergessen?“ tippen, den Wiederherstellungscode eingeben und ein neues Passwort wählen. Sie sind sofort wieder angemeldet; den neuen Code sichern Sie im geöffneten Bereich. Ohne Code hilft der Admin. Nach 5 Fehlversuchen 30 Sekunden warten.']],
   teacherEn:[['Log in:','The first time, open the link of the invitation from the admin or scan its QR code: the device gets connected and your login name is already there. Then choose your own password (your device suggests a strong one) and save the recovery code – in the password manager and as a file. After that: "I\'m a parent or teacher", username and password; connect another device once with the same link.'],
     ['Forgot your password?','On the login page tap “Forgot your password?”, enter your recovery code and choose a new password. You are logged in right away; save the new code in the area that opens. Without the code, the admin can help. After 5 wrong tries, wait 30 seconds.']],
-  adminDe:[['Konten und Startcodes','für Erwachsene stellen Sie aus, vorerst mit dem Werkzeug auf Ihrem Rechner. Es legt je Person eine Einladung als E-Mail-Entwurf an (QR-Code und Link mit Zugangscode und Startcode); Sie verschicken sie selbst. Eine Einladung gilt einmal und 7 Tage; derselbe Link verbindet später weitere Geräte.']],
-  adminEn:[['Accounts and start codes','for grown-ups are issued by you, for now with the tool on your computer. It makes an invitation per person as an e-mail draft (QR code and link with access code and start code); you send it yourself. An invitation works once and for 7 days; the same link connects more devices later.']]
+  adminDe:[['Konten und Startcodes','für Erwachsene stellen Sie vorerst mit dem Konten-Werkzeug auf Ihrem Rechner aus. Die Einladung gilt einmal und 7 Tage. Link oder QR-Code nur persönlich weitergeben.']],
+  adminEn:[['Accounts and start codes','for grown-ups you issue for now with the account tool on your computer. Each invitation works once and for 7 days. Hand over the link or QR code in person only.']]
 };
 const kontoTexte = (text, ersatz) => KONTO_UI ? anmPunkteErsetzen(text, ersatz) : text;
 const GUIDE_KID=kontoTexte(`<div class="quick"><b>Quick guide</b><ol>
@@ -6739,18 +6766,16 @@ const GUIDE_TEACHER_EN=kontoTexte(`<h3 class="pguide-h">Help for teachers</h3><o
 <li><b>Forgot your password?</b> The start code keeps working; otherwise the admin gives you a new one. After 5 wrong tries, wait 30 seconds.</li>
 </ol>`, KONTO_GUIDE.teacherEn);
 const GUIDE_ADMIN_DE=kontoTexte(`<h3 class="pguide-h">Für den Admin</h3><ol class="steps">
-<li><b>Konten und Startcodes</b> pflegen Sie mit dem Konten-Werkzeug auf Ihrem Rechner. Neue Startcodes als Startlink oder QR-Code nur persönlich übergeben.</li>
-<li><b>Administration:</b> auf der Übersichtsseite mit <b>Kontenübersicht</b> und <b>Versions- und Releaseinformationen</b>.</li>
-<li><b>Releasedokumentation:</b> in <b>Administration</b> unter <b>Versions- und Releaseinformationen</b> – nur für den Admin, gegliedert nach Epic, User Story und Bugfix.</li>
-<li><b>Lernstand eines Kindes:</b> nur mit Freigabe der Eltern, wie bei einer Lehrkraft – mit Vor- und Nachnamen, Geburtsdatum, Klasse und Schule, ohne Emoji und Einstellungen. Ihr eigenes Kind sehen Sie über Ihr Elternkonto.</li>
-<li><b>Testkinder:</b> oben in der Kinderauswahl unter „🧪 Testkinder“; „▶ Als Testkind spielen“ öffnet die Kinderseite mit Testdaten.</li>
+<li><b>Elternteil einladen:</b> in <b>Administration</b>. Hier legen Sie nur das Elternkonto an.</li>
+<li><b>Konten und Startcodes</b>: alles andere weiter mit dem Konten-Werkzeug auf Ihrem Rechner.</li>
+<li><b>Administration:</b> dort stehen auch <b>Kontenübersicht</b>, <b>Versions- und Releaseinformationen</b> und die <b>Releasedokumentation</b> nach <b>Epic, User Story und Bugfix</b>.</li>
+<li><b>Lernstand und Testkinder:</b> Ein Kind sehen Sie nur mit Freigabe der Eltern, dann mit Vor- und Nachname, Geburtsdatum, Klasse und Schule, ohne Emoji und Einstellungen. <b>🧪 Testkinder</b> stehen oben in der Kinderauswahl.</li>
 </ol>`, KONTO_GUIDE.adminDe);
 const GUIDE_ADMIN_EN=kontoTexte(`<h3 class="pguide-h">For the admin</h3><ol class="steps">
-<li><b>Accounts and start codes</b> are maintained with the account tool on your computer. Hand over new start codes as a start link or QR code in person only.</li>
-<li><b>Administration:</b> on the overview page with <b>Account overview</b> and <b>Version and release information</b>.</li>
-<li><b>Release notes:</b> in <b>Administration</b> under <b>Version and release information</b> – only for the admin, grouped into Epic, User Story and Bugfix.</li>
-<li><b>A child’s progress:</b> only with a grant from the parents, like a teacher – with first and last name, date of birth, class and school, without emoji and settings. You see your own child through your parent account.</li>
-<li><b>Test children:</b> at the top in the child list under “🧪 Test children”; “▶ Play as test child” opens the child’s pages with test data.</li>
+<li><b>Invite a parent:</b> in <b>Administration</b>. Here you only create the parent account.</li>
+<li><b>Accounts and start codes</b>: everything else stays in the account tool on your computer.</li>
+<li><b>Administration:</b> it also shows <b>Account overview</b>, <b>Version and release information</b> and the release notes by <b>Epic, User Story and bugfix</b>.</li>
+<li><b>Progress and test children:</b> you see a child only with the parents’ grant, then with first and last name, date of birth, class and school, without emoji and settings. <b>🧪 Test children</b> are at the top of the child list.</li>
 </ol>`, KONTO_GUIDE.adminEn);
 /* the grown-ups guide that fits the person who is logged in */
 const guideAdultFor = de => {
