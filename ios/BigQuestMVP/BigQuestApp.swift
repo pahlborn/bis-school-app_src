@@ -79,7 +79,7 @@ private struct BigQuestScreen: View {
             return nil
         }
         return (try? await bigQuest.view.evaluateJavaScript(
-            "typeof toddleEntwurfKontext === 'function' ? toddleEntwurfKontext() : null"
+            "window.bigQuestSchoolRow?.context() ?? null"
         )) as? String
     }
 
@@ -90,7 +90,7 @@ private struct BigQuestScreen: View {
         let result = try await bigQuest.view.callAsyncJavaScript(
             """
             if (location.origin !== 'https://big-quest-test.github.io') return 'context';
-            return toddleEntwurfOeffnen(context, transfer, standard, rating);
+            return window.bigQuestSchoolRow?.open(context, transfer, standard, rating) ?? 'context';
             """,
             arguments: ["context": context, "transfer": row.transfer, "standard": standard, "rating": row.rating],
             in: nil, contentWorld: .page

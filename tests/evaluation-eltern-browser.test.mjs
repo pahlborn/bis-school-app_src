@@ -191,12 +191,12 @@ test('correction drafts preserve the current focus, a synced confirmation replac
   await elternSeite(P.page, 'school');
   const form = P.page.locator('#pSchoolEvaluation');
   const handoff = () => P.page.evaluate(() => {
-    const context = toddleEntwurfKontext();
+    const context = window.bigQuestSchoolRow.context();
     const transfer = '00000000-0000-4000-8000-000000000186';
     return [
-      toddleEntwurfOeffnen('other-child', transfer, 'M-N5', 'C'),
-      toddleEntwurfOeffnen(context, transfer, 'M-N5', 'C'),
-      toddleEntwurfOeffnen(context, transfer, 'M-N5', 'C'),
+      window.bigQuestSchoolRow.open('other-child', transfer, 'M-N5', 'C'),
+      window.bigQuestSchoolRow.open(context, transfer, 'M-N5', 'C'),
+      window.bigQuestSchoolRow.open(context, transfer, 'M-N5', 'C'),
     ];
   });
   assert.deepEqual(await handoff(), ['context', 'opened', 'opened']);
