@@ -103,12 +103,24 @@ enum ClaudeClient {
         guard http.statusCode == 200 else {
             throw MVPError.message("Claude-Aufruf fehlgeschlagen (HTTP \(http.statusCode)).")
         }
-        guard body.count <= 16_384, let result = try? JSONDecoder().decode(Response.self, from: body),
-              result.stop_reason == "end_turn", result.content.count == 1,
-              result.content[0].type == "text", let raw = result.content[0].text,
-              let echoed = try? JSONDecoder().decode(Echo.self, from: Data(raw.utf8)),
-              echoed.value.utf8.elementsEqual(value.utf8) else {
-            throw MVPError.message("Claude hat den Feldwert nicht unverändert zurückgegeben.")
+        guard body.count <= 16_384 else {
+            throw MVPError.message("Claude-Antwort erhalten (HTTP 200), aber zu groß für diesen Test.")
+        }
+        guard let result = try? JSONDecoder().decode(Response.self, from: body) else {
+            throw MVPError.message("Claude-Antwort erhalten (HTTP 200), aber das API-Format ist nicht lesbar.")
+        }
+        guard result.stop_reason == "end_turn" else {
+            let known = ["max_tokens", "refusal", "stop_sequence", "tool_use", "pause_turn", "model_context_window_exceeded"]
+            let reason = known.first { $0 == result.stop_reason } ?? "unbekannt"
+            throw MVPError.message("Claude hat die Antwort nicht regulär abgeschlossen (\(reason)).")
+        }
+        let textBlocks = result.content.filter { $0.type == "text" }
+        guard textBlocks.count == 1, let raw = textBlocks[0].text,
+              let echoed = try? JSONDecoder().decode(Echo.self, from: Data(raw.utf8)) else {
+            throw MVPError.message("Claude-Antwort erhalten, aber das erwartete JSON-Feld fehlt.")
+        }
+        guard echoed.value.utf8.elementsEqual(value.utf8) else {
+            throw MVPError.message("Claude hat einen anderen Feldwert zurückgegeben (gesendet: \(value.utf8.count) Bytes, empfangen: \(echoed.value.utf8.count) Bytes).")
         }
         return echoed.value
     }
