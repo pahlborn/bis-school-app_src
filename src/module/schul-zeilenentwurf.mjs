@@ -17,8 +17,11 @@ export function schulZeilenOeffnen(context, transfer, standard, rating) {
     child: target.id, author: target.author, title: '', day: '', standard, rating,
     evaluation: transfer, revision: crypto.randomUUID(), preview: false, focus: schoolEvaluationNeedsPractice(rating),
   };
-  renderSheets();
-  document.querySelector('#pSchoolEvaluation input[name="title"]')?.focus();
+  const form = document.getElementById('pSchoolEvaluation');
+  const area = form.parentElement;
+  form.outerHTML = schoolEvaluationHTML();
+  bindSchoolEvaluation(area);
+  area.querySelector('#pSchoolEvaluation input[name="title"]')?.focus();
   return 'opened';
 }
 
