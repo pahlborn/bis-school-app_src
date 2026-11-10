@@ -44,7 +44,7 @@ export async function evaluationEntwurf(source, match = claudeZuordnung) {
     if (byRow.get(row) !== 1 || byStandard.get(standard) !== 1) return [];
     used.add(row);
     const { criterion, teacherRating: rating } = rows[row];
-    return [{ title, day, standard, rating, focus: schoolEvaluationNeedsPractice(rating) ?
+    return [{ row, title, day, standard, rating, focus: schoolEvaluationNeedsPractice(rating) ?
       SCHOOL_EVALUATION_TARGETS[standard].focus : 'none', criterion }];
   });
   return { proposals, unresolved: rows.filter((_, i) => !used.has(i)) };

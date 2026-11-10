@@ -24,7 +24,7 @@ test('matches map to valid Big Quest drafts and keep the teacher grades', async 
     ['M-N3', 'M', 'none'], ['M-N5', 'C', 'two-step'],
   ]);
   assert.deepEqual(output.unresolved, fixture.rows.slice(2));
-  for (const { criterion, ...draft } of output.proposals) {
+  for (const { row, criterion, ...draft } of output.proposals) {
     assert.deepEqual(checkEvent(newEvent({ type: 'school_evaluation', author: 'p_Parent', device: 'd_Device',
       at: '2026-11-10T12:00:00.000Z', payload: { ...draft, child: 'p_Child',
         evaluation: crypto.randomUUID(), revision: crypto.randomUUID() } })), []);
