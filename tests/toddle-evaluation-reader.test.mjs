@@ -28,6 +28,9 @@ test('selection-free reader preserves pairs and rejects ambiguous or hidden sour
   result = await read(table(row('Header','-')+row('A','C')+row('Unknown','Q')+row('Hidden','E','hidden')));
   assert.equal(result.skipped,2); assert.equal(result.rows.length,1);
   assert.equal((await read(table(row('<input value="name">','C')))).error,'missing');
+  for (const attr of ['style="opacity:0"','aria-hidden="true"','inert']) {
+   assert.equal((await read(table(row(`Visible <span ${attr}>Hidden name</span>`,'C')))).error,'missing');
+  }
   assert.equal((await read('<p>Evaluation C M</p>')).error,'missing');
   await page.goto('https://example.org/');
   assert.equal((await read(table(row('A','C')))).error,'origin');

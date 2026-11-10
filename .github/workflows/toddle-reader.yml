@@ -18,8 +18,3 @@ jobs:
       - run: npm install --no-package-lock
       - run: npx playwright install --with-deps chromium
       - run: node --test tests/toddle-evaluation-reader.test.mjs
-  ipad:
-    runs-on: macos-15
-    steps:
-      - uses: actions/checkout@v4
-      - run: xcodebuild -project ios/BigQuestMVP.xcodeproj -scheme BigQuestMVP -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build

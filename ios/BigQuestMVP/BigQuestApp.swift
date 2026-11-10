@@ -154,7 +154,7 @@ private struct ToddleFieldScreen: View {
             VStack(spacing: 0) {
                 BrowserPane(view: page.view)
                     .frame(maxHeight: .infinity)
-                    .allowsHitTesting(!reading && !sending)
+                    .allowsHitTesting(!reading && !sending && assessment == nil)
                 Divider()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 10) {
@@ -165,7 +165,13 @@ private struct ToddleFieldScreen: View {
                         .disabled(reading || sending)
                         if let assessment {
                             Text("Gelesene Kriterien: \(assessment.rows.count)").font(.headline)
-                            Text("Bitte mit der geöffneten Evaluation vergleichen. Noch nichts gespeichert.")
+                            Text("Lokale Aufnahme der gelesenen Kriterien. Vollständigkeit noch nicht bestätigt; es wird nichts gespeichert.")
+                            Button("Andere Evaluation öffnen") {
+                                self.assessment = nil
+                                suggestions = [:]
+                                error = nil
+                            }.disabled(reading || sending)
+                            Text("Dieser Entwicklungsstand prüft nur die Lernziele Runden (M-N3) und Subtraktionsstrategien (M-N5).")
                             if assessment.skipped > 0 {
                                 Text("\(assessment.skipped) Tabellenzeilen ohne eindeutig lesbare Einstufung. Die Übernahme ist gesperrt, bis die Vollständigkeit geklärt ist.")
                                     .foregroundStyle(.orange)
@@ -186,14 +192,7 @@ private struct ToddleFieldScreen: View {
                                 Task { await classify(assessment) }
                             }
                             .disabled(reading || sending)
-                            if assessment.rows.count == 1, assessment.skipped == 0,
-                               let row = assessment.rows.first, let standard = suggestions[row.transfer],
-                               ["M-N3", "M-N5"].contains(standard), canImport {
-                                Button("Entwurf in Big Quest öffnen") { Task { await open(row, standard) } }
-                                    .disabled(reading || sending)
-                            } else if !suggestions.isEmpty {
-                                Text("Diese Vorschau speichert noch keine mehrteilige Evaluation. Dafür wird die gemeinsame Übergabe aller Kriterien benötigt.")
-                            }
+                            Text("Die gemeinsame Übernahme in Big Quest ist noch nicht freigeschaltet. Zuerst muss die Vollständigkeit an der echten Evaluation geprüft werden.")
                         }
                         if let error { Text(error).foregroundStyle(.red) }
                     }
@@ -246,14 +245,4 @@ private struct ToddleFieldScreen: View {
         } catch { self.error = error.localizedDescription }
     }
 
-    private func open(_ row: ToddleField.AssessmentRow, _ standard: String) async {
-        guard !sending, !reading else { return }
-        sending = true
-        defer { sending = false }
-        error = nil
-        do {
-            try await openDraft(row, standard)
-            dismiss()
-        } catch { self.error = error.localizedDescription }
-    }
 }
