@@ -201,7 +201,8 @@ test('B Home-Bildschirm-App ohne Zugangscode: zuerst nur "Geraet verbinden"; QR-
     assert.equal(await K.page.evaluate(() => {
       const s = JSON.parse(localStorage.getItem('bq2_session') || localStorage.getItem('bqt_session') || 'null');
       const p = JSON.parse(localStorage.getItem('bq2_pendingAdmission') || localStorage.getItem('bqt_pendingAdmission') || '{}');
-      return !!(s && p && p[s.id]);
+      const x = s && p ? p[s.id] : null;
+      return !!(x && typeof x.transfer === 'string' && /^pt_/.test(x.transfer) && x.kopiert !== true);
     }), true, 'pendingAdmission nur lokal gemerkt');
     assert.deepEqual(K.fehler, []);
     await K.ctx.close();

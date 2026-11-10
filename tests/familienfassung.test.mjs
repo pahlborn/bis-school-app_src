@@ -310,9 +310,13 @@ test('Sandbox: gebaute Familienfassung - anmelden, Kind anlegen, ueben, Schulbew
   const code = P.im('#kCode').textContent;
   const K = geraet(t, W, { name: 'Kathies iPad', hash: link(anmStartlink('http://127.0.0.1/', { anmeldename: 'kathie', code, fingerabdruck: fp })) });
   await registrieren(K);
-  await K.wartenAuf('#kidWait');
+  await K.warten(() => K.sitzung() || K.da('#kidWait'), 'Kind startet lokal oder wartet');
   await W.uhr.vor(1000); await P.sync(); await W.uhr.vor(1000);
-  K.klick('#kidWaitAgain'); await K.wartenAuf('#welcomeGo'); await W.uhr.vor(1000); K.klick('#welcomeGo');
+  if (K.da('#kidWait')) {
+    K.klick('#kidWaitAgain'); await K.wartenAuf('#welcomeGo'); await W.uhr.vor(1000); K.klick('#welcomeGo');
+  } else {
+    await K.sync();
+  }
   P.klick('#kQrFertig');
   const kind = K.sitzung().id;
   await runde(K, W);
@@ -377,9 +381,13 @@ test('Sandbox: gebaute Familienfassung - anmelden, Kind anlegen, ueben, Schulbew
   await P.wartenAuf('#kQr');
   const B = geraet(t, W, { name: 'Bens Tablet', hash: link(anmStartlink('http://127.0.0.1/', { anmeldename: 'ben', code: P.im('#kCode').textContent, fingerabdruck: fp })) });
   await registrieren(B);
-  await B.wartenAuf('#kidWait');
+  await B.warten(() => B.sitzung() || B.da('#kidWait'), 'Kind startet lokal oder wartet');
   await W.uhr.vor(1000); await P.sync(); await W.uhr.vor(1000);
-  B.klick('#kidWaitAgain'); await B.wartenAuf('#welcomeGo'); await W.uhr.vor(1000); B.klick('#welcomeGo');
+  if (B.da('#kidWait')) {
+    B.klick('#kidWaitAgain'); await B.wartenAuf('#welcomeGo'); await W.uhr.vor(1000); B.klick('#welcomeGo');
+  } else {
+    await B.sync();
+  }
   P.klick('#kQrFertig');
   const ben = B.sitzung().id;
   await runde(B, W); await B.sync(); await W.uhr.vor(1000);
