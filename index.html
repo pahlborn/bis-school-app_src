@@ -5922,7 +5922,7 @@ function kontoZeileAuffrischen(){
   if(z){ z.innerHTML=kontoZeileHTML(); kontoZeileBinden(z); }
   const labels=body.querySelectorAll('[data-eval-sync]');
   if(!labels.length) return;
-  const synced=schoolEvaluationSyncedRevisions(schoolKid()), de=PL()==='de';
+  const synced=anmSchuleAbgeglicheneRevisionen(localStorage, schoolKid()), de=PL()==='de';
   for(const label of labels){
     const text=schoolEvaluationSyncText(synced.has(label.dataset.evalSync),de);
     if(label.textContent!==text) label.textContent=text;
@@ -6529,23 +6529,6 @@ function schoolDetailHTML(t, U, T, de){
     +(fq?`<p class="small">${de?'Daraus im automatischen Fokus':'In the automatic focus because of this'}: ${fq}</p>`:'')
     +(pq?`<p class="small">${T.quests}: ${pq}</p>`:'');
 }
-/* A signed event enters the log before the upload. Only a confirmed put clears
-   its outbox entry. Events received from other devices are already confirmed. */
-function schoolEvaluationSyncedRevisions(child){
-  const area='schule:'+child, stand=evRaw(GERAETEABGLEICH_SPEICHER.staende)?.[area];
-  const synced=new Set();
-  if(stand?.bereich!==area || !Array.isArray(stand.log) || !Array.isArray(stand.ausgang)) return synced;
-  const bundle=stand.unterwegs?.inhalt?.eintraege;
-  if(stand.unterwegs && !Array.isArray(bundle)) return synced;
-  const pending=new Set(stand.ausgang.map(x=>x?.event?.id));
-  for(const x of bundle||[]) pending.add(x?.id);
-  for(const entry of stand.log){
-    const e=entry?.event;
-    if(e?.type==='school_evaluation' && e.payload?.child===child && typeof e.id==='string'
-      && typeof entry.sig==='string' && entry.sig && !pending.has(e.id)) synced.add(e.payload.revision);
-  }
-  return synced;
-}
 function schoolEvaluationSyncText(synced,de){
   return synced?(de?'Mit App-Speicher abgeglichen':'Synced with app storage')
     :(de?'Lokal gespeichert · Abgleich ausstehend':'Saved on this device · sync pending');
@@ -6573,7 +6556,7 @@ function schoolEvaluationHistory(t, de, synced){
 function schoolListHTML(d){
   const de=PL()==='de', U=SCHOOL_UI[de?'de':'en'], T=schoolTexts(de), f=state.sfilt||SCHOOL_FILTER0, open=state.sopen||[];
   const target=schoolEvaluationTarget(), mayEdit=!!target;
-  const synced=mayEdit?schoolEvaluationSyncedRevisions(target.id):null;
+  const synced=mayEdit?anmSchuleAbgeglicheneRevisionen(localStorage, target.id):null;
   const all=d.tasks.filter(t=>!t.pending && (mayEdit || !t.manual?.withdrawn)).length, l=schoolFiltered(d, f, dayKey(), mayEdit);
   const rows=l.map(({t,i})=>{ const lv=schoolTaskLevels(t), op=open.includes(i);
     return `<tr class="psrow" data-psrow="${i}"><td data-l="${U.date}">${fmtDay(t.day)}</td><td data-l="${U.subject}">${esc(schoolArea(t.area,T))}</td><td data-l="${U.task}">${esc(t.title)}${t.manual?.withdrawn?` <span class="small">(${de?'zurückgenommen':'withdrawn'})</span>`:''}</td>`
@@ -6600,7 +6583,7 @@ function schoolEvaluationHTML(){
   const draft=schoolEvaluationDraft;
   const d=draft?.child===target.id && draft.author===target.author ? draft : null;
   const status=schoolEvaluationNotice?.child===target.id && schoolEvaluationNotice.author===target.author
-    ? `<p role="status">${schoolEvaluationSyncHTML(schoolEvaluationNotice.revision,schoolEvaluationSyncedRevisions(target.id),de)}</p>` : '';
+    ? `<p role="status">${schoolEvaluationSyncHTML(schoolEvaluationNotice.revision,anmSchuleAbgeglicheneRevisionen(localStorage, target.id),de)}</p>` : '';
   const criteria=de?STANDARD_TEXT:STANDARD_TEXT_EN;
   const start=`<button type="button" class="btn small" data-eval-action="open">${de?'Evaluation hinzufügen':'Add assessment'}</button>`;
   if(!d) return `<div id="pSchoolEvaluation">${start}${status}</div>`;
