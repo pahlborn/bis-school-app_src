@@ -11,20 +11,24 @@ export const RELEASE_NOTES = {
   current: {
     epics: [
       {
-        de: 'Releasedokumentation ist jetzt direkt im Admin-Bereich der App sichtbar.',
-        en: 'Release notes are now visible directly in the admin area of the app.'
+        de: 'Der Admin kann jetzt ein Elternkonto direkt in der App einladen.',
+        en: 'The admin can now invite a parent account directly in the app.'
       }
     ],
     stories: [
       {
-        de: 'Der Admin sieht pro Fassung eine Übersicht nach Epic, User Story und Bugfix.',
-        en: 'The admin sees one overview per version, grouped by epic, user story and bugfix.'
+        de: 'Unter Administration gibt es dafuer einen eigenen Bereich mit Link, QR-Code und offenen Einladungen.',
+        en: 'Under Administration there is now a dedicated area with link, QR code and open invitations.'
+      },
+      {
+        de: 'Der Admin legt dabei nur das Elternkonto an; Kind, Lehrkraft und Familienzuordnung bleiben ausserhalb dieses Pfads.',
+        en: 'This path creates only the parent account; child, teacher and family assignment stay outside this flow.'
       }
     ],
     bugfixes: [
       {
-        de: 'Fehlende Einträge zeigen einen ruhigen Hinweis statt einer kaputten Ansicht.',
-        en: 'Missing entries show a calm note instead of a broken screen.'
+        de: 'Bereits vergebene Anmeldenamen werden beim Admin-Einladen direkt abgefangen.',
+        en: 'Already-used login names are caught immediately during the admin invitation flow.'
       }
     ]
   },
