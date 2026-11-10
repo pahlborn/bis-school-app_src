@@ -712,6 +712,7 @@ const APP_RELEASES=/*BQ_RELEASES*/null;
    the test instance gets {art:'github', repo, wurzel} from its build, tests hand in a simulated storage (an object with
    geraet()). null (always in Kathie's app): no accounts in a storage, the login works with konten.json as before. */
 const KONTO_SPEICHER=/*BQ_SPEICHER*/null;
+const SCHULE_TESTFREIGABE=/*BQ_SCHULE_TESTFREIGABE*/null;
 const APP_ACCOUNTS=normAccounts(/*BQ_KONTEN*/null) || kontoKontenStart();
 /* login with accounts in the storage: test build (module konto), a storage, no konten.json (kontoKontenStart) */
 const KONTO_UI=!!(APP_ACCOUNTS && APP_ACCOUNTS.konto);
@@ -6377,11 +6378,15 @@ function schoolFromAccount(id){
 }
 const schoolData = () => { if(!accountsOn()) return null; const g=viewerGrant(); if(g && !g.scope.includes('school')) return null; const id=schoolKid(); return (KONTO_UI ? schoolFromAccount(id) : SCHOOL_DATA[id])||null; };
 const SL={C:'c',M:'m',E:'e',RS:'rs',N:'rs'};
-/* The initial slice stays in the local test build until the older-client sync path is verified. */
+/* The school evaluation pilot runs only on the configured test origin or against a local mock. */
 function schoolEvaluationPilot(){
-  return KONTO_UI && ['127.0.0.1','localhost','[::1]'].includes(location.hostname)
-    && KONTO_SPEICHER?.repo==='pahlborn/bis-school-app-testdaten'
-    && /^http:\/\/127\.0\.0\.1:\d+(?:\/|$)/.test(KONTO_SPEICHER.basis||'');
+  if(!KONTO_UI || KONTO_SPEICHER?.art!=='github') return false;
+  if(SCHULE_TESTFREIGABE && location.origin===SCHULE_TESTFREIGABE.origin){
+    return KONTO_SPEICHER.repo===SCHULE_TESTFREIGABE.repo && KONTO_SPEICHER.wurzel===''
+      && !Object.hasOwn(KONTO_SPEICHER,'basis');
+  }
+  return ['127.0.0.1','localhost','[::1]'].includes(location.hostname)
+    && /^http:\/\/127\.0\.0\.1:\d+\/*$/.test(KONTO_SPEICHER.basis||'');
 }
 const SCHOOL_EVALUATION_EXERCISES={
   'two-step':{build:twoStepQ, de:'Zweischrittige Subtraktion in Practise Today üben', en:'Practise two-step subtraction in Practise Today'},

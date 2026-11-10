@@ -15,7 +15,7 @@ import os from 'node:os';
 import path from 'node:path';
 import http from 'node:http';
 import { WURZEL, QUELLEN, testinstanzBauen, appZusammensetzen } from '../werkzeug/bauen.mjs';
-import { TESTINSTANZ, ersatzLesen, testinstanzUmwandeln, testinstanzPruefen, testinstanzManifest, geraeteNamen, VERSION_AUS_KLARTEXT, SPEICHER_MARKE, SPEICHER_TESTINSTANZ } from '../werkzeug/testinstanz.mjs';
+import { TESTINSTANZ, ersatzLesen, testinstanzUmwandeln, testinstanzPruefen, testinstanzManifest, geraeteNamen, VERSION_AUS_KLARTEXT, SPEICHER_MARKE, SPEICHER_TESTINSTANZ, SCHULE_TESTFREIGABE_MARKE } from '../werkzeug/testinstanz.mjs';
 import { woerterLesen } from '../werkzeug/kern.mjs';
 import { appLesen } from '../werkzeug/module.mjs';
 import { GITHUB_TOKEN_SCHLUESSEL, githubSpeicher } from '../src/module/github.mjs';
@@ -35,6 +35,7 @@ let ERSATZ, ZIEL, GEBAUT, APP, MANIFEST, KONTEXT;
 const TOKEN = 'github_pat_TESTINSTANZ_' + 'x7'.repeat(20);       // nur im Nachbau gueltig
 const REPO = TESTINSTANZ.repoDaten, GITHUB = 'https://api.github.com';
 const SPEICHER_ZEILE = 'const KONTO_SPEICHER=' + JSON.stringify(SPEICHER_TESTINSTANZ) + ';';
+const SCHULE_FREIGABE_ZEILE = 'const SCHULE_TESTFREIGABE=' + JSON.stringify({ origin: new URL(TESTINSTANZ.adresse).origin, repo: REPO }) + ';';
 let N, CODES, ELTERN;                                            // GitHub-Nachbau; Startcodes der Testkinder; Elterngeraet (ohne App)
 
 before(async () => {
@@ -70,11 +71,12 @@ const nurFund = (app, pruefung, manifest) => { const f = funde(app, manifest); a
 test('Bau: Suchlauf bestanden, fuenf Dateien, App im Klartext = umgewandelter Testbau, eigener Name, Version drin', () => {
   assert.deepEqual(GEBAUT.dateien, ['index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png']);
   for (const d of GEBAUT.dateien) assert.ok(fs.existsSync(path.join(ZIEL, d)), d);
-  assert.equal(GEBAUT.pruefungen.length, 17);                     // 17.: Schriften eingebettet (05.11.)
+  assert.equal(GEBAUT.pruefungen.length, 18);
   assert.deepEqual(GEBAUT.pruefungen.filter((p) => !p.ok), []);
   assert.ok(GEBAUT.pruefungen.some((p) => p.name === 'mit dem Test-Repo verbunden (pahlborn/bis-school-app-testdaten)'));
   assert.equal(APP.split(SPEICHER_ZEILE).length, 2, 'mit dem Test-Repo verbunden: ' + SPEICHER_ZEILE);
   assert.ok(!APP.includes(SPEICHER_MARKE), 'Marke ersetzt');
+  assert.ok(APP.includes(SCHULE_FREIGABE_ZEILE) && !APP.includes(SCHULE_TESTFREIGABE_MARKE), 'Schulfreigabe eingesetzt');
   assert.deepEqual(SPEICHER_TESTINSTANZ, { art: 'github', repo: 'pahlborn/bis-school-app-testdaten', wurzel: '' });
   assert.deepEqual(funde(APP), []);
   assert.ok(APP.startsWith('<!DOCTYPE html>') || APP.startsWith('<!doctype html>'), 'die App selbst, keine Huelle');
@@ -102,8 +104,11 @@ test('Umwandlung: alle Speicherstellen bqt_, Geraetedaten und Token geraeteweit,
   assert.equal(zeilenA.length, zeilenB.length, 'gleiche Zeilenzahl');
   const praefix = (z) => z.replace(/bq2_|\bbq_/g, 'bqt_').replace(/\bbqUpdateTo\b/g, 'bqtUpdateTo');
   const anders = zeilenA.map((z, i) => [z, zeilenB[i]]).filter(([a, b]) => praefix(a) !== b);
-  assert.ok(anders.length >= 10 && anders.length < 40, 'Zahl der Zeilen mit mehr als Praefixen: ' + anders.length);
-  const erklaert = anders.filter(([a, b]) => /GLOBAL_KEYS=|<title>|apple-mobile-web-app-title/.test(a) || (a.trim() === 'const KONTO_SPEICHER=' + SPEICHER_MARKE + ';' && b.trim() === SPEICHER_ZEILE) || ERSATZ.ersetzen.some(([s]) => a.toLowerCase().includes(s.toLowerCase())));
+  assert.ok(anders.length >= 10 && anders.length <= 40, 'Zahl der Zeilen mit mehr als Praefixen: ' + anders.length);
+  const erklaert = anders.filter(([a, b]) => /GLOBAL_KEYS=|<title>|apple-mobile-web-app-title/.test(a)
+    || (a.trim() === 'const KONTO_SPEICHER=' + SPEICHER_MARKE + ';' && b.trim() === SPEICHER_ZEILE)
+    || (a.trim() === 'const SCHULE_TESTFREIGABE=' + SCHULE_TESTFREIGABE_MARKE + ';' && b.trim() === SCHULE_FREIGABE_ZEILE)
+    || ERSATZ.ersetzen.some(([s]) => a.toLowerCase().includes(s.toLowerCase())));
   assert.equal(anders.length, erklaert.length, 'unerklaerte Aenderung: ' + anders.filter((x) => !erklaert.includes(x)).map(([a]) => a.trim().slice(0, 80)).join(' | '));
 });
 
@@ -135,6 +140,9 @@ test('Gegenproben Suchlauf: jede Abweichung wird gefunden (Schuldaten, Konten, T
     nurFund(mitSpeicher(s), 'mit dem Test-Repo verbunden');
   nurFund(APP.replace(SPEICHER_ZEILE, () => SPEICHER_ZEILE + SPEICHER_ZEILE), 'mit dem Test-Repo verbunden');
   nurFund(APP + '<!-- ' + SPEICHER_MARKE + ' -->', 'mit dem Test-Repo verbunden');
+  nurFund(APP.replace(SCHULE_FREIGABE_ZEILE, 'const SCHULE_TESTFREIGABE=null;'), 'Schulbewertungen nur auf der Testinstanz');
+  nurFund(APP.replace(SCHULE_FREIGABE_ZEILE, SCHULE_FREIGABE_ZEILE + SCHULE_FREIGABE_ZEILE), 'Schulbewertungen nur auf der Testinstanz');
+  nurFund(APP.replace(SCHULE_FREIGABE_ZEILE, SCHULE_FREIGABE_ZEILE.replace('https:', 'http:')), 'Schulbewertungen nur auf der Testinstanz');
   // Aktualisierung: alte publishedVersion (mit Schluessel und Tresor, Speicherstelle schon bqt_), doppelt, ohne Version
   const mitTresor = /async function publishedVersion\(\)\{[\s\S]*?\n\}/.exec(appLesen('utf8', { bauart: 'test' }))[0].replace(/\r/g, '').replace('bq_schluessel', 'bqt_schluessel');
   nurFund(APP.replace(VERSION_AUS_KLARTEXT, () => mitTresor), 'Aktualisierung ohne Schluessel');
@@ -158,8 +166,38 @@ test('Gegenproben Umwandlung: geaenderte Stellen in index.html und Namensgleichh
   assert.throws(() => testinstanzUmwandeln(testbau.replace("localStorage.getItem('bq_schluessel')", "localStorage.getItem('bq_key')"), ERSATZ), /publishedVersion \(mit Schluessel\) 0x/);
   assert.throws(() => testinstanzUmwandeln(testbau.replace(SPEICHER_MARKE, 'null'), ERSATZ), /Marke \/\*BQ_SPEICHER\*\/null 0x statt 1x/);
   assert.throws(() => testinstanzUmwandeln(testbau.replace(SPEICHER_MARKE, SPEICHER_MARKE + '||' + SPEICHER_MARKE), ERSATZ), /Marke \/\*BQ_SPEICHER\*\/null 2x statt 1x/);
+  assert.throws(() => testinstanzUmwandeln(testbau.replace(SCHULE_TESTFREIGABE_MARKE, 'null'), ERSATZ), /BQ_SCHULE_TESTFREIGABE.*0x statt 1x/);
   assert.throws(() => testinstanzUmwandeln(testbau + "<script>localStorage.getItem('bq2_abgleich')</script>", ERSATZ), /"abgleich" ist Geraetename und zugleich Speicherstelle/);
   assert.throws(() => testinstanzUmwandeln(testbau + "<script>store.get('gh',null)</script>", ERSATZ), /"gh" ist Geraetename/);
+});
+
+test('Schulbewertungen laufen auf der freigegebenen 3c-Adresse oder im Loopback-Nachbau', () => {
+  const fremd = { ...SPEICHER_TESTINSTANZ, repo: 'anderer-ort/familien-daten' };
+  const lokal = { ...SPEICHER_TESTINSTANZ, basis: 'http://127.0.0.1:9' };
+  const an = (adresse, speicher, testinstanz) => {
+    const location = Object.assign(new URL(adresse), { replace() {}, reload() {}, assign() {} });
+    const S = appSandbox({ bauart: 'test', seite: true, globale: { location }, anpassen: (h) => {
+      const ausdruck = JSON.stringify(speicher);
+      return testinstanz ? testinstanzUmwandeln(h, ERSATZ, { speicher: ausdruck }) : h.replace(SPEICHER_MARKE, () => ausdruck);
+    } });
+    return S.lauf(() => S.holen('schoolEvaluationPilot')());
+  };
+  for (const [adresse, speicher, testinstanz, erwartet] of [
+    [TESTINSTANZ.adresse, SPEICHER_TESTINSTANZ, true, true],
+    [TESTINSTANZ.adresse, SPEICHER_TESTINSTANZ, false, false],
+    [TESTINSTANZ.adresse.replace('https:', 'http:'), SPEICHER_TESTINSTANZ, true, false],
+    ['https://big-quest-test.github.io:8443/', SPEICHER_TESTINSTANZ, true, false],
+    ['https://big-quest-test.github.io.example.invalid/', SPEICHER_TESTINSTANZ, true, false],
+    [TESTINSTANZ.adresse, fremd, true, false],
+    [TESTINSTANZ.adresse, { ...SPEICHER_TESTINSTANZ, wurzel: 'anders' }, true, false],
+    [TESTINSTANZ.adresse, lokal, true, false],
+    ['https://pahlborn.github.io/bis-school-app/', fremd, false, false],
+    ['http://127.0.0.1:8765/', SPEICHER_TESTINSTANZ, true, false],
+    ['http://127.0.0.1:8765/', lokal, false, true],
+    ['http://127.0.0.1:8765/', { ...lokal, basis: 'http://127.0.0.1:9@extern.invalid' }, false, false],
+  ]) {
+    assert.equal(an(adresse, speicher, testinstanz), erwartet, JSON.stringify([adresse, speicher, testinstanz]));
+  }
 });
 
 test('Bau bricht ab und schreibt nichts, wenn ein verbotenes Wort ohne Ersatz in index.html steht', async () => {
