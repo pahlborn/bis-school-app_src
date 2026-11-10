@@ -74,7 +74,10 @@ test('1 Kind ueber den Link der Eltern: ohne Rollenwahl, Englisch; neues Passwor
   await K.warten(() => K.S.zustand().screen === 'home', 'Kind direkt auf der Startseite');
   const kid = (await W.z.directory(await kontoLookup('lio.sonnental'))).kennung;
   assert.equal(K.im('#kidWait'), null, 'kein Warten beim normalen Erststart');
-  assert.equal(K.S.lauf(() => { const p = K.S.holen('store').get('pendingAdmission', {}); return !!(p && p[kid]); }), true, 'pendingAdmission nur lokal vorgemerkt');
+  assert.equal(K.S.lauf(() => {
+    const p = K.S.holen('store').get('pendingAdmission', {})[kid];
+    return !!(p && typeof p.transfer === 'string' && p.transfer.startsWith('pt_') && p.kopiert !== true);
+  }), true, 'pendingAdmission nur lokal vorgemerkt');
   await K.S.lauf(() => K.S.holen('kontoAbgleich')());
   await W.sync();
 

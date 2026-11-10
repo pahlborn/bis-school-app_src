@@ -29,6 +29,38 @@ const RUNDEN = 1000;                                          // nur fuer Konten
 const warte = (ms) => new Promise((r) => setTimeout(r, ms));
 const roh = (x) => (x === undefined ? x : JSON.parse(JSON.stringify(x)));
 
+function idbNachbau() {
+  const dbs = new Map();
+  return {
+    open(name) {
+      const r = { result: undefined, onsuccess: null, onerror: null, onupgradeneeded: null };
+      Promise.resolve().then(() => {
+        const neu = !dbs.has(name); if (neu) dbs.set(name, new Map());
+        const daten = dbs.get(name);
+        r.result = {
+          createObjectStore() {}, close() {},
+          transaction() {
+            const t = { oncomplete: null, onerror: null, onabort: null };
+            const s = {
+              put(o) { daten.set(o.kennung, o); return { result: o.kennung }; },
+              delete(k) { daten.delete(k); return { result: undefined }; },
+              clear() { daten.clear(); return { result: undefined }; },
+              getAll() { return { result: [...daten.values()] }; },
+            };
+            t.objectStore = () => s;
+            Promise.resolve().then(() => t.oncomplete && t.oncomplete());
+            return t;
+          }
+        };
+        if (neu && r.onupgradeneeded) r.onupgradeneeded();
+        if (r.onsuccess) r.onsuccess();
+      });
+      return r;
+    },
+    deleteDatabase() {}
+  };
+}
+
 /* eine App-Instanz (ein Geraet) am gemeinsamen Speicher; hash = Startlink in der Adresse */
 function geraet(t, welt, { name, hash = '', speicher = {}, extra = {}, anpassen, praefix = 'bq2_' } = {}) {
   const geteilt = [];
@@ -230,7 +262,10 @@ test('2 Kind: Startcode getippt -> eigenes Passwort, kein Wiederherstellungscode
   assert.equal(A.da('#recCode'), false, 'Kinder haben keinen Wiederherstellungscode');
   const k = A.liste()[0];
   assert.equal(A.da('#kidWait'), false, 'kein Almost ready beim normalen Erststart');
-  assert.equal(A.wert("store.get('pendingAdmission', {})")[k.id], true, 'pendingAdmission lokal gesetzt');
+  assert.equal(A.S.lauf(() => {
+    const p = A.S.holen('store').get('pendingAdmission', {})[k.id];
+    return !!(p && typeof p.transfer === 'string' && p.transfer.startsWith('pt_') && p.kopiert !== true);
+  }), true, 'pendingAdmission lokal gesetzt');
   await A.S.lauf(() => A.S.holen('kontoAbgleich')());
   await W.aufnehmen('mama.b');
   assert.deepEqual([k.user, k.art], ['kathie.b', 'child']);
@@ -241,7 +276,7 @@ test('2 Kind: Startcode getippt -> eigenes Passwort, kein Wiederherstellungscode
   // ueben schreibt unter der Kennung des Kindes
   A.S.karteOeffnen(A.S.alleKarten().find((x) => !x.studio));
   A.S.frageBeantworten(A.S.zustand().round[0]);
-  assert.ok([...A.S.ablage.keys()].some((x) => x.startsWith('bq2_' + k.id + '__events')), 'Ereignisse unter der Kennung');
+  assert.ok([...A.S.ablage.keys()].some((x) => x === 'bq2_' + k.id + '__events' || x === 'bq2_' + k.id + '__pendingEvents'), 'Ereignisse unter der Kennung');
 
   // ein Geschwisterkind nimmt das iPad, waehrend Kathie noch angemeldet ist ("Someone else?" auf der Anmeldeseite)
   A.S.lauf(() => A.S.holen('showLogin')('student'));
@@ -281,6 +316,43 @@ test('2 Kind: Startcode getippt -> eigenes Passwort, kein Wiederherstellungscode
   assert.equal(B.wert('adultUser'), null);
   const pw2 = await kontoAnmelden({ zugang: W.z, anmeldename: 'lena.b', passwort: pwL });
   assert.equal(pw2.art, 'child', 'Lenas Passwort oeffnet ihr Konto im Speicher');
+});
+
+test('2a Pending-Daten gehen spaeter genau einmal in den regulaeren Ereignispfad ueber - auch nach Neustart', async (t) => {
+  const W = await welt();
+  await W.elternteil('mama.b');
+  const code = await W.kind('kathie.b', 'mama.b');
+  const idb = idbNachbau();
+  const A = geraet(t, W.w, { name: 'Kathies iPad', extra: { indexedDB: idb } });
+  await anmelden(A, 'student', 'kathie.b', code);
+  await passwortWaehlen(A);
+  await A.warten(() => A.sitzung() && A.S.zustand().screen === 'home', 'Kind startet lokal');
+  const kid = A.sitzung().id, pre = 'bq2_' + kid + '__';
+  const antworten = [];
+  for (let i = 0; i < 2; i++) {
+    A.S.karteOeffnen(A.S.alleKarten().find((x) => !x.studio));
+    const z = A.S.zustand();
+    A.S.frageBeantworten(z.round[z.idx]);
+    antworten.push(JSON.parse(A.S.ablage.get(pre + 'pendingEvents') || '[]').filter((e) => e.type === 'answer').map((e) => e.id).at(-1));
+  }
+  const pendingVorher = JSON.parse(A.S.ablage.get(pre + 'pendingEvents') || '[]').filter((e) => e.type === 'answer').map((e) => e.id);
+  assert.deepEqual(pendingVorher, antworten, 'lokale Startdaten liegen erst im Pending-Log');
+  assert.deepEqual(JSON.parse(A.S.ablage.get(pre + 'events') || '[]').filter((e) => e.type === 'answer'), [], 'regulaeres Log vor der Aufnahme noch leer');
+
+  const B = geraet(t, W.w, { name: 'Kathies iPad nach Neustart', speicher: Object.fromEntries(A.S.ablage), extra: { indexedDB: idb } });
+  await B.warten(() => B.sitzung() && B.S.zustand().screen === 'home', 'Kind bleibt nach Neustart lokal angemeldet');
+  assert.deepEqual(JSON.parse(B.S.ablage.get(pre + 'pendingEvents') || '[]').filter((e) => e.type === 'answer').map((e) => e.id), antworten, 'Neustart verdoppelt nichts');
+
+  await W.aufnehmen('mama.b');
+  await B.S.lauf(() => B.S.holen('kontoAbgleich')());
+  const regulaer = JSON.parse(B.S.ablage.get(pre + 'events') || '[]').filter((e) => e.type === 'answer').map((e) => e.id);
+  assert.deepEqual(regulaer, antworten, 'nach der Aufnahme erscheinen die Startdaten genau einmal regulaer');
+  assert.equal(new Set(regulaer).size, regulaer.length, 'keine doppelten Erst-Ereignisse');
+  assert.equal(B.S.ablage.get(pre + 'pendingEvents'), undefined, 'Pending-Log ist geleert');
+  assert.equal(B.S.lauf(() => B.S.holen('store').get('pendingAdmission', {})[kid]), undefined, 'Pending-Marke ist weg');
+
+  await B.S.lauf(() => B.S.holen('kontoAbgleich')());
+  assert.deepEqual(JSON.parse(B.S.ablage.get(pre + 'events') || '[]').filter((e) => e.type === 'answer').map((e) => e.id), antworten, 'wiederholter Abgleich uebernimmt nicht erneut');
 });
 
 test('3 Passwort vergessen (Erwachsene): Wiederherstellungscode -> neues Passwort -> neuer Code; alte gelten nicht mehr', async (t) => {
@@ -504,6 +576,6 @@ test('7 Testinstanz (Praefix bqt_): Anmeldung mit Startcode und auf dem zweiten 
     assert.ok(neu.includes('bqt_kontoListe') && neu.includes('bqt_evDevice'), G.name + ': ' + neu.join(', '));
   }
   assert.deepEqual(A.liste().map((e) => e.user), ['anna.b', 'kathie.b']);
-  assert.ok([...A.S.ablage.keys()].some((k) => k.startsWith('bqt_' + A.liste()[1].id + '__events')), 'Kathie (Test) uebt unter bqt_<Kennung>');
+  assert.ok([...A.S.ablage.keys()].some((k) => k === 'bqt_' + A.liste()[1].id + '__events' || k === 'bqt_' + A.liste()[1].id + '__pendingEvents'), 'Kathie (Test) uebt unter bqt_<Kennung>');
   assert.match(A.S.lauf(() => A.S.holen('GLOBAL_KEYS').source), /\|kontoListe\|pendingAdmission\)\$$/, 'Geraeteliste und pendingAdmission geraeteweit (nie Daten eines Kindes)');
 });
