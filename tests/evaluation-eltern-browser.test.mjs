@@ -190,13 +190,23 @@ test('correction drafts preserve the current focus, a synced confirmation replac
 
   await elternSeite(P.page, 'school');
   const form = P.page.locator('#pSchoolEvaluation');
-  await form.getByRole('button', { name: 'Evaluation hinzufügen' }).click();
+  const handoff = () => P.page.evaluate(() => {
+    const context = window.bigQuestSchoolRow.context();
+    const transfer = '00000000-0000-4000-8000-000000000186';
+    return [
+      window.bigQuestSchoolRow.open('other-child', transfer, 'M-N5', 'C'),
+      window.bigQuestSchoolRow.open(context, transfer, 'M-N5', 'C'),
+      window.bigQuestSchoolRow.open(context, transfer, 'M-N5', 'C'),
+    ];
+  });
+  assert.deepEqual(await handoff(), ['context', 'opened', 'opened']);
+  assert.deepEqual(await evaluationEvents(P.page), [], 'native handoff never saves the draft');
   assert.match(await form.innerText(), new RegExp(CHILD));
   await form.getByLabel('Titel').fill(TITLE);
   const today = await P.page.evaluate(() => new Date().toISOString().slice(0, 10));
   await form.getByLabel('Bewertungsdatum').fill(today);
-  await form.getByLabel('Kriterium').selectOption('M-N5');
-  await form.getByLabel('Einstufung').selectOption('C');
+  assert.equal(await form.getByLabel('Kriterium').inputValue(), 'M-N5');
+  assert.equal(await form.getByLabel('Einstufung').inputValue(), 'C');
   await form.getByRole('button', { name: 'Vorschau anzeigen' }).click();
   assert.match(await form.innerText(), /Vorschau[\s\S]*Tessa Sonnenweg[\s\S]*Zweischrittige Stickeraufgabe[\s\S]*Wird sicherer/);
   assert.equal(await form.getByRole('checkbox').isChecked(), true);
@@ -210,6 +220,7 @@ test('correction drafts preserve the current focus, a synced confirmation replac
   await P.page.getByRole('row').filter({ hasText: TITLE }).waitFor();
   const written = await evaluationEvents(P.page);
   assert.equal(written.length, 1);
+  assert.deepEqual(await handoff(), ['context', 'saved', 'saved'], 'replaying a confirmed transfer opens no duplicate');
   const { revision } = written[0].payload;
   assert.equal(written[0].payload.focus, 'two-step');
   assert.equal(written[0].payload.rating, 'C');
