@@ -21,6 +21,7 @@ export const schoolEvaluationNeedsPractice = (rating) => rating === 'RS' || rati
 /* ---------- field checks ---------- */
 const evObj = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
 const evStr = (x) => typeof x === 'string' && x.length > 0;
+const evEvalId = (x) => typeof x === 'string' && /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(x);
 const evDayOk = (s) => { if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false; const t = Date.parse(s + 'T00:00:00Z'); return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === s; };
 const evMs = (s) => {      // strict UTC time "YYYY-MM-DDTHH:MM:SS[.mmm]Z" -> milliseconds, else NaN
   if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/.test(s)) return NaN;
@@ -29,7 +30,8 @@ const evMs = (s) => {      // strict UTC time "YYYY-MM-DDTHH:MM:SS[.mmm]Z" -> mi
 };
 const evField = {
   day: evDayOk,
-  evalId: (x) => typeof x === 'string' && /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(x),
+  evalId: evEvalId,
+  evalRevisions: (x) => Array.isArray(x) && x.length >= 2 && new Set(x).size === x.length && x.every(evEvalId),
   evalTitle: (x) => evStr(x) && x.length <= 160 && x === x.trim() && !/[\x00-\x1f\x7f]/.test(x),
   str: evStr, nstr: (x) => x === null || evStr(x), bool: (x) => typeof x === 'boolean', any: (x) => x !== undefined,
   int: (x) => Number.isInteger(x) && x >= 0, pos: (x) => Number.isInteger(x) && x >= 1, lvl: (x) => x === 1 || x === 2 || x === 3,
@@ -67,7 +69,7 @@ const EV_SPEC = {
   checklist_set: ['studio:str index:int value:bool', 'size:pos'],   // size: number of items (the app stores the whole list, task 3b-1b)
   day_flag: ['flag:enum(greetDay|mysteryDone|bdayParty) day:day', ''],
   school_import: ['asOf:day data:obj', 'source:str'],
-  school_evaluation: [`child:pid evaluation:evalId revision:evalId title:evalTitle day:day standard:enum(${Object.keys(SCHOOL_EVALUATION_TARGETS).join('|')}) rating:enum(RS|C|M|E) focus:enum(${Object.values(SCHOOL_EVALUATION_TARGETS).map((t) => t.focus).join('|')}|none)`, ''],
+  school_evaluation: [`child:pid evaluation:evalId revision:evalId title:evalTitle day:day standard:enum(${Object.keys(SCHOOL_EVALUATION_TARGETS).join('|')}) rating:enum(RS|C|M|E) focus:enum(${Object.values(SCHOOL_EVALUATION_TARGETS).map((t) => t.focus).join('|')}|none)`, 'base:evalId withdrawn:bool resolves:evalRevisions'],
   grant_set: ['grant:str grantee:pid scope:scope from:day until:day', 'text:str'],
   grant_revoked: ['grant:str grantee:pid', ''],
   grant_opened: ['grant:str grantee:pid', 'scope:scope'],
@@ -158,10 +160,15 @@ export function checkEvent(e) {
     const { req, opt } = EV_PARSED[e.type];
     for (const [f, ok] of Object.entries(req)) { if (!evHas(e.payload, f)) err.push(`payload.${f}: missing`); else if (!ok(e.payload[f])) err.push(`payload.${f}: invalid`); }
     for (const [f, ok] of Object.entries(opt)) if (evHas(e.payload, f) && !ok(e.payload[f])) err.push(`payload.${f}: invalid`);
-    if (e.type === 'school_evaluation' && e.payload.focus !== 'none') {
-      const { standard, focus, rating } = e.payload;
-      if (typeof standard === 'string' && evOwn(SCHOOL_EVALUATION_TARGETS, standard) && focus !== SCHOOL_EVALUATION_TARGETS[standard].focus) err.push('payload.focus: incompatible with standard');
-      if (!schoolEvaluationNeedsPractice(rating)) err.push('payload.focus: incompatible with rating');
+    if (e.type === 'school_evaluation') {
+      const { standard, focus, rating, revision, base, withdrawn, resolves } = e.payload;
+      if (focus !== 'none') {
+        if (typeof standard === 'string' && evOwn(SCHOOL_EVALUATION_TARGETS, standard) && focus !== SCHOOL_EVALUATION_TARGETS[standard].focus) err.push('payload.focus: incompatible with standard');
+        if (!schoolEvaluationNeedsPractice(rating)) err.push('payload.focus: incompatible with rating');
+      }
+      if (base === revision || ((withdrawn || resolves) && !base)) err.push('payload.base: invalid revision base');
+      if (withdrawn && focus !== 'none') err.push('payload.focus: withdrawn evaluation');
+      if (Array.isArray(resolves) && (resolves.includes(revision) || resolves.includes(base))) err.push('payload.resolves: invalid conflict revisions');
     }
     for (const k of Object.keys(e.payload)) if (!evOwn(req, k) && !evOwn(opt, k)) err.push(`payload.${k}: unknown field`);
   }

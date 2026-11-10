@@ -1,4 +1,4 @@
-// M-N5 and M-N3 through the parent and child views, using the local GitHub protocol test server.
+// Both learning targets, correction and withdrawal through the normal parent and child views.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { appServer, browserStarten, elternSeite } from './app-hilfen.mjs';
@@ -102,7 +102,40 @@ async function solveTargets(page, targets) {
   assert.fail('the round is missing one or more questions attributed to the synced revisions');
 }
 
-test('M-N5/C and M-N3/C: child syncs both confirmed evaluations and solves both types in the same round', { timeout: 180000 }, async (t) => {
+async function showDetails(page, title) {
+  const rows = page.locator('.psrow').filter({ has: page.getByText(title, { exact: true }) });
+  const row = await rows.count() ? rows : page.locator('.psrow').filter({ hasText: title });
+  await row.waitFor();
+  const details = row.locator('[data-psdet]');
+  const index = await details.getAttribute('data-psdet');
+  if (await details.getAttribute('aria-expanded') === 'false') await details.click();
+  return page.locator(`[data-psdetrow="${index}"]`);
+}
+
+async function waitForRevision(page, revision) {
+  await page.waitForFunction((rev) => Object.keys(localStorage).some((key) => /^bq2_p_[A-Za-z0-9]+__events$/.test(key)
+    && JSON.parse(localStorage.getItem(key)).some((e) => e.type === 'school_evaluation' && e.payload.revision === rev)),
+  revision, { timeout: 70000 });
+}
+
+async function checkRoundRevisions(page, expected, solve = new Map()) {
+  await startToday(page);
+  const observed = [];
+  for (let i = 0; i < 8; i++) {
+    const label = page.locator('#qLabel');
+    const revision = await label.getAttribute('data-school-revision');
+    if (revision) observed.push(revision);
+    const solver = solve.get(revision);
+    if (solver) await solver(page);
+    if (i === 7) break;
+    if (solver) await page.locator('#nextBtn').click();
+    else await skipQuestion(page);
+  }
+  assert.deepEqual(observed.sort(), [...expected].sort(), 'the full round has exactly the expected assessment revisions');
+  await leaveRound(page);
+}
+
+test('correction drafts preserve the current focus, a synced confirmation replaces it, and withdrawal stops future cards', { timeout: 300000 }, async (t) => {
   const storage = await githubNachbau({ token: TOKEN, repos: [REPO] });
   t.after(() => storage.schliessen());
   const access = githubSpeicher({ repo: REPO, token: TOKEN, basis: storage.basis }).geraet('d_Werkzeug1');
@@ -226,6 +259,57 @@ test('M-N5/C and M-N3/C: child syncs both confirmed evaluations and solves both 
   assert.ok(roundingVariants.size >= 2, 'two different rounding variants solved');
   t.diagnostic(`Independently solved total/part/part: ${[...subtractionVariants].join(', ')}.`);
   t.diagnostic(`Independently solved number: lower distance/upper distance → nearest: ${[...roundingVariants].join(', ')}.`);
+
+  const correctedTitle = 'Runden mit Abstandsbegründung – korrigiert';
+  let detail = await showDetails(P.page, roundingTitle);
+  await detail.getByRole('button', { name: 'Bewertung korrigieren', exact: true }).click();
+  assert.equal(await form.getByLabel('Titel').inputValue(), roundingTitle);
+  assert.equal(await form.getByLabel('Kriterium').inputValue(), 'M-N3');
+  await form.getByLabel('Titel').fill(correctedTitle);
+  await form.getByRole('button', { name: 'Vorschau anzeigen' }).click();
+  await form.getByRole('button', { name: 'Korrektur bestätigen', exact: true }).waitFor();
+  assert.equal((await evaluationEvents(P.page)).length, 2);
+  assert.equal((await evaluationEvents(K.page)).length, 2);
+  await checkRoundRevisions(K.page, [revision, rounding.revision]);
+
+  // Keep a running round open while the parent confirms. Its current card is stable.
+  await startToday(K.page);
+  const label = K.page.locator('#qLabel');
+  const runningLabel = await label.innerText();
+  const runningRevision = await label.getAttribute('data-school-revision');
+  await form.getByRole('button', { name: 'Korrektur bestätigen', exact: true }).click();
+  await P.page.getByRole('cell', { name: correctedTitle, exact: true }).waitFor();
+  assert.equal(await label.innerText(), runningLabel);
+  assert.equal(await label.getAttribute('data-school-revision'), runningRevision);
+  await leaveRound(K.page);
+  const corrected = (await evaluationEvents(P.page)).find(({ payload }) => payload.title === correctedTitle)?.payload;
+  assert.ok(corrected);
+  assert.equal(corrected.evaluation, rounding.evaluation);
+  assert.equal(corrected.base, rounding.revision);
+  assert.notEqual(corrected.revision, rounding.revision);
+  assert.equal(corrected.focus, 'round-distance');
+  await waitForRevision(K.page, corrected.revision);
+  await checkRoundRevisions(K.page, [revision, corrected.revision], new Map([[corrected.revision, solveRounding]]));
+
+  detail = await showDetails(P.page, correctedTitle);
+  assert.ok((await detail.innerText()).includes(roundingTitle), 'previous title is visible in the parent history');
+  await detail.getByRole('button', { name: 'Bewertung zurücknehmen', exact: true }).click();
+  await form.getByRole('button', { name: 'Rücknahme bestätigen', exact: true }).waitFor();
+  assert.equal((await evaluationEvents(P.page)).length, 3);
+  assert.equal((await evaluationEvents(K.page)).length, 3);
+  await form.getByRole('button', { name: 'Rücknahme bestätigen', exact: true }).click();
+  const withdrawal = (await evaluationEvents(P.page)).find(({ payload }) => payload.withdrawn)?.payload;
+  assert.ok(withdrawal);
+  assert.equal(withdrawal.evaluation, rounding.evaluation);
+  assert.equal(withdrawal.base, corrected.revision);
+  assert.notEqual(withdrawal.revision, corrected.revision);
+  await waitForRevision(K.page, withdrawal.revision);
+  assert.equal((await evaluationEvents(K.page)).length, 4);
+  await checkRoundRevisions(K.page, [revision], new Map([[revision, solveSubtraction]]));
+  detail = await showDetails(P.page, correctedTitle);
+  assert.match(await detail.innerText(), /zurückgenommen/i);
+  assert.ok((await detail.innerText()).includes(roundingTitle), 'withdrawal retains the previous history');
+  t.diagnostic('Observed exact sets of school-revision cards before confirmation, after correction sync, and after withdrawal sync.');
   assert.deepEqual(P.errors, []);
   assert.deepEqual(K.errors, []);
 });

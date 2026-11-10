@@ -287,6 +287,55 @@ export function derive(events, { now, base } = {}) {
   return st;
 }
 
+/* A resolution names the competing siblings it supersedes. A sibling that
+   arrives later remains a contender, as do two concurrent resolutions. */
+function abSchoolContenders(siblings) {
+  const known = new Set(siblings.filter(p => !p.resolves).map(p => p.revision));
+  const superseded = new Set();
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const p of siblings) {
+      if (known.has(p.revision) || !p.resolves || !p.resolves.every(id => known.has(id))) continue;
+      known.add(p.revision);
+      for (const id of p.resolves) superseded.add(id);
+      changed = true;
+    }
+  }
+  return siblings.filter(p => known.has(p.revision) && !superseded.has(p.revision));
+}
+
+function abSchoolManual(revisions) {
+  const root = [...revisions.values()].find(p => !p.base);
+  if (!root) return null;
+  const children = new Map();
+  for (const p of revisions.values()) {
+    if (!p.base) continue;
+    if (!children.has(p.base)) children.set(p.base, []);
+    children.get(p.base).push(p);
+  }
+  const history = [root];
+  for (let i = 0; i < history.length; i++) {
+    const parent = history[i];
+    if (!parent.withdrawn) history.push(...(children.get(parent.revision) || []));
+  }
+  let active = root, contenders = [];
+  while (!active.withdrawn) {
+    contenders = abSchoolContenders(children.get(active.revision) || []);
+    if (contenders.length !== 1) break;
+    active = contenders[0];
+    contenders = [];
+  }
+  const { evaluation, revision, standard, focus, withdrawn } = active;
+  const focusNext = withdrawn || focus === 'none' ? [] : [SCHOOL_EVALUATION_TARGETS[standard].world];
+  return {
+    title: active.title, day: active.day, area: 'math', std: { [standard]: active.rating },
+    quests: focusNext, focusNext,
+    manual: { evaluation, revision, standard, focus, withdrawn: !!withdrawn, history,
+      conflicts: contenders.map(p => p.revision) },
+  };
+}
+
 /* deriveSchool(events, { now }): the school ratings of a child from its log (task "Schulbewertungen uebernehmen",
    preparation stage 4) - the object the app keeps per child today (werkzeug/schuldaten.json, kinder.<name> =
    { asOf, tasks }), or null without any school events. Manual evaluations are separate rows.
@@ -300,23 +349,21 @@ export function deriveSchool(events, { now } = {}) {
   for (const e of mergeLog([Array.isArray(events) ? events : []], now).events) {
     const p = e.payload;
     if (e.type === 'school_evaluation') {
-      // Initial revisions only. Retrying the same evaluation never produces a second row.
-      if (manual.has(p.evaluation)) continue;
+      const key = p.child + ':' + p.evaluation;
+      if (!manual.has(key)) manual.set(key, new Map());
+      const revisions = manual.get(key);
+      if (revisions.has(p.revision)) continue;
+      revisions.set(p.revision, p);
       const date = new Date(effectiveTime(e.at, now)).toISOString().slice(0, 10);
       if (date > manualAsOf) manualAsOf = date;
-      const focusNext = p.focus === 'none' ? [] : [SCHOOL_EVALUATION_TARGETS[p.standard].world];
-      manual.set(p.evaluation, {
-        title: p.title, day: p.day, area: 'math', std: { [p.standard]: p.rating },
-        quests: focusNext, focusNext,
-        manual: { evaluation: p.evaluation, revision: p.revision, standard: p.standard, focus: p.focus },
-      });
     } else if (e.type === 'school_import' && p.data.asOf === p.asOf && Array.isArray(p.data.tasks)) {
       if (!best || p.asOf >= best.asOf) best = p;
     }
   }
-  if (!manual.size) return best ? abClone(best.data) : null;
+  const tasks = [...manual.values()].map(abSchoolManual).filter(Boolean);
+  if (!tasks.length) return best ? abClone(best.data) : null;
   const school = best ? abClone(best.data) : { asOf: '', tasks: [] };
-  school.tasks.push(...manual.values());
+  school.tasks.push(...tasks);
   if (manualAsOf > school.asOf) school.asOf = manualAsOf;
   return school;
 }

@@ -77,3 +77,58 @@ test('a worked-answer bridge preserves a following school card and queues excess
   assert.equal(state.round.length, 3);
   assert.equal(app.holen('store').get('bridgeNext', []).length, 2);
 });
+
+const rev = n => '7d97af5e-6e19-46b8-85c6-d3c950a776' + String(n).padStart(2, '0');
+const edit = (n, parent, fields = {}) => event('school_evaluation', {
+  ...base, revision: rev(n), base: parent, ...fields,
+}, n);
+const read = entries => deriveSchool(entries, { now }).tasks[0];
+const original = event('school_evaluation', base, 1);
+
+test('revisions keep the original history and withdrawal disables the targeted practice', () => {
+  const correction = { title: 'Korrigierter Titel', standard: 'M-N3', focus: 'round-distance' };
+  const changed = edit(10, base.revision, correction);
+  const retry = edit(10, base.revision, correction);
+  retry.id = 'e_' + 'f'.repeat(24);
+  const withdrawn = edit(11, rev(10), { ...correction, withdrawn: true, focus: 'none' });
+  assert.equal(deriveSchool([changed], { now }), null, 'a correction can arrive before its base');
+  assert.deepEqual(read([changed, original, retry]).focusNext, ['round']);
+  const task = read([withdrawn, changed, original, retry]);
+  assert.equal(task.manual.evaluation, base.evaluation);
+  assert.equal(task.manual.revision, rev(11));
+  assert.equal(task.manual.withdrawn, true);
+  assert.deepEqual(task.focusNext, []);
+  assert.deepEqual(task.manual.history.map(p => p.revision), [base.revision, rev(10), rev(11)]);
+});
+
+test('parallel corrections preserve the common version and converge after explicit resolution', () => {
+  const a = edit(12, base.revision, { title: 'A', standard: 'M-N3', focus: 'round-distance' });
+  const b = edit(13, base.revision, { title: 'B', rating: 'M', focus: 'none' });
+  const following = edit(14, rev(12), { title: 'A2', standard: 'M-N3', focus: 'round-distance' });
+  const resolution = edit(15, base.revision, { title: 'Gewählt', standard: 'M-N3', focus: 'round-distance', resolves: [rev(12), rev(13)] });
+  const parallel = edit(16, base.revision, { title: 'Alternativ', withdrawn: true, focus: 'none', resolves: [rev(12), rev(13)] });
+  const late = edit(17, base.revision, { title: 'Spät' });
+  const after = edit(18, base.revision, { title: 'Erneut gewählt', resolves: [rev(15), rev(16)] });
+  const fork = [original, a, b, following];
+  const conflicted = read(fork);
+  assert.equal(conflicted.manual.revision, base.revision);
+  assert.deepEqual(conflicted.manual.conflicts, [rev(12), rev(13)]);
+  assert.ok(conflicted.manual.history.some(p => p.title === 'A2'));
+  assert.equal(read([...fork, resolution]).manual.revision, rev(15));
+  assert.deepEqual(read([...fork, resolution, late]).manual.conflicts, [rev(15), rev(17)]);
+  assert.deepEqual(read([...fork, resolution, parallel]).manual.conflicts, [rev(15), rev(16)]);
+  assert.deepEqual(read([...fork, resolution, parallel, after]).focusNext, ['wordprob']);
+  assert.deepEqual(read([after, parallel, resolution, ...fork].reverse()), read([after, parallel, resolution, ...fork]));
+  const foreign = edit(19, base.revision, { child: 'p_k2' });
+  assert.deepEqual(read([...fork, foreign]), conflicted);
+});
+
+test('revision event rejects invalid bases, premature withdrawals and malformed resolutions', () => {
+  for (const [payload, message] of [
+    [{ ...base, base: base.revision }, 'payload.base: invalid revision base'],
+    [{ ...base, focus: 'none', withdrawn: true }, 'payload.base: invalid revision base'],
+    [{ ...base, base: rev(10), withdrawn: true }, 'payload.focus: withdrawn evaluation'],
+    [{ ...base, base: rev(10), resolves: [rev(11), rev(11)] }, 'payload.resolves: invalid'],
+    [{ ...base, base: rev(10), resolves: [rev(10), rev(11)] }, 'payload.resolves: invalid conflict revisions'],
+  ]) assert.ok(checkEvent(event('school_evaluation', payload, 1)).includes(message), message);
+});

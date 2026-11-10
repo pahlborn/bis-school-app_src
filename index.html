@@ -6391,7 +6391,7 @@ function schoolEvaluationQuestions(used){
   if(!schoolEvaluationPilot() || focusManualMode()) return [];
   const latest=new Map(), today=dayKey();
   for(const task of schoolData()?.tasks||[]){
-    if(!task.manual || task.day>today) continue;
+    if(!task.manual || task.manual.withdrawn || task.day>today) continue;
     const {standard}=task.manual, previous=latest.get(standard);
     if(!previous || task.day>=previous.day) latest.set(standard,task);
   }
@@ -6419,7 +6419,7 @@ function schoolEvaluationQuestions(used){
 /* latest rating per standard: [{day, r}] newest first */
 function schoolRatings(d, includeManual=true){
   const per={};
-  (d?d.tasks:[]).filter(t=>!t.pending && (includeManual || !t.manual)).forEach(t=>Object.entries(t.std).forEach(([s,r])=>{ (per[s]=per[s]||[]).push({day:t.day,r}); }));
+  (d?d.tasks:[]).filter(t=>!t.pending && !t.manual?.withdrawn && (includeManual || !t.manual)).forEach(t=>Object.entries(t.std).forEach(([s,r])=>{ (per[s]=per[s]||[]).push({day:t.day,r}); }));
   Object.values(per).forEach(l=>l.sort((a,b)=>a.day<b.day?1:-1));
   return per;
 }
@@ -6445,7 +6445,7 @@ function stdSubject(std){
 const AREA_SUBJECT={math:'maths', english:'english', science:'science', learner:'learner', deutsch:'deutsch'};
 /* the teacher's evaluations that count for the focus: the last 8 weeks, if there are none that recent all of them (as classTopics) */
 function recentEvaluations(d){
-  const done=d.tasks.filter(t=>!t.pending), recent=done.filter(t=>daysBetween(t.day,dayKey())<=56);
+  const done=d.tasks.filter(t=>!t.pending && !t.manual?.withdrawn), recent=done.filter(t=>daysBetween(t.day,dayKey())<=56);
   return (recent.length?recent:done).slice().sort((a,b)=>a.day<b.day?1:-1);
 }
 /* 🏫 From school (concept 5.4, C1): at the top of a subject - its standards, the teacher's next steps, learning skills */
@@ -6489,8 +6489,8 @@ const schoolWeakest = t => { const l=schoolTaskLevels(t); return l.length?SCHOOL
 const schoolAreaIdx = a => { const i=SCHOOL_AREAS.indexOf(a); return i<0?SCHOOL_AREAS.length:i; };
 /* the school year starts on 1 August (the school calendar of the platform starts in August) */
 const schoolYearStart = today => { const [y,m]=today.split('-').map(Number); return (m>=8?y:y-1)+'-08-01'; };
-function schoolFiltered(d, f, today){
-  let l=d.tasks.map((t,i)=>({t,i})).filter(x=>!x.t.pending);
+function schoolFiltered(d, f, today, showWithdrawn){
+  let l=d.tasks.map((t,i)=>({t,i})).filter(({t})=>!t.pending && (showWithdrawn || !t.manual?.withdrawn));
   if(f.area) l=l.filter(x=>x.t.area===f.area);
   if(f.period==='8w') l=l.filter(x=>daysBetween(x.t.day,today)<=56);
   if(f.period==='year') l=l.filter(x=>x.t.day>=schoolYearStart(today));
@@ -6517,14 +6517,32 @@ function schoolDetailHTML(t, U, T, de){
     +(fq?`<p class="small">${de?'Daraus im automatischen Fokus':'In the automatic focus because of this'}: ${fq}</p>`:'')
     +(pq?`<p class="small">${T.quests}: ${pq}</p>`:'');
 }
+function schoolEvaluationHistory(t, de){
+  const m=t.manual;
+  if(!m) return '';
+  const lang=de?'de':'en', standards=de?STANDARD_TEXT:STANDARD_TEXT_EN;
+  const button=(action,label,choice='')=>`<button type="button" class="btn small" data-pseval="${m.evaluation}" data-pseval-op="${action}" data-pseval-choice="${choice}">${label}</button>`;
+  const history=m.history.map(p=>{
+    const current=p.revision===m.revision, proposal=m.conflicts.includes(p.revision);
+    const status=p.withdrawn?(de?'Zurückgenommen':'Withdrawn'):current?(de?'Aktive Fassung':'Active revision'):proposal?(de?'Vorschlag':'Proposal'):(de?'Frühere Fassung':'Earlier revision');
+    const choose=proposal||current&&m.conflicts.length;
+    return `<li>${esc(p.title)} · ${fmtDay(p.day)} · ${esc(standards[p.standard])} · ${PSTAND[lang][SL[p.rating]]} · <b>${status}</b>`
+      +`${choose?' '+button('resolve',de?'Diese Fassung wählen':'Choose this revision',p.revision):''}</li>`;
+  }).join('');
+  const actions=m.conflicts.length
+    ? `<p role="status">${de?'Konkurrierende Änderungen. Die bisherige Fassung bleibt aktiv, bis Sie eine Fassung wählen und bestätigen.':'Conflicting changes. The previous revision stays active until you choose and confirm a revision.'}</p>`
+    : m.withdrawn?'':`<p>${button('correct',de?'Bewertung korrigieren':'Correct assessment')} ${button('withdraw',de?'Bewertung zurücknehmen':'Withdraw assessment')}</p>`;
+  return `${actions}<h4>${de?'Fassungsverlauf':'Revision history'}</h4><ul>${history}</ul>`;
+}
 function schoolListHTML(d){
   const de=PL()==='de', U=SCHOOL_UI[de?'de':'en'], T=schoolTexts(de), f=state.sfilt||SCHOOL_FILTER0, open=state.sopen||[];
-  const all=d.tasks.filter(t=>!t.pending).length, l=schoolFiltered(d, f, dayKey());
+  const mayEdit=!!schoolEvaluationTarget();
+  const all=d.tasks.filter(t=>!t.pending && (mayEdit || !t.manual?.withdrawn)).length, l=schoolFiltered(d, f, dayKey(), mayEdit);
   const rows=l.map(({t,i})=>{ const lv=schoolTaskLevels(t), op=open.includes(i);
-    return `<tr class="psrow" data-psrow="${i}"><td data-l="${U.date}">${fmtDay(t.day)}</td><td data-l="${U.subject}">${esc(schoolArea(t.area,T))}</td><td data-l="${U.task}">${esc(t.title)}</td>`
+    return `<tr class="psrow" data-psrow="${i}"><td data-l="${U.date}">${fmtDay(t.day)}</td><td data-l="${U.subject}">${esc(schoolArea(t.area,T))}</td><td data-l="${U.task}">${esc(t.title)}${t.manual?.withdrawn?` <span class="small">(${de?'zurückgenommen':'withdrawn'})</span>`:''}</td>`
       +`<td data-l="${U.rating}"><span class="pslv">${lv.length?lv.map(([k,n])=>`<span class="pst ${k}">${n>1?n+'× ':''}${PSTAND[PL()][k]}</span>`).join(''):'–'}</span></td>`
       +`<td><button type="button" class="btn small" data-psdet="${i}" aria-expanded="${op}">${op?U.close:U.details}</button></td></tr>`
-      +`<tr class="psdet" data-psdetrow="${i}"${op?'':' hidden'}><td colspan="5">${schoolDetailHTML(t,U,T,de)}</td></tr>`; }).join('');
+      +`<tr class="psdet" data-psdetrow="${i}"${op?'':' hidden'}><td colspan="5">${schoolDetailHTML(t,U,T,de)}${mayEdit?schoolEvaluationHistory(t,de):''}</td></tr>`; }).join('');
   return `<p class="small pscount" role="status">${U.count.replace('{n}',l.length).replace('{m}',all)}</p>`
     +(l.length?`<table class="dt pstab"><thead><tr><th>${U.date}</th><th>${U.subject}</th><th>${U.task}</th><th>${U.rating}</th><th><span class="sr-only">${U.details}</span></th></tr></thead><tbody>${rows}</tbody></table>`
       :`<p>${U.empty} <button type="button" class="btn small" data-psreset>${U.reset}</button></p>`);
@@ -6553,19 +6571,27 @@ function schoolEvaluationHTML(){
   const child=`<p><b>${de?'Kind':'Child'}</b> · ${esc(target.name)}</p>`;
   const error=d.error?`<p role="alert">${esc(d.error)}</p>`:'';
   let content;
-  if(d.preview){
+  if(d.withdrawn){
+    const title=de?'Bewertung zurücknehmen':'Withdraw assessment';
+    const explanation=de?'Der Eintrag bleibt im Fassungsverlauf. Nach dem Abgleich liefert er keine gezielten Karten mehr für neue Tagesrunden.':'The assessment remains in the revision history. After syncing, it stops adding targeted cards to new daily rounds.';
+    content=`<h3>${title}</h3>${child}<p>${esc(d.title)} · ${fmtDay(d.day)}</p><p>${explanation}</p>
+      <button class="btn" type="submit">${de?'Rücknahme bestätigen':'Confirm withdrawal'}</button>`;
+  } else if(d.preview){
     const exercise=SCHOOL_EVALUATION_EXERCISES[SCHOOL_EVALUATION_TARGETS[d.standard].focus];
     const hasFocus=schoolEvaluationNeedsPractice(d.rating);
-    const same=schoolFromAccount(target.id)?.tasks.some(t=>t.manual && t.title===d.title && t.day===d.day
+    const same=!d.base && schoolFromAccount(target.id)?.tasks.some(t=>t.manual && !t.manual.withdrawn && t.title===d.title && t.day===d.day
       && t.manual.standard===d.standard && t.std[d.standard]===d.rating
       && t.manual.focus===(d.focus?SCHOOL_EVALUATION_TARGETS[d.standard].focus:'none'));
+    const confirm=d.resolves?(de?'Konfliktauflösung bestätigen':'Confirm resolution')
+      :d.base?(de?'Korrektur bestätigen':'Confirm correction')
+      :same?(de?'Separaten Eintrag speichern':'Save as a separate assessment'):(de?'Evaluation bestätigen':'Confirm assessment');
     content=`<h3>${de?'Vorschau':'Preview'}</h3>${child}<p>${esc(d.title)} · ${fmtDay(d.day)}</p>
       <p>${esc(criteria[d.standard])} · ${PSTAND[lang][SL[d.rating]]}</p>
       ${hasFocus?`<label><input type="checkbox" name="focus"${d.focus?' checked':''}> ${exercise[lang]}</label>`
       :`<p>${de?'Ohne zusätzlichen Übungsfokus':'Without additional practice focus'}</p>`}
       ${same?`<p role="status">${de?'Im Verlauf steht bereits ein Eintrag mit denselben Angaben. Prüfen Sie, ob es eine separate Evaluation ist.':'An assessment with the same details is already in the history. Check whether this is a separate assessment.'}</p>`:''}
       <p class="small">${de?'Titel, Datum, Kriterium, Einstufung und Übungsfokus werden im Schulbereich des Kindes gespeichert. Verwenden Sie im Titel keine Namen.':'The title, date, criterion, rating and practice focus are saved in the child’s school area. Leave names out of the title.'}</p>
-      <button class="btn" type="submit">${same?(de?'Separaten Eintrag speichern':'Save as a separate assessment'):(de?'Evaluation bestätigen':'Confirm assessment')}</button>
+      <button class="btn" type="submit">${confirm}</button>
       <button class="btn small" type="button" data-eval-action="edit">${de?'Bearbeiten':'Edit'}</button>`;
   } else {
     const options=['RS','C','M','E'].map(r=>`<option value="${r}"${r===d.rating?' selected':''}>${PSTAND[lang][SL[r]]}</option>`).join('');
@@ -6601,7 +6627,10 @@ function bindSchoolEvaluation(body){
   box.addEventListener('input',e=>{
     const d=current(), name=e.target.name;
     if(!d) return;
-    if(!d.preview && ['title','day','standard','rating'].includes(name)) d[name]=e.target.value;
+    if(!d.preview && ['title','day','standard','rating'].includes(name)){
+      if(name==='rating' && !schoolEvaluationNeedsPractice(d.rating)) d.focus=schoolEvaluationNeedsPractice(e.target.value);
+      d[name]=e.target.value;
+    }
     if(d.preview && name==='focus'){ d.focus=e.target.checked; redraw(); body.querySelector('#pSchoolEvaluation [name="focus"]')?.focus(); }
   });
   box.addEventListener('submit',e=>{
@@ -6613,12 +6642,23 @@ function bindSchoolEvaluation(body){
       if(!d.title || /[\x00-\x1f\x7f]/.test(d.title) || !d.day || d.day>dayKey() || !Object.hasOwn(SCHOOL_EVALUATION_TARGETS,d.standard) || !SL[d.rating]){
         d.error=de?'Bitte prüfen Sie Titel, Datum, Kriterium und Einstufung.':'Check the title, date, criterion and rating.';
       } else {
-        d.error=''; d.preview=true; d.focus=schoolEvaluationNeedsPractice(d.rating);
+        d.error=''; d.preview=true; d.focus=schoolEvaluationNeedsPractice(d.rating) && d.focus;
       }
       redraw(); body.querySelector('#pSchoolEvaluation button[type="submit"]')?.focus(); return;
     }
     const {child,evaluation,revision,title,day,standard,rating}=d;
     const payload={child,evaluation,revision,title,day,standard,rating,focus:d.focus?SCHOOL_EVALUATION_TARGETS[standard].focus:'none'};
+    if(d.base){
+      const active=schoolFromAccount(child)?.tasks.find(t=>t.manual?.evaluation===evaluation)?.manual;
+      const conflicts=active?.conflicts||[];
+      if(active?.revision!==d.base || conflicts.length!==(d.resolves||[]).length || conflicts.some(id=>!d.resolves.includes(id))){
+        d.error=de?'Die Bewertung hat sich beim Abgleich geändert. Brechen Sie den Entwurf ab und öffnen Sie die aktuelle Fassung.':'The assessment changed during sync. Cancel this draft and open the current revision.';
+        redraw(); return;
+      }
+      payload.base=d.base;
+      if(d.resolves) payload.resolves=d.resolves;
+      if(d.withdrawn){ payload.withdrawn=true; payload.focus='none'; }
+    }
     const event=eventHook('school_evaluation',payload,child);
     if(!event || !(evRaw('bq2_'+child+'__events')||[]).some(x=>x.id===event.id)){
       evNeuLaden(); d.error=de?'Speichern fehlgeschlagen. Ihre Eingaben sind noch da.':'Saving failed. Your entries are still here.';
@@ -6636,7 +6676,7 @@ function schoolHTML(){
   const h=de?'Schulische Einstufungen':'School assessments';
   const form=schoolEvaluationHTML();
   if(!d) return `<h2>${h}</h2>${form}<p>${T.none}</p>`;
-  const done=d.tasks.filter(t=>!t.pending), pend=d.tasks.filter(t=>t.pending).sort((a,b)=>a.day<b.day?1:-1);
+  const done=d.tasks.filter(t=>!t.pending && (!t.manual?.withdrawn || schoolEvaluationTarget())), pend=d.tasks.filter(t=>t.pending).sort((a,b)=>a.day<b.day?1:-1);
   const latest=done.reduce((m,t)=>t.day>m?t.day:m,''), stand=d.asOf||latest;
   const areas=SCHOOL_AREAS.concat(uniq(done.map(t=>t.area)).filter(a=>!SCHOOL_AREAS.includes(a))).filter(a=>done.some(t=>t.area===a));
   const opt=(v,txt,cur)=>`<option value="${esc(v)}"${v===cur?' selected':''}>${esc(txt)}</option>`;
@@ -6658,6 +6698,27 @@ function bindSchoolList(body){
     state.sfilt={...(state.sfilt||SCHOOL_FILTER0), [k]: k==='weak'?e.target.checked:e.target.value}; redraw(); });
   box.addEventListener('click',e=>{ if(!parentAccess) return;
     const r=e.target.closest('[data-psreset]'); if(r){ state.sfilt={...SCHOOL_FILTER0}; box.querySelectorAll('[data-psf]').forEach(x=>{ if(x.type==='checkbox') x.checked=false; else x.value=SCHOOL_FILTER0[x.dataset.psf]; }); redraw(); return; }
+    const revisionButton=e.target.closest('[data-pseval]');
+    if(revisionButton){
+      const target=schoolEvaluationTarget(), {pseval,psevalOp,psevalChoice}=revisionButton.dataset;
+      const m=target && schoolFromAccount(target.id)?.tasks.find(t=>t.manual?.evaluation===pseval)?.manual;
+      if(!m || m.withdrawn || schoolEvaluationDraft) return;
+      const resolving=psevalOp==='resolve';
+      if(resolving!==!!m.conflicts.length) return;
+      if(resolving && psevalChoice!==m.revision && !m.conflicts.includes(psevalChoice)) return;
+      const p=m.history.find(p=>p.revision===(resolving?psevalChoice:m.revision));
+      if(!p) return;
+      const withdrawn=psevalOp==='withdraw'||!!p.withdrawn;
+      schoolEvaluationNotice=null;
+      schoolEvaluationDraft={child:target.id,author:target.author,evaluation:m.evaluation,revision:crypto.randomUUID(),
+        base:m.revision,resolves:resolving?m.conflicts.slice():null,title:p.title,day:p.day,standard:p.standard,rating:p.rating,
+        focus:!withdrawn && p.focus!=='none',preview:withdrawn||resolving,withdrawn};
+      const form=body.querySelector('#pSchoolEvaluation');
+      form.outerHTML=schoolEvaluationHTML();
+      bindSchoolEvaluation(body);
+      body.querySelector('#pSchoolEvaluation form :is(input[name="title"],button[type="submit"])')?.focus();
+      return;
+    }
     const b=e.target.closest('[data-psdet]'); if(!b) return;
     const i=Number(b.dataset.psdet), open=state.sopen||(state.sopen=[]), row=box.querySelector(`[data-psdetrow="${i}"]`), U=SCHOOL_UI[PL()==='de'?'de':'en'];
     const now=!open.includes(i); if(now) open.push(i); else open.splice(open.indexOf(i),1);

@@ -347,3 +347,46 @@ test('Testbau: nach der Uebernahme zeigt der Elternbereich dieselben Einstufunge
   assert.notDeepEqual(ohne.fokus, heute.fokus, 'Gegenprobe: ohne Schuldaten ein anderer Fokus');
   assert.equal(JSON.stringify(S.holen('eventErrors')), '[]');
 });
+
+jedeWelt('Zwei Eltern schreiben parallel: Konflikt, gemeinsame Fassung und Auflösung werden abgeglichen', async (W) => {
+  const { P, A, K } = await familien(W);
+  const child = K.konto.kennung;
+  const id = n => '7d97af5e-6e19-46b8-85c6-d3c950a776' + n;
+  const initial = { child, evaluation: id('80'), revision: id('81'), title: 'Fiktive Bewertung', day: HEUTE,
+    standard: 'M-N5', rating: 'C', focus: 'two-step' };
+  const append = (device, payload) => {
+    const e = newEvent({ type: 'school_evaluation', author: device.konto.kennung, device: device.d,
+      at: new Date(weiter(W)).toISOString(), payload });
+    device.a.setItem('bq2_' + child + '__events', JSON.stringify([...device.log(child), e]));
+  };
+  const task = device => deriveSchool(device.log(child), { now: W.uhr.t }).tasks[0];
+
+  append(P, initial);
+  await P.sync();
+  await A.sync();
+  assert.equal(task(A).manual.revision, initial.revision);
+  append(P, { ...initial, base: initial.revision, revision: id('82'), title: 'Elternteil A' });
+  append(A, { ...initial, base: initial.revision, revision: id('83'), title: 'Elternteil B',
+    standard: 'M-N3', focus: 'round-distance' });
+  await P.sync();
+  await A.sync();
+  await K.sync();
+  await P.sync();
+  for (const device of [P, A, K]) {
+    assert.equal(task(device).manual.revision, initial.revision);
+    assert.deepEqual(task(device).manual.conflicts, [id('82'), id('83')]);
+    assert.deepEqual(task(device).focusNext, ['wordprob']);
+  }
+
+  append(A, { ...initial, base: initial.revision, revision: id('84'), title: 'Gemeinsam bestätigte Fassung',
+    standard: 'M-N3', focus: 'round-distance', resolves: [id('82'), id('83')] });
+  await A.sync();
+  await P.sync();
+  await K.sync();
+  for (const device of [P, A, K]) {
+    assert.equal(task(device).manual.revision, id('84'));
+    assert.deepEqual(task(device).manual.conflicts, []);
+    assert.deepEqual(task(device).focusNext, ['round']);
+    assert.equal(task(device).manual.history.length, 4);
+  }
+});
