@@ -50,7 +50,7 @@ const ANN_RIGHTS = {
   child: ['answer', 'round_done', 'badge', 'review', 'practice_day', 'profile_set', 'rank_seen', 'sheet_created', 'sheet_result', 'checklist_set', 'day_flag', 'device_added', 'gap_state', 'advent_open', 'joke_seen', 'story_read', 'person_set', 'anchor_set'],
   parent: ['profile_set', 'sheet_created', 'sheet_discarded', 'setting_set', 'school_import', 'grant_set', 'grant_revoked', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated', 'snapshot', 'gap_state', 'gap_active', 'list_set', 'advent_open', 'joke_seen', 'story_read', 'person_set', 'glance_set', 'backup_made', 'anchor_set', 'family_set', 'invite_set'],
   teacher: ['grant_opened', 'device_added', 'person_set', 'member_added', 'key_rotated', 'device_removed'],
-  admin: ['grant_opened', 'device_added', 'person_set', 'member_added', 'key_rotated', 'device_removed'],
+  admin: ['grant_opened', 'device_added', 'person_set', 'member_added', 'key_rotated', 'device_removed', 'invite_set'],
 };
 /* task "Meine Geraete": teacher and admin remove one of their devices in their own person area (and renew their key). */
 /* task "Neuer Schluessel" (US9.7): a grown-up renews his person key. He announces the new public keys himself with

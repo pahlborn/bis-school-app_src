@@ -24,7 +24,7 @@ before(async () => {
   N = await githubNachbau({ token: TOKEN, repos: [REPO] });
   const z = githubSpeicher({ repo: REPO, token: TOKEN, basis: N.basis }).geraet('d_Werkzeug1');
   const sc = await startcodeAusstellen({ zugang: z, aussteller: null, anmeldename: 'admin', art: 'admin', now: Date.now() });
-  const admin = await ersteAnmeldung({ zugang: z, code: sc.code, passwort: 'Werkzeug-Admin-Passwort-1', now: Date.now(), runden: 1000 });
+  const admin = await ersteAnmeldung({ zugang: z, code: sc.code, passwort: 'Werkzeug-Admin-Passwort-1', now: Date.now() });
   startP = await startcodeAusstellen({ zugang: z, aussteller: admin, anmeldename: 'peter.a', art: 'parent', now: Date.now() });
   const speicher = JSON.stringify({ art: 'github', repo: REPO, wurzel: '', basis: N.basis });
   server = await appServer({ bauart: 'test', anpassen: (h) => h.replace('/*BQ_SPEICHER*/null', () => speicher) });
@@ -33,15 +33,29 @@ before(async () => {
 after(async () => { await browser?.close(); server?.close(); await N?.schliessen(); });
 
 async function geraet() {
-  const ctx = await browser.newContext();
+  const ctx = await browser.newContext({ acceptDownloads: true });
   await ctx.route('**/*', (r) => (r.request().url().startsWith(server.url) || r.request().url().startsWith(N.basis) ? r.continue() : r.abort()));
-  await ctx.addInitScript(() => { window.AudioContext = undefined; window.webkitAudioContext = undefined; });
+  await ctx.addInitScript(() => { window.AudioContext = undefined; window.webkitAudioContext = undefined; try { Object.defineProperty(navigator, 'canShare', { value: undefined }); } catch (e) { /* egal */ } });
   const page = await ctx.newPage(), fehler = [];
   page.on('pageerror', (e) => fehler.push(e.message));
   return { ctx, page, fehler };
 }
 /* Einladung geoeffnet (Aufgabe "Erstanmeldung per QR-Code"): Passwortformular ohne Rollenwahl, Merkpasswort, absenden */
 async function registrieren(page) { await page.waitForSelector('#kontoNeuForm', { state: 'visible', timeout: 30000 }); await page.locator('#kontoNeuUse').click(); await page.locator('#kontoNeuGo').click(); }
+async function verbinden(page) {
+  await page.goto(server.url);
+  await page.waitForSelector('#verbinden');
+  await page.locator('#verbLink').fill(TOKEN);
+  await page.locator('#verbGo').click();
+  await page.waitForSelector('#roleAdult');
+}
+async function erwachsenenLogin(page, name, passwort) {
+  await page.locator('#roleAdult').click();
+  await page.locator('#loginUser').fill(name);
+  await page.locator('#loginPw').fill(passwort);
+  await page.locator('#loginGo').click();
+  await page.waitForSelector('#parentClose');
+}
 const attr = (page, sel) => page.locator(sel).evaluate((e) => ({ autocomplete: e.getAttribute('autocomplete'), name: e.getAttribute('name'), type: e.type }));
 async function togglePruefen(page, id, wert, autocomplete) {
   const feld = page.locator('#' + id), knopf = page.locator(`[data-pw-toggle="${id}"]`);
@@ -125,4 +139,61 @@ test('Browser: Kind anlegen -> Start-QR-Code -> Kind wartet und geht von selbst 
   await P.page.waitForSelector('#login:not([hidden])');
   assert.deepEqual(P.fehler, []); assert.deepEqual(K.fehler, []);
   await P.ctx.close(); await K.ctx.close();
+});
+
+test('Browser: Admin laedt einen Elternteil ein, zeigt Link/QR, speichert die Einladung und der erste Eltern-Login klappt', async () => {
+  const A = await geraet();
+  await verbinden(A.page);
+  await erwachsenenLogin(A.page, 'admin', 'Werkzeug-Admin-Passwort-1');
+  await A.page.locator('details.psec[data-psec="administration"] > summary').click();
+  const admin = A.page.locator('details.psec[data-psec="administration"]');
+  await admin.locator('details[data-admin="invite-parent"] > summary').click();
+  assert.deepEqual(await admin.locator('details[data-admin] > summary').allInnerTexts(), ['Elternteil einladen', 'Kontenübersicht', 'Zugangsdaten und Geräte', 'Daten exportieren und löschen', 'Versions- und Releaseinformationen']);
+  await admin.locator('#kAdminElternEinladen').click();
+  await A.page.waitForSelector('#kAdminForm');
+  assert.match(await A.page.locator('#aboutBody').innerText(), /Rolle fest: Elternteil/);
+  assert.deepEqual(await A.page.locator('#kAdminForm option').allInnerTexts(), ['Deutsch', 'English']);
+  assert.equal(await A.page.locator('#kAdminForm input[type="radio"]').count(), 0, 'keine Rollenauswahl');
+  await A.page.locator('#kAdminLogin').fill('mira.sonnental');
+  await A.page.locator('#kAdminDisplay').fill('Mira Sonnental');
+  await A.page.locator('#kAdminLang').selectOption('en');
+  await A.page.locator('#kAdminGo').click();
+  await A.page.waitForSelector('#kQr svg', { timeout: 30000 });
+  const link = await A.page.locator('#kLink').inputValue();
+  const code = (await A.page.locator('#kCode').textContent()).trim();
+  const d = await A.page.locator('#kQr path').getAttribute('d');
+  assert.match(link, /#zugang=.*&start=mira\.sonnental\//);
+  assert.ok(link.includes('/' + code), 'Link traegt den Startcode');
+  assert.equal(d, /<path fill="#000" d="([^"]*)"/.exec(qrSvg(link, { ecc: 'M', rand: 4 }))[1], 'QR-Code traegt genau den sichtbaren Link');
+  const [download] = await Promise.all([A.page.waitForEvent('download'), A.page.locator('#kQrMail').click()]);
+  assert.equal(download.suggestedFilename(), 'Big-Quest-invitation-mira.sonnental.html');
+  await A.page.locator('#kQrFertig').click();
+  if (!(await admin.evaluate((e) => e.open))) await admin.locator('summary').click();
+  const inviteParent = admin.locator('details[data-admin="invite-parent"]');
+  if (!(await inviteParent.evaluate((e) => e.open))) await inviteParent.locator('summary').click();
+  await A.page.waitForFunction(() => /Offene Einladungen/.test(document.querySelector('#aboutBody')?.innerText || ''), null, { timeout: 30000 });
+  assert.match(await admin.innerText(), /Offene Einladungen[\s\S]*Mira Sonnental/);
+
+  const P = await geraet();
+  await P.page.goto(link);
+  await registrieren(P.page);
+  await P.page.waitForSelector('#recGo', { timeout: 30000 });
+  await P.page.locator('#recGo').click();
+  await P.page.locator('#welcomeGo').click();
+  await P.page.waitForSelector('#parentClose');
+  assert.equal(await P.page.locator('details.psec[data-psec="administration"]').count(), 0, 'nicht als Admin angemeldet -> keine Funktion');
+
+  if (!(await admin.evaluate((e) => e.open))) await admin.locator('summary').click();
+  if (!(await inviteParent.evaluate((e) => e.open))) await inviteParent.locator('summary').click();
+  await A.page.waitForSelector('details[data-admin="invite-parent"] #kAdminElternEinladen', { state: 'visible', timeout: 30000 });
+  await A.page.locator('#kAdminElternEinladen').click();
+  await A.page.waitForSelector('#kAdminForm');
+  await A.page.locator('#kAdminLogin').fill('mira.sonnental');
+  await A.page.locator('#kAdminGo').click();
+  await A.page.waitForFunction(() => /Anmeldename ist schon vergeben|login name is taken/i.test(document.querySelector('#kMsg')?.textContent || ''), null, { timeout: 30000 });
+
+  assert.deepEqual(A.fehler, []);
+  assert.deepEqual(P.fehler, []);
+  await A.ctx.close();
+  await P.ctx.close();
 });
