@@ -2350,9 +2350,12 @@ function bridgeFor(q){
 function queueBridge(q){
   if(q.bridge) return;
   const tasks=bridgeFor(q); if(!tasks.length) return;
-  const slots=state.round.length-state.idx-1;
-  tasks.slice(0,slots).forEach((b,i)=>{ state.round[state.idx+1+i]=b; });
-  if(tasks.length>slots) store.set('bridgeNext',store.get('bridgeNext',[]).concat(tasks.slice(slots)).slice(-12));
+  const slots=[];
+  for(let i=state.idx+1;i<state.round.length;i++){
+    if(!state.round[i].schoolRevision) slots.push(i);
+  }
+  tasks.slice(0,slots.length).forEach((b,i)=>{ state.round[slots[i]]=b; });
+  if(tasks.length>slots.length) store.set('bridgeNext',store.get('bridgeNext',[]).concat(tasks.slice(slots.length)).slice(-12));
 }
 /* School key (standards legend of the school): Not applicable, Requires support, Consolidating, Meeting expectations, Extending.
    It is used ONLY to choose the next questions. Nothing of it is ever shown to the child: no levels, no words, no percentages.
@@ -6380,21 +6383,36 @@ function schoolEvaluationPilot(){
     && KONTO_SPEICHER?.repo==='pahlborn/bis-school-app-testdaten'
     && /^http:\/\/127\.0\.0\.1:\d+(?:\/|$)/.test(KONTO_SPEICHER.basis||'');
 }
+const SCHOOL_EVALUATION_EXERCISES={
+  'two-step':{build:twoStepQ, de:'Zweischrittige Subtraktion in Practise Today üben', en:'Practise two-step subtraction in Practise Today'},
+  'round-distance':{build:()=>Object.assign(distanceExplainQ(),RND), de:'Runden mit Abstandsbegründung in Practise Today üben', en:'Practise rounding by comparing distances in Practise Today'},
+};
 function schoolEvaluationQuestions(used){
-  if(!schoolEvaluationPilot() || focusManualMode() || isLocked('wordprob')) return [];
-  const assessment=(schoolData()?.tasks||[]).reduce((latest,t)=>{
-    if(!t.manual || t.day>dayKey() || (latest && t.day<latest.day)) return latest;
-    return t;
-  },null);
-  if(assessment?.manual.focus!=='two-step') return [];
-  const count=assessment.std['M-N5']==='RS'?2:1, questions=[];
-  const ids=new Set(used.map(qId));
-  for(let i=0;i<12 && questions.length<count;i++){
-    const q=twoStepQ(), id=qId(q);
-    if(ids.has(id)) continue;
-    ids.add(id);
-    Object.defineProperty(q,'schoolRevision',{value:assessment.manual.revision});
-    questions.push(q);
+  if(!schoolEvaluationPilot() || focusManualMode()) return [];
+  const latest=new Map(), today=dayKey();
+  for(const task of schoolData()?.tasks||[]){
+    if(!task.manual || task.day>today) continue;
+    const {standard}=task.manual, previous=latest.get(standard);
+    if(!previous || task.day>=previous.day) latest.set(standard,task);
+  }
+  const active=[...latest.values()].filter(t=>t.manual.focus!=='none' && !isLocked(SCHOOL_EVALUATION_TARGETS[t.manual.standard].world));
+  const questions=[], ids=new Set(used.map(qId));
+  // One slot for each active standard first. A second card for RS uses a free slot.
+  const add=task=>{
+    const {focus,revision}=task.manual;
+    for(let attempt=0;attempt<12;attempt++){
+      const q=SCHOOL_EVALUATION_EXERCISES[focus].build(), id=qId(q);
+      if(ids.has(id)) continue;
+      ids.add(id);
+      Object.defineProperty(q,'schoolRevision',{value:revision});
+      questions.push(q);
+      return;
+    }
+  };
+  active.forEach(add);
+  for(const task of active){
+    if(questions.length>=2) break;
+    if(task.std[task.manual.standard]==='RS') add(task);
   }
   return questions;
 }
@@ -6528,7 +6546,7 @@ function schoolEvaluationHTML(){
   const d=draft?.child===target.id && draft.author===target.author ? draft : null;
   const status=schoolEvaluationNotice?.child===target.id && schoolEvaluationNotice.author===target.author
     ? `<p role="status">${de?'Auf diesem Gerät gespeichert. Der Abgleich läuft über den normalen App-Speicher.':'Saved on this device. The app uses its regular storage to sync it.'}</p>` : '';
-  const criterion=(de?STANDARD_TEXT:STANDARD_TEXT_EN)['M-N5'];
+  const criteria=de?STANDARD_TEXT:STANDARD_TEXT_EN;
   const start=`<button type="button" class="btn small" data-eval-action="open">${de?'Evaluation hinzufügen':'Add assessment'}</button>`;
   if(!d) return `<div id="pSchoolEvaluation">${start}${status}</div>`;
   const cancel=`<button type="button" class="btn small" data-eval-action="cancel">${de?'Abbrechen':'Cancel'}</button>`;
@@ -6536,12 +6554,14 @@ function schoolEvaluationHTML(){
   const error=d.error?`<p role="alert">${esc(d.error)}</p>`:'';
   let content;
   if(d.preview){
-    const hasFocus=['RS','C'].includes(d.rating);
+    const exercise=SCHOOL_EVALUATION_EXERCISES[SCHOOL_EVALUATION_TARGETS[d.standard].focus];
+    const hasFocus=schoolEvaluationNeedsPractice(d.rating);
     const same=schoolFromAccount(target.id)?.tasks.some(t=>t.manual && t.title===d.title && t.day===d.day
-      && t.std['M-N5']===d.rating && t.manual.focus===(d.focus?'two-step':'none'));
+      && t.manual.standard===d.standard && t.std[d.standard]===d.rating
+      && t.manual.focus===(d.focus?SCHOOL_EVALUATION_TARGETS[d.standard].focus:'none'));
     content=`<h3>${de?'Vorschau':'Preview'}</h3>${child}<p>${esc(d.title)} · ${fmtDay(d.day)}</p>
-      <p>${esc(criterion)} · ${PSTAND[lang][SL[d.rating]]}</p>
-      ${hasFocus?`<label><input type="checkbox" name="focus"${d.focus?' checked':''}> ${de?'Zweischrittige Subtraktion in Practise Today üben':'Practise two-step subtraction in Practise Today'}</label>`
+      <p>${esc(criteria[d.standard])} · ${PSTAND[lang][SL[d.rating]]}</p>
+      ${hasFocus?`<label><input type="checkbox" name="focus"${d.focus?' checked':''}> ${exercise[lang]}</label>`
       :`<p>${de?'Ohne zusätzlichen Übungsfokus':'Without additional practice focus'}</p>`}
       ${same?`<p role="status">${de?'Im Verlauf steht bereits ein Eintrag mit denselben Angaben. Prüfen Sie, ob es eine separate Evaluation ist.':'An assessment with the same details is already in the history. Check whether this is a separate assessment.'}</p>`:''}
       <p class="small">${de?'Titel, Datum, Kriterium, Einstufung und Übungsfokus werden im Schulbereich des Kindes gespeichert. Verwenden Sie im Titel keine Namen.':'The title, date, criterion, rating and practice focus are saved in the child’s school area. Leave names out of the title.'}</p>
@@ -6549,9 +6569,10 @@ function schoolEvaluationHTML(){
       <button class="btn small" type="button" data-eval-action="edit">${de?'Bearbeiten':'Edit'}</button>`;
   } else {
     const options=['RS','C','M','E'].map(r=>`<option value="${r}"${r===d.rating?' selected':''}>${PSTAND[lang][SL[r]]}</option>`).join('');
+    const standards=Object.keys(SCHOOL_EVALUATION_TARGETS).sort().map(code=>`<option value="${code}"${code===d.standard?' selected':''}>${esc(criteria[code])}</option>`).join('');
     content=`${child}<label>${de?'Titel':'Title'} <input name="title" required maxlength="160" value="${esc(d.title)}"></label>
       <label>${de?'Bewertungsdatum':'Assessment date'} <input name="day" type="date" required max="${dayKey()}" value="${esc(d.day)}"></label>
-      <label>${de?'Kriterium':'Criterion'} <select name="standard" required><option value="">${de?'Bitte auswählen':'Select a criterion'}</option><option value="M-N5"${d.standard?' selected':''}>${esc(criterion)}</option></select></label>
+      <label>${de?'Kriterium':'Criterion'} <select name="standard" required><option value="">${de?'Bitte auswählen':'Select a criterion'}</option>${standards}</select></label>
       <label>${de?'Einstufung':'Rating'} <select name="rating" required><option value="">${de?'Bitte auswählen':'Select a rating'}</option>${options}</select></label>
       <button class="btn" type="submit">${de?'Vorschau anzeigen':'Show preview'}</button>`;
   }
@@ -6589,15 +6610,15 @@ function bindSchoolEvaluation(body){
     if(!d) return;
     if(!d.preview){
       d.title=d.title.trim();
-      if(!d.title || /[\x00-\x1f\x7f]/.test(d.title) || !d.day || d.day>dayKey() || d.standard!=='M-N5' || !SL[d.rating]){
+      if(!d.title || /[\x00-\x1f\x7f]/.test(d.title) || !d.day || d.day>dayKey() || !Object.hasOwn(SCHOOL_EVALUATION_TARGETS,d.standard) || !SL[d.rating]){
         d.error=de?'Bitte prüfen Sie Titel, Datum, Kriterium und Einstufung.':'Check the title, date, criterion and rating.';
       } else {
-        d.error=''; d.preview=true; d.focus=['RS','C'].includes(d.rating);
+        d.error=''; d.preview=true; d.focus=schoolEvaluationNeedsPractice(d.rating);
       }
       redraw(); body.querySelector('#pSchoolEvaluation button[type="submit"]')?.focus(); return;
     }
     const {child,evaluation,revision,title,day,standard,rating}=d;
-    const payload={child,evaluation,revision,title,day,standard,rating,focus:d.focus?'two-step':'none'};
+    const payload={child,evaluation,revision,title,day,standard,rating,focus:d.focus?SCHOOL_EVALUATION_TARGETS[standard].focus:'none'};
     const event=eventHook('school_evaluation',payload,child);
     if(!event || !(evRaw('bq2_'+child+'__events')||[]).some(x=>x.id===event.id)){
       evNeuLaden(); d.error=de?'Speichern fehlgeschlagen. Ihre Eingaben sind noch da.':'Saving failed. Your entries are still here.';

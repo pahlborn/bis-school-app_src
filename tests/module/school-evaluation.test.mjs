@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { checkEvent, newEvent } from '../../src/module/ereignisse.mjs';
 import { deriveSchool } from '../../src/module/ableitung.mjs';
+import { appSandbox } from '../app-sandbox.mjs';
 
 const day = '2026-11-05';
 const at = day + 'T12:00:00Z';
@@ -40,7 +41,39 @@ test('manual event rejects out-of-scope fields, dates and incompatible ratings',
     [{ ...base, notes: 'Raw teacher remarks' }, 'payload.notes: unknown field'],
     [{ ...base, title: 'First line\nSecond line' }, 'payload.title: invalid'],
     [{ ...base, rating: 'M' }, 'payload.focus: incompatible with rating'],
-    [{ ...base, standard: 'M-N3' }, 'payload.standard: invalid'],
+    [{ ...base, standard: 'M-N1' }, 'payload.standard: invalid'],
+    [{ ...base, standard: 'M-N3' }, 'payload.focus: incompatible with standard'],
+    [{ ...base, focus: 'round-distance' }, 'payload.focus: incompatible with standard'],
     [{ ...base, day: '2026-02-31' }, 'payload.day: invalid'],
   ]) assert.ok(checkEvent(event('school_evaluation', invalid, 1)).includes(expected), expected);
+});
+
+test('a confirmed rounding evaluation maps to Rounding Road alongside an existing subtraction evaluation', () => {
+  const rounding = {
+    ...base, evaluation: '7d97af5e-6e19-46b8-85c6-d3c950a77684', revision: '7d97af5e-6e19-46b8-85c6-d3c950a77685',
+    standard: 'M-N3', focus: 'round-distance',
+  };
+  const events = [event('school_evaluation', base, 1), event('school_evaluation', rounding, 2)];
+  assert.deepEqual(checkEvent(events[1]), []);
+  const { tasks } = deriveSchool(events, { now });
+  assert.deepEqual(tasks.map(t => [t.manual.standard, t.focusNext]), [
+    ['M-N5', ['wordprob']], ['M-N3', ['round']],
+  ]);
+});
+
+test('a worked-answer bridge preserves a following school card and queues excess support', () => {
+  const app = appSandbox({ seed: 42 });
+  const makeQuestion = app.holen('twoStepQ');
+  const source = makeQuestion();
+  const schoolCard = Object.defineProperty(makeQuestion(), 'schoolRevision', { value: base.revision });
+  const state = app.holen('state');
+  state.round = [source, schoolCard, makeQuestion()];
+  state.idx = 0;
+
+  app.holen('queueBridge')(source);
+
+  assert.equal(state.round[1], schoolCard);
+  assert.equal(state.round[2].bridgePart, 'practice');
+  assert.equal(state.round.length, 3);
+  assert.equal(app.holen('store').get('bridgeNext', []).length, 2);
 });

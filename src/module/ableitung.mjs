@@ -18,7 +18,7 @@
 //
 // Names: helpers start with "ab"/"AB" because all modules and index.html share one scope in the app.
 
-import { mergeLog, lastWins, lastWinsOrder, effectiveTime } from './ereignisse.mjs';
+import { mergeLog, lastWins, lastWinsOrder, effectiveTime, SCHOOL_EVALUATION_TARGETS } from './ereignisse.mjs';
 
 /* the limits of today's app (index.html: slice(-200) in attempts, EVIDENCE_MAX, DUE_MAX, GAPS, slice(-8) in sheets,
    TREE_AT, RANKS); the browser test compares them with the app */
@@ -304,11 +304,11 @@ export function deriveSchool(events, { now } = {}) {
       if (manual.has(p.evaluation)) continue;
       const date = new Date(effectiveTime(e.at, now)).toISOString().slice(0, 10);
       if (date > manualAsOf) manualAsOf = date;
-      const focusNext = p.focus === 'two-step' ? ['wordprob'] : [];
+      const focusNext = p.focus === 'none' ? [] : [SCHOOL_EVALUATION_TARGETS[p.standard].world];
       manual.set(p.evaluation, {
         title: p.title, day: p.day, area: 'math', std: { [p.standard]: p.rating },
         quests: focusNext, focusNext,
-        manual: { evaluation: p.evaluation, revision: p.revision, focus: p.focus },
+        manual: { evaluation: p.evaluation, revision: p.revision, standard: p.standard, focus: p.focus },
       });
     } else if (e.type === 'school_import' && p.data.asOf === p.asOf && Array.isArray(p.data.tasks)) {
       if (!best || p.asOf >= best.asOf) best = p;

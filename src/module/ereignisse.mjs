@@ -12,6 +12,12 @@
 export const EVENT_VERSION = 1;
 export const EVENT_FUTURE_MS = 24 * 3600 * 1000;
 
+export const SCHOOL_EVALUATION_TARGETS = Object.freeze({
+  'M-N5': Object.freeze({ focus: 'two-step', world: 'wordprob' }),
+  'M-N3': Object.freeze({ focus: 'round-distance', world: 'round' }),
+});
+export const schoolEvaluationNeedsPractice = (rating) => rating === 'RS' || rating === 'C';
+
 /* ---------- field checks ---------- */
 const evObj = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
 const evStr = (x) => typeof x === 'string' && x.length > 0;
@@ -61,7 +67,7 @@ const EV_SPEC = {
   checklist_set: ['studio:str index:int value:bool', 'size:pos'],   // size: number of items (the app stores the whole list, task 3b-1b)
   day_flag: ['flag:enum(greetDay|mysteryDone|bdayParty) day:day', ''],
   school_import: ['asOf:day data:obj', 'source:str'],
-  school_evaluation: ['child:pid evaluation:evalId revision:evalId title:evalTitle day:day standard:enum(M-N5) rating:enum(RS|C|M|E) focus:enum(two-step|none)', ''],
+  school_evaluation: [`child:pid evaluation:evalId revision:evalId title:evalTitle day:day standard:enum(${Object.keys(SCHOOL_EVALUATION_TARGETS).join('|')}) rating:enum(RS|C|M|E) focus:enum(${Object.values(SCHOOL_EVALUATION_TARGETS).map((t) => t.focus).join('|')}|none)`, ''],
   grant_set: ['grant:str grantee:pid scope:scope from:day until:day', 'text:str'],
   grant_revoked: ['grant:str grantee:pid', ''],
   grant_opened: ['grant:str grantee:pid', 'scope:scope'],
@@ -152,7 +158,11 @@ export function checkEvent(e) {
     const { req, opt } = EV_PARSED[e.type];
     for (const [f, ok] of Object.entries(req)) { if (!evHas(e.payload, f)) err.push(`payload.${f}: missing`); else if (!ok(e.payload[f])) err.push(`payload.${f}: invalid`); }
     for (const [f, ok] of Object.entries(opt)) if (evHas(e.payload, f) && !ok(e.payload[f])) err.push(`payload.${f}: invalid`);
-    if (e.type === 'school_evaluation' && e.payload.focus === 'two-step' && !['RS', 'C'].includes(e.payload.rating)) err.push('payload.focus: incompatible with rating');
+    if (e.type === 'school_evaluation' && e.payload.focus !== 'none') {
+      const { standard, focus, rating } = e.payload;
+      if (typeof standard === 'string' && evOwn(SCHOOL_EVALUATION_TARGETS, standard) && focus !== SCHOOL_EVALUATION_TARGETS[standard].focus) err.push('payload.focus: incompatible with standard');
+      if (!schoolEvaluationNeedsPractice(rating)) err.push('payload.focus: incompatible with rating');
+    }
     for (const k of Object.keys(e.payload)) if (!evOwn(req, k) && !evOwn(opt, k)) err.push(`payload.${k}: unknown field`);
   }
   return err;
