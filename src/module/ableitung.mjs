@@ -289,17 +289,34 @@ export function derive(events, { now, base } = {}) {
 
 /* deriveSchool(events, { now }): the school ratings of a child from its log (task "Schulbewertungen uebernehmen",
    preparation stage 4) - the object the app keeps per child today (werkzeug/schuldaten.json, kinder.<name> =
-   { asOf, tasks }), or null without any school_import. Not part of derive: today's app has no storage key for it.
+   { asOf, tasks }), or null without any school events. Manual evaluations are separate rows.
    Rule: the import with the newest asOf wins; on the same asOf the later one in the merged log (time, then id) - every
    device decides the same. An import whose data does not carry the same asOf, or has no list of tasks, never counts. */
 export function deriveSchool(events, { now } = {}) {
   if (now === undefined || now === null) throw new Error('deriveSchool: "now" is missing');
   let best = null;
+  let manualAsOf = '';
+  const manual = new Map();
   for (const e of mergeLog([Array.isArray(events) ? events : []], now).events) {
-    if (e.type !== 'school_import') continue;
     const p = e.payload;
-    if (p.data.asOf !== p.asOf || !Array.isArray(p.data.tasks)) continue;
-    if (!best || p.asOf >= best.asOf) best = p;
+    if (e.type === 'school_evaluation') {
+      // Initial revisions only. Retrying the same evaluation never produces a second row.
+      if (manual.has(p.evaluation)) continue;
+      const date = new Date(effectiveTime(e.at, now)).toISOString().slice(0, 10);
+      if (date > manualAsOf) manualAsOf = date;
+      const focusNext = p.focus === 'two-step' ? ['wordprob'] : [];
+      manual.set(p.evaluation, {
+        title: p.title, day: p.day, area: 'math', std: { [p.standard]: p.rating },
+        quests: focusNext, focusNext,
+        manual: { evaluation: p.evaluation, revision: p.revision, focus: p.focus },
+      });
+    } else if (e.type === 'school_import' && p.data.asOf === p.asOf && Array.isArray(p.data.tasks)) {
+      if (!best || p.asOf >= best.asOf) best = p;
+    }
   }
-  return best ? abClone(best.data) : null;
+  if (!manual.size) return best ? abClone(best.data) : null;
+  const school = best ? abClone(best.data) : { asOf: '', tasks: [] };
+  school.tasks.push(...manual.values());
+  if (manualAsOf > school.asOf) school.asOf = manualAsOf;
+  return school;
 }

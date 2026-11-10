@@ -47,6 +47,7 @@ function payloadFor(type, author, device) {
     checklist_set: { studio: 'grow', index: 0, value: true },
     day_flag: { flag: 'greetDay', day: DAY },
     school_import: { asOf: DAY, data: { round: 'M' } },
+    school_evaluation: { child: 'p_k1', evaluation: '7d97af5e-6e19-46b8-85c6-d3c950a77680', revision: '7d97af5e-6e19-46b8-85c6-d3c950a77681', title: 'Synthetic assessment', day: '2026-11-01', standard: 'M-N5', rating: 'C', focus: 'two-step' },
     grant_set: { grant: 'g1', grantee: 'p_l1', scope: ['learning'], from: DAY, until: '2026-11-16' },
     grant_revoked: { grant: 'g1', grantee: 'p_l1' },
     grant_opened: { grant: 'g1', grantee: author },
@@ -87,7 +88,7 @@ const ERWARTET = {
   answer: 'c', round_done: 'c', practice_day: 'c', rank_seen: 'c', checklist_set: 'c', day_flag: 'c',
   badge: 'c', review: 'c', sheet_result: 'c',
   profile_set: 'cp', sheet_created: 'cp', gap_state: 'cp', device_added: 'cpta',
-  sheet_discarded: 'p', setting_set: 'p', school_import: 'p', grant_set: 'p', grant_revoked: 'p',
+  sheet_discarded: 'p', setting_set: 'p', school_import: 'p', school_evaluation: 'p', grant_set: 'p', grant_revoked: 'p',
   member_added: 'p', member_removed: 'p', device_removed: 'p', key_rotated: 'p', snapshot: 'p', gap_active: 'p', list_set: 'p', advent_open: 'cp', joke_seen: 'cp', story_read: 'cp',
   grant_opened: 'ta',
   person_set: 'cpta', glance_set: 'p', backup_made: 'p',          // 3b-1c: everybody his own settings; glance and backup: parents
@@ -99,7 +100,7 @@ const darf = (role, type) => ERWARTET[type].includes(role[0]);
 test('Annehmen: gueltig unterschriebene Ereignisse je Rolle und erlaubtem Typ zaehlen', async () => {
   let k = 0;
   for (const role of ROLES) for (const type of EVENT_TYPES) if (darf(role, type)) { assert.equal(await reason(await signed(role, type)), 'ok', `${role} ${type}`); k++; }
-  assert.equal(k, 50, 'every allowed pair was tried once');   // cp: profile_set, sheet_created, gap_state, advent_open, joke_seen, story_read; 3b-1c: person_set x4, glance_set, backup_made; Einladungen: anchor_set x2, family_set, invite_set x2
+  assert.equal(k, 51, 'every allowed pair was tried once');   // cp: profile_set, sheet_created, gap_state, advent_open, joke_seen, story_read; 3b-1c: person_set x4, glance_set, backup_made; Einladungen: anchor_set x2, family_set, invite_set x2
   // Einladungen: ein Kind hat einen Anker, keine Familie; ein Elternteil eine Familie, keinen Anker
   const ak = (pid, did, kind) => sg(mk('anchor_set', pid, did, { kind, person: 'p_e1', pub: { ecdh: 'QUJD', ecdsa: 'REVG' } }), KEYS[pid]);
   assert.equal(await reason(await ak('p_k1', 'd_k1', 'family')), 'rolle-darf-nicht', 'child: no family');
@@ -205,7 +206,7 @@ test('canonicalBytes: feste Bytefolge, unabhaengig von der Schluesselreihenfolge
 /* ---------- 5 matrix ---------- */
 test('Matrix: alle 35 Typen x 4 Rollen gegen die hier ausgeschriebene Tabelle', async () => {
   assert.deepEqual(Object.keys(ERWARTET).sort(), EVENT_TYPES.slice().sort(), 'the table covers every type');
-  assert.equal(EVENT_TYPES.length, 35);
+  assert.equal(EVENT_TYPES.length, 36);
   const falsch = [];
   for (const type of EVENT_TYPES) for (const role of ROLES) {
     const got = await reason(await signed(role, type)), want = darf(role, type) ? 'ok' : 'rolle-darf-nicht';
@@ -343,4 +344,14 @@ test('Modul ist rein: kein Zufall, keine Uhr, kein Speicher, kein Netz; Hilfsnam
   const top = [...src.matchAll(/^(?:export\s+)?(?:async\s+)?(?:function\s+([A-Za-z_$][\w$]*)|(?:const|let)\s+([A-Za-z_$][\w$]*))/gm)].map((m) => m[1] || m[2]);
   const exported = ['ANNAHME_GRUENDE', 'ANNAHME_RECHTE', 'canonicalBytes', 'signEvent', 'acceptEvent', 'acceptAll', 'roleMayWrite'];
   for (const name of top) assert.ok(exported.includes(name) || /^(ann|ANN_)/.test(name), 'shared scope: ' + name);
+});
+
+
+test('manual school evaluation must be signed by a parent for the child in its payload', async () => {
+  assert.equal(await reason(await signed('parent', 'school_evaluation')), 'ok');
+  const area = 'schule:p_k2';
+  assert.equal(await reason(await signed('parent', 'school_evaluation', { area }), { ...Z, area }), 'bereich-falsch');
+  for (const role of ['child', 'teacher', 'admin']) {
+    assert.equal(await reason(await signed(role, 'school_evaluation')), 'rolle-darf-nicht', role);
+  }
 });

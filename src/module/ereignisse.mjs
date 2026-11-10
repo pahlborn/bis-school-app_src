@@ -22,7 +22,10 @@ const evMs = (s) => {      // strict UTC time "YYYY-MM-DDTHH:MM:SS[.mmm]Z" -> mi
   return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 19) === s.slice(0, 19) ? t : NaN;   // rejects 30 February, hour 24, ...
 };
 const evField = {
-  day: evDayOk, str: evStr, nstr: (x) => x === null || evStr(x), bool: (x) => typeof x === 'boolean', any: (x) => x !== undefined,
+  day: evDayOk,
+  evalId: (x) => typeof x === 'string' && /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(x),
+  evalTitle: (x) => evStr(x) && x.length <= 160 && x === x.trim() && !/[\x00-\x1f\x7f]/.test(x),
+  str: evStr, nstr: (x) => x === null || evStr(x), bool: (x) => typeof x === 'boolean', any: (x) => x !== undefined,
   int: (x) => Number.isInteger(x) && x >= 0, pos: (x) => Number.isInteger(x) && x >= 1, lvl: (x) => x === 1 || x === 2 || x === 3,
   arr: Array.isArray, obj: evObj, utc: (x) => !Number.isNaN(evMs(x)),
   sha: (x) => typeof x === 'string' && /^[0-9a-f]{64}$/.test(x),          // SHA-256 as 64 small hex characters
@@ -58,6 +61,7 @@ const EV_SPEC = {
   checklist_set: ['studio:str index:int value:bool', 'size:pos'],   // size: number of items (the app stores the whole list, task 3b-1b)
   day_flag: ['flag:enum(greetDay|mysteryDone|bdayParty) day:day', ''],
   school_import: ['asOf:day data:obj', 'source:str'],
+  school_evaluation: ['child:pid evaluation:evalId revision:evalId title:evalTitle day:day standard:enum(M-N5) rating:enum(RS|C|M|E) focus:enum(two-step|none)', ''],
   grant_set: ['grant:str grantee:pid scope:scope from:day until:day', 'text:str'],
   grant_revoked: ['grant:str grantee:pid', ''],
   grant_opened: ['grant:str grantee:pid', 'scope:scope'],
@@ -148,6 +152,7 @@ export function checkEvent(e) {
     const { req, opt } = EV_PARSED[e.type];
     for (const [f, ok] of Object.entries(req)) { if (!evHas(e.payload, f)) err.push(`payload.${f}: missing`); else if (!ok(e.payload[f])) err.push(`payload.${f}: invalid`); }
     for (const [f, ok] of Object.entries(opt)) if (evHas(e.payload, f) && !ok(e.payload[f])) err.push(`payload.${f}: invalid`);
+    if (e.type === 'school_evaluation' && e.payload.focus === 'two-step' && !['RS', 'C'].includes(e.payload.rating)) err.push('payload.focus: incompatible with rating');
     for (const k of Object.keys(e.payload)) if (!evOwn(req, k) && !evOwn(opt, k)) err.push(`payload.${k}: unknown field`);
   }
   return err;

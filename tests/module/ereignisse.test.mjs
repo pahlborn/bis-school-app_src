@@ -24,7 +24,7 @@ const rand0 = bytesOf(seeded(20261102));
 const ev = (type, payload, { at = iso(NOW - HOUR), author = 'p_k1', device = 'd_a1', rand = rand0 } = {}) => newEvent({ type, author, device, payload, at }, { rand });
 const answer = (device, i, ms, rand) => ev('answer', { day: iso(ms).slice(0, 10), skill: 'round', level: 2, attempt: 1, ok: i % 3 !== 0, qid: 'q' + i }, { at: iso(ms), device, rand });
 const name = (value, ms, device, rand = rand0) => ev('profile_set', { field: 'name', value }, { at: iso(ms), device, rand });
-const KONZEPT_TYPEN = ['answer', 'round_done', 'badge', 'review', 'practice_day', 'profile_set', 'rank_seen', 'sheet_created', 'sheet_result', 'sheet_discarded', 'setting_set', 'checklist_set', 'day_flag', 'school_import', 'grant_set', 'grant_revoked', 'grant_opened', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated', 'snapshot', 'gap_state', 'gap_active', 'list_set', 'advent_open', 'joke_seen', 'story_read', 'person_set', 'glance_set', 'backup_made', 'anchor_set', 'family_set', 'invite_set'];
+const KONZEPT_TYPEN = ['answer', 'round_done', 'badge', 'review', 'practice_day', 'profile_set', 'rank_seen', 'sheet_created', 'sheet_result', 'sheet_discarded', 'setting_set', 'checklist_set', 'day_flag', 'school_import', 'school_evaluation', 'grant_set', 'grant_revoked', 'grant_opened', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated', 'snapshot', 'gap_state', 'gap_active', 'list_set', 'advent_open', 'joke_seen', 'story_read', 'person_set', 'glance_set', 'backup_made', 'anchor_set', 'family_set', 'invite_set'];
 const SAMPLE = {
   answer: { day: DAY, skill: 'round', family: null, level: 2, attempt: 1, ok: true, response: '3', qid: 'q|v|o|a', help: false, example: false },
   round_done: { day: DAY, skill: 'round', stars: 7, count: 8 },
@@ -40,6 +40,7 @@ const SAMPLE = {
   checklist_set: { studio: 'grow', index: 2, value: true },
   day_flag: { flag: 'greetDay', day: DAY },
   school_import: { asOf: '2026-11-01', data: { round: 'M' }, source: 'toddle' },
+  school_evaluation: { child: 'p_k1', evaluation: '7d97af5e-6e19-46b8-85c6-d3c950a77680', revision: '7d97af5e-6e19-46b8-85c6-d3c950a77681', title: 'Synthetic assessment', day: '2026-11-01', standard: 'M-N5', rating: 'C', focus: 'two-step' },
   grant_set: { grant: 'g1', grantee: 'p_l1', scope: ['learning', 'school'], from: DAY, until: '2026-11-15', text: 'consent text' },
   grant_revoked: { grant: 'g1', grantee: 'p_l1' },
   grant_opened: { grant: 'g1', grantee: 'p_l1', scope: ['learning'] },
@@ -69,7 +70,7 @@ const mitGrund = (e, re, wo = '') => { const f = checkEvent(e); assert.ok(f.some
 test('US7.1: 35 Typen wie im Konzept 9.1 (23 + 2 fuer Luecken, 3b-0, + 2 fuer Listen und Advent, 3b-1b-2, + 2 fuer Witze und Geschichten, 3b-1b-4, + 3 fuer Person, Blick und Sicherung, 3b-1c, + 3 fuer Anker, Familie und Einladung, Einladungen); je Typ ein gueltiges Ereignis', () => {
   assert.equal(EVENT_VERSION, 1);
   assert.deepEqual(EVENT_TYPES, KONZEPT_TYPEN);
-  assert.equal(EVENT_TYPES.length, 35);
+  assert.equal(EVENT_TYPES.length, 36);
   assert.deepEqual(Object.keys(SAMPLE), EVENT_TYPES);
   for (const type of EVENT_TYPES) {
     const e = ev(type, SAMPLE[type]);
