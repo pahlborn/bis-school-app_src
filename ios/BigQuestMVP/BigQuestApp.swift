@@ -57,7 +57,7 @@ private struct BigQuestScreen: View {
                         Button("Claude-Schlüssel") { showKey = true }
                     }
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Toddle-Feld prüfen") {
+                        Button("Evaluation aus Toddle") {
                             Task {
                                 toddleContext = await currentToddleContext()
                                 showToddle = true
@@ -143,9 +143,8 @@ private struct ToddleFieldScreen: View {
     let page: BrowserPage
     let canImport: Bool
     let openDraft: (ToddleField.AssessmentRow, String) async throws -> Void
-    @State private var row: ToddleField.AssessmentRow?
-    @State private var field: String?
-    @State private var returnedValue: String?
+    @State private var assessment: ToddleField.Assessment?
+    @State private var suggestions: [String: String] = [:]
     @State private var error: String?
     @State private var reading = false
     @State private var sending = false
@@ -155,121 +154,106 @@ private struct ToddleFieldScreen: View {
             VStack(spacing: 0) {
                 BrowserPane(view: page.view)
                     .frame(maxHeight: .infinity)
+                    .allowsHitTesting(!reading && !sending)
                 Divider()
                 ScrollView {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("In Toddle als Familienmitglied anmelden. Einen einzelnen sichtbaren Feldwert markieren, zum Beispiel den Titel einer Evaluation.")
-                        Button("Markierten Wert aus Toddle lesen") {
-                            Task { await readField() }
+                        Text("Öffne in Toddle die gewünschte Evaluation mit ihren Bewertungskriterien.")
+                        Button(reading ? "Wird gelesen …" : "Geöffnete Evaluation lesen") {
+                            Task { await readAssessment() }
                         }
                         .disabled(reading || sending)
-                        if canImport {
-                            Button("Bewertungszeile lesen") { Task { await readRow() } }
-                                .disabled(reading || sending)
-                        }
-                        if let row {
-                            Text(row.criterion)
-                            Text("Lehrkraft-Einstufung: " + row.rating)
-                            Text("An Claude geht nur der Kriterientext. Bitte prüfe ihn auf persönliche Angaben.")
-                                .font(.footnote)
-                            Button("Lernziel vorschlagen und Entwurf öffnen") {
-                                Task { await suggest(row) }
+                        if let assessment {
+                            Text("Gelesene Kriterien: \(assessment.rows.count)").font(.headline)
+                            Text("Bitte mit der geöffneten Evaluation vergleichen. Noch nichts gespeichert.")
+                            if assessment.skipped > 0 {
+                                Text("\(assessment.skipped) Tabellenzeilen ohne eindeutig lesbare Einstufung. Die Übernahme ist gesperrt, bis die Vollständigkeit geklärt ist.")
+                                    .foregroundStyle(.orange)
                             }
-                            .buttonStyle(.borderedProminent)
-                            .disabled(reading || sending)
-                        }
-                        if let field {
-                            Text("Gelesener Feldwert").font(.headline)
-                            Text(field).textSelection(.enabled)
-                            Text("Sende nur einen Wert ohne Namen, Kennungen oder andere persönliche Angaben an Anthropic.")
-                                .font(.footnote)
-                            Button(sending ? "Claude wird aufgerufen …" : "Diesen Wert an Claude senden") {
-                                Task { await send(field) }
+                            ForEach(assessment.rows, id: \.transfer) { row in
+                                VStack(alignment: .leading) {
+                                    Text(row.criterion)
+                                    Text("Lehrkraft-Einstufung: " + row.rating).bold()
+                                    if let suggestion = suggestions[row.transfer] {
+                                        Text("Lernzielvorschlag: " + suggestion)
+                                    }
+                                }
+                                Divider()
                             }
-                            .buttonStyle(.borderedProminent)
+                            Text("An Claude gehen nur die angezeigten Kriterientexte. Bitte vorher auf persönliche Angaben prüfen.")
+                                .font(.footnote)
+                            Button(sending ? "Lernziele werden geprüft …" : "Lernziele mit Claude zuordnen") {
+                                Task { await classify(assessment) }
+                            }
                             .disabled(reading || sending)
-                        }
-                        if let returnedValue {
-                            Label("Claude hat den Wert unverändert zurückgegeben", systemImage: "checkmark.circle")
-                                .font(.headline)
-                            Text(returnedValue).textSelection(.enabled)
+                            if assessment.rows.count == 1, assessment.skipped == 0,
+                               let row = assessment.rows.first, let standard = suggestions[row.transfer],
+                               ["M-N3", "M-N5"].contains(standard), canImport {
+                                Button("Entwurf in Big Quest öffnen") { Task { await open(row, standard) } }
+                                    .disabled(reading || sending)
+                            } else if !suggestions.isEmpty {
+                                Text("Diese Vorschau speichert noch keine mehrteilige Evaluation. Dafür wird die gemeinsame Übergabe aller Kriterien benötigt.")
+                            }
                         }
                         if let error { Text(error).foregroundStyle(.red) }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding()
                 }
-                .frame(height: row != nil || field != nil ? 255 : 150)
+                .frame(height: assessment == nil ? 150 : 330)
             }
             .navigationTitle("Toddle")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Fertig") { dismiss() }.disabled(sending)
+                    Button("Fertig") { dismiss() }.disabled(reading || sending)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Zurück") { page.view.goBack() }
-                        .disabled(reading || sending)
+                    Button("Zurück") {
+                        assessment = nil
+                        suggestions = [:]
+                        error = nil
+                        page.view.goBack()
+                    }.disabled(reading || sending)
                 }
             }
         }
-        .interactiveDismissDisabled(sending)
+        .interactiveDismissDisabled(reading || sending)
     }
 
-    private func readField() async {
+    private func readAssessment() async {
         guard !reading, !sending else { return }
         reading = true
         defer { reading = false }
-        row = nil
-        field = nil
-        returnedValue = nil
+        assessment = nil
+        suggestions = [:]
         error = nil
-        do {
-            field = try await ToddleField.read(from: page.view)
-        } catch {
-            self.error = error.localizedDescription
-        }
+        do { assessment = try await ToddleField.readAssessment(from: page.view) }
+        catch { self.error = error.localizedDescription }
     }
 
-    private func readRow() async {
-        guard !reading, !sending else { return }
-        reading = true
-        defer { reading = false }
-        row = nil
-        field = nil
-        returnedValue = nil
-        error = nil
-        do {
-            row = try await ToddleField.readAssessmentRow(from: page.view)
-        } catch {
-            self.error = error.localizedDescription
-        }
-    }
-
-    private func suggest(_ row: ToddleField.AssessmentRow) async {
+    private func classify(_ assessment: ToddleField.Assessment) async {
         guard !sending, !reading else { return }
         sending = true
         defer { sending = false }
         error = nil
         do {
-            let standard = try await ClaudeClient.suggestStandard(for: row.criterion, key: ClaudeKey.read())
+            let key = try ClaudeKey.read()
+            for row in assessment.rows where suggestions[row.transfer] == nil {
+                let result = try await ClaudeClient.classifyStandard(for: row.criterion, key: key)
+                suggestions[row.transfer] = result == "unmatched" ? "Kein passendes Lernziel" : result
+            }
+        } catch { self.error = error.localizedDescription }
+    }
+
+    private func open(_ row: ToddleField.AssessmentRow, _ standard: String) async {
+        guard !sending, !reading else { return }
+        sending = true
+        defer { sending = false }
+        error = nil
+        do {
             try await openDraft(row, standard)
             dismiss()
-        } catch {
-            self.error = error.localizedDescription
-        }
-    }
-
-    private func send(_ value: String) async {
-        guard !sending, !reading else { return }
-        sending = true
-        defer { sending = false }
-        error = nil
-        returnedValue = nil
-        do {
-            returnedValue = try await ClaudeClient.echo(value, key: ClaudeKey.read())
-        } catch {
-            self.error = error.localizedDescription
-        }
+        } catch { self.error = error.localizedDescription }
     }
 }

@@ -28,3 +28,15 @@ Die Zeilenübernahme benötigt den Big-Quest-Testbuild mit `schul-zeilenentwurf`
 Die App liest Kriterium und Einstufung aus derselben sichtbaren zweispaltigen Zeile. Sie zeigt beide Werte vor dem Claude-Aufruf. **Lernziel vorschlagen und Entwurf öffnen** sendet ausschließlich den Kriterientext und öffnet bei passender Zuordnung den vorhandenen Bewertungsentwurf. Titel und Bewertungsdatum werden im Entwurf ergänzt. Die Übernahme erfolgt erst nach Vorschau und Bestätigung.
 
 Für die Geräteabnahme die BIS-Zeile zur zweischrittigen Subtraktion verwenden. Der Vorschlag muss M-N5 und die originale Einstufung C zeigen. Nach Bestätigung und Abgleich soll das Kind in einer neuen Runde genau eine passend zugeordnete Aufgabe erhalten.
+
+## Evaluation ohne Markierung – aktueller Entwicklungsstand
+
+Der neue Einstieg heißt **Evaluation aus Toddle**. Eltern öffnen die Evaluation und wählen **Geöffnete Evaluation lesen**. Die App liest die gerenderte, eindeutig beschriftete Bewertungstabelle und zeigt Kriterien und Originaleinstufungen zusammen. Es erfolgt kein Zugriff auf Kontodaten, versteckte Zustände oder private Toddle-Endpunkte. Ausgelesene Texte werden zunächst nur lokal angezeigt.
+
+**Lernziele mit Claude zuordnen** sendet nach Sichtprüfung nur die Kriterientexte. Unterstützt sind derzeit M-N3 und M-N5; andere Kriterien bleiben ausdrücklich ohne Zuordnung. Einstufungen werden weder an Claude gesendet noch von Claude ersetzt. Teilweise erfolgreiche Zuordnungen bleiben bei API-Fehlern sichtbar, ein Wiederholen fragt nur noch fehlende Kriterien ab.
+
+Mehrteilige Evaluationen werden in diesem Stand **nicht gespeichert**. Die bestehende Ein-Kriterium-Brücke darf sie nicht in mehrere scheinbar unabhängige Evaluationen zerlegen. Gemeinsame Speicherung mit Titel, Datum, Originalkriterien und Kindzuordnung ist der nächste Integrationsschritt. Auch eine nicht eindeutig gelesene Zeile sperrt die Ein-Kriterium-Übergabe.
+
+Die DOM-Gegenproben verwenden ausdrücklich synthetische Tabellen und führen das unveränderte JavaScript aus der Swift-Datei aus. Sie belegen Paarzuordnung, Herkunftsprüfung, Ausschluss versteckter Tabellen und Ablehnung mehrdeutiger Tabellen. Sie sind **kein Nachweis der tatsächlichen Toddle-DOM-Struktur**, von nachgeladenen/virtualisierten Zeilen oder der Vollständigkeit einer echten Evaluation. Dafür ist die Ausführung auf dem iPad mit der bereits bekannten Evaluation nötig. Es werden keine Testdaten als Schuldaten importiert.
+
+Technische Referenzen: Apple WKWebView evaluateJavaScript (https://developer.apple.com/documentation/WebKit/WKWebView/evaluateJavaScript(_:completionHandler:)); MDN Element.getClientRects (https://developer.mozilla.org/en-US/docs/Web/API/Element/getClientRects).

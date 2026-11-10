@@ -1,0 +1,25 @@
+name: Toddle evaluation reader
+on:
+  pull_request:
+    paths:
+      - 'ios/**'
+      - 'tests/toddle-evaluation-reader.test.mjs'
+      - '.github/workflows/toddle-reader.yml'
+permissions:
+  contents: read
+jobs:
+  reader:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-package-lock
+      - run: npx playwright install --with-deps chromium
+      - run: node --test tests/toddle-evaluation-reader.test.mjs
+  ipad:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - run: xcodebuild -project ios/BigQuestMVP.xcodeproj -scheme BigQuestMVP -sdk iphonesimulator -configuration Debug CODE_SIGNING_ALLOWED=NO build

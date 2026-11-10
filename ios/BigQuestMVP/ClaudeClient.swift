@@ -82,7 +82,7 @@ enum ClaudeClient {
         return echoed
     }
 
-    static func suggestStandard(for criterion: String, key: String) async throws -> String {
+    static func classifyStandard(for criterion: String, key: String) async throws -> String {
         let result = try await respond(
             criterion, key: key,
             system: """
@@ -92,7 +92,7 @@ enum ClaudeClient {
             Return unmatched if neither definition clearly fits. Never infer or return a grade.
             """
         )
-        guard ["M-N3", "M-N5"].contains(result) else {
+        guard ["M-N3", "M-N5", "unmatched"].contains(result) else {
             throw MVPError.message("Für dieses Kriterium wurde kein passendes Big-Quest-Lernziel gefunden.")
         }
         return result
