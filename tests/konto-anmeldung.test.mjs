@@ -89,6 +89,10 @@ async function anmelden(G, rolle, name, pw) {
   G.tippe('#loginUser', name); G.tippe('#loginPw', pw);
   G.absenden('#loginGo');
 }
+const syncZeile = (G) => G.S.lauf(() => {
+  const z = G.S.$('#aboutBody').querySelector('#kSync');
+  return z ? { text: z.textContent, html: z.innerHTML } : null;
+});
 /* nach dem Startcode: Vorschlag uebernehmen und speichern -> das gewaehlte Passwort */
 async function passwortWaehlen(G) {
   await G.wartenAuf('#setPwForm');
@@ -281,6 +285,38 @@ test('2 Kind: Startcode getippt -> eigenes Passwort, kein Wiederherstellungscode
   assert.equal(B.wert('adultUser'), null);
   const pw2 = await kontoAnmelden({ zugang: W.z, anmeldename: 'lena.b', passwort: pwL });
   assert.equal(pw2.art, 'child', 'Lenas Passwort oeffnet ihr Konto im Speicher');
+});
+
+test('2b Erwachsenenhinweise: offenes Pending spaeter sichtbar, Dauerfehler mit klarer Folgeaktion', async (t) => {
+  const W = await welt();
+  await W.elternteil('mama.b');
+  await W.elternteil('anna.b');
+  const annaId = W.offen['anna.b'].kennung, mamaId = W.offen['mama.b'].kennung;
+  const A = geraet(t, W.w, { name: 'Kathies iPad' });
+  await anmelden(A, 'student', 'kathie.b', await W.kind('kathie.b', 'mama.b'));
+  await passwortWaehlen(A);
+  await A.warten(() => A.sitzung() && A.sitzung().user === 'kathie.b', 'Kind startet sofort');
+  const kind = A.liste()[0];
+  const kindText = A.S.lauf(() => ['#home', '#play', '#results', '#subject'].map((s) => A.S.$(s).textContent).join(' | '));
+  assert.doesNotMatch(kindText, /Aufnahme|Abgleich|Speicher|Zugang|Netz/i, 'Kind sieht keinen Techniktext');
+
+  A.S.lauf(() => {
+    A.S.holen('APP_ACCOUNTS').users.push({ id: annaId, user: 'anna.b', role: 'parent' }, { id: mamaId, user: 'mama.b', role: 'parent' });
+    A.S.holen('loginDone')({ id: annaId, user: 'anna.b', role: 'parent' });
+  });
+  await A.warten(() => !!syncZeile(A), 'Statuszeile');
+  assert.match(syncZeile(A).text, /kathie\.b: Ein Elternteil muss die Aufnahme fertigstellen\./, syncZeile(A).text);
+
+  A.S.lauf(() => {
+    A.S.holen('loginDone')({ id: mamaId, user: 'mama.b', role: 'parent' });
+    A.S.holen('kontoKindPendingSetzen')(kind.id, { status: 'error', reason: 'invite-missing' });
+    A.S.holen('renderSheets')();
+  });
+  await A.warten(() => /Aufnahme fehlgeschlagen\./.test((syncZeile(A) || {}).text || ''), 'Fehlerhinweis');
+  assert.match(syncZeile(A).text, /kathie\.b: Aufnahme fehlgeschlagen\./, syncZeile(A).text);
+  assert.match(syncZeile(A).html, /data-kgoto="familie"/, syncZeile(A).html);
+  A.S.lauf(() => A.S.$('#aboutBody').querySelector('[data-kgoto="familie"]').click());
+  assert.equal(A.S.ctx.location.hash, '#eltern/einstellungen/familie');
 });
 
 test('3 Passwort vergessen (Erwachsene): Wiederherstellungscode -> neues Passwort -> neuer Code; alte gelten nicht mehr', async (t) => {

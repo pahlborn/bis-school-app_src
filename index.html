@@ -5782,6 +5782,7 @@ async function kontoAbgleichLauf(){
       if(err && KONTO_SPEICHERFEHLER.includes(err.code)){ fehler=err.code; if(fehler==='limit') warten=Number.isFinite(err.wartezeit)?err.wartezeit:60000; }
       else kontoFehlerListe.push('abgleich: '+String(err&&err.message||err));
     }
+    const pendingGeaendert=await kontoKindPendingPruefen();
     kontoStatus.fehler=fehler;
     if(fehler==='limit') kontoStatus.wartenBis=Date.now()+Math.max(1000, warten||0);
     if(!fehler) kontoStatus.letzter=Date.now();
@@ -5789,6 +5790,7 @@ async function kontoAbgleichLauf(){
     // the first sync after a login brought the news that this device was removed: new device id, sync once more
     if(!fehler && r && kontoStatus.frisch){ const id=kontoStatus.frisch; kontoStatus.frisch=null; if(kontoOffen.has(id) && kontoNeueKennung(id)) kontoNochmal=true; }
     kontoZeileAuffrischen();
+    if(pendingGeaendert) kontoNeuZeichnen(true);
   }while(kontoNochmal);
   return r;
 }
@@ -5907,6 +5909,10 @@ function kontoZeileHTML(){
   const de=PL()==='de', s=kontoStatus, jetzt=Date.now(), teile=[];
   const neu=kontoNeuAnmelden();
   if(neu) teile.push(`<b>⚠️ ${neu==='entfernt'?(de?'Dieses Gerät wurde entfernt.':'This device was removed.'):(de?'Ihr Zugang wurde auf einem anderen Gerät neu abgesichert.':'Your access was secured again on another device.')} ${de?'Bitte melden Sie sich hier neu an.':'Please log in again here.'}</b> <button type="button" class="btn small primary" id="kNeuAnmelden">${de?'Neu anmelden':'Log in again'}</button>`);
+  for(const h of kontoKindPendingHinweise()){
+    if(h.status==='error') teile.push(`⚠️ ${esc(h.name)}: ${h.selbst?(de?'Aufnahme fehlgeschlagen.':'Admission failed.'):(de?'Aufnahme fehlgeschlagen. Bitte Elternteil fragen.':'Admission failed. Please ask the parent.')} ${h.selbst?`<button type="button" class="btn small" data-kgoto="familie">${de?'Familie öffnen':'Open family'}</button>`:''}`);
+    else teile.push(`⏳ ${esc(h.name)}: ${h.selbst?(de?'Aufnahme noch offen.':'Admission still open.'):(de?'Ein Elternteil muss die Aufnahme fertigstellen.':'A parent needs to finish the admission.')} ${h.selbst?`<button type="button" class="btn small" data-kgoto="familie">${de?'Familie öffnen':'Open family'}</button>`:''}`);
+  }
   if(s.fehler==='offline') teile.push(de?'📴 Kein Netz – wird nachgeholt.':'📴 No connection – will catch up later.');
   else if(s.fehler==='zugang') teile.push(`🔑 ${de?'Der Zugangscode dieses Geräts passt nicht mehr (abgelaufen oder ungültig).':'The access code of this device no longer works (expired or not valid).'} <button type="button" class="btn small" id="kTokenNeu">${de?'Gerät neu verbinden':'Connect again'}</button>`);
   else if(s.fehler==='limit') teile.push(de?`⏳ Gerade zu viele Abgleiche – ab ${kontoUhrzeit(s.wartenBis)} geht es weiter.`:`⏳ Too many syncs just now – it goes on from ${kontoUhrzeit(s.wartenBis)}.`);
@@ -5925,16 +5931,69 @@ function kontoZeileAuffrischen(){
 function kontoZeileBinden(z){
   const a=z.querySelector('#kNeuAnmelden'); if(a) a.addEventListener('click',()=>{ if(!parentAccess) return; parentAbmelden(); showLogin('adult'); });
   const t=z.querySelector('#kTokenNeu'); if(t) t.addEventListener('click',()=>{ if(parentAccess) kontoBlattZeigen({art:'token'}); });
+  z.querySelectorAll('[data-kgoto]').forEach(b=>b.addEventListener('click',()=>{
+    if(!parentAccess) return;
+    pviewPushed=true;
+    location.hash=VIEW_HASH.settings+'/'+b.dataset.kgoto;
+    applyParentRoute();
+  }));
 }
 function kontoKindPending(){
   const p=store.get('pendingAdmission', null);
   return p && typeof p==='object' && !Array.isArray(p) ? p : {};
 }
 function kontoKindPendingHat(id){ return !!(id && kontoKindPending()[id]); }
+function kontoKindPendingEintrag(id){
+  if(!id) return null;
+  const v=kontoKindPending()[id];
+  if(v===true) return {status:'pending', reason:null};
+  if(!v || typeof v!=='object' || Array.isArray(v)) return null;
+  return {status:v.status==='error'?'error':'pending', reason:typeof v.reason==='string'?v.reason:null};
+}
+function kontoKindPendingStatus(id){
+  const alt=kontoKindPendingEintrag(id)||{status:'pending', reason:null};
+  const kind=kontoKonto(id);
+  if(!kind) return null;
+  const anker=kind.anker && kind.anker.role==='parent' ? kind.anker.person : null;
+  if(!anker || !kontoOffen.has(anker) || kontoOffen.get(anker).art!=='parent') return {...alt, anker};
+  const eltern=kontoKonto(anker);
+  if(!eltern) return {...alt, anker};
+  const offen=kontoVerb(eltern).offen.find(o=>o.art==='child' && o.person===id);
+  const warn=offen && kontoBericht && Array.isArray(kontoBericht.warnungen) ? kontoBericht.warnungen.find(w=>w.id===offen.invite) : null;
+  if(warn) return {status:'error', reason:warn.grund||'warnung', anker};
+  if(!offen) return {status:'error', reason:'invite-missing', anker};
+  return {status:'pending', reason:null, anker};
+}
+function kontoKindPendingHinweise(){
+  if(!adultUser) return [];
+  const de=PL()==='de', akt=accByRef({user:adultUser.user});
+  return Object.keys(kontoKindPending()).map(id=>{
+    const s=kontoKindPendingStatus(id); if(!s) return null;
+    const e=kontoListe().find(x=>x.id===id), name=kontoKindName(id, (e&&e.user)||'') || (e&&e.user) || (de?'dieses Kind':'this child');
+    const selbst=!!(akt && akt.role==='parent' && s.anker===akt.id);
+    return {id, name, status:s.status, selbst};
+  }).filter(Boolean);
+}
+async function kontoKindPendingPruefen(){
+  const ids=Object.keys(kontoKindPending());
+  let geaendert=false;
+  for(const id of ids){
+    if(!kontoKonto(id)){ kontoKindPendingSetzen(id, false); geaendert=true; continue; }
+    if(await kontoKindIstBereit(id)){ kontoKindPendingSetzen(id, false); geaendert=true; continue; }
+    const alt=kontoKindPendingEintrag(id)||{status:'pending', reason:null};
+    const neu=kontoKindPendingStatus(id)||{status:'pending', reason:null};
+    if(neu.status!==alt.status || (neu.reason||null)!==(alt.reason||null)){
+      kontoKindPendingSetzen(id, neu.status==='pending' && !neu.reason ? true : neu);
+      geaendert=true;
+    }
+  }
+  return geaendert;
+}
 function kontoKindPendingSetzen(id, an){
   if(!id) return;
   const p=kontoKindPending();
-  if(an) p[id]=true;
+  if(an===true) p[id]=true;
+  else if(an && typeof an==='object' && !Array.isArray(an)) p[id]={status:an.status==='error'?'error':'pending', ...(an.reason?{reason:an.reason}: {})};
   else delete p[id];
   if(Object.keys(p).length) store.set('pendingAdmission', p);
   else store.del('pendingAdmission');
