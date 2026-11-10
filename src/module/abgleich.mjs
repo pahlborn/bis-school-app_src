@@ -29,6 +29,8 @@ export const ABGLEICH_BUENDEL_MAX = 100;
 /* reasons for a rejected entry: the bundle or entry cannot be read, the entry does not match its event, or annahme */
 export const ABGLEICH_GRUENDE = Object.freeze(['entschluesseln', 'eintrag-passt-nicht', ...ANNAHME_GRUENDE, 'nach-entfernung']);
 
+// Older clients advanced their school cursor even after dropping unknown evaluation events.
+const ABG_SCHULE_LESESTAND = 1;
 const ABG_KEYS = ['bereich', 'geraet', 'ausgang', 'unterwegs', 'naechsteNr', 'merker', 'wartend', 'log'];
 const abgObj = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
 const abgStr = (x) => typeof x === 'string' && x.length > 0;
@@ -150,11 +152,13 @@ export async function holen(stand, { zugang, schluessel, zulassung, now } = {}) 
   abgPruefeStand(stand); abgPruefeSchluessel(schluessel);
   if (now === undefined || now === null) throw abgFehler('"now" fehlt.');
   const { bereich } = stand;
-  const r = await zugang.list(bereich, stand.merker);
+  const schule = bereich.startsWith('schule:');
+  const neuLesen = schule && stand.merker !== null && stand.merker.schuleLesestand !== ABG_SCHULE_LESESTAND;
+  const r = await zugang.list(bereich, neuLesen ? null : stand.merker);
   const ids = [];
   for (const k of [...stand.wartend, ...r.kennungen]) {
     const nr = abgEigeneNr(stand, k);
-    if (nr > 0 && nr < stand.naechsteNr && !stand.wartend.includes(k)) continue;   // own bundle, already in the log
+    if (!neuLesen && nr > 0 && nr < stand.naechsteNr && !stand.wartend.includes(k)) continue;   // own bundle, already in the log
     if (!ids.includes(k)) ids.push(k);
   }
   const gelesen = [];
@@ -209,6 +213,7 @@ export async function holen(stand, { zugang, schluessel, zulassung, now } = {}) 
   const neu = new Set(angenommen.map((x) => x.event.id).filter((id) => !vorher.has(id))).size;
   stand.log = abgEinordnen(stand.log, angenommen, now);
   stand.merker = abgClone(r.merker);
+  if (schule) stand.merker.schuleLesestand = ABG_SCHULE_LESESTAND;
   stand.wartend = wartend;
   for (const k of r.kennungen) { const nr = abgEigeneNr(stand, k); if (nr >= stand.naechsteNr) stand.naechsteNr = nr + 1; }
   return { neu, verworfen, wartend: wartend.slice() };

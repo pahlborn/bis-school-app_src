@@ -390,3 +390,37 @@ jedeWelt('Zwei Eltern schreiben parallel: Konflikt, gemeinsame Fassung und AuflÃ
     assert.equal(task(device).manual.history.length, 4);
   }
 });
+
+jedeWelt('Upgrade stellt einen zuvor selbst gesendeten Schuleintrag auch im App-Verlauf wieder her', async (W) => {
+  const { P, K } = await familien(W);
+  const child = K.konto.kennung;
+  const area = 'schule:' + child;
+  const key = 'bq2_' + child + '__events';
+  const assessment = newEvent({ type: 'school_evaluation', author: P.konto.kennung, device: P.d,
+    at: new Date(weiter(W)).toISOString(), payload: {
+      child, evaluation: '7d97af5e-6e19-46b8-85c6-d3c950a77680', revision: '7d97af5e-6e19-46b8-85c6-d3c950a77681',
+      title: 'Fiktive Evaluation', day: HEUTE, standard: 'M-N5', rating: 'C', focus: 'two-step',
+    } });
+  P.a.setItem(key, JSON.stringify([...P.log(child), assessment]));
+  await P.sync();
+  await P.sync();
+  const states = JSON.parse(P.a.getItem('bq_abgleich'));
+  const school = states[area];
+  assert.ok(school.merker.stand[P.d] > 0);
+  assert.equal(school.merker.schuleLesestand, 1);
+  const next = school.naechsteNr;
+  const learning = states['kind:lern:' + child].merker;
+  // Older builds preserve the cursor but omit the unsupported event when merging.
+  delete school.merker.schuleLesestand;
+  school.log = school.log.filter(x => x.event.id !== assessment.id);
+  P.a.setItem('bq_abgleich', JSON.stringify(states));
+  P.a.setItem(key, JSON.stringify(P.log(child).filter(e => e.id !== assessment.id)));
+
+  await P.sync();
+  await P.sync();
+  assert.deepEqual(P.log(child).filter(e => e.id === assessment.id), [assessment]);
+  const after = JSON.parse(P.a.getItem('bq_abgleich'));
+  assert.equal(after[area].naechsteNr, next);
+  assert.equal(after[area].merker.schuleLesestand, 1);
+  assert.deepEqual(after['kind:lern:' + child].merker, learning);
+});
