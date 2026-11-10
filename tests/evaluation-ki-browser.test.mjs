@@ -6,6 +6,7 @@ import { browserStarten, elternSeite } from './app-hilfen.mjs';
 import { startSchoolAI } from '../spikes/schulbewertung-ki/server.mjs';
 import { anmEinladungslink } from '../src/module/anmeldung.mjs';
 import { keyFingerprint } from '../src/module/krypto.mjs';
+import { createSchoolAiServer } from '../services/school-ai/server.mjs';
 
 const CHILD = 'Tessa Sonnenweg';
 const LOGIN = 'tessa.sonnenweg';
@@ -79,22 +80,25 @@ async function checkRoundRevisions(page, expected, solve = new Map()) {
   await leaveRound(page);
 }
 
-test('KI preview keeps six source rows, saves one confirmed criterion and reaches the child practice round', { timeout: 180000 }, async (t) => {
+for (const hosted of [false, true]) test(`KI preview reaches the child practice round (${hosted ? 'hosted service' : 'local development'})`, { timeout: 180000 }, async (t) => {
   const fixture = new URL('../spikes/schulbewertung-ki/bis-referenz.json', import.meta.url);
   const source = JSON.parse(await readFile(fixture, 'utf8'));
   const matcherCalls = [];
-  const server = await startSchoolAI({ source, match: async (rows) => {
+  const match = async (rows) => {
     matcherCalls.push(rows);
     if (matcherCalls.length === 1) throw new Error('simulated model failure');
     return { matches: [{ row: 2, standard: 'M-N3' }, { row: 4, standard: 'M-N5' }] };
-  } });
+  };
+  const aiOrigin = 'https://school-ai.invalid';
+  const server = await startSchoolAI({ source, match, previewService: hosted ? aiOrigin : undefined });
   t.after(() => server.close());
   const browser = await browserStarten();
   t.after(() => browser.close());
   const P = await device(browser);
   const K = await device(browser);
 
-  await P.page.goto(server.invitation);
+  const appOrigin = server.origin;
+  await P.page.goto(server.invitation.replace(server.origin, appOrigin));
   await register(P.page);
   await P.page.locator('#recGo').click();
   await P.page.locator('#welcomeGo').click();
@@ -108,7 +112,7 @@ test('KI preview keeps six source rows, saves one confirmed criterion and reache
   await P.page.locator('#kKindGo').click();
   await P.page.locator('#kQr svg').waitFor();
   const code = (await P.page.locator('#kCode').textContent()).trim();
-  const pub = await P.page.evaluate(async () => {
+  const { pub, account } = await P.page.evaluate(async () => {
     const entries = await new Promise((resolve, reject) => {
       const db = indexedDB.open('bq2_konto', 1);
       db.onerror = () => reject(db.error);
@@ -119,13 +123,25 @@ test('KI preview keeps six source rows, saves one confirmed criterion and reache
       };
     });
     assertSingleKey(entries);
-    return entries[0].pub;
+    return { pub: entries[0].pub, account: entries[0].kennung };
     function assertSingleKey(keys) {
       if (keys.length !== 1) throw new Error('Expected one key on the parent-only device');
     }
   });
+  if (hosted) {
+    const service = createSchoolAiServer({ origin: appOrigin, parents: { [account]: pub.ecdsa }, match, testLoopback: true });
+    await new Promise(resolve => service.listen(0, '127.0.0.1', resolve));
+    t.after(() => new Promise(resolve => service.close(resolve)));
+    await P.page.route(aiOrigin + '/v1/school-assessment', async route => {
+      const request = route.request();
+      const response = await fetch('http://127.0.0.1:' + service.address().port + '/v1/school-assessment', {
+        method: request.method(), headers: await request.allHeaders(), body: request.postData() ?? undefined,
+      });
+      await route.fulfill({ status: response.status, headers: Object.fromEntries(response.headers), body: await response.text() });
+    });
+  }
   const zugang = new URLSearchParams(new URL(server.invitation).hash.slice(1)).get('zugang');
-  await K.page.goto(anmEinladungslink(server.origin + '/', { zugang, anmeldename: LOGIN, code, fingerabdruck: await keyFingerprint(pub) }));
+  await K.page.goto(anmEinladungslink(appOrigin + '/', { zugang, anmeldename: LOGIN, code, fingerabdruck: await keyFingerprint(pub) }));
   await register(K.page);
   await K.page.locator('#welcomeGo').click({ timeout: 60000 });
   await K.page.waitForSelector('#home:not([hidden])');
@@ -138,8 +154,15 @@ test('KI preview keeps six source rows, saves one confirmed criterion and reache
   const analyze = form.getByRole('button', { name: 'KI-Zuordnung anzeigen' });
   await open.click();
   const input = form.locator('textarea[name="schoolSource"]');
-  const inputText = await input.inputValue();
-  assert.deepEqual(JSON.parse(inputText), source, 'the prepared source is available without retyping');
+  const inputText = hosted ? source.rows.map(r => r.criterion + '\t' + r.teacherRating).join('\n') : await input.inputValue();
+  const fillSource = async () => {
+    if (!hosted) return;
+    await form.getByLabel('Titel').fill(source.title);
+    await form.getByLabel('Bewertungsdatum').fill(source.day);
+    await input.fill(inputText);
+  };
+  if (!hosted) assert.deepEqual(JSON.parse(inputText), source, 'the prepared source is available without retyping');
+  await fillSource();
   await analyze.click();
   await form.getByRole('alert').waitFor();
   assert.equal(await input.inputValue(), inputText, 'recoverable endpoint failure preserves input');
@@ -165,6 +188,7 @@ test('KI preview keeps six source rows, saves one confirmed criterion and reache
   assert.deepEqual(await evaluationEvents(K.page), []);
 
   await open.click();
+  await fillSource();
   await analyze.click();
   await table.waitFor();
   await table.locator('input[name="schoolRow"][value="2"]').check();

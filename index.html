@@ -6577,11 +6577,53 @@ function schoolEvaluationTarget(){
   const child=kontoVerb(account).kinder.find(c=>c.id===id);
   return child ? {id, author:account.kennung, name:kontoKindName(id, child.name)} : null;
 }
+function schoolEvaluationHostedSource(d){
+  const title=d.title.trim();
+  const day=d.day, date=new Date(day+'T00:00:00Z');
+  if(!title || /[\x00-\x1f\x7f]/.test(title) || title.length>160 || !/^\d{4}-\d{2}-\d{2}$/.test(day) ||
+    !Number.isFinite(+date) || date.toISOString().slice(0,10)!==day || day>dayKey()) throw new Error('school input');
+  const lines=d.source.trim().split(/\r?\n/).filter(line=>line.trim());
+  if(!lines.length || lines.length>30) throw new Error('school input');
+  const rows=lines.map(line=>{
+    const fields=line.split('\t').map(value=>value.trim());
+    if(fields.length!==2 || !fields[0] || fields[0].length>600) throw new Error('school input');
+    return {criterion:fields[0],teacherRating:Object.hasOwn(SL,fields[1]) && fields[1]!=='N'?fields[1]:null};
+  });
+  return {title,day,rows};
+}
+async function schoolEvaluationAiRequest(d){
+  const headers={'Content-Type':'application/json'};
+  const signal=AbortSignal.timeout(35000);
+  if(!SCHULE_KI.url){
+    const response=await fetch('/__bq_school_ai',{method:'POST',headers,body:d.source,signal});
+    if(!response.ok) throw new Error('school extract');
+    return response.json();
+  }
+  const source=schoolEvaluationHostedSource(d), account=kontoIch();
+  if(account?.art!=='parent' || account.kennung!==d.author) throw new Error('school access');
+  const rows=source.rows.map(({criterion},row)=>({row,criterion}));
+  const body=JSON.stringify({account:account.kennung,at:Date.now(),nonce:crypto.randomUUID(),rows});
+  headers['X-BQ-Signature']=await signBytes(account.schluessel,'bq-school-ai-v1\n'+location.origin+'\n'+body);
+  const response=await fetch(SCHULE_KI.url+'/v1/school-assessment',{method:'POST',headers,body,signal,credentials:'omit',redirect:'error'});
+  if(response.status===403) throw new Error('school access');
+  if(!response.ok) throw new Error('school extract');
+  const {matches}=await response.json();
+  if(!Array.isArray(matches)) throw new Error('school extract');
+  return {...source,rows:source.rows.map((row,i)=>{
+    const candidates=matches.filter(m=>m?.row===i);
+    const standard=candidates[0]?.standard;
+    const unique=matches.filter(m=>m?.standard===standard).length===1;
+    return {...row,standard:row.teacherRating && candidates.length===1 && unique && Object.hasOwn(SCHOOL_EVALUATION_TARGETS,standard)?standard:null};
+  })};
+}
 function schoolEvaluationAiHTML(d, child, criteria, lang){
   const de=lang==='de';
   if(!d.preview){
     return `<h3>${de?'Schulauszug prüfen':'Review school extract'}</h3>${child}
       <p>${de?'Nur geprüfte Kriterientexte werden zur Zuordnung an Claude gesendet. Entfernen Sie Namen und Kennungen aus den Kriterien.':'Only checked criterion text is sent to Claude. Remove names and identifiers from criteria.'}</p>
+      ${SCHULE_KI.url?`<label>${de?'Titel':'Title'} <input name="title" required maxlength="160" value="${esc(d.title)}"${d.busy?' readonly':''}></label>
+      <label>${de?'Bewertungsdatum':'Assessment date'} <input name="day" type="date" required max="${dayKey()}" value="${esc(d.day)}"${d.busy?' readonly':''}></label>
+      <p>${de?'Kopieren Sie die beiden Spalten Kriterium und Lehrkraft-Einstufung ohne Kopfzeile aus der Bewertung.':'Copy the criterion and teacher rating columns from the assessment without the header row.'}</p>`:''}
       <label>${de?'Schulauszug':'School extract'} <textarea name="schoolSource" rows="6" maxlength="24000" required${d.busy?' readonly':''}>${esc(d.source)}</textarea></label>
       <button class="btn" type="submit"${d.busy?' disabled':''}>${d.busy?(de?'Zuordnung läuft …':'Matching …'):(de?'KI-Zuordnung anzeigen':'Show AI suggestions')}</button>`;
   }
@@ -6671,7 +6713,7 @@ function bindSchoolEvaluation(body){
     } else if(action==='ai' && SCHULE_KI){
       schoolEvaluationNotice=null;
       schoolEvaluationDraft={child:t.id, author:t.author, ai:true, source:typeof SCHULE_KI==='string'?SCHULE_KI:'',
-        evaluation:crypto.randomUUID(), revision:crypto.randomUUID(), preview:false, row:null};
+        evaluation:crypto.randomUUID(), revision:crypto.randomUUID(), preview:false, row:null, title:'', day:''};
     } else if(action==='cancel') schoolEvaluationDraft=null;
     else if(action==='edit' && current()){ current().preview=false; current().error=''; }
     redraw();
@@ -6702,16 +6744,17 @@ function bindSchoolEvaluation(body){
       if(d.busy) return;
       d.busy=true; d.error=''; redraw();
       try {
-        const response=await fetch('/__bq_school_ai',{method:'POST',headers:{'Content-Type':'application/json'},
-          body:d.source,signal:AbortSignal.timeout(35000)});
-        if(!response.ok) throw new Error('school extract');
-        const {title,day,rows,strengths,nextSteps}=await response.json();
+        const {title,day,rows,strengths,nextSteps}=await schoolEvaluationAiRequest(d);
         if(typeof title!=='string' || !title || title.length>160 || typeof day!=='string' ||
           !/^\d{4}-\d{2}-\d{2}$/.test(day) || day>dayKey() || !Array.isArray(rows) || !rows.length ||
           rows.some(r=>typeof r?.criterion!=='string')) throw new Error('school preview');
         Object.assign(d,{title,day,rows,strengths,nextSteps,preview:true,row:null,standard:'',rating:'',focus:false});
-      } catch {
-        d.error=de?'Die Zuordnung ist fehlgeschlagen. Prüfen Sie den Auszug und versuchen Sie es erneut.'
+      } catch(error) {
+        if(error.message==='school access'){
+          d.error=de?'Dieses Elternkonto ist für die KI-Zuordnung noch nicht freigegeben.':'This parent account is not enabled for AI matching yet.';
+        } else if(error.message==='school input'){
+          d.error=de?'Bitte prüfen Sie Titel und Datum. Kopieren Sie pro Zeile ein Kriterium und seine Einstufung in zwei Spalten.':'Check the title and date. Paste one criterion and its rating as two columns per row.';
+        } else d.error=de?'Die Zuordnung ist fehlgeschlagen. Prüfen Sie den Auszug und versuchen Sie es erneut.'
           :'Matching failed. Check the extract and try again.';
       } finally {
         d.busy=false;

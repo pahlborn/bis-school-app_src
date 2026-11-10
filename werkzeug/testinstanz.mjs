@@ -43,6 +43,15 @@ export const ERSATZ_DATEI = 'werkzeug/testinstanz-ersatz.json';
  *  "basis" - die Tests lenken api.github.com selbst auf den Nachbau um). */
 export const SPEICHER_MARKE = '/*BQ_SPEICHER*/null';
 export const SPEICHER_TESTINSTANZ = Object.freeze({ art: 'github', repo: TESTINSTANZ.repoDaten, wurzel: TESTINSTANZ.wurzelDaten });
+const SCHULE_KI_MARKE = '/*BQ_SCHULE_KI*/false';
+function schuleKiKonfiguration(value) {
+  if (!value) return null;
+  const url = new URL(value);
+  if (url.protocol !== 'https:' || url.username || url.password || url.pathname !== '/' || url.search || url.hash) {
+    throw new Error('BQ_SCHULE_KI_URL muss eine HTTPS-Origin ohne Pfad oder Zugangsdaten sein.');
+  }
+  return { url: url.origin };
+}
 export const SCHULE_TESTFREIGABE_MARKE = '/*BQ_SCHULE_TESTFREIGABE*/null';
 const SCHULE_TESTFREIGABE = JSON.stringify({ origin: new URL(TESTINSTANZ.adresse).origin, repo: TESTINSTANZ.repoDaten });
 
@@ -91,23 +100,25 @@ const VERSION_AUS_TRESOR = /async function publishedVersion\(\)\{\r?\n {2}const 
  * speicher: nur fuer Tests - ein anderer Ausdruck an der Marke (z. B. der simulierte Speicher). Der Bau nimmt immer
  * SPEICHER_TESTINSTANZ, der Suchlauf (testinstanzPruefen) verlangt genau diesen.
  */
-export function testinstanzUmwandeln(app, ersatz, { speicher = JSON.stringify(SPEICHER_TESTINSTANZ) } = {}) {
+export function testinstanzUmwandeln(app, ersatz, { speicher = JSON.stringify(SPEICHER_TESTINSTANZ), kiUrl } = {}) {
   // eingebettete Schriften (Base64) bleiben unberuehrt: Ersetzungen ohne Ruecksicht auf Gross/klein koennten sonst
   // zufaellig mitten in den Daten treffen
   const daten = [];
   const geschuetzt = String(app).replace(DATEN_RE, (m) => { daten.push(m); return `url(data:font/woff2;base64,BQSCHRIFT${daten.length - 1}x)`; });
-  const t = umwandeln(geschuetzt, ersatz, speicher);
+  const t = umwandeln(geschuetzt, ersatz, speicher, schuleKiKonfiguration(kiUrl));
   const n = (t.match(/BQSCHRIFT\d+x/g) || []).length;
   if (n !== daten.length) throw new Error(`Testinstanz: eingebettete Schriften ${n}x statt ${daten.length}x nach der Umwandlung - nichts gebaut.`);
   return t.replace(/url\(data:font\/woff2;base64,BQSCHRIFT(\d+)x\)/g, (_, i) => daten[Number(i)]);
 }
 
-function umwandeln(app, ersatz, speicher) {
+function umwandeln(app, ersatz, speicher, ki) {
   let t = String(app);
   for (const [suche, neu] of ersatz.ersetzen) t = t.replace(new RegExp(reEsc(suche), 'gi'), () => neu);
   t = einmal(t, VERSION_AUS_TRESOR, () => VERSION_AUS_KLARTEXT, 'publishedVersion (mit Schluessel)');
   t = einmal(t, new RegExp(reEsc(SPEICHER_MARKE)), () => speicher, 'Marke ' + SPEICHER_MARKE);
   t = einmal(t, new RegExp(reEsc(SCHULE_TESTFREIGABE_MARKE)), () => SCHULE_TESTFREIGABE, 'Marke ' + SCHULE_TESTFREIGABE_MARKE);
+
+  if (ki) t = einmal(t, new RegExp(reEsc(SCHULE_KI_MARKE)), () => JSON.stringify(ki), 'Marke ' + SCHULE_KI_MARKE);
 
   // Geraetedaten (bq_abgleich, bq_schluessel ...) und der Token liegen kuenftig unter demselben Praefix wie die Daten
   // der App. Damit sie nie als Daten eines Kindes gelten (Umzug auf Kennungen, Sicherung), werden sie geraeteweit.

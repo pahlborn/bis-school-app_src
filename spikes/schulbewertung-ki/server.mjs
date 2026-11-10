@@ -35,7 +35,7 @@ export async function evaluationVorschau(source, match) {
   };
 }
 
-export async function startSchoolAI({ source, match } = {}) {
+export async function startSchoolAI({ source, match, previewService } = {}) {
   const token = 'github_pat_' + randomBytes(32).toString('hex');
   const storage = await githubNachbau({ token, repos: [REPO] });
   let server;
@@ -46,7 +46,7 @@ export async function startSchoolAI({ source, match } = {}) {
     const admin = await ersteAnmeldung({ zugang: access, code: adminCode.code, passwort: randomBytes(24).toString('hex'), now });
     const parent = await startcodeAusstellen({ zugang: access, aussteller: admin, anmeldename: 'test.eltern', art: 'parent', now });
     const config = JSON.stringify({ art: 'github', repo: REPO, wurzel: '', basis: storage.basis });
-    const initial = source ? JSON.stringify(JSON.stringify(source, null, 2)).replaceAll('<', '\\u003c') : 'true';
+    const initial = JSON.stringify(previewService ? { url: previewService } : source ? JSON.stringify(source, null, 2) : true).replaceAll('<', '\\u003c');
     const html = appLesen('utf8', { bauart: 'test' })
       .replace('/*BQ_SPEICHER*/null', () => config)
       .replace('/*BQ_SCHULE_KI*/false', () => initial);
