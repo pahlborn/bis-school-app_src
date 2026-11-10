@@ -167,6 +167,12 @@ test('Browser: Admin laedt einen Elternteil ein, zeigt Link/QR, speichert die Ei
   assert.equal(d, /<path fill="#000" d="([^"]*)"/.exec(qrSvg(link, { ecc: 'M', rand: 4 }))[1], 'QR-Code traegt genau den sichtbaren Link');
   const [download] = await Promise.all([A.page.waitForEvent('download'), A.page.locator('#kQrMail').click()]);
   assert.equal(download.suggestedFilename(), 'Big-Quest-invitation-mira.sonnental.html');
+  await A.page.locator('#kQrFertig').click();
+  if (!(await admin.evaluate((e) => e.open))) await admin.locator('summary').click();
+  const inviteParent = admin.locator('details[data-admin="invite-parent"]');
+  if (!(await inviteParent.evaluate((e) => e.open))) await inviteParent.locator('summary').click();
+  await A.page.waitForFunction(() => /Offene Einladungen/.test(document.querySelector('#aboutBody')?.innerText || ''), null, { timeout: 30000 });
+  assert.match(await admin.innerText(), /Offene Einladungen[\s\S]*Mira Sonnental/);
 
   const P = await geraet();
   await P.page.goto(link);
@@ -177,12 +183,9 @@ test('Browser: Admin laedt einen Elternteil ein, zeigt Link/QR, speichert die Ei
   await P.page.waitForSelector('#parentClose');
   assert.equal(await P.page.locator('details.psec[data-psec="administration"]').count(), 0, 'nicht als Admin angemeldet -> keine Funktion');
 
-  await A.page.waitForFunction(() => /ist angemeldet|is logged in/.test(document.querySelector('#kQrStatus')?.textContent || ''), null, { timeout: 30000 });
-  await A.page.locator('#kQrFertig').click();
   if (!(await admin.evaluate((e) => e.open))) await admin.locator('summary').click();
-  const inviteParent = admin.locator('details[data-admin="invite-parent"]');
   if (!(await inviteParent.evaluate((e) => e.open))) await inviteParent.locator('summary').click();
-  await A.page.waitForSelector('#kAdminElternEinladen');
+  await A.page.waitForSelector('details[data-admin="invite-parent"] #kAdminElternEinladen', { state: 'visible', timeout: 30000 });
   await A.page.locator('#kAdminElternEinladen').click();
   await A.page.waitForSelector('#kAdminForm');
   await A.page.locator('#kAdminLogin').fill('mira.sonnental');

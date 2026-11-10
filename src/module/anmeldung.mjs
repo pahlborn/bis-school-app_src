@@ -33,9 +33,9 @@
 //     in the app (module qrlesen) or paste the link or only the code (anmEingefuegt). Terms (B3): "Zugangscode" /
 //     "access code" connects a device, "Passwort" belongs to a person.
 
-import { KONTO_ARTEN, kontoName, kontoLookup, ersteAnmeldung, anmelden, wiederherstellen, schluesselErneuern, kontoFingerabdruck, startcodeAusstellen, startcodeAnsehen, kontoStand } from './konto.mjs';
+import { KONTO_ARTEN, kontoName, kontoLookup, ersteAnmeldung, anmelden, wiederherstellen, schluesselErneuern, kontoFingerabdruck, startcodeAnsehen, kontoStand } from './konto.mjs';
 import { githubSpeicher, githubTokenLesen, githubTokenSpeichern } from './github.mjs';
-import { verbindungen, kindAnlegen, elternteilEinladen, kindPasswortNeu, einladungZurueckziehen, abgleichMitVerbindungen, anmeldenameVorschlag, kindLokalEntfernen } from './einladung.mjs';
+import { verbindungen, kindAnlegen, elternteilEinladen, adminElternEinladen, kindPasswortNeu, einladungZurueckziehen, abgleichMitVerbindungen, anmeldenameVorschlag, kindLokalEntfernen } from './einladung.mjs';
 import { meineGeraete, geraetEntfernen } from './geraete.mjs';
 import { GERAETEABGLEICH_SPEICHER } from './geraeteabgleich.mjs';
 import { bereichName, schluesselLesen } from './bereiche.mjs';
@@ -354,7 +354,7 @@ export const anmNameVorschlag = ({ zugang, anzeigename }) => anmeldenameVorschla
    new password of a child / withdraw */
 export const anmKindAnlegen = ({ zugang, ablage, konto, anmeldename, anzeigename, now }) => kindAnlegen({ zugang, ablage, konto, anmeldename, anzeigename, now });
 export const anmElternEinladen = ({ zugang, ablage, konto, anmeldename, now }) => elternteilEinladen({ zugang, ablage, konto, anmeldename, now });
-export const anmAdminElternEinladen = ({ zugang, konto, anmeldename, now }) => startcodeAusstellen({ zugang, aussteller: konto, anmeldename, art: 'parent', now });
+export const anmAdminElternEinladen = ({ zugang, ablage, konto, anmeldename, anzeigename, now }) => adminElternEinladen({ zugang, ablage, konto, anmeldename, anzeigename, now });
 export const anmKindNeu = ({ zugang, ablage, konto, kind, now }) => kindPasswortNeu({ zugang, ablage, konto, kind, now });
 export const anmZurueckziehen = ({ zugang, ablage, konto, id, now }) => einladungZurueckziehen({ zugang, ablage, konto, id, now });
 /* "Meine Geraete" and "Geraet entfernen" (module geraete) */

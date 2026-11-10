@@ -265,6 +265,15 @@ export async function elternteilEinladen({ zugang, ablage, konto, anmeldename, n
   return eldMerken(ablage, konto, r, 'parent', r.kennung, r.anmeldename, now, '');
 }
 
+/* Admin -> parent: account only, no family binding in this path. */
+export async function adminElternEinladen({ zugang, ablage, konto, anmeldename, anzeigename, now, rand = eldRand } = {}) {
+  eldPruefen({ ablage, konto, now });
+  if (konto.art !== 'admin' || !eldObj(konto.schluessel)) throw eldFehler('nicht-erlaubt');
+  const display = typeof anzeigename === 'string' && anzeigename.trim() ? anzeigename.trim().slice(0, 40) : '';
+  const r = await startcodeAusstellen({ zugang, aussteller: konto, anmeldename, art: 'parent', now, rand });
+  return eldMerken(ablage, konto, r, 'parent', r.kennung, r.anmeldename, now, display);
+}
+
 /* the family_set about me, signed by "anker" in the area of the family -> { area, event, sig } or null */
 function eldBuergschaft(ablage, familie, anker, konto) {
   const area = bereichName('familie', familie), st = eldJson(ablage, GERAETEABGLEICH_SPEICHER.staende, {})[area];
@@ -345,15 +354,15 @@ async function eldEingeloest(zugang, o) {
 }
 
 /* the issuer's device checks its open invitations (abgleichMitVerbindungen calls it):
-   - used, with the right proof -> the person goes into the family (family_set; a new child also gets its display name),
-     the invitation is "done"
+   - used, with the right proof -> the invitation is "done"; a parent's device also writes the invited person into the
+     family (family_set; a new child also gets its display name)
    - an entry without the right proof (swapped keys, US6.5) -> warning; nothing is noted, so no key is wrapped for it
    - not used and over -> "expired" (the invitation is deleted from the storage)
    -> { bestaetigt: [{ id, art, person, pub }], warnungen: [{ id, art, person, grund }], abgelaufen: [id] } */
 export async function einladungenPruefen({ zugang, ablage, konto, now } = {}) {
   eldPruefen({ ablage, konto, now });
   const out = { bestaetigt: [], warnungen: [], abgelaufen: [] };
-  if (konto.art !== 'parent') return out;
+  if (konto.art !== 'parent' && konto.art !== 'admin') return out;
   const v = verbindungen({ ablage, konto, now });
   for (const o of v.offen) {
     const r = await eldEingeloest(zugang, o);
@@ -366,17 +375,19 @@ export async function einladungenPruefen({ zugang, ablage, konto, now } = {}) {
       }
       continue;
     }
-    if (!v.familie) { out.warnungen.push({ id: o.invite, art: o.art, person: o.person, grund: 'familie-fehlt' }); continue; }
-    const fam = { familie: v.familie };
-    if (o.art === 'parent') {
-      eldSchreiben(ablage, fam, konto, 'family_set', { person: o.person, role: 'parent', pub: r.pub, stand: r.stand, name: o.name }, now);
-    } else {
-      // a new child: its anchor is me; new password: the anchor stays (the family knows it)
-      const k = v.kinder.find((c) => c.id === o.person);
-      if (o.art === 'reset' && !k) { out.warnungen.push({ id: o.invite, art: o.art, person: o.person, grund: 'kind-unbekannt' }); continue; }
-      const a = o.art === 'reset' ? k.anker : { person: konto.kennung, pub: konto.pub };
-      eldSchreiben(ablage, fam, konto, 'family_set', { person: o.person, role: 'child', pub: r.pub, stand: r.stand, name: o.name, anchor: a.person, anchorPub: { ...a.pub } }, now);
-      if (o.art === 'child' && o.display) eldSchreiben(ablage, { kind: o.person }, konto, 'profile_set', { field: 'name', value: o.display }, now);
+    if (konto.art === 'parent') {
+      if (!v.familie) { out.warnungen.push({ id: o.invite, art: o.art, person: o.person, grund: 'familie-fehlt' }); continue; }
+      const fam = { familie: v.familie };
+      if (o.art === 'parent') {
+        eldSchreiben(ablage, fam, konto, 'family_set', { person: o.person, role: 'parent', pub: r.pub, stand: r.stand, name: o.name }, now);
+      } else {
+        // a new child: its anchor is me; new password: the anchor stays (the family knows it)
+        const k = v.kinder.find((c) => c.id === o.person);
+        if (o.art === 'reset' && !k) { out.warnungen.push({ id: o.invite, art: o.art, person: o.person, grund: 'kind-unbekannt' }); continue; }
+        const a = o.art === 'reset' ? k.anker : { person: konto.kennung, pub: konto.pub };
+        eldSchreiben(ablage, fam, konto, 'family_set', { person: o.person, role: 'child', pub: r.pub, stand: r.stand, name: o.name, anchor: a.person, anchorPub: { ...a.pub } }, now);
+        if (o.art === 'child' && o.display) eldSchreiben(ablage, { kind: o.person }, konto, 'profile_set', { field: 'name', value: o.display }, now);
+      }
     }
     eldSchreiben(ablage, { person: konto.kennung }, konto, 'invite_set', { ...o, state: 'done' }, now);
     out.bestaetigt.push({ id: o.invite, art: o.art, person: o.person, pub: r.pub });

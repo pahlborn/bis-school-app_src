@@ -5798,11 +5798,10 @@ function kontoPlanen(){
   kontoStatus.timerAt=at;
   kontoStatus.timer=setTimeout(()=>{ kontoStatus.timer=null; if(document.hidden) return; if(kontoLauf) return; kontoAbgleich(); }, at-jetzt);
 }
-/* open invitations of the parents on this device: invitation id -> { name, display, art } */
+/* open invitations of the grown-up accounts on this device: invitation id -> { name, display, art } */
 function kontoEinladungen(){
   const m=new Map();
   for(const id of kontoOffen.keys()){
-    if(kontoOffen.get(id).art!=='parent') continue;
     try{ for(const o of anmVerbindungen({ablage:localStorage, konto:kontoKonto(id), now:Date.now()}).offen) m.set(o.invite, o); }catch(e){ /* not yet in a family */ }
   }
   return m;
@@ -5983,6 +5982,12 @@ function kontoFamilieHTML(){
     +(v.offen.length?`<h3 class="psub">${de?'Offene Einladungen':'Open invitations'}</h3><ul class="klist">${v.offen.map(o=>`<li>${warn.has(o.invite)?'⚠️ ':''}${esc(o.display||o.name)} – ${artText(o.art)}, ${de?'gültig bis':'valid until'} ${esc(kontoZeit(o.until))} <button type="button" class="btn small" data-kzurueck="${esc(o.invite)}">${de?'Zurückziehen':'Withdraw'}</button></li>`).join('')}</ul>`:'')
     +`<h3 class="psub">${de?'Mein Konto löschen':'Delete my account'}</h3><p><button type="button" class="btn small" id="kKontoLoeschen">🗑️ ${de?'Mein Konto löschen':'Delete my account'}</button></p>`;
 }
+function adminInviteHTML(){
+  const de=PL()==='de', k=kontoIch(); if(!KONTO_UI || !k || k.art!=='admin') return '';
+  const v=kontoVerb(k), offen=v.offen.filter(o=>o.art==='parent'), warn=new Set(((kontoBericht&&kontoBericht.warnungen)||[]).map(w=>w.id));
+  return `<p class="small">${de?'Hier legen Sie nur ein Elternkonto an. Kinder und Familienverwaltung laufen danach im Elternkonto. Lehrkraft, weiterer Admin oder Kind sind hier nicht dabei.':'Here you only create a parent account. Children and family management happen later in the parent account. Teacher, another admin or a child are not part of this here.'}</p><p><button type="button" class="btn" id="kAdminElternEinladen">➕ ${de?'Elternteil einladen':'Invite a parent'}</button></p>`
+    +(offen.length?`<h3 class="psub">${de?'Offene Einladungen':'Open invitations'}</h3><ul class="klist">${offen.map(o=>`<li>${warn.has(o.invite)?'⚠️ ':''}${esc(o.display||o.name)} – ${de?'Elternteil':'parent'}, ${de?'gültig bis':'valid until'} ${esc(kontoZeit(o.until))} <button type="button" class="btn small" data-kzurueck="${esc(o.invite)}">${de?'Zurückziehen':'Withdraw'}</button></li>`).join('')}</ul>`:'');
+}
 function kontoGeraeteHTML(){
   const de=PL()==='de', k=kontoIch(); if(!k) return '';
   const liste=pid=>{ try{ return anmGeraete({ablage:localStorage, person:pid, now:Date.now()}); }catch(e){ return []; } };
@@ -6044,27 +6049,14 @@ function kontoQrText(){
 /* the QR panel: status after each sync; withdrawn or expired elsewhere -> no longer valid */
 async function kontoQrStatus(){
   const b=kontoBlatt; if(!b || b.art!=='qr') return;
-  if(!b.fertig){
-    if(b.zweck==='adminEltern'){
-      try{
-        const z=kontoZugang();
-        if(z){
-          const r=await anmLinkPruefen({zugang:z, start:{anmeldename:b.login, code:b.code, fingerabdruck:b.fp||null}, now:Date.now()});
-          if(r.art==='anmelden') b.fertig=true;
-          else if(r.art==='fehler' && (r.code==='startcode-ungueltig' || r.code==='startcode-abgelaufen')) b.weg=true;
-        }
-      }catch(err){ if(!err || typeof err.code!=='string') kontoFehlerListe.push('qr-status: '+String(err&&err.message||err)); }
-    } else {
-      const k=kontoIch(); if(k && !kontoVerb(k).offen.some(o=>o.invite===b.id)) b.weg=true;
-    }
-  }
+  if(!b.fertig){ const k=kontoIch(); if(k && !kontoVerb(k).offen.some(o=>o.invite===b.id)) b.weg=true; }
   const s=$('#aboutBody').querySelector('#kQrStatus'); if(s) s.textContent=kontoQrText();
   const w=$('#aboutBody').querySelector('#kQrWeg'); if(w && (b.fertig || b.weg)) w.remove();
 }
 function kontoQrTakt(id){
   setTimeout(async()=>{
     const b=kontoBlatt; if(!b || b.art!=='qr' || b.id!==id || b.fertig || b.weg || !parentAccess) return;
-    if(b.zweck!=='adminEltern' && !document.hidden) await kontoAbgleich();
+    if(!document.hidden) await kontoAbgleich();
     await kontoQrStatus(); kontoQrTakt(id);
   }, KONTO_QR_MS);
 }
@@ -6196,11 +6188,11 @@ function kontoBinden(body){
   form('#kKindForm',()=>{ const anzeige=q('#kKindName').value.trim(); if(!anzeige) return; kontoSchritt('#kKindWeiter', async()=>{ const z=kontoZugang(); if(!z) throw Object.assign(new Error('kein Zugang'),{code:'offline'}); const login=await anmNameVorschlag({zugang:z, anzeigename:anzeige}); kontoBlattZeigen({art:'kind2', anzeige, login}); }); });
   form('#kKind2Form',()=>{ const b=kontoBlatt, login=anmName(q('#kKindLogin').value); if(!login){ q('#kMsg').textContent=kontoHinweisNamen(de); return; } kontoSchritt('#kKindGo', ()=>kontoEinladen((z,me)=>anmKindAnlegen({zugang:z, ablage:localStorage, konto:me, anmeldename:login, anzeigename:b.anzeige, now:Date.now()}), {zweck:'kind', name:b.anzeige})); });
   form('#kElternForm',()=>{ const login=anmName(q('#kElternLogin').value); if(!login){ q('#kMsg').textContent=kontoHinweisNamen(de); return; } kontoSchritt('#kElternGo', ()=>kontoEinladen((z,me)=>anmElternEinladen({zugang:z, ablage:localStorage, konto:me, anmeldename:login, now:Date.now()}), {zweck:'eltern', name:login})); });
-  form('#kAdminForm',()=>{ const login=anmName(q('#kAdminLogin').value), display=q('#kAdminDisplay').value.trim().slice(0,40), sprache=q('#kAdminLang').value==='en'?'en':'de'; if(!login){ q('#kMsg').textContent=kontoHinweisNamen(de); return; } kontoSchritt('#kAdminGo', ()=>kontoEinladen((z,me)=>anmAdminElternEinladen({zugang:z, konto:me, anmeldename:login, now:Date.now()}), {zweck:'adminEltern', name:display||login, display, sprache})); });
+  form('#kAdminForm',()=>{ const login=anmName(q('#kAdminLogin').value), display=q('#kAdminDisplay').value.trim().slice(0,40), sprache=q('#kAdminLang').value==='en'?'en':'de'; if(!login){ q('#kMsg').textContent=kontoHinweisNamen(de); return; } kontoSchritt('#kAdminGo', ()=>kontoEinladen((z,me)=>anmAdminElternEinladen({zugang:z, ablage:localStorage, konto:me, anmeldename:login, anzeigename:display, now:Date.now()}), {zweck:'adminEltern', name:display||login, display, sprache})); });
   an('#kQrFertig',()=>kontoBlattZeigen(null));
   // parent invitations as an e-mail draft: an HTML file with QR code and link (the admin / grown-up sends it himself)
   an('#kQrMail',()=>{ const b=kontoBlatt; if(!b || b.art!=='qr') return; const link=anmEinladungslink(location.href, {zugang:anmZugangscode(KONTO_SPEICHER, localStorage), anmeldename:b.login, code:b.code, fingerabdruck:b.fp}); const m=anmEinladungMail({link, qr:anmQr(link, b.zweck==='adminEltern'?'Invitation for parent':'Invitation'), anmeldename:b.login, bis:b.bis, sprache:b.zweck==='adminEltern'?(b.sprache||'de'):(de?'de':'en')}); kontoDateiSichern(m.html, m.dateiname, 'text/html', de, q('#kMsg')); });
-  an('#kQrWeg',()=>{ const b=kontoBlatt; if(!b || b.art!=='qr') return; kontoSchritt('#kQrWeg', async()=>{ const z=kontoZugang(); let r; if(b.zweck==='adminEltern') r={zurueckgezogen:await z.invite.delete(b.id)}; else { r=await anmZurueckziehen({zugang:z, ablage:localStorage, konto:kontoIch(), id:b.id, now:Date.now()}); await kontoAbgleich(); } kontoMeldungen.push({art:'info', text:r.zurueckgezogen?(de?`Die Einladung für ${kontoEinladungsName(b)} ist zurückgezogen.`:`The invitation for ${kontoEinladungsName(b)} is withdrawn.`):(de?'Die Einladung war schon eingelöst oder abgelaufen.':'The invitation was already used or had expired.')}); kontoBlattZeigen(null); }); });
+  an('#kQrWeg',()=>{ const b=kontoBlatt; if(!b || b.art!=='qr') return; kontoSchritt('#kQrWeg', async()=>{ const z=kontoZugang(); const r=await anmZurueckziehen({zugang:z, ablage:localStorage, konto:kontoIch(), id:b.id, now:Date.now()}); await kontoAbgleich(); kontoMeldungen.push({art:'info', text:r.zurueckgezogen?(de?`Die Einladung für ${kontoEinladungsName(b)} ist zurückgezogen.`:`The invitation for ${kontoEinladungsName(b)} is withdrawn.`):(de?'Die Einladung war schon eingelöst oder abgelaufen.':'The invitation was already used or had expired.')}); kontoBlattZeigen(null); }); });
   an('#kWegJa',()=>{ const b=kontoBlatt; kontoSchritt('#kWegJa', async()=>{ const z=kontoZugang(); await anmGeraetEntfernen({ablage:localStorage, zugang:z, konto:kontoIch(), person:b.kind, geraet:b.geraet, now:Date.now()}); await kontoAbgleich(); kontoBlattZeigen({art:'frageneu', kind:b.kind, name:b.name}); }); });
   body.querySelectorAll('[data-kexport]').forEach(b=>b.addEventListener('click',()=>{ if(parentAccess) kontoExport(b.dataset.kexport); }));
   body.querySelectorAll('[data-kloesch]').forEach(b=>b.addEventListener('click',()=>{
