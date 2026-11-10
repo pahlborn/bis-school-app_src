@@ -1,0 +1,23 @@
+name: Big Quest iPad build
+
+on:
+  pull_request:
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ipad-mvp.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  simulator:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build iPad app for the simulator
+        run: >-
+          xcodebuild -project ios/BigQuestMVP.xcodeproj
+          -scheme BigQuestMVP
+          -destination 'generic/platform=iOS Simulator'
+          CODE_SIGNING_ALLOWED=NO build
