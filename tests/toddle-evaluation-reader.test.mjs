@@ -27,11 +27,18 @@ test('selection-free reader preserves pairs and rejects ambiguous or hidden sour
   assert.deepEqual(result.rows,[{criterion:'B',rating:'M'}]);
   result = await read(table(row('Header','-')+row('A','C')+row('Unknown','Q')+row('Hidden','E','hidden')));
   assert.equal(result.skipped,2); assert.equal(result.rows.length,1);
-  assert.equal((await read(table(row('<input value="name">','C')))).error,'missing');
+  assert.equal((await read(table(row('<input value="name">','C')))).error,'rows');
   for (const attr of ['style="opacity:0"','aria-hidden="true"','inert']) {
-   assert.equal((await read(table(row(`Visible <span ${attr}>Hidden name</span>`,'C')))).error,'missing');
+   assert.equal((await read(table(row(`Visible <span ${attr}>Hidden name</span>`,'C')))).error,'rows');
   }
-  assert.equal((await read('<p>Evaluation C M</p>')).error,'missing');
+  assert.equal((await read('<p>Evaluation C M</p>')).error,'header');
+  result = await read('<div role="dialog">One</div><div role="dialog">Two</div>');
+  assert.equal(result.error,'dialogs'); assert.equal(result.diagnostic.dialogs,2);
+  result = await read('<iframe src="about:blank"></iframe><canvas></canvas><p>PRIVATE NAME</p>');
+  assert.equal(result.error,'header'); assert.equal(result.diagnostic.frames,1);
+  assert.equal(result.diagnostic.canvases,1);
+  assert.ok(Object.values(result.diagnostic).every(Number.isInteger));
+  assert.ok(!JSON.stringify(result).includes('PRIVATE'));
   await page.goto('https://example.org/');
   assert.equal((await read(table(row('A','C')))).error,'origin');
  } finally { await browser.close(); }

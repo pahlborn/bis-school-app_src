@@ -23,13 +23,27 @@ enum ToddleField {
         return true;
       };
       const selector = 'table, [role="table"], [role="grid"]';
+      // Structural counts only. Never return source URLs, HTML, titles or account text.
+      const count = (scope, query) => Math.min(999, [...scope.querySelectorAll(query)].filter(rendered).length);
+      const diagnostic = {
+        tables: count(document, selector),
+        dialogs: count(document, '[role="dialog"], dialog[open]'),
+        frames: count(document, 'iframe, frame'),
+        embedded: count(document, 'embed, object'),
+        canvases: count(document, 'canvas'),
+        rows: count(document, 'tr, [role="row"]'),
+        cells: count(document, 'td, th, [role="cell"], [role="gridcell"], [role="columnheader"]'),
+        candidates: 0, skipped: 0, accepted: 0
+      };
+      const fail = stage => ({ error: stage, diagnostic });
       const active = [...document.querySelectorAll('[role="dialog"], dialog[open]')].filter(rendered);
-      if (active.length > 1) return { error: 'ambiguous' };
+      if (active.length > 1) return fail('dialogs');
       const scope = active[0] || document;
       const tables = [...scope.querySelectorAll(selector)].filter(table => rendered(table) &&
         [...table.querySelectorAll('th, td, [role="columnheader"], [role="cell"], [role="gridcell"]')]
           .some(cell => rendered(cell) && /^Assessment(?: Criteria)?$/i.test(cell.innerText.trim())));
-      if (tables.length !== 1) return { error: tables.length ? 'ambiguous' : 'missing' };
+      diagnostic.candidates = Math.min(999, tables.length);
+      if (tables.length !== 1) return fail(tables.length ? 'ambiguous' : 'header');
       const table = tables[0];
       const rows = [];
       let skipped = 0;
@@ -48,7 +62,9 @@ enum ToddleField {
         }
         rows.push({criterion, rating});
       }
-      if (!rows.length || rows.length > 60) return { error: 'missing' };
+      diagnostic.skipped = Math.min(999, skipped);
+      diagnostic.accepted = Math.min(999, rows.length);
+      if (!rows.length || rows.length > 60) return fail('rows');
       return { rows, skipped };
     })()
     """#
@@ -70,7 +86,23 @@ enum ToddleField {
         }
         guard let data = result as? [String: Any], let raw = data["rows"] as? [[String: String]],
               !raw.isEmpty, raw.count <= 60, let skipped = data["skipped"] as? Int else {
-            throw MVPError.message("Keine eindeutige Bewertungstabelle erkannt. Öffne die Evaluation mit ihren Kriterien. Es wurde nichts übernommen.")
+            let data = result as? [String: Any]
+            let stage = data?["error"] as? String ?? "format"
+            let reasons = [
+                "dialogs": "Mehrere überlagerte Ansichten erkannt.",
+                "header": "Die erwartete Tabellenüberschrift wurde nicht erkannt.",
+                "ambiguous": "Mehrere mögliche Bewertungstabellen erkannt.",
+                "rows": "Die Tabellenzeilen konnten nicht eindeutig zugeordnet werden.",
+                "origin": "Die Ansicht liegt nicht auf der erwarteten Toddle-Adresse."
+            ]
+            let counts = data?["diagnostic"] as? [String: Any] ?? [:]
+            let keys = ["tables", "dialogs", "frames", "embedded", "canvases", "rows", "cells", "candidates", "skipped", "accepted"]
+            let code = keys.map { key in
+                let number = counts[key] as? Int ?? 0
+                return "\(key)=\(min(999, max(0, number)))"
+            }.joined(separator: ", ")
+            throw MVPError.message((reasons[stage] ?? "Das Leseergebnis konnte nicht verarbeitet werden.")
+                + " Es wurde nichts übernommen.\nDiagnose (nur Strukturzahlen): " + code)
         }
         let rows = try raw.map { entry -> AssessmentRow in
             guard let criterion = entry["criterion"], !criterion.isEmpty, criterion.utf8.count <= 800,
