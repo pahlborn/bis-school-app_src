@@ -6607,7 +6607,7 @@ function schoolEvaluationHTML(){
       :same?(de?'Separaten Eintrag speichern':'Save as a separate assessment'):(de?'Evaluation bestätigen':'Confirm assessment');
     content=`<h3>${de?'Vorschau':'Preview'}</h3>${child}<p>${esc(d.title)} · ${fmtDay(d.day)}</p>
       <p>${esc(criteria[d.standard])} · ${PSTAND[lang][SL[d.rating]]}</p>
-      ${hasFocus?`<label><input type="checkbox" name="focus"${d.focus?' checked':''}> ${exercise[lang]}</label>`
+      ${hasFocus?`<label><input type="checkbox" name="exerciseFocus"${d.focus?' checked':''}> ${exercise[lang]}</label>`
       :`<p>${de?'Ohne zusätzlichen Übungsfokus':'Without additional practice focus'}</p>`}
       ${same?`<p role="status">${de?'Im Verlauf steht bereits ein Eintrag mit denselben Angaben. Prüfen Sie, ob es eine separate Evaluation ist.':'An assessment with the same details is already in the history. Check whether this is a separate assessment.'}</p>`:''}
       <p class="small">${de?'Titel, Datum, Kriterium, Einstufung und Übungsfokus werden im Schulbereich des Kindes gespeichert. Verwenden Sie im Titel keine Namen.':'The title, date, criterion, rating and practice focus are saved in the child’s school area. Leave names out of the title.'}</p>
@@ -6651,7 +6651,7 @@ function bindSchoolEvaluation(body){
       if(name==='rating' && !schoolEvaluationNeedsPractice(d.rating)) d.focus=schoolEvaluationNeedsPractice(e.target.value);
       d[name]=e.target.value;
     }
-    if(d.preview && name==='focus'){ d.focus=e.target.checked; redraw(); body.querySelector('#pSchoolEvaluation [name="focus"]')?.focus(); }
+    if(d.preview && name==='exerciseFocus'){ d.focus=e.target.checked; redraw(); body.querySelector('#pSchoolEvaluation [name="exerciseFocus"]')?.focus(); }
   });
   box.addEventListener('submit',e=>{
     e.preventDefault();
