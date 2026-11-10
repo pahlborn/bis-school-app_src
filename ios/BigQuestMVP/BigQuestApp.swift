@@ -45,6 +45,7 @@ private struct BigQuestScreen: View {
     )
     @State private var showToddle = false
     @State private var showKey = false
+    @State private var toddleContext: String?
 
     var body: some View {
         NavigationStack {
@@ -56,13 +57,48 @@ private struct BigQuestScreen: View {
                         Button("Claude-Schlüssel") { showKey = true }
                     }
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Toddle-Feld prüfen") { showToddle = true }
+                        Button("Toddle-Feld prüfen") {
+                            Task {
+                                toddleContext = await currentToddleContext()
+                                showToddle = true
+                            }
+                        }
                     }
                 }
         }
         .sheet(isPresented: $showKey) { ClaudeKeyScreen() }
         .sheet(isPresented: $showToddle) {
-            ToddleFieldScreen(page: toddle)
+            ToddleFieldScreen(
+                page: toddle, canImport: toddleContext != nil, openDraft: openToddleDraft
+            )
+        }
+    }
+
+    private func currentToddleContext() async -> String? {
+        guard bigQuest.view.url?.scheme == "https", bigQuest.view.url?.host == "big-quest-test.github.io" else {
+            return nil
+        }
+        return (try? await bigQuest.view.evaluateJavaScript(
+            "typeof toddleEntwurfKontext === 'function' ? toddleEntwurfKontext() : null"
+        )) as? String
+    }
+
+    private func openToddleDraft(_ row: ToddleField.AssessmentRow, standard: String) async throws {
+        guard let context = toddleContext, await currentToddleContext() == context else {
+            throw MVPError.message("Öffne zuerst Schulische Einstufungen für das richtige Kind in Big Quest.")
+        }
+        let result = try await bigQuest.view.callAsyncJavaScript(
+            """
+            if (location.origin !== 'https://big-quest-test.github.io') return 'context';
+            return toddleEntwurfOeffnen(context, transfer, standard, rating);
+            """,
+            arguments: ["context": context, "transfer": row.transfer, "standard": standard, "rating": row.rating],
+            in: nil, contentWorld: .page
+        ) as? String
+        guard result == "opened" || result == "saved" else {
+            throw MVPError.message(result == "busy"
+                ? "In Big Quest ist bereits ein Bewertungsentwurf offen."
+                : "Das ausgewählte Kind oder die Big-Quest-Ansicht hat sich geändert.")
         }
     }
 }
@@ -105,6 +141,9 @@ private struct ClaudeKeyScreen: View {
 private struct ToddleFieldScreen: View {
     @Environment(\.dismiss) private var dismiss
     let page: BrowserPage
+    let canImport: Bool
+    let openDraft: (ToddleField.AssessmentRow, String) async throws -> Void
+    @State private var row: ToddleField.AssessmentRow?
     @State private var field: String?
     @State private var returnedValue: String?
     @State private var error: String?
@@ -124,6 +163,21 @@ private struct ToddleFieldScreen: View {
                             Task { await readField() }
                         }
                         .disabled(reading || sending)
+                        if canImport {
+                            Button("Bewertungszeile lesen") { Task { await readRow() } }
+                                .disabled(reading || sending)
+                        }
+                        if let row {
+                            Text(row.criterion)
+                            Text("Lehrkraft-Einstufung: " + row.rating)
+                            Text("An Claude geht nur der Kriterientext. Bitte prüfe ihn auf persönliche Angaben.")
+                                .font(.footnote)
+                            Button("Lernziel vorschlagen und Entwurf öffnen") {
+                                Task { await suggest(row) }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(reading || sending)
+                        }
                         if let field {
                             Text("Gelesener Feldwert").font(.headline)
                             Text(field).textSelection(.enabled)
@@ -145,7 +199,7 @@ private struct ToddleFieldScreen: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding()
                 }
-                .frame(height: field == nil ? 125 : 230)
+                .frame(height: row != nil || field != nil ? 255 : 150)
             }
             .navigationTitle("Toddle")
             .navigationBarTitleDisplayMode(.inline)
@@ -166,11 +220,41 @@ private struct ToddleFieldScreen: View {
         guard !reading, !sending else { return }
         reading = true
         defer { reading = false }
+        row = nil
         field = nil
         returnedValue = nil
         error = nil
         do {
             field = try await ToddleField.read(from: page.view)
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    private func readRow() async {
+        guard !reading, !sending else { return }
+        reading = true
+        defer { reading = false }
+        row = nil
+        field = nil
+        returnedValue = nil
+        error = nil
+        do {
+            row = try await ToddleField.readAssessmentRow(from: page.view)
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    private func suggest(_ row: ToddleField.AssessmentRow) async {
+        guard !sending, !reading else { return }
+        sending = true
+        defer { sending = false }
+        error = nil
+        do {
+            let standard = try await ClaudeClient.suggestStandard(for: row.criterion, key: ClaudeKey.read())
+            try await openDraft(row, standard)
+            dismiss()
         } catch {
             self.error = error.localizedDescription
         }

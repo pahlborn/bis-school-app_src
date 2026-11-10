@@ -20,3 +20,11 @@ xcodebuild -project ios/BigQuestMVP.xcodeproj -scheme BigQuestMVP \
 ```
 
 Der Simulator-Build prüft die Kompilierung. Die Abnahme oben erfordert ein echtes Toddle-Elternkonto, einen Anthropic-Schlüssel und ein iPad.
+
+## Eine Bewertungszeile in Big Quest übernehmen
+
+Die Zeilenübernahme benötigt den Big-Quest-Testbuild mit `toddle-elternentwurf`. In Big Quest zuerst als Elternteil anmelden, das richtige Kind wählen und **Schulische Einstufungen** öffnen. Dann **Toddle-Feld prüfen** öffnen, in der Evaluation die Einstufung einer Zeile markieren und **Bewertungszeile lesen** tippen.
+
+Die App liest Kriterium und Einstufung aus derselben sichtbaren zweispaltigen Zeile. Sie zeigt beide Werte vor dem Claude-Aufruf. **Lernziel vorschlagen und Entwurf öffnen** sendet ausschließlich den Kriterientext und öffnet bei passender Zuordnung den vorhandenen Bewertungsentwurf. Titel und Bewertungsdatum werden im Entwurf ergänzt. Die Übernahme erfolgt erst nach Vorschau und Bestätigung.
+
+Für die Geräteabnahme die BIS-Zeile zur zweischrittigen Subtraktion verwenden. Der Vorschlag muss M-N5 und die originale Einstufung C zeigen. Nach Bestätigung und Abgleich soll das Kind in einer neuen Runde genau eine passend zugeordnete Aufgabe erhalten.
