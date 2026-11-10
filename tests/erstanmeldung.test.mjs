@@ -71,11 +71,12 @@ test('1 Kind ueber den Link der Eltern: ohne Rollenwahl, Englisch; neues Passwor
   assert.equal(neuFormular(K, '#kontoNeuName').value, 'lio.sonnental');
   assert.equal(neuFormular(K, '#kontoNeuPw').value, '', 'Passwortfeld leer');
   await registrieren(K);
-  await K.warten(() => K.im('#kidWait'), 'Kind wartet auf die Eltern');
-  await W.sync();
-  K.S.lauf(() => K.im('#kidWaitAgain').click());
-  await K.warten(() => K.im('#welcomeGo'), 'Willkommen');
+  await K.warten(() => K.S.zustand().screen === 'home', 'Kind direkt auf der Startseite');
   const kid = (await W.z.directory(await kontoLookup('lio.sonnental'))).kennung;
+  assert.equal(K.im('#kidWait'), null, 'kein Warten beim normalen Erststart');
+  assert.equal(K.S.lauf(() => { const p = K.S.holen('store').get('pendingAdmission', {}); return !!(p && p[kid]); }), true, 'pendingAdmission nur lokal vorgemerkt');
+  await K.S.lauf(() => K.S.holen('kontoAbgleich')());
+  await W.sync();
 
   // Passwort vergessen: die Eltern geben einen neuen Start-QR-Code - das Konto gibt es, der Code ist offen
   const n = await kindPasswortNeu({ zugang: W.zm, ablage: W.a, konto: W.mira, kind: kid, now: Date.now() });
@@ -86,7 +87,7 @@ test('1 Kind ueber den Link der Eltern: ohne Rollenwahl, Englisch; neues Passwor
   assert.equal(neuFormular(K2, '#kontoNeuTitel').textContent, 'Choose a new password');
   assert.match(neuFormular(K2, '#kontoNeuInfo').textContent, /Your progress stays/);
   await registrieren(K2);
-  await K2.warten(() => K2.im('#kidWait') || K2.im('#welcomeGo'), 'nach dem neuen Passwort');
+  await K2.warten(() => K2.S.zustand().screen === 'home' || K2.im('#kidWait') || K2.im('#welcomeGo'), 'nach dem neuen Passwort');
   assert.equal(JSON.parse(K2.S.ablage.get('bq2_kontoListe'))[0].id, kid, 'dieselbe Kennung');
 
   // der erste Link noch einmal (Code verbraucht, Konto da): "bitte anmelden", Name steht da, Rolle Kind

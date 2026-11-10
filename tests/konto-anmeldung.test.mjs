@@ -226,12 +226,13 @@ test('2 Kind: Startcode getippt -> eigenes Passwort, kein Wiederherstellungscode
   assert.ok(A.text().includes('It works on every device you log in to'), 'Kinder: Englisch');
   assert.ok(A.text().includes('Idea'));
   const pwK = await passwortWaehlen(A);
-  await aufnehmenLassen(W, A, 'mama.b');
-  await A.wartenAuf('#welcomeGo');
+  await A.warten(() => A.sitzung() && A.sitzung().user === 'kathie.b', 'Kind startet sofort');
   assert.equal(A.da('#recCode'), false, 'Kinder haben keinen Wiederherstellungscode');
-  assert.ok(A.text().includes('Welcome to Big Quest!'));
-  A.klick('#welcomeGo');
   const k = A.liste()[0];
+  assert.equal(A.da('#kidWait'), false, 'kein Almost ready beim normalen Erststart');
+  assert.equal(A.wert("store.get('pendingAdmission', {})")[k.id], true, 'pendingAdmission lokal gesetzt');
+  await A.S.lauf(() => A.S.holen('kontoAbgleich')());
+  await W.aufnehmen('mama.b');
   assert.deepEqual([k.user, k.art], ['kathie.b', 'child']);
   assert.deepEqual(A.sitzung(), { user: 'kathie.b', id: k.id }, 'Kind angemeldet, Daten unter seiner Kennung');
   assert.deepEqual(A.wert("store.get('kidsHere',[])"), [k.id]);
@@ -255,8 +256,10 @@ test('2 Kind: Startcode getippt -> eigenes Passwort, kein Wiederherstellungscode
   // Geschwister am selben Geraet: Lena meldet sich an, Kathies Schluessel verlaesst das Geraet
   await anmelden(A, 'student', 'lena.b', codeL);
   const pwL = await passwortWaehlen(A);
-  await aufnehmenLassen(W, A, 'mama.b');
-  await A.wartenAuf('#welcomeGo'); A.klick('#welcomeGo');
+  await A.warten(() => A.sitzung() && A.sitzung().user === 'lena.b', 'Lena startet sofort');
+  assert.equal(A.da('#kidWait'), false, 'auch Geschwister starten lokal sofort');
+  await A.S.lauf(() => A.S.holen('kontoAbgleich')());
+  await W.aufnehmen('mama.b');
   const lena = A.liste().find((e) => e.user === 'lena.b');
   assert.deepEqual(A.offen(), [lena.id], 'nur das angemeldete Kind behaelt seine Schluesselkopie');
   // Wechsel zurueck zu Kathie ueber "Who's here?" - mit ihrem Passwort
@@ -483,7 +486,11 @@ test('7 Testinstanz (Praefix bqt_): Anmeldung mit Startcode und auf dem zweiten 
   assert.equal(A.erwachsen().user, 'anna.b');
   A.S.lauf(() => A.S.holen('logout')());
   await anmelden(A, 'student', 'kathie.b', codeK);
-  await passwortWaehlen(A); await aufnehmenLassen(W, A, 'peter.b'); await A.wartenAuf('#welcomeGo'); A.klick('#welcomeGo');
+  await passwortWaehlen(A);
+  await A.warten(() => A.sitzung() && A.sitzung().user === 'kathie.b', 'Testinstanz-Kind startet sofort');
+  assert.equal(A.da('#kidWait'), false);
+  await A.S.lauf(() => A.S.holen('kontoAbgleich')());
+  await W.aufnehmen('peter.b');
   assert.equal(A.sitzung().user, 'kathie.b');
   A.S.karteOeffnen(A.S.alleKarten().find((x) => !x.studio));
   A.S.frageBeantworten(A.S.zustand().round[0]);
@@ -498,5 +505,5 @@ test('7 Testinstanz (Praefix bqt_): Anmeldung mit Startcode und auf dem zweiten 
   }
   assert.deepEqual(A.liste().map((e) => e.user), ['anna.b', 'kathie.b']);
   assert.ok([...A.S.ablage.keys()].some((k) => k.startsWith('bqt_' + A.liste()[1].id + '__events')), 'Kathie (Test) uebt unter bqt_<Kennung>');
-  assert.match(A.S.lauf(() => A.S.holen('GLOBAL_KEYS').source), /\|kontoListe\)\$$/, 'Geraeteliste geraeteweit (nie Daten eines Kindes)');
+  assert.match(A.S.lauf(() => A.S.holen('GLOBAL_KEYS').source), /\|kontoListe\|pendingAdmission\)\$$/, 'Geraeteliste und pendingAdmission geraeteweit (nie Daten eines Kindes)');
 });

@@ -782,7 +782,7 @@ const TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4
    bq2_<id>__<key>; passwords under bq2_pw_<id>. Before (and as a fallback if the move on this device
    failed): the FIRST student account used bq2_<key>, every other one bq2_<user>__<key>. Device-wide keys
    stay shared. */
-const GLOBAL_KEYS=/^(session|sessionPrev|adultSession|adultUnlock|pw_.+|parentPin|muted|parentLang|migr|kidsHere|lastSeen|conceptSeen|glance|evDevice|personEvents|kontoListe)$/;
+const GLOBAL_KEYS=/^(session|sessionPrev|adultSession|adultUnlock|pw_.+|parentPin|muted|parentLang|migr|kidsHere|lastSeen|conceptSeen|glance|evDevice|personEvents|kontoListe|pendingAdmission)$/;
 let ID_STORAGE=false;
 /* account for a stored reference {id} or {user} (id first: login names may change, IDs never do) */
 function accByRef(r){
@@ -5512,7 +5512,12 @@ function kontoNeuZeigen(r){
       loginFails=0;
       const a=await kontoAngemeldet(k);
       kontoNeuWeg();   // the form leaves the page after "submit": now the password manager offers to save name and password
-      if(k.art==='child') return kontoKindStart(a, k.kennung, ()=>renderWelcome(a));
+      if(k.art==='child'){
+        kontoKindPendingSetzen(k.kennung, true);
+        loginDone(a, true);
+        kontoAbgleich();
+        return;
+      }
       if(k.wiederherstellungscode) renderKontoCode(a, k.wiederherstellungscode, ()=>renderWelcome(a));
       else renderWelcome(a);
       kontoAbgleich();   // a new grown-up: the first sync notes his family (module einladung) - in the background
@@ -5572,7 +5577,12 @@ async function kontoErstesPasswort(u, pw){
     const k=await anmErstesMal({zugang:z, code:u.konto.code, passwort:pw, fingerabdruck:u.konto.fp, now:Date.now()});
     kontoLinkFp=null; loginFails=0;
     const a=await kontoAngemeldet(k);
-    if(k.art==='child') return kontoKindStart(a, k.kennung, ()=>renderWelcome(a));
+    if(k.art==='child'){
+      kontoKindPendingSetzen(k.kennung, true);
+      loginDone(a, true);
+      kontoAbgleich();
+      return;
+    }
     if(k.wiederherstellungscode) renderKontoCode(a, k.wiederherstellungscode, ()=>renderWelcome(a));
     else renderWelcome(a);
     kontoAbgleich();   // a new grown-up: the first sync notes his family (module einladung) - in the background
@@ -5916,6 +5926,19 @@ function kontoZeileBinden(z){
   const a=z.querySelector('#kNeuAnmelden'); if(a) a.addEventListener('click',()=>{ if(!parentAccess) return; parentAbmelden(); showLogin('adult'); });
   const t=z.querySelector('#kTokenNeu'); if(t) t.addEventListener('click',()=>{ if(parentAccess) kontoBlattZeigen({art:'token'}); });
 }
+function kontoKindPending(){
+  const p=store.get('pendingAdmission', null);
+  return p && typeof p==='object' && !Array.isArray(p) ? p : {};
+}
+function kontoKindPendingHat(id){ return !!(id && kontoKindPending()[id]); }
+function kontoKindPendingSetzen(id, an){
+  if(!id) return;
+  const p=kontoKindPending();
+  if(an) p[id]=true;
+  else delete p[id];
+  if(Object.keys(p).length) store.set('pendingAdmission', p);
+  else store.del('pendingAdmission');
+}
 /* ---------- a child after its login: practise only once a parent's device took it in ---------- */
 async function kontoKindIstBereit(id){
   const z=kontoZugang(), k=kontoKonto(id); if(!z || !k) return false;
@@ -5923,9 +5946,11 @@ async function kontoKindIstBereit(id){
   catch(e){ kontoFehlerListe.push('bereit: '+String(e&&e.message||e)); return false; }
 }
 async function kontoKindStart(a, id, weiter){
+  const pending=kontoKindPendingHat(id);
   $('#loginBody').innerHTML=`<h2>One moment …</h2><p class="small" role="status">Getting your things ready.</p>`;
   await kontoAbgleich();
-  if(await kontoKindIstBereit(id)) return weiter();
+  if(await kontoKindIstBereit(id)){ kontoKindPendingSetzen(id, false); return weiter(); }
+  if(pending) return weiter();
   renderKontoWarten(id, weiter);
 }
 function renderKontoWarten(id, weiter){
@@ -5937,7 +5962,7 @@ function renderKontoWarten(id, weiter){
     const m=lb.querySelector('#kidWaitMsg'); if(m) m.textContent='Checking …';
     await kontoAbgleich();
     if(aus || !da()) return;
-    if(await kontoKindIstBereit(id)){ if(aus || !da()) return; aus=true; return weiter(); }
+    if(await kontoKindIstBereit(id)){ if(aus || !da()) return; kontoKindPendingSetzen(id, false); aus=true; return weiter(); }
     const m2=lb.querySelector('#kidWaitMsg'); if(m2) m2.textContent='Not yet – your grown-up’s device has not let you in yet.';
   };
   const takt=()=>{ if(aus || !da()) return; pruefen().then(()=>setTimeout(takt, KONTO_WARTEN_MS)); };
