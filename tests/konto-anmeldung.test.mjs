@@ -413,7 +413,6 @@ test('2d Pending-Daten gehen spaeter genau einmal in den regulaeren Ereignispfad
   await B.S.lauf(() => B.S.holen('kontoAbgleich')());
   assert.deepEqual(JSON.parse(B.S.ablage.get(pre + 'events') || '[]').filter((e) => e.type === 'answer').map((e) => e.id), antworten, 'wiederholter Abgleich uebernimmt nicht erneut');
 });
-});
 
 test('3 Passwort vergessen (Erwachsene): Wiederherstellungscode -> neues Passwort -> neuer Code; alte gelten nicht mehr', async (t) => {
   const W = await welt();
