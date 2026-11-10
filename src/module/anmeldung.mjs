@@ -395,6 +395,23 @@ export async function anmKindBereit({ ablage, zugang, konto, now }) {
 /* ---------- the sync in the app (task "Abgleich in der App"; concept 9.1, 9.4) ---------- */
 const anmStaende = (ablage) => { try { const s = JSON.parse(ablage.getItem(GERAETEABGLEICH_SPEICHER.staende) || '{}'); return s && typeof s === 'object' && !Array.isArray(s) ? s : {}; } catch (e) { return {}; } };
 const anmEvents = (st) => (st && Array.isArray(st.log) ? st.log.map((x) => x && x.event).filter((e) => e && typeof e === 'object' && e.payload && typeof e.payload === 'object') : []);
+/* A signed event enters the log before the upload. Only a confirmed put clears
+   its outbox entry. Events received from other devices are already confirmed. */
+export function anmSchuleAbgeglicheneRevisionen(ablage, child) {
+  const area = 'schule:' + child, stand = anmStaende(ablage)[area];
+  const synced=new Set();
+  if(stand?.bereich!==area || !Array.isArray(stand.log) || !Array.isArray(stand.ausgang)) return synced;
+  const bundle=stand.unterwegs?.inhalt?.eintraege;
+  if(stand.unterwegs && !Array.isArray(bundle)) return synced;
+  const pending=new Set(stand.ausgang.map(x=>x?.event?.id));
+  for(const x of bundle||[]) pending.add(x?.id);
+  for(const entry of stand.log){
+    const e=entry?.event;
+    if(e?.type==='school_evaluation' && e.payload?.child===child && typeof e.id==='string'
+      && typeof entry.sig==='string' && entry.sig && !pending.has(e.id)) synced.add(e.payload.revision);
+  }
+  return synced;
+}
 /* entries this device dropped while syncing (kept once, module geraeteabgleich) that the grown-ups are told of as a
    number: only forgeries and entries without the right to write them (Peter, 05.11., from #139) - never the harmless
    ones of the order of things (an author or device whose admission comes later, e.g. right after "Schluessel erneuern";

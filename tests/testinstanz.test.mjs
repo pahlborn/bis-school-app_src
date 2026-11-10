@@ -397,7 +397,7 @@ test('Abgleichstatus einer Bewertungsfassung folgt der bestätigten Übertragung
       anpassen: () => APP,
       speicher: { bqt_abgleich: JSON.stringify({ [area]: { bereich: area, log: [entry], ausgang: [], ...stand } }) },
     });
-    return S.holen('schoolEvaluationSyncedRevisions')(child).has(revision);
+    return S.holen('anmSchuleAbgeglicheneRevisionen')(S.ctx.localStorage, child).has(revision);
   };
   assert.equal(status({ ausgang: [entry] }), false, 'signed but queued');
   assert.equal(status({ unterwegs: { inhalt: { eintraege: [{ id: entry.event.id }] } } }), false, 'pending encrypted bundle');
