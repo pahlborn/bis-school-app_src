@@ -5915,11 +5915,18 @@ function kontoZeileHTML(){
   return teile.join(' · ')+` <button type="button" class="info-btn" data-help="abgleich" aria-label="Info">ⓘ</button>`;
 }
 const kontoUhrzeit = ms => { const d=new Date(ms); return pad(d.getHours())+':'+pad(d.getMinutes()); };
-/* after a sync: the line anew (only the line - a form being filled in stays as it is) */
+/* Refresh sync labels in place so a form being filled in stays as it is. */
 function kontoZeileAuffrischen(){
   if(!KONTO_UI || !parentAccess) return;
-  const z=$('#aboutBody').querySelector('#kSync'); if(!z) return;
-  z.innerHTML=kontoZeileHTML(); kontoZeileBinden(z);
+  const body=$('#aboutBody'), z=body.querySelector('#kSync');
+  if(z){ z.innerHTML=kontoZeileHTML(); kontoZeileBinden(z); }
+  const labels=body.querySelectorAll('[data-eval-sync]');
+  if(!labels.length) return;
+  const synced=schoolEvaluationSyncedRevisions(schoolKid()), de=PL()==='de';
+  for(const label of labels){
+    const text=schoolEvaluationSyncText(synced.has(label.dataset.evalSync),de);
+    if(label.textContent!==text) label.textContent=text;
+  }
 }
 function kontoZeileBinden(z){
   const a=z.querySelector('#kNeuAnmelden'); if(a) a.addEventListener('click',()=>{ if(!parentAccess) return; parentAbmelden(); showLogin('adult'); });
@@ -6522,7 +6529,31 @@ function schoolDetailHTML(t, U, T, de){
     +(fq?`<p class="small">${de?'Daraus im automatischen Fokus':'In the automatic focus because of this'}: ${fq}</p>`:'')
     +(pq?`<p class="small">${T.quests}: ${pq}</p>`:'');
 }
-function schoolEvaluationHistory(t, de){
+/* A signed event enters the log before the upload. Only a confirmed put clears
+   its outbox entry. Events received from other devices are already confirmed. */
+function schoolEvaluationSyncedRevisions(child){
+  const area='schule:'+child, stand=evRaw(GERAETEABGLEICH_SPEICHER.staende)?.[area];
+  const synced=new Set();
+  if(stand?.bereich!==area || !Array.isArray(stand.log) || !Array.isArray(stand.ausgang)) return synced;
+  const bundle=stand.unterwegs?.inhalt?.eintraege;
+  if(stand.unterwegs && !Array.isArray(bundle)) return synced;
+  const pending=new Set(stand.ausgang.map(x=>x?.event?.id));
+  for(const x of bundle||[]) pending.add(x?.id);
+  for(const entry of stand.log){
+    const e=entry?.event;
+    if(e?.type==='school_evaluation' && e.payload?.child===child && typeof e.id==='string'
+      && typeof entry.sig==='string' && entry.sig && !pending.has(e.id)) synced.add(e.payload.revision);
+  }
+  return synced;
+}
+function schoolEvaluationSyncText(synced,de){
+  return synced?(de?'Mit App-Speicher abgeglichen':'Synced with app storage')
+    :(de?'Lokal gespeichert · Abgleich ausstehend':'Saved on this device · sync pending');
+}
+function schoolEvaluationSyncHTML(revision,synced,de){
+  return `<span class="small" data-eval-sync="${esc(revision)}">${schoolEvaluationSyncText(synced.has(revision),de)}</span>`;
+}
+function schoolEvaluationHistory(t, de, synced){
   const m=t.manual;
   if(!m) return '';
   const lang=de?'de':'en', standards=de?STANDARD_TEXT:STANDARD_TEXT_EN;
@@ -6531,7 +6562,7 @@ function schoolEvaluationHistory(t, de){
     const current=p.revision===m.revision, proposal=m.conflicts.includes(p.revision);
     const status=p.withdrawn?(de?'Zurückgenommen':'Withdrawn'):current?(de?'Aktive Fassung':'Active revision'):proposal?(de?'Vorschlag':'Proposal'):(de?'Frühere Fassung':'Earlier revision');
     const choose=proposal||current&&m.conflicts.length;
-    return `<li>${esc(p.title)} · ${fmtDay(p.day)} · ${esc(standards[p.standard])} · ${PSTAND[lang][SL[p.rating]]} · <b>${status}</b>`
+    return `<li>${esc(p.title)} · ${fmtDay(p.day)} · ${esc(standards[p.standard])} · ${PSTAND[lang][SL[p.rating]]} · <b>${status}</b> · ${schoolEvaluationSyncHTML(p.revision,synced,de)}`
       +`${choose?' '+button('resolve',de?'Diese Fassung wählen':'Choose this revision',p.revision):''}</li>`;
   }).join('');
   const actions=m.conflicts.length
@@ -6541,13 +6572,14 @@ function schoolEvaluationHistory(t, de){
 }
 function schoolListHTML(d){
   const de=PL()==='de', U=SCHOOL_UI[de?'de':'en'], T=schoolTexts(de), f=state.sfilt||SCHOOL_FILTER0, open=state.sopen||[];
-  const mayEdit=!!schoolEvaluationTarget();
+  const target=schoolEvaluationTarget(), mayEdit=!!target;
+  const synced=mayEdit?schoolEvaluationSyncedRevisions(target.id):null;
   const all=d.tasks.filter(t=>!t.pending && (mayEdit || !t.manual?.withdrawn)).length, l=schoolFiltered(d, f, dayKey(), mayEdit);
   const rows=l.map(({t,i})=>{ const lv=schoolTaskLevels(t), op=open.includes(i);
     return `<tr class="psrow" data-psrow="${i}"><td data-l="${U.date}">${fmtDay(t.day)}</td><td data-l="${U.subject}">${esc(schoolArea(t.area,T))}</td><td data-l="${U.task}">${esc(t.title)}${t.manual?.withdrawn?` <span class="small">(${de?'zurückgenommen':'withdrawn'})</span>`:''}</td>`
       +`<td data-l="${U.rating}"><span class="pslv">${lv.length?lv.map(([k,n])=>`<span class="pst ${k}">${n>1?n+'× ':''}${PSTAND[PL()][k]}</span>`).join(''):'–'}</span></td>`
       +`<td><button type="button" class="btn small" data-psdet="${i}" aria-expanded="${op}">${op?U.close:U.details}</button></td></tr>`
-      +`<tr class="psdet" data-psdetrow="${i}"${op?'':' hidden'}><td colspan="5">${schoolDetailHTML(t,U,T,de)}${mayEdit?schoolEvaluationHistory(t,de):''}</td></tr>`; }).join('');
+      +`<tr class="psdet" data-psdetrow="${i}"${op?'':' hidden'}><td colspan="5">${schoolDetailHTML(t,U,T,de)}${mayEdit?schoolEvaluationHistory(t,de,synced):''}</td></tr>`; }).join('');
   return `<p class="small pscount" role="status">${U.count.replace('{n}',l.length).replace('{m}',all)}</p>`
     +(l.length?`<table class="dt pstab"><thead><tr><th>${U.date}</th><th>${U.subject}</th><th>${U.task}</th><th>${U.rating}</th><th><span class="sr-only">${U.details}</span></th></tr></thead><tbody>${rows}</tbody></table>`
       :`<p>${U.empty} <button type="button" class="btn small" data-psreset>${U.reset}</button></p>`);
@@ -6568,7 +6600,7 @@ function schoolEvaluationHTML(){
   const draft=schoolEvaluationDraft;
   const d=draft?.child===target.id && draft.author===target.author ? draft : null;
   const status=schoolEvaluationNotice?.child===target.id && schoolEvaluationNotice.author===target.author
-    ? `<p role="status">${de?'Auf diesem Gerät gespeichert. Der Abgleich läuft über den normalen App-Speicher.':'Saved on this device. The app uses its regular storage to sync it.'}</p>` : '';
+    ? `<p role="status">${schoolEvaluationSyncHTML(schoolEvaluationNotice.revision,schoolEvaluationSyncedRevisions(target.id),de)}</p>` : '';
   const criteria=de?STANDARD_TEXT:STANDARD_TEXT_EN;
   const start=`<button type="button" class="btn small" data-eval-action="open">${de?'Evaluation hinzufügen':'Add assessment'}</button>`;
   if(!d) return `<div id="pSchoolEvaluation">${start}${status}</div>`;
@@ -6669,7 +6701,7 @@ function bindSchoolEvaluation(body){
       evNeuLaden(); d.error=de?'Speichern fehlgeschlagen. Ihre Eingaben sind noch da.':'Saving failed. Your entries are still here.';
       redraw(); return;
     }
-    schoolEvaluationNotice={child,author:d.author};
+    schoolEvaluationNotice={child,author:d.author,revision};
     schoolEvaluationDraft=null;
     state.sopen=[];
     renderSheets();

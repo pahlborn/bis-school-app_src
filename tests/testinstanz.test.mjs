@@ -387,3 +387,20 @@ test('Browser: die gebaute Testinstanz startet mit der Anmeldung, Zugang einmal 
     assert.deepEqual(Object.keys(r.alle).filter((k) => !(k in KATHIE) && !k.startsWith('bqt_')), [], 'nur bqt_ geschrieben');
   } finally { await browser.close(); server.close(); }
 });
+
+test('Abgleichstatus einer Bewertungsfassung folgt der bestätigten Übertragung im Testbau', () => {
+  const child = 'p_fixture3c', area = 'schule:' + child, revision = 'revision-1';
+  const entry = { event: { id: 'e_fixture', type: 'school_evaluation', payload: { child, revision } }, sig: 'signed-fixture' };
+  const status = (stand) => {
+    const S = appSandbox({
+      bauart: 'test',
+      anpassen: () => APP,
+      speicher: { bqt_abgleich: JSON.stringify({ [area]: { bereich: area, log: [entry], ausgang: [], ...stand } }) },
+    });
+    return S.holen('schoolEvaluationSyncedRevisions')(child).has(revision);
+  };
+  assert.equal(status({ ausgang: [entry] }), false, 'signed but queued');
+  assert.equal(status({ unterwegs: { inhalt: { eintraege: [{ id: entry.event.id }] } } }), false, 'pending encrypted bundle');
+  assert.equal(status({ log: [] }), false, 'saved only to the app log');
+  assert.equal(status({}), true, 'signed and upload confirmed');
+});
