@@ -11,14 +11,21 @@ struct BigQuestApp: App {
 
 @MainActor
 private final class BrowserPage: ObservableObject {
-    let view: WKWebView
+    private let url: URL
+    private let persistent: Bool
 
     init(url: URL, persistent: Bool) {
+        self.url = url
+        self.persistent = persistent
+    }
+
+    lazy var view: WKWebView = {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = persistent ? .default() : .nonPersistent()
-        view = WKWebView(frame: .zero, configuration: configuration)
-        view.load(URLRequest(url: url))
-    }
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+        webView.load(URLRequest(url: url))
+        return webView
+    }()
 }
 
 private struct BrowserPane: UIViewRepresentable {
@@ -33,7 +40,9 @@ private struct BigQuestScreen: View {
     @StateObject private var bigQuest = BrowserPage(
         url: URL(string: "https://big-quest-test.github.io/")!, persistent: true
     )
-    @State private var toddle: BrowserPage?
+    @StateObject private var toddle = BrowserPage(
+        url: URL(string: "https://web.toddleapp.com/")!, persistent: false
+    )
     @State private var showToddle = false
     @State private var showKey = false
 
@@ -47,20 +56,13 @@ private struct BigQuestScreen: View {
                         Button("Claude-Schlüssel") { showKey = true }
                     }
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Toddle-Feld prüfen") {
-                            if toddle == nil {
-                                toddle = BrowserPage(
-                                    url: URL(string: "https://web.toddleapp.com/")!, persistent: false
-                                )
-                            }
-                            showToddle = true
-                        }
+                        Button("Toddle-Feld prüfen") { showToddle = true }
                     }
                 }
         }
         .sheet(isPresented: $showKey) { ClaudeKeyScreen() }
         .sheet(isPresented: $showToddle) {
-            if let toddle { ToddleFieldScreen(page: toddle) }
+            ToddleFieldScreen(page: toddle)
         }
     }
 }
