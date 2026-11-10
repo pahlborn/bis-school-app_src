@@ -43,6 +43,8 @@ export const ERSATZ_DATEI = 'werkzeug/testinstanz-ersatz.json';
  *  "basis" - die Tests lenken api.github.com selbst auf den Nachbau um). */
 export const SPEICHER_MARKE = '/*BQ_SPEICHER*/null';
 export const SPEICHER_TESTINSTANZ = Object.freeze({ art: 'github', repo: TESTINSTANZ.repoDaten, wurzel: TESTINSTANZ.wurzelDaten });
+export const SCHULE_TESTFREIGABE_MARKE = '/*BQ_SCHULE_TESTFREIGABE*/null';
+const SCHULE_TESTFREIGABE = JSON.stringify({ origin: new URL(TESTINSTANZ.adresse).origin, repo: TESTINSTANZ.repoDaten });
 
 const WURZEL = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const reEsc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -105,6 +107,7 @@ function umwandeln(app, ersatz, speicher) {
   for (const [suche, neu] of ersatz.ersetzen) t = t.replace(new RegExp(reEsc(suche), 'gi'), () => neu);
   t = einmal(t, VERSION_AUS_TRESOR, () => VERSION_AUS_KLARTEXT, 'publishedVersion (mit Schluessel)');
   t = einmal(t, new RegExp(reEsc(SPEICHER_MARKE)), () => speicher, 'Marke ' + SPEICHER_MARKE);
+  t = einmal(t, new RegExp(reEsc(SCHULE_TESTFREIGABE_MARKE)), () => SCHULE_TESTFREIGABE, 'Marke ' + SCHULE_TESTFREIGABE_MARKE);
 
   // Geraetedaten (bq_abgleich, bq_schluessel ...) und der Token liegen kuenftig unter demselben Praefix wie die Daten
   // der App. Damit sie nie als Daten eines Kindes gelten (Umzug auf Kennungen, Sicherung), werden sie geraeteweit.
@@ -184,6 +187,9 @@ export function testinstanzPruefen(app, manifest, { woerter = [], auchVerboten =
     app.includes(SPEICHER_MARKE) ? 'Marke ' + SPEICHER_MARKE + ' nicht ersetzt'
       : sp.length !== 1 ? `KONTO_SPEICHER ${sp.length}x`
         : sp[0] !== JSON.stringify(SPEICHER_TESTINSTANZ) ? 'anderer Speicher: ' + sp[0].slice(0, 80) : '');
+  const schulFreigabe = [...app.matchAll(/const SCHULE_TESTFREIGABE=([^;\r\n]*);/g)].map((m) => m[1]);
+  pruef('Schulbewertungen nur auf der Testinstanz', schulFreigabe.length === 1 && schulFreigabe[0] === SCHULE_TESTFREIGABE
+    && !app.includes(SCHULE_TESTFREIGABE_MARKE) ? '' : 'Testinstanz-Freigabe fehlt oder weicht ab');
 
   // Selbst-Aktualisierung ohne Schluessel: genau eine publishedVersion, sie liest die Version im Klartext
   const pv = [...app.matchAll(/async function publishedVersion\(\)\{[\s\S]*?\n\}/g)];

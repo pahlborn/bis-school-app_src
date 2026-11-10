@@ -371,3 +371,48 @@ test('Reinheit: kein Netz, kein Browser-Speicher, kein Zufall ausser krypto; Imp
     assert.ok(m[0].startsWith('export') || /^(abg|ABG_)/.test(name), name);
   }
 });
+
+test('a school cursor from an old build is replayed once, including own bundles, and retries after interruption', async () => {
+  const area = 'schule:p_k1';
+  const storage = lokalerSpeicher();
+  const device = storage.geraet('d_e1');
+  const writer = abgleichStand(area, 'd_e1');
+  const assessment = {
+    child: 'p_k1', evaluation: '7d97af5e-6e19-46b8-85c6-d3c950a77680', revision: '7d97af5e-6e19-46b8-85c6-d3c950a77681',
+    title: 'Fiktive Evaluation', day: TAG, standard: 'M-N5', rating: 'C', focus: 'two-step',
+  };
+  const old = await signEvent(newEvent({ type: 'school_import', author: 'p_e1', device: 'd_e1', at: at(),
+    payload: { asOf: TAG, data: { asOf: TAG, tasks: [] } } }), area, KEYS.p_e1);
+  const current = await signEvent(newEvent({ type: 'school_evaluation', author: 'p_e1', device: 'd_e1', at: at(),
+    payload: assessment }), area, KEYS.p_e1);
+  for (const item of [old, current]) {
+    vormerken(writer, item, { now: JETZT });
+    await senden(writer, { zugang: device, schluessel: SCH });
+  }
+
+  const saved = { ...json(writer), log: [old], merker: (await device.list(area, null)).merker };
+  const before = json(saved);
+  const listed = [], read = [];
+  let interrupt = true;
+  const access = {
+    ...device,
+    list: (area, cursor) => { listed.push(cursor); return device.list(area, cursor); },
+    get: (area, id) => {
+      read.push(id);
+      if (interrupt && id.endsWith('/2')) throw Object.assign(new Error('offline'), { code: 'offline' });
+      return device.get(area, id);
+    },
+  };
+  const setup = opts(access, { zulassung: { ...Z, area } });
+  await assert.rejects(holen(saved, setup), { code: 'offline' });
+  assert.deepEqual(saved, before);
+  interrupt = false;
+  assert.equal((await holen(saved, setup)).neu, 1);
+  assert.deepEqual(ids(saved), [old.event.id, current.event.id]);
+  assert.equal(saved.naechsteNr, before.naechsteNr);
+  assert.deepEqual(saved.merker.stand, before.merker.stand);
+  assert.equal((await holen(saved, setup)).neu, 0);
+  assert.deepEqual(listed.slice(0, 2), [null, null]);
+  assert.deepEqual(listed[2], saved.merker);
+  assert.deepEqual(read, ['d_e1/1', 'd_e1/2', 'd_e1/1', 'd_e1/2']);
+});

@@ -267,7 +267,9 @@ async function gabBereich(o, area, ziel, anker, stand) {
     //    it stays in the area's log and comes with the next sync (this step compares the whole log with the app's).
     const app = gabZiel(o.ablage, ziel);
     const da = new Set(app.lesen().map((e) => gabObj(e) && e.id));
-    const neu = stand.log.map((x) => x.event).filter((e) => e.device !== geraet && !da.has(e.id) && bereichVonEreignis(e) !== '*');
+    // A school replay can also restore a missing evaluation originally sent by this device.
+    const neu = stand.log.map((x) => x.event).filter((e) =>
+      (e.device !== geraet || e.type === 'school_evaluation') && !da.has(e.id) && bereichVonEreignis(e) !== '*');
     if (neu.length && o.inDieApp) {
       app.schreiben(mergeLog([app.lesen(), neu], now).events);
       bericht.inDieApp = neu.length;

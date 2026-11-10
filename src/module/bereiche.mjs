@@ -46,7 +46,7 @@ const BER_TYP = {
   profile_set: { name: 'kind:lern', lastName: 'kind:lern', birthday: 'kind:lern', mySchool: 'kind:lern', emoji: 'kind:privat', kidLang: 'kind:privat', muted: 'kind:privat' },
   setting_set: 'kind:privat', list_set: 'kind:privat', checklist_set: 'kind:privat', day_flag: 'kind:privat', advent_open: 'kind:privat',
   joke_seen: 'kind:privat', story_read: 'kind:privat',
-  school_import: 'schule', gap_state: 'schule', gap_active: 'schule',
+  school_import: 'schule', school_evaluation: 'schule', gap_state: 'schule', gap_active: 'schule',
   grant_set: 'eltern:allg', grant_revoked: 'eltern:allg', backup_made: 'eltern:allg',
   grant_opened: 'freigabe',
   person_set: 'person', glance_set: 'person',                       // task 3b-1c: settings of one person, its own area only
@@ -113,6 +113,7 @@ export function passtZumBereich(e, bereich) {
   if (!z || !art) return false;
   if (art === '*') return true;
   if (art !== z.art && BER_AUCH[e.type] !== z.art) return false;
+  if (e.type === 'school_evaluation') return e.payload.child === z.id;
   if (z.art === 'person') return e.author === z.id;          // task 3b-1c: a person writes its own settings, nobody else's
   return z.art !== 'freigabe' || e.payload.grant === z.id;    // grant g1 and its log lie in freigabe:g1 only
 }

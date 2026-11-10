@@ -11,6 +11,27 @@ export const RELEASE_NOTES = {
   current: {
     epics: [
       {
+        de: 'Auf der Testinstanz können Eltern Schulevaluationen erfassen, korrigieren und zurücknehmen.',
+        en: 'On the test instance, parents can add, correct and withdraw school evaluations.'
+      }
+    ],
+    stories: [
+      {
+        de: 'Die Tagesrunde kann passende Subtraktions- und Rundungsaufgaben aufnehmen. Der Fassungsverlauf zeigt, ob der App-Speicher die Bewertung bestätigt hat.',
+        en: 'The daily round can include targeted subtraction and rounding exercises. The revision history shows whether the app storage has confirmed the evaluation.'
+      }
+    ],
+    bugfixes: [
+      {
+        de: 'Nach dem Upgrade werden zuvor übersprungene Schulbewertungen beim Abgleich nachgeholt.',
+        en: 'After an upgrade, sync recovers previously skipped school evaluations.'
+      }
+    ]
+  },
+  history: [{
+    version: 'V 0.152 (Betaversion)',
+    epics: [
+      {
         de: 'Der Admin kann jetzt ein Elternkonto direkt in der App einladen.',
         en: 'The admin can now invite a parent account directly in the app.'
       }
@@ -31,8 +52,7 @@ export const RELEASE_NOTES = {
         en: 'Already-used login names are caught immediately during the admin invitation flow.'
       }
     ]
-  },
-  history: []
+  }]
 };
 
 function normText(v) {

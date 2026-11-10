@@ -712,6 +712,7 @@ const APP_RELEASES=/*BQ_RELEASES*/null;
    the test instance gets {art:'github', repo, wurzel} from its build, tests hand in a simulated storage (an object with
    geraet()). null (always in Kathie's app): no accounts in a storage, the login works with konten.json as before. */
 const KONTO_SPEICHER=/*BQ_SPEICHER*/null;
+const SCHULE_TESTFREIGABE=/*BQ_SCHULE_TESTFREIGABE*/null;
 const APP_ACCOUNTS=normAccounts(/*BQ_KONTEN*/null) || kontoKontenStart();
 /* login with accounts in the storage: test build (module konto), a storage, no konten.json (kontoKontenStart) */
 const KONTO_UI=!!(APP_ACCOUNTS && APP_ACCOUNTS.konto);
@@ -2350,9 +2351,12 @@ function bridgeFor(q){
 function queueBridge(q){
   if(q.bridge) return;
   const tasks=bridgeFor(q); if(!tasks.length) return;
-  const slots=state.round.length-state.idx-1;
-  tasks.slice(0,slots).forEach((b,i)=>{ state.round[state.idx+1+i]=b; });
-  if(tasks.length>slots) store.set('bridgeNext',store.get('bridgeNext',[]).concat(tasks.slice(slots)).slice(-12));
+  const slots=[];
+  for(let i=state.idx+1;i<state.round.length;i++){
+    if(!state.round[i].schoolRevision) slots.push(i);
+  }
+  tasks.slice(0,slots.length).forEach((b,i)=>{ state.round[slots[i]]=b; });
+  if(tasks.length>slots.length) store.set('bridgeNext',store.get('bridgeNext',[]).concat(tasks.slice(slots.length)).slice(-12));
 }
 /* School key (standards legend of the school): Not applicable, Requires support, Consolidating, Meeting expectations, Extending.
    It is used ONLY to choose the next questions. Nothing of it is ever shown to the child: no levels, no words, no percentages.
@@ -2578,14 +2582,16 @@ function buildToday(){
   const ready=topics.filter(k=>['M','E'].includes(standOf(k)));
   let challenge=null;
   if(ready.length){ const k=pick(ready); challenge=WORLDS[k].build().concat(WORLDS[k].build()).find(q=>levelOf(q)===3) || null; if(challenge) challenge.challenge=true; }
-  const lane=gapTasks(gq, Math.min(2, 8-out.length-(challenge?1:0)));
+  const schoolTasks=schoolEvaluationQuestions(out);
+  const lane=gapTasks(gq, Math.min(2, 8-out.length-schoolTasks.length-(challenge?1:0)));
+  lane.unshift(...schoolTasks);
   const pools=shuffle(topics).map(k=>adaptRound(k, WORLDS[k].build()).filter(q=>levelOf(q)<3 || standOf(k)!=='NA'));
   const middle=[]; let i=0;
   while(out.length+lane.length+middle.length+(challenge?1:0)<8 && pools.some(p=>p.length)){ const p=pools[i%pools.length]; if(p.length) middle.push(p.shift()); i++; }
   const round=out.concat(insertInOrder(shuffle(middle), lane), challenge?[challenge]:[]).slice(0,8);
   // no task twice (module runde): warm-up, due repeats, gap tasks and the challenge stay; a repeated topic task is
   // replaced by another one of the same level from the current topics
-  return ohneDoppelte(round, ()=>{ const k=pick(topics); return adaptRound(k, WORLDS[k].build()); }, {id:qId, level:levelOf, keep:q=>!!(q.warmup||q.dueId||q.gap||q.challenge)});
+  return ohneDoppelte(round, ()=>{ const k=pick(topics); return adaptRound(k, WORLDS[k].build()); }, {id:qId, level:levelOf, keep:q=>!!(q.warmup||q.dueId||q.gap||q.challenge||q.schoolRevision)});
 }
 /* ======================= WORLDS, SUBJECTS & STUDIOS ======================= */
 const ICONS={
@@ -2697,7 +2703,7 @@ const gapQuests = s => cleanFocus(SUBJECTS.flatMap(questsIn)).filter(k=>mainStd(
 /* the latest school rating of a standard: {st, day} */
 function stdRating(s){
   const d=schoolData(); if(!d) return null;
-  const l=schoolRatings(d)[s]; return l&&l.length?{st:l[0].r==='N'?'RS':l[0].r, day:l[0].day}:null;
+  const l=schoolRatings(d, false)[s]; return l&&l.length?{st:l[0].r==='N'?'RS':l[0].r, day:l[0].day}:null;
 }
 const gapOrder = (a,b) => (GAP_WEAK.indexOf(a.st)-GAP_WEAK.indexOf(b.st)) || (a.day<b.day?-1:a.day>b.day?1:0) || (a.s<b.s?-1:1);
 /* all open gaps {s, st, day, quests} in their order; closes gaps the app has confirmed (written only where the
@@ -2831,7 +2837,7 @@ function insertInOrder(list, extra){
    without evaluations for this child, the hand-made list FOCUS. New evaluations change the focus by themselves. */
 function classTopics(){
   const d=typeof schoolData==='function'?schoolData():null; if(!d) return FOCUS;
-  const done=d.tasks.filter(t=>!t.pending && (t.focusNext||[]).length), recent=done.filter(t=>daysBetween(t.day,dayKey())<=56);
+  const done=d.tasks.filter(t=>!t.pending && !t.manual && (t.focusNext||[]).length), recent=done.filter(t=>daysBetween(t.day,dayKey())<=56);
   const list=uniq((recent.length?recent:done).flatMap(t=>t.focusNext)).filter(k=>WORLDS[k]);
   return list.length?list:FOCUS;
 }
@@ -3005,8 +3011,9 @@ function startRound(k){
   state.results=state.round.map(()=>null);
   const pending=store.get('bridgeNext',[]).filter(q=>q && WORLDS[q.world]);
   if(pending.length){
-    const use=pending.slice(0,Math.min(3,state.round.length));
-    use.map(neutralQ).filter(Boolean).forEach((q,i)=>state.round[i]=q);
+    const slots=state.round.map((q,i)=>q.schoolRevision?-1:i).filter(i=>i>=0);
+    const use=pending.slice(0,Math.min(3,slots.length));
+    use.map(neutralQ).filter(Boolean).forEach((q,i)=>state.round[slots[i]]=q);
     store.set('bridgeNext',pending.slice(use.length));
   }
   state.noteShown=false; state.noteNow=null;
@@ -3052,6 +3059,8 @@ function renderQuestion(){
   state.challengeRewarded=false;
   window.scrollTo(0,0);
   const pn=$('#playNote'); pn.hidden=!state.pendingNote; pn.textContent=state.pendingNote||''; state.pendingNote=null;
+  if(q.schoolRevision) $('#qLabel').dataset.schoolRevision=q.schoolRevision;
+  else delete $('#qLabel').dataset.schoolRevision;
   if(q.challenge && !q.accepted){ renderChallengeOffer(); return; }
   play.style.setProperty('--world', (WORLDS[q.world]||WORLDS[state.world]).color); // repeats saved by an older version may name a quest that no longer exists
   $('#qLabel').textContent=state.sheet
@@ -4891,7 +4900,7 @@ function renderSheets(){
   [['#pSettings','settings'],['#pHelp','help']].forEach(([sel,view])=>{ const b=$(sel); if(b) b.addEventListener('click',()=>{ if(!parentAccess) return; if(state.pview===view) closeParentView(); else openParentView(view); }); });
   ['#pSetBack','#pHelpBack'].forEach(sel=>{ const b=$(sel); if(b) b.addEventListener('click',closeParentView); });
   const real=$('#pRealData'); if(real) real.addEventListener('click',()=>{ if(!parentAccess) return; restoreRealChild(); renderSheets(); });
-  const kidSel=$('#pKidSel'); if(kidSel) kidSel.addEventListener('change',()=>{ const k=kidSel.value; if(!parentAccess || !kidChoices().includes(k)) return; const s=studentSession(); viewUser=(s && s.user===k)?null:k; state.psubj=null; state.sopen=[]; renderSheets(); });
+  const kidSel=$('#pKidSel'); if(kidSel) kidSel.addEventListener('change',()=>{ const k=kidSel.value; if(!parentAccess || !kidChoices().includes(k)) return; const s=studentSession(); viewUser=(s && s.user===k)?null:k; state.psubj=null; state.sopen=[]; schoolEvaluationDraft=null; renderSheets(); });
   const play=$('#pPlayTest'); if(play) play.addEventListener('click',playTest);
   body.querySelectorAll('[data-psubj],[data-pmore]').forEach(b=>b.addEventListener('click',()=>{ state.psubj=b.dataset.psubj||b.dataset.pmore; renderSheets(); window.scrollTo(0,0); }));
   const back=$('#pBack'); if(back) back.addEventListener('click',()=>{ state.psubj=null; renderSheets(); window.scrollTo(0,0); });
@@ -5906,11 +5915,18 @@ function kontoZeileHTML(){
   return teile.join(' · ')+` <button type="button" class="info-btn" data-help="abgleich" aria-label="Info">ⓘ</button>`;
 }
 const kontoUhrzeit = ms => { const d=new Date(ms); return pad(d.getHours())+':'+pad(d.getMinutes()); };
-/* after a sync: the line anew (only the line - a form being filled in stays as it is) */
+/* Refresh sync labels in place so a form being filled in stays as it is. */
 function kontoZeileAuffrischen(){
   if(!KONTO_UI || !parentAccess) return;
-  const z=$('#aboutBody').querySelector('#kSync'); if(!z) return;
-  z.innerHTML=kontoZeileHTML(); kontoZeileBinden(z);
+  const body=$('#aboutBody'), z=body.querySelector('#kSync');
+  if(z){ z.innerHTML=kontoZeileHTML(); kontoZeileBinden(z); }
+  const labels=body.querySelectorAll('[data-eval-sync]');
+  if(!labels.length) return;
+  const synced=schoolEvaluationSyncedRevisions(schoolKid()), de=PL()==='de';
+  for(const label of labels){
+    const text=schoolEvaluationSyncText(synced.has(label.dataset.evalSync),de);
+    if(label.textContent!==text) label.textContent=text;
+  }
 }
 function kontoZeileBinden(z){
   const a=z.querySelector('#kNeuAnmelden'); if(a) a.addEventListener('click',()=>{ if(!parentAccess) return; parentAbmelden(); showLogin('adult'); });
@@ -5960,6 +5976,8 @@ function adultHideOnChildDevice(){
 }
 /* "Log out" of a grown-up: his session and his key copy leave this device; a child logged in here stays */
 function parentAbmelden(){
+  schoolEvaluationDraft=null;
+  schoolEvaluationNotice=null;
   pendingRoute=null;
   store.del('adultUnlock');
   if(accountsOn()){ if(KONTO_UI){ kontoBlatt=null; if(adultUser) kontoAbmelden((accByRef({user:adultUser.user})||{}).id); } store.del('adultSession'); restoreRealChild(); }
@@ -6367,17 +6385,60 @@ function schoolFromAccount(id){
 }
 const schoolData = () => { if(!accountsOn()) return null; const g=viewerGrant(); if(g && !g.scope.includes('school')) return null; const id=schoolKid(); return (KONTO_UI ? schoolFromAccount(id) : SCHOOL_DATA[id])||null; };
 const SL={C:'c',M:'m',E:'e',RS:'rs',N:'rs'};
+/* The school evaluation pilot runs only on the configured test origin or against a local mock. */
+function schoolEvaluationPilot(){
+  if(!KONTO_UI || KONTO_SPEICHER?.art!=='github') return false;
+  if(SCHULE_TESTFREIGABE && location.origin===SCHULE_TESTFREIGABE.origin){
+    return KONTO_SPEICHER.repo===SCHULE_TESTFREIGABE.repo && KONTO_SPEICHER.wurzel===''
+      && !Object.hasOwn(KONTO_SPEICHER,'basis');
+  }
+  return ['127.0.0.1','localhost','[::1]'].includes(location.hostname)
+    && /^http:\/\/127\.0\.0\.1:\d+\/*$/.test(KONTO_SPEICHER.basis||'');
+}
+const SCHOOL_EVALUATION_EXERCISES={
+  'two-step':{build:twoStepQ, de:'Zweischrittige Subtraktion in Practise Today üben', en:'Practise two-step subtraction in Practise Today'},
+  'round-distance':{build:()=>Object.assign(distanceExplainQ(),RND), de:'Runden mit Abstandsbegründung in Practise Today üben', en:'Practise rounding by comparing distances in Practise Today'},
+};
+function schoolEvaluationQuestions(used){
+  if(!schoolEvaluationPilot() || focusManualMode()) return [];
+  const latest=new Map(), today=dayKey();
+  for(const task of schoolData()?.tasks||[]){
+    if(!task.manual || task.manual.withdrawn || task.day>today) continue;
+    const {standard}=task.manual, previous=latest.get(standard);
+    if(!previous || task.day>=previous.day) latest.set(standard,task);
+  }
+  const active=[...latest.values()].filter(t=>t.manual.focus!=='none' && !isLocked(SCHOOL_EVALUATION_TARGETS[t.manual.standard].world));
+  const questions=[], ids=new Set(used.map(qId));
+  // One slot for each active standard first. A second card for RS uses a free slot.
+  const add=task=>{
+    const {focus,revision}=task.manual;
+    for(let attempt=0;attempt<12;attempt++){
+      const q=SCHOOL_EVALUATION_EXERCISES[focus].build(), id=qId(q);
+      if(ids.has(id)) continue;
+      ids.add(id);
+      Object.defineProperty(q,'schoolRevision',{value:revision});
+      questions.push(q);
+      return;
+    }
+  };
+  active.forEach(add);
+  for(const task of active){
+    if(questions.length>=2) break;
+    if(task.std[task.manual.standard]==='RS') add(task);
+  }
+  return questions;
+}
 /* latest rating per standard: [{day, r}] newest first */
-function schoolRatings(d){
+function schoolRatings(d, includeManual=true){
   const per={};
-  (d?d.tasks:[]).filter(t=>!t.pending).forEach(t=>Object.entries(t.std).forEach(([s,r])=>{ (per[s]=per[s]||[]).push({day:t.day,r}); }));
+  (d?d.tasks:[]).filter(t=>!t.pending && !t.manual?.withdrawn && (includeManual || !t.manual)).forEach(t=>Object.entries(t.std).forEach(([s,r])=>{ (per[s]=per[s]||[]).push({day:t.day,r}); }));
   Object.values(per).forEach(l=>l.sort((a,b)=>a.day<b.day?1:-1));
   return per;
 }
 /* the school's starting value for a quest: the latest rating of its first (main) standard */
 function schoolStandFor(k){
   const d=schoolData(), s=(STANDARDS[k]||[])[0]; if(!d || !s) return null;
-  const l=schoolRatings(d)[s]; return l&&l.length?{st:l[0].r==='N'?'RS':l[0].r, day:l[0].day}:null;
+  const l=schoolRatings(d, false)[s]; return l&&l.length?{st:l[0].r==='N'?'RS':l[0].r, day:l[0].day}:null;
 }
 const fmtDay = d => PL()==='de' ? d.split('-').reverse().join('.') : new Date(d+'T12:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
 /* School data (concept 5.3/5.4, C1): texts shared by the block in the subject view and the history chapter. */
@@ -6396,7 +6457,7 @@ function stdSubject(std){
 const AREA_SUBJECT={math:'maths', english:'english', science:'science', learner:'learner', deutsch:'deutsch'};
 /* the teacher's evaluations that count for the focus: the last 8 weeks, if there are none that recent all of them (as classTopics) */
 function recentEvaluations(d){
-  const done=d.tasks.filter(t=>!t.pending), recent=done.filter(t=>daysBetween(t.day,dayKey())<=56);
+  const done=d.tasks.filter(t=>!t.pending && !t.manual?.withdrawn), recent=done.filter(t=>daysBetween(t.day,dayKey())<=56);
   return (recent.length?recent:done).slice().sort((a,b)=>a.day<b.day?1:-1);
 }
 /* 🏫 From school (concept 5.4, C1): at the top of a subject - its standards, the teacher's next steps, learning skills */
@@ -6440,8 +6501,8 @@ const schoolWeakest = t => { const l=schoolTaskLevels(t); return l.length?SCHOOL
 const schoolAreaIdx = a => { const i=SCHOOL_AREAS.indexOf(a); return i<0?SCHOOL_AREAS.length:i; };
 /* the school year starts on 1 August (the school calendar of the platform starts in August) */
 const schoolYearStart = today => { const [y,m]=today.split('-').map(Number); return (m>=8?y:y-1)+'-08-01'; };
-function schoolFiltered(d, f, today){
-  let l=d.tasks.map((t,i)=>({t,i})).filter(x=>!x.t.pending);
+function schoolFiltered(d, f, today, showWithdrawn){
+  let l=d.tasks.map((t,i)=>({t,i})).filter(({t})=>!t.pending && (showWithdrawn || !t.manual?.withdrawn));
   if(f.area) l=l.filter(x=>x.t.area===f.area);
   if(f.period==='8w') l=l.filter(x=>daysBetween(x.t.day,today)<=56);
   if(f.period==='year') l=l.filter(x=>x.t.day>=schoolYearStart(today));
@@ -6468,27 +6529,195 @@ function schoolDetailHTML(t, U, T, de){
     +(fq?`<p class="small">${de?'Daraus im automatischen Fokus':'In the automatic focus because of this'}: ${fq}</p>`:'')
     +(pq?`<p class="small">${T.quests}: ${pq}</p>`:'');
 }
+/* A signed event enters the log before the upload. Only a confirmed put clears
+   its outbox entry. Events received from other devices are already confirmed. */
+function schoolEvaluationSyncedRevisions(child){
+  const area='schule:'+child, stand=evRaw(GERAETEABGLEICH_SPEICHER.staende)?.[area];
+  const synced=new Set();
+  if(stand?.bereich!==area || !Array.isArray(stand.log) || !Array.isArray(stand.ausgang)) return synced;
+  const bundle=stand.unterwegs?.inhalt?.eintraege;
+  if(stand.unterwegs && !Array.isArray(bundle)) return synced;
+  const pending=new Set(stand.ausgang.map(x=>x?.event?.id));
+  for(const x of bundle||[]) pending.add(x?.id);
+  for(const entry of stand.log){
+    const e=entry?.event;
+    if(e?.type==='school_evaluation' && e.payload?.child===child && typeof e.id==='string'
+      && typeof entry.sig==='string' && entry.sig && !pending.has(e.id)) synced.add(e.payload.revision);
+  }
+  return synced;
+}
+function schoolEvaluationSyncText(synced,de){
+  return synced?(de?'Mit App-Speicher abgeglichen':'Synced with app storage')
+    :(de?'Lokal gespeichert · Abgleich ausstehend':'Saved on this device · sync pending');
+}
+function schoolEvaluationSyncHTML(revision,synced,de){
+  return `<span class="small" data-eval-sync="${esc(revision)}">${schoolEvaluationSyncText(synced.has(revision),de)}</span>`;
+}
+function schoolEvaluationHistory(t, de, synced){
+  const m=t.manual;
+  if(!m) return '';
+  const lang=de?'de':'en', standards=de?STANDARD_TEXT:STANDARD_TEXT_EN;
+  const button=(action,label,choice='')=>`<button type="button" class="btn small" data-pseval="${m.evaluation}" data-pseval-op="${action}" data-pseval-choice="${choice}">${label}</button>`;
+  const history=m.history.map(p=>{
+    const current=p.revision===m.revision, proposal=m.conflicts.includes(p.revision);
+    const status=p.withdrawn?(de?'Zurückgenommen':'Withdrawn'):current?(de?'Aktive Fassung':'Active revision'):proposal?(de?'Vorschlag':'Proposal'):(de?'Frühere Fassung':'Earlier revision');
+    const choose=proposal||current&&m.conflicts.length;
+    return `<li>${esc(p.title)} · ${fmtDay(p.day)} · ${esc(standards[p.standard])} · ${PSTAND[lang][SL[p.rating]]} · <b>${status}</b> · ${schoolEvaluationSyncHTML(p.revision,synced,de)}`
+      +`${choose?' '+button('resolve',de?'Diese Fassung wählen':'Choose this revision',p.revision):''}</li>`;
+  }).join('');
+  const actions=m.conflicts.length
+    ? `<p role="status">${de?'Konkurrierende Änderungen. Die bisherige Fassung bleibt aktiv, bis Sie eine Fassung wählen und bestätigen.':'Conflicting changes. The previous revision stays active until you choose and confirm a revision.'}</p>`
+    : m.withdrawn?'':`<p>${button('correct',de?'Bewertung korrigieren':'Correct assessment')} ${button('withdraw',de?'Bewertung zurücknehmen':'Withdraw assessment')}</p>`;
+  return `${actions}<h4>${de?'Fassungsverlauf':'Revision history'}</h4><ul>${history}</ul>`;
+}
 function schoolListHTML(d){
   const de=PL()==='de', U=SCHOOL_UI[de?'de':'en'], T=schoolTexts(de), f=state.sfilt||SCHOOL_FILTER0, open=state.sopen||[];
-  const all=d.tasks.filter(t=>!t.pending).length, l=schoolFiltered(d, f, dayKey());
+  const target=schoolEvaluationTarget(), mayEdit=!!target;
+  const synced=mayEdit?schoolEvaluationSyncedRevisions(target.id):null;
+  const all=d.tasks.filter(t=>!t.pending && (mayEdit || !t.manual?.withdrawn)).length, l=schoolFiltered(d, f, dayKey(), mayEdit);
   const rows=l.map(({t,i})=>{ const lv=schoolTaskLevels(t), op=open.includes(i);
-    return `<tr class="psrow" data-psrow="${i}"><td data-l="${U.date}">${fmtDay(t.day)}</td><td data-l="${U.subject}">${esc(schoolArea(t.area,T))}</td><td data-l="${U.task}">${esc(t.title)}</td>`
+    return `<tr class="psrow" data-psrow="${i}"><td data-l="${U.date}">${fmtDay(t.day)}</td><td data-l="${U.subject}">${esc(schoolArea(t.area,T))}</td><td data-l="${U.task}">${esc(t.title)}${t.manual?.withdrawn?` <span class="small">(${de?'zurückgenommen':'withdrawn'})</span>`:''}</td>`
       +`<td data-l="${U.rating}"><span class="pslv">${lv.length?lv.map(([k,n])=>`<span class="pst ${k}">${n>1?n+'× ':''}${PSTAND[PL()][k]}</span>`).join(''):'–'}</span></td>`
       +`<td><button type="button" class="btn small" data-psdet="${i}" aria-expanded="${op}">${op?U.close:U.details}</button></td></tr>`
-      +`<tr class="psdet" data-psdetrow="${i}"${op?'':' hidden'}><td colspan="5">${schoolDetailHTML(t,U,T,de)}</td></tr>`; }).join('');
+      +`<tr class="psdet" data-psdetrow="${i}"${op?'':' hidden'}><td colspan="5">${schoolDetailHTML(t,U,T,de)}${mayEdit?schoolEvaluationHistory(t,de,synced):''}</td></tr>`; }).join('');
   return `<p class="small pscount" role="status">${U.count.replace('{n}',l.length).replace('{m}',all)}</p>`
     +(l.length?`<table class="dt pstab"><thead><tr><th>${U.date}</th><th>${U.subject}</th><th>${U.task}</th><th>${U.rating}</th><th><span class="sr-only">${U.details}</span></th></tr></thead><tbody>${rows}</tbody></table>`
       :`<p>${U.empty} <button type="button" class="btn small" data-psreset>${U.reset}</button></p>`);
 }
+let schoolEvaluationDraft=null;
+let schoolEvaluationNotice=null;
+function schoolEvaluationTarget(){
+  if(!schoolEvaluationPilot() || !parentAccess || eventWho()?.role!=='parent') return null;
+  const account=kontoIch(), id=schoolKid();
+  if(account?.art!=='parent' || !id || id!==childNs()) return null;
+  const child=kontoVerb(account).kinder.find(c=>c.id===id);
+  return child ? {id, author:account.kennung, name:kontoKindName(id, child.name)} : null;
+}
+function schoolEvaluationHTML(){
+  const target=schoolEvaluationTarget();
+  if(!target) return '';
+  const de=PL()==='de', lang=de?'de':'en';
+  const draft=schoolEvaluationDraft;
+  const d=draft?.child===target.id && draft.author===target.author ? draft : null;
+  const status=schoolEvaluationNotice?.child===target.id && schoolEvaluationNotice.author===target.author
+    ? `<p role="status">${schoolEvaluationSyncHTML(schoolEvaluationNotice.revision,schoolEvaluationSyncedRevisions(target.id),de)}</p>` : '';
+  const criteria=de?STANDARD_TEXT:STANDARD_TEXT_EN;
+  const start=`<button type="button" class="btn small" data-eval-action="open">${de?'Evaluation hinzufügen':'Add assessment'}</button>`;
+  if(!d) return `<div id="pSchoolEvaluation">${start}${status}</div>`;
+  const cancel=`<button type="button" class="btn small" data-eval-action="cancel">${de?'Abbrechen':'Cancel'}</button>`;
+  const child=`<p><b>${de?'Kind':'Child'}</b> · ${esc(target.name)}</p>`;
+  const error=d.error?`<p role="alert">${esc(d.error)}</p>`:'';
+  let content;
+  if(d.withdrawn){
+    const title=de?'Bewertung zurücknehmen':'Withdraw assessment';
+    const explanation=de?'Der Eintrag bleibt im Fassungsverlauf. Nach dem Abgleich liefert er keine gezielten Karten mehr für neue Tagesrunden.':'The assessment remains in the revision history. After syncing, it stops adding targeted cards to new daily rounds.';
+    content=`<h3>${title}</h3>${child}<p>${esc(d.title)} · ${fmtDay(d.day)}</p><p>${explanation}</p>
+      <button class="btn" type="submit">${de?'Rücknahme bestätigen':'Confirm withdrawal'}</button>`;
+  } else if(d.preview){
+    const exercise=SCHOOL_EVALUATION_EXERCISES[SCHOOL_EVALUATION_TARGETS[d.standard].focus];
+    const hasFocus=schoolEvaluationNeedsPractice(d.rating);
+    const same=!d.base && schoolFromAccount(target.id)?.tasks.some(t=>t.manual && !t.manual.withdrawn && t.title===d.title && t.day===d.day
+      && t.manual.standard===d.standard && t.std[d.standard]===d.rating
+      && t.manual.focus===(d.focus?SCHOOL_EVALUATION_TARGETS[d.standard].focus:'none'));
+    const confirm=d.resolves?(de?'Konfliktauflösung bestätigen':'Confirm resolution')
+      :d.base?(de?'Korrektur bestätigen':'Confirm correction')
+      :same?(de?'Separaten Eintrag speichern':'Save as a separate assessment'):(de?'Evaluation bestätigen':'Confirm assessment');
+    content=`<h3>${de?'Vorschau':'Preview'}</h3>${child}<p>${esc(d.title)} · ${fmtDay(d.day)}</p>
+      <p>${esc(criteria[d.standard])} · ${PSTAND[lang][SL[d.rating]]}</p>
+      ${hasFocus?`<label><input type="checkbox" name="focus"${d.focus?' checked':''}> ${exercise[lang]}</label>`
+      :`<p>${de?'Ohne zusätzlichen Übungsfokus':'Without additional practice focus'}</p>`}
+      ${same?`<p role="status">${de?'Im Verlauf steht bereits ein Eintrag mit denselben Angaben. Prüfen Sie, ob es eine separate Evaluation ist.':'An assessment with the same details is already in the history. Check whether this is a separate assessment.'}</p>`:''}
+      <p class="small">${de?'Titel, Datum, Kriterium, Einstufung und Übungsfokus werden im Schulbereich des Kindes gespeichert. Verwenden Sie im Titel keine Namen.':'The title, date, criterion, rating and practice focus are saved in the child’s school area. Leave names out of the title.'}</p>
+      <button class="btn" type="submit">${confirm}</button>
+      <button class="btn small" type="button" data-eval-action="edit">${de?'Bearbeiten':'Edit'}</button>`;
+  } else {
+    const options=['RS','C','M','E'].map(r=>`<option value="${r}"${r===d.rating?' selected':''}>${PSTAND[lang][SL[r]]}</option>`).join('');
+    const standards=Object.keys(SCHOOL_EVALUATION_TARGETS).sort().map(code=>`<option value="${code}"${code===d.standard?' selected':''}>${esc(criteria[code])}</option>`).join('');
+    content=`${child}<label>${de?'Titel':'Title'} <input name="title" required maxlength="160" value="${esc(d.title)}"></label>
+      <label>${de?'Bewertungsdatum':'Assessment date'} <input name="day" type="date" required max="${dayKey()}" value="${esc(d.day)}"></label>
+      <label>${de?'Kriterium':'Criterion'} <select name="standard" required><option value="">${de?'Bitte auswählen':'Select a criterion'}</option>${standards}</select></label>
+      <label>${de?'Einstufung':'Rating'} <select name="rating" required><option value="">${de?'Bitte auswählen':'Select a rating'}</option>${options}</select></label>
+      <button class="btn" type="submit">${de?'Vorschau anzeigen':'Show preview'}</button>`;
+  }
+  return `<div id="pSchoolEvaluation"><form class="login-form">${content} ${cancel}${error}</form></div>`;
+}
+function bindSchoolEvaluation(body){
+  const box=body.querySelector('#pSchoolEvaluation');
+  if(!box) return;
+  const redraw=()=>{ box.outerHTML=schoolEvaluationHTML(); bindSchoolEvaluation(body); };
+  const current=()=>{
+    const t=schoolEvaluationTarget(), d=schoolEvaluationDraft;
+    return t && d?.child===t.id && d.author===t.author ? d : null;
+  };
+  box.addEventListener('click',e=>{
+    const action=e.target.closest('[data-eval-action]')?.dataset.evalAction, t=schoolEvaluationTarget();
+    if(!action || !t) return;
+    if(action==='open'){
+      schoolEvaluationNotice=null;
+      schoolEvaluationDraft={child:t.id, author:t.author, title:'', day:'', standard:'', rating:'',
+        evaluation:crypto.randomUUID(), revision:crypto.randomUUID(), preview:false, focus:false};
+    } else if(action==='cancel') schoolEvaluationDraft=null;
+    else if(action==='edit' && current()){ current().preview=false; current().error=''; }
+    redraw();
+    body.querySelector('#pSchoolEvaluation input[name="title"], #pSchoolEvaluation [data-eval-action="open"]')?.focus();
+  });
+  box.addEventListener('input',e=>{
+    const d=current(), name=e.target.name;
+    if(!d) return;
+    if(!d.preview && ['title','day','standard','rating'].includes(name)){
+      if(name==='rating' && !schoolEvaluationNeedsPractice(d.rating)) d.focus=schoolEvaluationNeedsPractice(e.target.value);
+      d[name]=e.target.value;
+    }
+    if(d.preview && name==='focus'){ d.focus=e.target.checked; redraw(); body.querySelector('#pSchoolEvaluation [name="focus"]')?.focus(); }
+  });
+  box.addEventListener('submit',e=>{
+    e.preventDefault();
+    const d=current(), de=PL()==='de';
+    if(!d) return;
+    if(!d.preview){
+      d.title=d.title.trim();
+      if(!d.title || /[\x00-\x1f\x7f]/.test(d.title) || !d.day || d.day>dayKey() || !Object.hasOwn(SCHOOL_EVALUATION_TARGETS,d.standard) || !SL[d.rating]){
+        d.error=de?'Bitte prüfen Sie Titel, Datum, Kriterium und Einstufung.':'Check the title, date, criterion and rating.';
+      } else {
+        d.error=''; d.preview=true; d.focus=schoolEvaluationNeedsPractice(d.rating) && d.focus;
+      }
+      redraw(); body.querySelector('#pSchoolEvaluation button[type="submit"]')?.focus(); return;
+    }
+    const {child,evaluation,revision,title,day,standard,rating}=d;
+    const payload={child,evaluation,revision,title,day,standard,rating,focus:d.focus?SCHOOL_EVALUATION_TARGETS[standard].focus:'none'};
+    if(d.base){
+      const active=schoolFromAccount(child)?.tasks.find(t=>t.manual?.evaluation===evaluation)?.manual;
+      const conflicts=active?.conflicts||[];
+      if(active?.revision!==d.base || conflicts.length!==(d.resolves||[]).length || conflicts.some(id=>!d.resolves.includes(id))){
+        d.error=de?'Die Bewertung hat sich beim Abgleich geändert. Brechen Sie den Entwurf ab und öffnen Sie die aktuelle Fassung.':'The assessment changed during sync. Cancel this draft and open the current revision.';
+        redraw(); return;
+      }
+      payload.base=d.base;
+      if(d.resolves) payload.resolves=d.resolves;
+      if(d.withdrawn){ payload.withdrawn=true; payload.focus='none'; }
+    }
+    const event=eventHook('school_evaluation',payload,child);
+    if(!event || !(evRaw('bq2_'+child+'__events')||[]).some(x=>x.id===event.id)){
+      evNeuLaden(); d.error=de?'Speichern fehlgeschlagen. Ihre Eingaben sind noch da.':'Saving failed. Your entries are still here.';
+      redraw(); return;
+    }
+    schoolEvaluationNotice={child,author:d.author,revision};
+    schoolEvaluationDraft=null;
+    state.sopen=[];
+    renderSheets();
+    body.querySelector('#pSchoolEvaluation [data-eval-action="open"]')?.focus();
+  });
+}
 function schoolHTML(){
   const d=schoolData(), de=PL()==='de', T=schoolTexts(de), U=SCHOOL_UI[de?'de':'en'], f=state.sfilt||SCHOOL_FILTER0;
   const h=de?'Schulische Einstufungen':'School assessments';
-  if(!d) return `<h2>${h}</h2><p>${T.none}</p>`;
-  const done=d.tasks.filter(t=>!t.pending), pend=d.tasks.filter(t=>t.pending).sort((a,b)=>a.day<b.day?1:-1);
+  const form=schoolEvaluationHTML();
+  if(!d) return `<h2>${h}</h2>${form}<p>${T.none}</p>`;
+  const done=d.tasks.filter(t=>!t.pending && (!t.manual?.withdrawn || schoolEvaluationTarget())), pend=d.tasks.filter(t=>t.pending).sort((a,b)=>a.day<b.day?1:-1);
   const latest=done.reduce((m,t)=>t.day>m?t.day:m,''), stand=d.asOf||latest;
   const areas=SCHOOL_AREAS.concat(uniq(done.map(t=>t.area)).filter(a=>!SCHOOL_AREAS.includes(a))).filter(a=>done.some(t=>t.area===a));
   const opt=(v,txt,cur)=>`<option value="${esc(v)}"${v===cur?' selected':''}>${esc(txt)}</option>`;
-  return `<h2>${h}</h2><p class="small psstand">${stand?`${U.asOf}: ${fmtDay(stand)}`:''}${latest?` · ${U.latest}: ${fmtDay(latest)}`:''}. ${U.who}</p>`
+  return `<h2>${h}</h2>${form}<p class="small psstand">${stand?`${U.asOf}: ${fmtDay(stand)}`:''}${latest?` · ${U.latest}: ${fmtDay(latest)}`:''}. ${U.who}</p>`
     +(pend.length?`<div class="pspend"><h3 class="psub">⏳ ${T.pend}</h3><ul class="small">${pend.map(t=>`<li>${fmtDay(t.day)} · ${esc(schoolArea(t.area,T))} · ${esc(t.title)}</li>`).join('')}</ul></div>`:'')
     +`<div id="pSchoolAll"><div class="psfilters">`
     +`<label>${U.subject}<select data-psf="area">${opt('',U.all,f.area)}${areas.map(a=>opt(a,schoolArea(a,T),f.area)).join('')}</select></label>`
@@ -6499,12 +6728,34 @@ function schoolHTML(){
 }
 /* filters and details change the list in place (no new rendering of the whole area, the page does not jump) */
 function bindSchoolList(body){
+  bindSchoolEvaluation(body);
   const box=body.querySelector('#pSchoolAll'); if(!box) return;
   const redraw=()=>{ const d=schoolData(), el=box.querySelector('#psList'); if(d && el) el.innerHTML=schoolListHTML(d); };
   box.addEventListener('change',e=>{ const k=e.target.dataset.psf; if(!k || !parentAccess) return;
     state.sfilt={...(state.sfilt||SCHOOL_FILTER0), [k]: k==='weak'?e.target.checked:e.target.value}; redraw(); });
   box.addEventListener('click',e=>{ if(!parentAccess) return;
     const r=e.target.closest('[data-psreset]'); if(r){ state.sfilt={...SCHOOL_FILTER0}; box.querySelectorAll('[data-psf]').forEach(x=>{ if(x.type==='checkbox') x.checked=false; else x.value=SCHOOL_FILTER0[x.dataset.psf]; }); redraw(); return; }
+    const revisionButton=e.target.closest('[data-pseval]');
+    if(revisionButton){
+      const target=schoolEvaluationTarget(), {pseval,psevalOp,psevalChoice}=revisionButton.dataset;
+      const m=target && schoolFromAccount(target.id)?.tasks.find(t=>t.manual?.evaluation===pseval)?.manual;
+      if(!m || m.withdrawn || schoolEvaluationDraft) return;
+      const resolving=psevalOp==='resolve';
+      if(resolving!==!!m.conflicts.length) return;
+      if(resolving && psevalChoice!==m.revision && !m.conflicts.includes(psevalChoice)) return;
+      const p=m.history.find(p=>p.revision===(resolving?psevalChoice:m.revision));
+      if(!p) return;
+      const withdrawn=psevalOp==='withdraw'||!!p.withdrawn;
+      schoolEvaluationNotice=null;
+      schoolEvaluationDraft={child:target.id,author:target.author,evaluation:m.evaluation,revision:crypto.randomUUID(),
+        base:m.revision,resolves:resolving?m.conflicts.slice():null,title:p.title,day:p.day,standard:p.standard,rating:p.rating,
+        focus:!withdrawn && p.focus!=='none',preview:withdrawn||resolving,withdrawn};
+      const form=body.querySelector('#pSchoolEvaluation');
+      form.outerHTML=schoolEvaluationHTML();
+      bindSchoolEvaluation(body);
+      body.querySelector('#pSchoolEvaluation form :is(input[name="title"],button[type="submit"])')?.focus();
+      return;
+    }
     const b=e.target.closest('[data-psdet]'); if(!b) return;
     const i=Number(b.dataset.psdet), open=state.sopen||(state.sopen=[]), row=box.querySelector(`[data-psdetrow="${i}"]`), U=SCHOOL_UI[PL()==='de'?'de':'en'];
     const now=!open.includes(i); if(now) open.push(i); else open.splice(open.indexOf(i),1);
