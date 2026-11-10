@@ -1,6 +1,6 @@
 {
   "name": "bis-school-app-src",
-  "version": "0.151.0-beta",
+  "version": "0.152.0-beta",
   "private": true,
   "type": "module",
   "description": "Quelle der Lern-App und Werkzeug, das sie fuer die Veroeffentlichung verschluesselt",
