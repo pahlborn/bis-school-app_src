@@ -58,6 +58,7 @@ export const KINDDATEN_STELLEN = Object.freeze([
   ['gaps', 'schule'],
   ['grants', 'eltern'], ['grantlog', 'eltern'], ['lastBackup', 'eltern'],
   ['parentLang', 'person'], ['conceptSeen', 'person'], ['glance', 'person'], ['personEvents', 'person'],
+  ['pendingAdmission', 'geraet'], ['pendingEvents', 'geraet'],
   ['bridgeNext', 'geraet'], ['dayOffset', 'geraet'], ['vorRueckspielen', 'geraet'], ['session', 'geraet'], ['sessionPrev', 'geraet'],
   ['adultSession', 'geraet'], ['adultUnlock', 'geraet'], ['pw_', 'geraet', 1], ['parentPin', 'geraet'], ['migr', 'geraet'], ['lastSeen', 'geraet'], ['kidsHere', 'geraet'],
   ['evDevice', 'geraet'], ['schluessel', 'geraet'], ['abgleich', 'geraet'], ['abgleichVerworfen', 'geraet'], ['geraetEntfernen', 'geraet'],
