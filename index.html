@@ -6002,13 +6002,14 @@ function kontoKindPendingId(){ return newDeviceId().replace(/^d_/, 'pt_'); }
 function kontoKindPendingStand(id){
   if(!id) return null;
   const x=kontoKindPending()[id];
-  if(x===true) return {transfer:kontoKindPendingId(), kopiert:false, status:'pending', reason:null};
+  if(x===true) return {transfer:kontoKindPendingId(), kopiert:false, status:'pending', reason:null, anker:null};
   if(!x || typeof x!=='object' || Array.isArray(x)) return null;
   return {
     transfer:typeof x.transfer==='string' && x.transfer ? x.transfer : kontoKindPendingId(),
     kopiert:x.kopiert===true,
     status:x.status==='error'?'error':'pending',
-    reason:typeof x.reason==='string'?x.reason:null
+    reason:typeof x.reason==='string'?x.reason:null,
+    anker:typeof x.anker==='string' && /^p_[0-9A-Za-z]{1,40}$/.test(x.anker) ? x.anker : null
   };
 }
 function kontoKindPendingSpeichern(id, stand){
@@ -6018,7 +6019,8 @@ function kontoKindPendingSpeichern(id, stand){
     transfer:stand.transfer||kontoKindPendingId(),
     ...(stand.kopiert?{kopiert:true}:{}),
     ...(stand.status==='error'?{status:'error'}:{}),
-    ...(stand.reason?{reason:stand.reason}:{})
+    ...(stand.reason?{reason:stand.reason}:{}),
+    ...(stand.anker?{anker:stand.anker}:{})
   };
   else delete p[id];
   if(Object.keys(p).length) store.set('pendingAdmission', p);
@@ -6030,12 +6032,13 @@ function kontoKindPendingHat(id){ return kontoKindPendingOffen(id); }
 function kontoKindPendingSetzen(id, an){
   if(!id) return;
   if(an){
-    const s=kontoKindPendingStand(id);
+    const s=kontoKindPendingStand(id), kind=kontoKonto(id), anker=kind && kind.anker && kind.anker.role==='parent' ? kind.anker.person : (s&&s.anker)||null;
     kontoKindPendingSpeichern(id, {
       transfer:s&&s.transfer||kontoKindPendingId(),
       kopiert:false,
       status:an!==true && an && typeof an==='object' && !Array.isArray(an) && an.status==='error' ? 'error' : 'pending',
-      reason:an!==true && an && typeof an==='object' && !Array.isArray(an) && typeof an.reason==='string' ? an.reason : null
+      reason:an!==true && an && typeof an==='object' && !Array.isArray(an) && typeof an.reason==='string' ? an.reason : null,
+      anker
     });
   }
   else kontoKindPendingSpeichern(id, null);
@@ -6044,8 +6047,7 @@ function kontoKindPendingStatus(id){
   const alt=kontoKindPendingEintrag(id);
   if(!alt || alt.kopiert) return null;
   const kind=kontoKonto(id);
-  if(!kind) return null;
-  const anker=kind.anker && kind.anker.role==='parent' ? kind.anker.person : null;
+  const anker=kind && kind.anker && kind.anker.role==='parent' ? kind.anker.person : alt.anker;
   if(!anker || !kontoOffen.has(anker) || kontoOffen.get(anker).art!=='parent') return {status:alt.status, reason:alt.reason, anker};
   const eltern=kontoKonto(anker);
   if(!eltern) return {status:alt.status, reason:alt.reason, anker};
@@ -6059,9 +6061,8 @@ function kontoKindPendingHinweise(){
   if(!adultUser) return [];
   const de=PL()==='de', akt=accByRef({user:adultUser.user});
   return Object.keys(kontoKindPending()).map(id=>{
-    const kind=kontoKonto(id);
-    if(!akt || (akt.role!=='admin' && !(akt.role==='parent' && kind && kind.anker && kind.anker.role==='parent' && kind.anker.person===akt.id))) return null;
     const s=kontoKindPendingStatus(id); if(!s) return null;
+    if(!akt || (akt.role!=='admin' && !(akt.role==='parent' && s.anker===akt.id))) return null;
     const e=kontoListe().find(x=>x.id===id), name=kontoKindName(id, (e&&e.user)||'') || (e&&e.user) || (de?'dieses Kind':'this child');
     const selbst=!!(akt && akt.role==='parent' && s.anker===akt.id);
     return {id, name, status:s.status, selbst};
@@ -6071,12 +6072,13 @@ async function kontoKindPendingPruefen(){
   const ids=Object.keys(kontoKindPending());
   let geaendert=false;
   for(const id of ids){
-    if(!kontoKonto(id)){
+    const kind=kontoKonto(id), inListe=kontoListe().some(x=>x.id===id);
+    if(!kind && !inListe){
       kontoKindPendingSetzen(id, false);
       geaendert=true;
       continue;
     }
-    if(await kontoKindIstBereit(id)){
+    if(kind && await kontoKindIstBereit(id)){
       const hatte=!!kontoKindPendingStand(id);
       kontoKindPendingUebernehmen(id);
       if(hatte) geaendert=true;
@@ -6096,6 +6098,10 @@ function kontoKindPendingUebernehmen(id){
   const pre='bq2_'+id+'__', pend=evKindPendingLog(pre), regular=evKindLog(pre), liste=pend.liste();
   if(s.kopiert){
     if(liste.length) pend.schreiben([]);
+    if(Array.isArray(evRaw(evPendingKey(pre))) && evRaw(evPendingKey(pre)).length){
+      evKindNeuLaden(pre, {sicht:true});
+      return 0;
+    }
     kontoKindPendingSpeichern(id, null);
     evKindNeuLaden(pre, {sicht:true});
     return liste.length;
@@ -6112,8 +6118,19 @@ function kontoKindPendingUebernehmen(id){
     at:new Date(++at).toISOString()
   }));
   regular.schreiben(mergeLog([regulaer, uebernommen], Date.now()).events);
-  kontoKindPendingSpeichern(id, {transfer:s.transfer, kopiert:true});
+  const rawRegular=evRaw(pre+'events');
+  const ids=new Set((Array.isArray(rawRegular)?rawRegular:[]).map(e=>e&&e.id).filter(Boolean));
+  if(!uebernommen.every(e=>ids.has(e.id))){
+    evKindNeuLaden(pre, {sicht:true});
+    return 0;
+  }
+  kontoKindPendingSpeichern(id, {transfer:s.transfer, kopiert:true, anker:s.anker});
   pend.schreiben([]);
+  if(Array.isArray(evRaw(evPendingKey(pre))) && evRaw(evPendingKey(pre)).length){
+    evKindNeuLaden(pre, {sicht:true});
+    kontoNeuEintrag(); kontoNochmal=true;
+    return uebernommen.length;
+  }
   kontoKindPendingSpeichern(id, null);
   evKindNeuLaden(pre, {sicht:true});
   kontoNeuEintrag(); kontoNochmal=true;

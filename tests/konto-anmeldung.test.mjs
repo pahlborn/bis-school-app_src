@@ -377,6 +377,37 @@ test('2c Gegenproben: zweites Kindgeraet wartet vor der Aufnahme; fremder Eltern
   assert.doesNotMatch(syncZeile(A).text, /kathie\.b|Aufnahme|Admission/, syncZeile(A).text);
 });
 
+test('2c Geschwisterwechsel: Pending-Hinweise des ersten Kindes bleiben auf dem Geraet erhalten', async (t) => {
+  const W = await welt();
+  await W.elternteil('mama.b');
+  const mamaId = W.offen['mama.b'].kennung;
+  const codeK = await W.kind('kathie.b', 'mama.b'), codeL = await W.kind('lena.b', 'mama.b');
+  const A = geraet(t, W.w, { name: 'Familien-iPad' });
+
+  await anmelden(A, 'student', 'kathie.b', codeK);
+  await passwortWaehlen(A);
+  await A.warten(() => A.sitzung() && A.sitzung().user === 'kathie.b', 'Kathie startet sofort');
+  const kathieId = A.sitzung().id;
+
+  A.S.lauf(() => A.S.holen('showLogin')('student'));
+  await anmelden(A, 'student', 'lena.b', codeL);
+  await passwortWaehlen(A);
+  await A.warten(() => A.sitzung() && A.sitzung().user === 'lena.b', 'Lena startet sofort');
+  const lenaId = A.sitzung().id;
+
+  const pending = A.wert("store.get('pendingAdmission', {})");
+  assert.ok(pending[kathieId], 'Kathies Pending-Marke bleibt erhalten');
+  assert.ok(pending[lenaId], 'Lenas Pending-Marke ist da');
+
+  A.S.lauf(() => {
+    A.S.holen('APP_ACCOUNTS').users.push({ id: mamaId, user: 'mama.b', role: 'parent' });
+    A.S.holen('loginDone')({ id: mamaId, user: 'mama.b', role: 'parent' });
+  });
+  await A.warten(() => !!syncZeile(A), 'Statuszeile');
+  assert.match(syncZeile(A).text, /kathie\.b: Aufnahme noch offen\./, syncZeile(A).text);
+  assert.match(syncZeile(A).text, /lena\.b: Aufnahme noch offen\./, syncZeile(A).text);
+});
+
 test('2d Pending-Daten gehen spaeter genau einmal in den regulaeren Ereignispfad ueber - auch nach Neustart', async (t) => {
   const W = await welt();
   await W.elternteil('mama.b');
@@ -412,6 +443,44 @@ test('2d Pending-Daten gehen spaeter genau einmal in den regulaeren Ereignispfad
 
   await B.S.lauf(() => B.S.holen('kontoAbgleich')());
   assert.deepEqual(JSON.parse(B.S.ablage.get(pre + 'events') || '[]').filter((e) => e.type === 'answer').map((e) => e.id), antworten, 'wiederholter Abgleich uebernimmt nicht erneut');
+});
+
+test('2e Pending-Uebernahme: Schreibfehler loescht vorgemerkte Uebungen nicht vorzeitig', async (t) => {
+  const W = await welt();
+  await W.elternteil('mama.b');
+  const code = await W.kind('kathie.b', 'mama.b');
+  const idb = idbNachbau();
+  const A = geraet(t, W.w, { name: 'Kathies iPad', extra: { indexedDB: idb } });
+  await anmelden(A, 'student', 'kathie.b', code);
+  await passwortWaehlen(A);
+  await A.warten(() => A.sitzung() && A.S.zustand().screen === 'home', 'Kind startet lokal');
+  const kid = A.sitzung().id, pre = 'bq2_' + kid + '__';
+  A.S.karteOeffnen(A.S.alleKarten().find((x) => !x.studio));
+  A.S.frageBeantworten(A.S.zustand().round[0]);
+  const antworten = JSON.parse(A.S.ablage.get(pre + 'pendingEvents') || '[]').filter((e) => e.type === 'answer').map((e) => e.id);
+
+  const B = geraet(t, W.w, { name: 'Kathies iPad nach Neustart', speicher: Object.fromEntries(A.S.ablage), extra: { indexedDB: idb } });
+  await B.warten(() => B.sitzung() && B.S.zustand().screen === 'home', 'Kind bleibt nach Neustart lokal angemeldet');
+  await W.aufnehmen('mama.b');
+
+  const origSetItem = B.S.ctx.localStorage.setItem;
+  B.S.ctx.localStorage.setItem = (k, v) => {
+    if (k === pre + 'events') {
+      throw new Error('simulierter Schreibfehler');
+    }
+    return origSetItem(k, v);
+  };
+
+  await B.S.lauf(() => B.S.holen('kontoAbgleich')());
+  assert.deepEqual(JSON.parse(B.S.ablage.get(pre + 'events') || '[]').filter((e) => e.type === 'answer').map((e) => e.id), [], 'regulaeres Log bleibt bei Schreibfehler leer');
+  assert.deepEqual(JSON.parse(B.S.ablage.get(pre + 'pendingEvents') || '[]').filter((e) => e.type === 'answer').map((e) => e.id), antworten, 'Pending-Log bleibt erhalten');
+  assert.ok(B.S.lauf(() => !!B.S.holen('store').get('pendingAdmission', {})[kid]), 'Pending-Marke bleibt erhalten');
+
+  B.S.ctx.localStorage.setItem = origSetItem;
+  await B.S.lauf(() => B.S.holen('kontoAbgleich')());
+  assert.deepEqual(JSON.parse(B.S.ablage.get(pre + 'events') || '[]').filter((e) => e.type === 'answer').map((e) => e.id), antworten, 'spaeterer Abgleich uebernimmt die Uebungen regulaer');
+  assert.equal(B.S.ablage.get(pre + 'pendingEvents'), undefined, 'Pending-Log ist danach leer');
+  assert.equal(B.S.lauf(() => B.S.holen('store').get('pendingAdmission', {})[kid]), undefined, 'Pending-Marke ist danach weg');
 });
 
 test('3 Passwort vergessen (Erwachsene): Wiederherstellungscode -> neues Passwort -> neuer Code; alte gelten nicht mehr', async (t) => {

@@ -331,7 +331,7 @@ export async function einladungZurueckziehen({ zugang, ablage, konto, id, now } 
   return { zurueckgezogen: true };
 }
 
-/* the directory entry the invited person wrote with this invitation, if its proof is right -> { pub, stand, anker? } or a reason */
+/* the directory entry the invited person wrote with this invitation, if its proof is right -> { pub, stand } or a reason */
 async function eldEingeloest(zugang, o) {
   if (kontoName(o.name) !== o.name) return { grund: 'fingerabdruck' };
   const lookup = await kontoLookup(o.name);
@@ -342,10 +342,7 @@ async function eldEingeloest(zugang, o) {
     if (!eldObj(e) || e.kennung !== o.person || !(await kontoBeweisPruefen(o.check, e))) return { grund: 'fingerabdruck' };
     const s = await kontoStand({ zugang, anmeldename: o.name });
     if (!s || s.kennung !== o.person || !eldGleichePub(s.pub, e.pub)) return { grund: 'fingerabdruck' };
-    const anker = o.art === 'child' && eldObj(e.anker) && eldPid(e.anker.kennung) && eldObj(e.anker.pub)
-      ? { person: e.anker.kennung, pub: { ...e.anker.pub } }
-      : undefined;
-    return { pub: e.pub, stand: 1, ...(anker ? { anker } : {}) };
+    return { pub: e.pub, stand: 1 };
   }
   // new password: the entry that counts now (konto) must be the one made with this invitation
   const s = await kontoStand({ zugang, anmeldename: o.name });
@@ -387,7 +384,7 @@ export async function einladungenPruefen({ zugang, ablage, konto, now } = {}) {
         // a new child: its anchor is me; new password: the anchor stays (the family knows it)
         const k = v.kinder.find((c) => c.id === o.person);
         if (o.art === 'reset' && !k) { out.warnungen.push({ id: o.invite, art: o.art, person: o.person, grund: 'kind-unbekannt' }); continue; }
-        const a = o.art === 'reset' ? k.anker : (r.anker || { person: konto.kennung, pub: konto.pub });
+        const a = o.art === 'reset' ? k.anker : { person: konto.kennung, pub: konto.pub };
         eldSchreiben(ablage, fam, konto, 'family_set', { person: o.person, role: 'child', pub: r.pub, stand: r.stand, name: o.name, anchor: a.person, anchorPub: { ...a.pub } }, now);
         if (o.art === 'child' && o.display) eldSchreiben(ablage, { kind: o.person }, konto, 'profile_set', { field: 'name', value: o.display }, now);
       }
