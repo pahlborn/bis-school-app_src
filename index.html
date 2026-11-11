@@ -927,7 +927,7 @@ function evKindSichtLog(pre){
 }
 function evKindZielLog(pre){
   const id=evKindId(pre);
-  if(!kontoKindPendingOffen(id)) return evKindLog(pre);
+  if(!kontoKindPendingOffen(id) || (typeof parentAccess!=='undefined' && parentAccess) || evAktivesKindId()!==id) return evKindLog(pre);
   return {
     liste:()=>anmKindEreignisseVereinen(evKindLog(pre).liste(), evKindPendingLog(pre).liste(), Date.now()),
     schreiben:l=>{
