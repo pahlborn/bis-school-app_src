@@ -279,7 +279,7 @@ test('correction drafts preserve the current focus, a synced confirmation replac
   let detail = await showDetails(P.page, roundingTitle);
   await detail.getByRole('button', { name: 'Bewertung korrigieren', exact: true }).click();
   assert.equal(await form.getByLabel('Titel').inputValue(), roundingTitle);
-  assert.equal(await form.getByLabel('Übungsmuster').inputValue(), 'M-N3');
+  assert.equal(await form.getByLabel('Übungsmuster', { exact: true }).inputValue(), 'M-N3');
   await form.getByLabel('Titel').fill(correctedTitle);
   await form.getByRole('button', { name: 'Vorschau anzeigen' }).click();
   await form.getByRole('button', { name: 'Korrektur bestätigen', exact: true }).waitFor();
