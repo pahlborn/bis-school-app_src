@@ -143,14 +143,19 @@ async function kindAnlegen(P, vorname, erwarteterName) {
   await P.wartenAuf('#kQr');
   return { ...qrLink(P, erwarteterName), name: erwarteterName };
 }
-/* das Kind meldet sich mit dem QR-Link an, waehlt ein Passwort und wartet auf die Eltern -> Passwort */
+/* das Kind meldet sich mit dem QR-Link an, waehlt ein Passwort und wird spaeter regulär aufgenommen -> Passwort */
 async function kindStart(K, P) {
   const pw = await registrieren(K);
-  await K.wartenAuf('#kidWait');
-  assert.equal(K.sitzung(), null, 'noch nicht angemeldet: wartet');
-  await P.sync();                                                       // = Takt des QR-Codes auf dem Elterngeraet
-  K.klick('#kidWaitAgain');
-  await K.wartenAuf('#welcomeGo'); K.klick('#welcomeGo');
+  await K.warten(() => !!K.sitzung() || K.da('#kidWait'), 'Kind startet lokal oder wartet');
+  await P.sync();
+  if (K.da('#kidWait')) {
+    assert.equal(K.sitzung(), null, 'alter Wartepfad: noch nicht angemeldet');
+    K.klick('#kidWaitAgain');
+    await K.wartenAuf('#welcomeGo'); K.klick('#welcomeGo');
+  } else {
+    assert.equal(K.da('#kidWait'), false, 'normaler Erststart ohne Almost ready');
+    await K.sync();
+  }
   return pw;
 }
 function ueben(K, n = 1) {
@@ -245,11 +250,18 @@ test('1 Familie: Kind anlegen (Start-QR), Kind wartet bis zur Aufnahme; zweiter 
   const K2 = geraet(t, W.w, { name: 'Kathies neues iPad' });
   K2.klick('#roleStudent'); K2.tippe('#loginUser', 'kathie'); K2.tippe('#loginPw', nq.code); K2.absenden('#loginGo');
   const pwK2 = await passwortWaehlen(K2);
-  await K2.wartenAuf('#kidWait');
+  await K2.warten(() => K2.sitzung(), 'neues Passwort gespeichert und Kind angemeldet');
   await P.sync();
   assert.match(P.im('#kQrStatus').textContent, /✓ Kathie hat ein neues Passwort\./);
-  K2.klick('#kidWaitAgain');
-  await K2.wartenAuf('#welcomeGo'); K2.klick('#welcomeGo');
+  await K2.warten(() => K2.da('#kidWait') || K2.da('#welcomeGo') || K2.sitzung(), 'neues Passwort: weiter');
+  if (K2.da('#kidWait')) {
+    K2.klick('#kidWaitAgain');
+    await K2.wartenAuf('#welcomeGo'); K2.klick('#welcomeGo');
+  } else if (K2.da('#welcomeGo')) {
+    K2.klick('#welcomeGo');
+  } else {
+    await K2.sync();
+  }
   assert.equal(K2.sitzung().id, K.sitzung().id, 'dieselbe Kennung');
   assert.deepEqual(K2.antworten(K2.sitzung().id), antwortenK, 'Zaehlprobe: dieselben 3 Antworten, nichts verloren');
   await assert.rejects(kontoAnmelden({ zugang: W.z, anmeldename: 'kathie', passwort: pwK }), (e) => e.code === 'anmeldung', 'altes Passwort gilt nicht mehr');

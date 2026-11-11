@@ -44,6 +44,12 @@ import { qrSvg } from './qrcode.mjs';
 import { qrLesen, QRL_HINWEIS } from './qrlesen.mjs';
 import { kindDatenExport, kindDatenLoeschen, kontoDatenLoeschen } from './kinddaten.mjs';
 import { deriveSchool } from './ableitung.mjs';
+import { mergeLog } from './ereignisse.mjs';
+
+/** Merge the regular child log with the temporary first-start events. */
+export function anmKindEreignisseVereinen(regulaer, vorgemerkt, now) {
+  return mergeLog([regulaer, vorgemerkt], now).events;
+}
 
 /* a start code as module konto issues it: 16 random bytes, base64url */
 export const ANM_STARTCODE = /^[A-Za-z0-9_-]{22}$/;
@@ -52,6 +58,8 @@ export const ANM_EINTRAG = Object.freeze({ de: ' (Wiederherstellungscode)', en: 
 
 const anmFp = (t) => (typeof t === 'string' && /^[a-z]+(-[a-z]+){5}$/i.test(t) ? t : null);
 const anmPid = (x) => typeof x === 'string' && /^p_[0-9A-Za-z]{1,40}$/.test(x);
+const anmPub = (x) => x && typeof x === 'object' && typeof x.ecdh === 'string' && typeof x.ecdsa === 'string';
+const anmGleichePub = (a, b) => anmPub(a) && anmPub(b) && a.ecdh === b.ecdh && a.ecdsa === b.ecdsa;
 const anmEsc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 /* is this typed text a start code (and not a password)? A start code is random; the form of the app's password suggestion
@@ -375,9 +383,16 @@ export const ANM_QR_LESER = QRL_HINWEIS;
 export async function anmKindBereit({ ablage, zugang, konto, now }) {
   if (!konto || konto.art !== 'child') return true;
   const k = verbindungen({ ablage, konto, now }).kinder.find((c) => c.id === konto.kennung);
-  // After a restart the key copy may already know the child's anchor before the local connection logs are back.
-  const anker = k && k.anker ? k.anker : (konto.anker && konto.anker.role === 'parent' && konto.anker.pub ? konto.anker : null);
+  const logAnker = k && k.anker && k.anker.role === 'parent' && anmPid(k.anker.person) && anmPub(k.anker.pub) ? k.anker : null;
+  const hatKontoAnker = Object.prototype.hasOwnProperty.call(konto, 'anker');
+  const kontoAnker = konto.anker && konto.anker.role === 'parent' && anmPid(konto.anker.person) && anmPub(konto.anker.pub) ? konto.anker : null;
+  // An explicit anchor on the account stays the bootstrap source; a remembered local anchor must still describe the same
+  // parent, and only the remembered anchor (if present) may contradict that bootstrap source.
+  const anker = hatKontoAnker ? kontoAnker : logAnker;
   if (!anker) return false;
+  if (logAnker && logAnker.person !== anker.person) return false;
+  const gleicherAnker = !!(logAnker && logAnker.person === anker.person && anmGleichePub(logAnker.pub, anker.pub));
+  const ankerVertraut = hatKontoAnker ? (!logAnker || gleicherAnker) : !!logAnker;
   const area = bereichName('kind:lern', konto.kennung);
   let st = null;
   try { st = JSON.parse(ablage.getItem(GERAETEABGLEICH_SPEICHER.staende) || '{}')[area]; } catch (e) { st = null; }
@@ -385,7 +400,7 @@ export async function anmKindBereit({ ablage, zugang, konto, now }) {
   try {
     const zul = await zulassungAus(log, { area, anker, now });
     const s = await schluesselLesen(zugang, area, { ich: konto.kennung, meineSchluessel: konto.schluessel, mitglieder: aktiveMitglieder(zul) });
-    return !!(s.aktuell && s.keys.has(s.aktuell));
+    return !!(s.aktuell && s.keys.has(s.aktuell)) || !!(ankerVertraut && !s.aktuell && s.lesbar.size);
   } catch (err) {
     if (err && typeof err.code === 'string') return false;
     throw err;

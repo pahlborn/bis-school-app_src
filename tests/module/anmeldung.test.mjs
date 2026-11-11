@@ -125,7 +125,7 @@ test('anmAdminElternEinladen: Admin stellt direkt einen Eltern-Startcode aus; de
 
 test('anmKindBereit: erst wenn ein Elterngeraet das Kind aufgenommen hat (aktueller Schluessel des Lernbereichs); Erwachsene immer', async () => {
   const { lokalerSpeicher } = await import('../../src/module/speicher.mjs');
-  const { startcodeAusstellen, ersteAnmeldung } = await import('../../src/module/konto.mjs');
+  const { startcodeAusstellen, ersteAnmeldung, anmelden: kontoAnmelden, schluesselErneuern } = await import('../../src/module/konto.mjs');
   const { anmKindBereit, anmKindAnlegen, anmAbgleich } = await import('../../src/module/anmeldung.mjs');
   const w = lokalerSpeicher(), now = () => Date.now();
   const ablage = (d, init = {}) => {
@@ -145,12 +145,27 @@ test('anmKindBereit: erst wenn ein Elterngeraet das Kind aufgenommen hat (aktuel
   const aK = ablage('d_K');
   await sync(aK, 'd_K', K);
   assert.equal(await anmKindBereit({ ablage: aK, zugang: w.geraet('d_K'), konto: K, now: now() }), false, 'vor der Aufnahme: wartet');
-  await sync(aP, 'd_P', P);
-  assert.equal(await anmKindBereit({ ablage: aK, zugang: w.geraet('d_K'), konto: K, now: now() }), true, 'nach der Aufnahme: darf ueben');
-  const aK2 = ablage('d_K', { bq_abgleich: aK.dump().bq_abgleich });
-  assert.equal(await anmKindBereit({ ablage: aK2, zugang: w.geraet('d_K'), konto: K, now: now() }), true, 'spaeterer Start mit gemerktem Anker: kein erneutes Warten');
+
+  const K2 = await kontoAnmelden({ zugang: w.geraet('d_K2'), anmeldename: 'kathie', passwort: 'Puffin-Jam-Lake-9876', runden: 1000 });
+  const aK2 = ablage('d_K2');
+  await sync(aK2, 'd_K2', K2);
+  const bereich = 'kind:lern:' + K.kennung;
+  assert.equal(await anmKindBereit({ ablage: aK2, zugang: w.geraet('d_K2'), konto: K2, now: now() }), false, 'zweites Kindgeraet vor der Aufnahme: noch nicht bereit');
+  assert.deepEqual((await w.geraet('d_K2').list(bereich)).kennungen, [], 'vor der Aufnahme kein schreibender Stand im Lernbereich');
+
+  const Pneu = await schluesselErneuern({ zugang: w.geraet('d_P'), anmeldename: 'peter', passwort: 'Otter-Cake-Moss-1234', neuesPasswort: 'Otter-New-Key-8844', runden: 1000 });
+  await sync(aP, 'd_P', Pneu);
+  await sync(aK, 'd_K', K);
+  assert.equal(await anmKindBereit({ ablage: aK, zugang: w.geraet('d_K'), konto: K, now: now() }), true, 'Aufnahme bleibt auch nach Schluesselwechsel des Elterngeraets kompatibel');
+  const aKRestart = ablage('d_K', { bq_abgleich: aK.dump().bq_abgleich });
+  assert.equal(await anmKindBereit({ ablage: aKRestart, zugang: w.geraet('d_K'), konto: K, now: now() }), true, 'spaeterer Start mit gemerktem Anker: kein erneutes Warten');
   const off = w.geraet('d_K'); off.offline();
   assert.equal(await anmKindBereit({ ablage: aK, zugang: off, konto: K, now: now() }), false, 'Speicher weg: (noch) nicht');
+
+  const ohneAnker = { ...K, anker: null };
+  assert.equal(await anmKindBereit({ ablage: aK, zugang: w.geraet('d_K'), konto: ohneAnker, now: now() }), false, 'fehlender Familienbezug gilt nie als regulaer');
+  const kaputterAnker = { ...K, anker: { person: K.anker.person, role: 'parent', pub: admin.pub } };
+  assert.equal(await anmKindBereit({ ablage: aK, zugang: w.geraet('d_K'), konto: kaputterAnker, now: now() }), false, 'kaputter Familienbezug gilt nie als regulaer');
 });
 
 test('Abgleich in der App: Zahl des nicht Uebernommenen; Geraet entfernt? (nur die eigene Kennung); neu beginnen; fremder Speicher', async () => {

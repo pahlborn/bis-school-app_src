@@ -242,11 +242,14 @@ async function kindAnmeldenSandbox(S, name, code, { bisPasswort = false } = {}) 
   await warten(() => im('#setPwForm'), '#setPwForm');
   klick('#pwUse'); absenden('#setPwGo');
   if (bisPasswort) { await warten(() => { const m = im('#setPwMsg'); return m && m.textContent && !/moment/i.test(m.textContent); }, 'Meldung'); return im('#setPwMsg').textContent; }
-  // das Kind wartet, bis das Geraet des Elternteils es aufgenommen hat (Konzept 10.3)
-  await warten(() => im('#kidWait') || im('#welcomeGo'), '#kidWait');
-  if (S.lauf(() => !!im('#kidWait'))) { await ELTERN.sync(); klick('#kidWaitAgain'); }
-  await warten(() => im('#welcomeGo'), '#welcomeGo');
-  klick('#welcomeGo');
+  await warten(() => im('#kidWait') || im('#welcomeGo') || !!JSON.parse(S.ablage.get('bqt_session') || 'null'), '#kidWait oder Startseite');
+  await ELTERN.sync();
+  if (S.lauf(() => !!im('#kidWait'))) {
+    klick('#kidWaitAgain');
+    await warten(() => im('#welcomeGo'), '#welcomeGo');
+    klick('#welcomeGo');
+  } else if (S.lauf(() => !!im('#welcomeGo'))) klick('#welcomeGo');
+  else await S.lauf(() => S.holen('kontoAbgleich')());
   return null;
 }
 
@@ -366,10 +369,13 @@ test('Browser: die gebaute Testinstanz startet mit der Anmeldung, Zugang einmal 
     await page.waitForSelector('#setPwForm', { timeout: 30000 });
     await page.locator('#pwUse').click();
     await page.locator('#setPwGo').click();
-    // das Kind wartet, bis das Geraet des Elternteils es aufgenommen hat; danach geht es von selbst weiter (Takt der App)
-    await page.waitForSelector('#kidWait', { timeout: 30000 });
+    await page.waitForFunction(() => document.querySelector('#kidWait') || document.querySelector('#home h1'), { timeout: 30000 });
     await ELTERN.sync();
-    await page.locator('#welcomeGo').click({ timeout: 30000 });
+    if (await page.locator('#kidWait').count()) await page.locator('#welcomeGo').click({ timeout: 30000 });
+    else {
+      await page.waitForTimeout(50);
+      if (!(await page.locator('#home h1').count())) await page.locator('#welcomeGo').click({ timeout: 30000 });
+    }
     await page.waitForSelector('#home h1');
     await page.locator('#subjects button.subject').first().click();
     await page.waitForSelector('#subjectBody button.world');
