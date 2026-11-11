@@ -41,7 +41,95 @@ enum ClaudeKey {
         query[kSecMatchLimit as String] = kSecMatchLimitOne
         var result: CFTypeRef?
         guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-              let payload: [String: Any] = [
+              let data = result as? Data, let key = String(data: data, encoding: .utf8) else {
+            throw MVPError.message("Hinterlege zuerst den Anthropic-API-Schlüssel in Big Quest.")
+        }
+        return key
+    }
+}
+
+private final class ClaudeNoRedirect: NSObject, URLSessionTaskDelegate {
+    func urlSession(
+        _ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
+        newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void
+    ) {
+        completionHandler(nil)
+    }
+}
+
+enum ClaudeClient {
+    private struct Response: Decodable {
+        struct Content: Decodable {
+            let type: String
+            let text: String?
+        }
+        let stop_reason: String?
+        let content: [Content]
+    }
+
+    struct Evaluation: Codable {
+        struct Criterion: Codable {
+            var criterion: String
+            var rating: String
+            var evidence: String
+        }
+        var title: String
+        var date: String
+        var goal: String
+        var instructions: String
+        var feedback: String
+        var criteria: [Criterion]
+        var missing: [String]
+    }
+
+    static func extractEvaluation(source: String, key: String) async throws -> Evaluation {
+        guard !source.isEmpty, source.utf8.count <= 48000 else {
+            throw MVPError.message("Bitte den erfassten Evaluationstext prüfen.")
+        }
+        let string: [String: Any] = ["type": "string"]
+        let schema: [String: Any] = [
+            "type": "object", "additionalProperties": false,
+            "required": ["title", "date", "goal", "instructions", "feedback", "criteria", "missing"],
+            "properties": [
+                "title": string, "date": string, "goal": string, "instructions": string, "feedback": string,
+                "criteria": ["type": "array", "items": [
+                    "type": "object", "additionalProperties": false,
+                    "required": ["criterion", "rating", "evidence"],
+                    "properties": ["criterion": string, "rating": string, "evidence": string]
+                ]],
+                "missing": ["type": "array", "items": string]
+            ]
+        ]
+        let raw = try await respond(source, key: key, schema: schema)
+        guard let result = try? JSONDecoder().decode(Evaluation.self, from: Data(raw.utf8)),
+              result.criteria.count <= 60, result.missing.count <= 20 else {
+            throw MVPError.message("Claude lieferte kein gültiges Evaluationsformular.")
+        }
+        let normalized = source.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.joined(separator: " ")
+        for row in result.criteria {
+            let evidence = row.evidence.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.joined(separator: " ")
+            let criterion = row.criterion.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.joined(separator: " ")
+            guard !criterion.isEmpty, !evidence.isEmpty, normalized.contains(evidence), evidence.contains(criterion),
+                  ["", "RS", "C", "M", "E"].contains(row.rating) else {
+                throw MVPError.message("Eine Kriterienzuordnung ist durch den Quelltext nicht belegt. Bitte die Quelle prüfen.")
+            }
+            if !row.rating.isEmpty {
+                let words = evidence.components(separatedBy: CharacterSet.alphanumerics.inverted)
+                guard words.contains(row.rating) else {
+                    throw MVPError.message("Eine Einstufung ist im Quellenbeleg nicht enthalten.")
+                }
+            }
+        }
+        return result
+    }
+
+    private static func respond(_ source: String, key: String, schema: [String: Any]) async throws -> String {
+        var request = URLRequest(url: URL(string: "https://api.anthropic.com/v1/messages")!)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(key, forHTTPHeaderField: "x-api-key")
+        request.setValue("2026-10-21", forHTTPHeaderField: "anthropic-version")
+        let payload: [String: Any] = [
             "model": "claude-haiku-5-5", "max_tokens": 8000,
             "thinking": ["type": "disabled"],
             "system": """
