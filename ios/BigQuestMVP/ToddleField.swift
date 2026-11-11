@@ -2,116 +2,60 @@ import Foundation
 import WebKit
 
 enum ToddleField {
-    private static let host = "web.toddleapp.com"
-
-    struct AssessmentRow {
-        let criterion: String
-        let rating: String
-        let transfer = UUID().uuidString.lowercased()
-    }
-
-    // Read only the rendered assessment table, never selection, account data or hidden state.
+    // Captures rendered text only. No table semantics, account state or network endpoints.
     static let evaluationScript = #"""
     (() => {
       if (location.origin !== 'https://web.toddleapp.com') return { error: 'origin' };
-      const rendered = el => {
-        if (!el || !el.getClientRects().length || el.closest('[hidden], [aria-hidden="true"], [inert]')) return false;
-        for (let p = el; p; p = p.parentElement) {
-          const s = getComputedStyle(p);
-          if (s.display === 'none' || s.visibility !== 'visible' || Number(s.opacity) === 0) return false;
+      const rendered = element => {
+        if (!element || !element.getClientRects().length) return false;
+        for (let parent = element; parent; parent = parent.parentElement) {
+          const style = getComputedStyle(parent);
+          if (parent.hidden || parent.hasAttribute('inert') || style.display === 'none' ||
+              style.visibility !== 'visible' || Number(style.opacity) === 0) return false;
         }
         return true;
       };
-      const selector = 'table, [role="table"], [role="grid"]';
-      // Structural counts only. Never return source URLs, HTML, titles or account text.
-      const count = (scope, query) => Math.min(999, [...scope.querySelectorAll(query)].filter(rendered).length);
-      const diagnostic = {
-        tables: count(document, selector),
-        dialogs: count(document, '[role="dialog"], dialog[open]'),
-        frames: count(document, 'iframe, frame'),
-        embedded: count(document, 'embed, object'),
-        canvases: count(document, 'canvas'),
-        rows: count(document, 'tr, [role="row"]'),
-        cells: count(document, 'td, th, [role="cell"], [role="gridcell"], [role="columnheader"]'),
-        candidates: 0, skipped: 0, accepted: 0
-      };
-      const fail = stage => ({ error: stage, diagnostic });
-      const active = [...document.querySelectorAll('[role="dialog"], dialog[open]')].filter(rendered);
-      if (active.length > 1) return fail('dialogs');
-      const scope = active[0] || document;
-      const tables = [...scope.querySelectorAll(selector)].filter(table => rendered(table) &&
-        [...table.querySelectorAll('th, td, [role="columnheader"], [role="cell"], [role="gridcell"]')]
-          .some(cell => rendered(cell) && /^Assessment(?: Criteria)?$/i.test(cell.innerText.trim())));
-      diagnostic.candidates = Math.min(999, tables.length);
-      if (tables.length !== 1) return fail(tables.length ? 'ambiguous' : 'header');
-      const table = tables[0];
-      const rows = [];
-      let skipped = 0;
-      for (const tr of table.querySelectorAll('tr, [role="row"]')) {
-        if (tr.closest(selector) !== table || !rendered(tr)) continue;
-        const cells = [...tr.children].filter(c => c.matches('td, th, [role="cell"], [role="gridcell"], [role="rowheader"], [role="columnheader"]'));
-        if (cells.some(c => /^Assessment(?: Criteria)?$/i.test(c.innerText.trim()))) continue;
-        if (cells.length !== 2 || cells.some(c => !rendered(c) || [...c.querySelectorAll('*')].some(el => !rendered(el)) || c.querySelector('input, textarea, select, [contenteditable="true"]'))) {
-          skipped++; continue;
-        }
-        const criterion = cells[0].innerText.trim();
-        const rating = cells[1].innerText.trim();
-        if (rating === '-' || rating === '–' || rating === '—') { skipped++; continue; }
-        if (!criterion || new TextEncoder().encode(criterion).length > 800 || !['RS','C','M','E'].includes(rating)) {
-          skipped++; continue;
-        }
-        rows.push({criterion, rating});
+      const dialogs = [...document.querySelectorAll('[role="dialog"], dialog[open]')].filter(rendered);
+      // Nested dialogs are normal. A hit test identifies the foreground view.
+      const hits = document.elementsFromPoint(innerWidth / 2, innerHeight / 2);
+      const front = dialogs.find(dialog => hits[0] && dialog.contains(hits[0]));
+      const roots = dialogs.filter(dialog => !dialogs.some(other => other !== dialog && other.contains(dialog)));
+      let scope;
+      if (front) scope = roots.find(root => root.contains(front)) || front;
+      else if (roots.length === 1) scope = roots[0];
+      else if (!roots.length) scope = document.querySelector('main, [role="main"]');
+      if (!scope || !rendered(scope)) return {error: 'scope'};
+      const lines = [];
+      const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        const parent = node.parentElement;
+        if (!parent || parent.closest('script, style, noscript, input, textarea, select, button, nav, [role="navigation"], [contenteditable="true"]') || !rendered(parent)) continue;
+        if (parent.closest('[aria-hidden="true"]')) continue;
+        const text = node.textContent.replace(/\s+/g, ' ').trim();
+        if (text) lines.push(text);
       }
-      diagnostic.skipped = Math.min(999, skipped);
-      diagnostic.accepted = Math.min(999, rows.length);
-      if (!rows.length || rows.length > 60) return fail('rows');
-      return { rows, skipped };
+      const text = lines.join('\n');
+      if (!text || !/Learning intentions|Learning experience description|Assessment|Evaluation/i.test(text)) return {error: 'content'};
+      if (new TextEncoder().encode(text).length > 48000) return {error: 'size'};
+      return {text};
     })()
     """#
 
-    struct Assessment {
-        let rows: [AssessmentRow]
-        let skipped: Int
-    }
-
     @MainActor
-    static func readAssessment(from webView: WKWebView) async throws -> Assessment {
-        let url = webView.url
-        guard url?.scheme == "https", url?.host == host else {
-            throw MVPError.message("Öffne zuerst die gewünschte Evaluation in Toddle.")
+    static func readSource(from view: WKWebView) async throws -> String {
+        let url = view.url
+        guard url?.scheme == "https", url?.host == "web.toddleapp.com" else {
+            throw MVPError.message("Öffne die gewünschte Evaluation in Toddle.")
         }
-        let result = try await webView.evaluateJavaScript(evaluationScript)
-        guard webView.url == url else {
-            throw MVPError.message("Die Seite hat sich geändert. Bitte die Evaluation erneut lesen.")
+        let result = try await view.evaluateJavaScript(evaluationScript)
+        guard view.url == url else {
+            throw MVPError.message("Die Seite hat sich während des Lesens geändert. Bitte erneut lesen.")
         }
-        guard let data = result as? [String: Any], let raw = data["rows"] as? [[String: String]],
-              !raw.isEmpty, raw.count <= 60, let skipped = data["skipped"] as? Int else {
-            let data = result as? [String: Any]
-            let stage = data?["error"] as? String ?? "format"
-            let reasons = [
-                "dialogs": "Mehrere überlagerte Ansichten erkannt.",
-                "header": "Die erwartete Tabellenüberschrift wurde nicht erkannt.",
-                "ambiguous": "Mehrere mögliche Bewertungstabellen erkannt.",
-                "rows": "Die Tabellenzeilen konnten nicht eindeutig zugeordnet werden.",
-                "origin": "Die Ansicht liegt nicht auf der erwarteten Toddle-Adresse."
-            ]
-            let counts = data?["diagnostic"] as? [String: Any] ?? [:]
-            let keys = ["tables", "dialogs", "frames", "embedded", "canvases", "rows", "cells", "candidates", "skipped", "accepted"]
-            let code = keys.map { key in
-                let number = counts[key] as? Int ?? 0
-                return "\(key)=\(min(999, max(0, number)))"
-            }.joined(separator: ", ")
-            throw MVPError.message((reasons[stage] ?? "Das Leseergebnis konnte nicht verarbeitet werden.")
-                + " Es wurde nichts übernommen.\nDiagnose (nur Strukturzahlen): " + code)
+        guard let data = result as? [String: Any], let text = data["text"] as? String,
+              !text.isEmpty, text.utf8.count <= 48000 else {
+            throw MVPError.message("Der Text der Evaluation konnte nicht erfasst werden. Bitte die geöffnete Ansicht prüfen.")
         }
-        let rows = try raw.map { entry -> AssessmentRow in
-            guard let criterion = entry["criterion"], !criterion.isEmpty, criterion.utf8.count <= 800,
-                  let rating = entry["rating"], ["RS", "C", "M", "E"].contains(rating) else {
-                throw MVPError.message("Die Bewertungstabelle konnte nicht vollständig gelesen werden.")
-            }
-            return AssessmentRow(criterion: criterion, rating: rating)
-        }
-        return Assessment(rows: rows, skipped: skipped)
+        return text
     }
-
 }

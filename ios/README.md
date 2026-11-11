@@ -1,42 +1,20 @@
-# Big Quest · iPad-MVP mit Toddle und Claude
+# Big Quest iPad – Evaluation ins bewährte Formular
 
-Das Xcode-Projekt öffnet die bestehende Big-Quest-Testseite in der App. Über **Toddle-Feld prüfen** öffnet sich Toddle mit eigener Browsersitzung. Der native Claude-Aufruf verwendet den Schlüssel der Familie im iPad-Schlüsselbund.
+Test 06 liest den gerenderten Text der geöffneten Toddle-Evaluation ohne Tabellenannahmen oder Markierung. Verschachtelte Dialoge werden unterstützt. Das erfasste Dokument öffnet das lokale Formular mit der Gestaltung und den Feldern des ursprünglichen Übergabetests: Titel, Datum, Lernziel, Arbeitsanweisung, Lehrkraft-Rückmeldung. Die ursprüngliche einzelne M-N3-Einstufung ist zu einer Liste von Kriterien und Originalbewertungen erweitert, damit auch Englisch und mehrteilige Evaluationen erfasst werden können.
 
-## Auf dem iPad abnehmen
+1. **Evaluation aus Toddle** öffnen und die gewünschte Evaluation anzeigen.
+2. **Evaluation ins Formular übernehmen** antippen.
+3. Erfassten Text auf Vollständigkeit und persönliche Angaben prüfen. Der Text kann vor dem Senden korrigiert werden.
+4. **Mit Claude ins Formular übertragen** sendet genau den angezeigten Text über den bereits erprobten nativen API-Zugang. Der Schlüssel bleibt im iPad-Schlüsselbund und gelangt nie in JavaScript.
+5. Formularangaben und Quellenbelege prüfen, gegebenenfalls korrigieren und **Vorschau anzeigen** wählen.
+6. **Übergabe bestätigen** bestätigt nur die geöffnete lokale Vorschau.
 
-1. `ios/BigQuestMVP.xcodeproj` in Xcode öffnen, das Entwicklungsteam im Target **BigQuestMVP** auswählen und das Projekt auf einem iPad starten.
-2. In Big Quest **Claude-Schlüssel** öffnen und den eigenen Anthropic-API-Schlüssel hinterlegen.
-3. **Toddle-Feld prüfen** öffnen, **Family account** wählen und sich regulär anmelden. Die echte Evaluation öffnen und genau einen sichtbaren Feldwert ohne personenbezogene Angaben markieren, etwa den Evaluationstitel.
-4. **Markierten Wert aus Toddle lesen** tippen. Den angezeigten Wert mit Toddle vergleichen und **Diesen Wert an Claude senden** bestätigen.
-5. Bestanden ist der Ablauf erst, wenn der angezeigte Wert aus Toddle stammt und Claude ihn unverändert zurückgibt. Für den Nachweis genügen iPadOS-Version, Build-Commit, sichtbarer Feldtyp und Ergebnis. Schlüssel, Kontodaten und personenbezogene Inhalte gehören nicht ins Protokoll.
+Claude muss fehlende Angaben offenlassen und für Kriterien/Bewertungen wörtliche Quellenbelege zurückgeben. Die App prüft, dass der Beleg im erfassten Text vorkommt und Kriterium und gegebenenfalls Bewertung enthält. Diese Belegprüfung ersetzt die Elternprüfung der tatsächlichen Zuordnung nicht. Bei API-Fehlern bleibt der Quelltext erhalten. Änderungen an Quelle oder Formular verwerfen die davon abhängige Vorschau.
 
-Die App verwendet für den Aufruf ausschließlich den markierten Wert. Der MVP speichert keine Bewertung und verändert keine Aufgaben. Der Anthropic-Schlüssel wird lokal im Schlüsselbund hinterlegt. Eine Toddle-Anmeldung per SSO kann in einer eingebetteten Webansicht anders ablaufen als in Safari und gehört zum Gerätetest.
+Die Erfassung liest DOM-Text der geöffneten Ansicht. Bilder, nachgeladene oder ausgeblendete Inhalte können fehlen. Eine vollständige echte Toddle-Evaluation ist erst nach Geräteabnahme nachgewiesen. Der DOM-Test verwendet ausdrücklich synthetische Seiten und führt den tatsächlichen nativen Erfassungscode aus. Der Formular-Test verwendet eine gekennzeichnete Testantwort für die mechanische Übertragung, keinen als echt behaupteten Claude-Aufruf.
 
-## Buildprüfung im Simulator
+Die Übungserzeugung und gemeinsame dauerhafte Speicherung der mehrteiligen Evaluation sind in diesem iPad-Stand noch nicht angeschlossen. Die bestehende Big-Quest-Web-App und ihre Datenpfade werden hier nicht verändert. Kein Merge oder Deployment durch diesen Test.
 
-```sh
-xcodebuild -project ios/BigQuestMVP.xcodeproj -scheme BigQuestMVP \
-  -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
-```
+Technische Grundlage: Apple WKScriptMessageHandlerWithReply und WKWebView.callAsyncJavaScript. Der native Nachrichtenempfänger ist ausschließlich im lokalen Formular installiert und prüft Mainframe und lokale about:blank-Adresse. Toddle erhält keinen Zugriff auf den Empfänger. Die Formular-CSP verhindert Netzwerkzugriffe; Navigationen sind auf die lokale Seite beschränkt.
 
-Der Simulator-Build prüft die Kompilierung. Die Abnahme oben erfordert ein echtes Toddle-Elternkonto, einen Anthropic-Schlüssel und ein iPad.
-
-## Eine Bewertungszeile in Big Quest übernehmen
-
-Die Zeilenübernahme benötigt den Big-Quest-Testbuild mit `schul-zeilenentwurf`. In Big Quest zuerst als Elternteil anmelden, das richtige Kind wählen und **Schulische Einstufungen** öffnen. Dann **Toddle-Feld prüfen** öffnen, in der Evaluation die Einstufung einer Zeile markieren und **Bewertungszeile lesen** tippen.
-
-Die App liest Kriterium und Einstufung aus derselben sichtbaren zweispaltigen Zeile. Sie zeigt beide Werte vor dem Claude-Aufruf. **Lernziel vorschlagen und Entwurf öffnen** sendet ausschließlich den Kriterientext und öffnet bei passender Zuordnung den vorhandenen Bewertungsentwurf. Titel und Bewertungsdatum werden im Entwurf ergänzt. Die Übernahme erfolgt erst nach Vorschau und Bestätigung.
-
-Für die Geräteabnahme die BIS-Zeile zur zweischrittigen Subtraktion verwenden. Der Vorschlag muss M-N5 und die originale Einstufung C zeigen. Nach Bestätigung und Abgleich soll das Kind in einer neuen Runde genau eine passend zugeordnete Aufgabe erhalten.
-
-## Evaluation ohne Markierung – aktueller Entwicklungsstand
-
-Der neue Einstieg heißt **Evaluation aus Toddle**. Eltern öffnen die Evaluation und wählen **Geöffnete Evaluation lesen**. Die App liest die gerenderte, eindeutig beschriftete Bewertungstabelle und zeigt Kriterien und Originaleinstufungen zusammen. Es erfolgt kein Zugriff auf Kontodaten, versteckte Zustände oder private Toddle-Endpunkte. Ausgelesene Texte werden zunächst nur lokal angezeigt.
-
-**Lernziele mit Claude zuordnen** sendet nach Sichtprüfung nur die Kriterientexte. Unterstützt sind derzeit M-N3 und M-N5; andere Kriterien bleiben ausdrücklich ohne Zuordnung. Einstufungen werden weder an Claude gesendet noch von Claude ersetzt. Teilweise erfolgreiche Zuordnungen bleiben bei API-Fehlern sichtbar, ein Wiederholen fragt nur noch fehlende Kriterien ab.
-
-Mehrteilige Evaluationen werden in diesem Stand **nicht gespeichert**. Die bestehende Ein-Kriterium-Brücke darf sie nicht in mehrere scheinbar unabhängige Evaluationen zerlegen. Gemeinsame Speicherung mit Titel, Datum, Originalkriterien und Kindzuordnung ist der nächste Integrationsschritt. Auch die Ein-Kriterium-Übergabe ist in diesem Stand gesperrt, weil eine einzelne gefundene Zeile keine vollständige Evaluation beweist. Die Toddle-Ansicht bleibt während der lokalen Aufnahme für Eingaben gesperrt; **Andere Evaluation öffnen** verwirft die Aufnahme und alle Zuordnungen.
-
-Die DOM-Gegenproben verwenden ausdrücklich synthetische Tabellen und führen das unveränderte JavaScript aus der Swift-Datei aus. Sie belegen Paarzuordnung, Herkunftsprüfung, Ausschluss versteckter Tabellen und Ablehnung mehrdeutiger Tabellen. Sie sind **kein Nachweis der tatsächlichen Toddle-DOM-Struktur**, von nachgeladenen/virtualisierten Zeilen oder der Vollständigkeit einer echten Evaluation. Dafür ist die Ausführung auf dem iPad mit der bereits bekannten Evaluation nötig. Es werden keine Testdaten als Schuldaten importiert.
-
-Technische Referenzen: Apple WKWebView evaluateJavaScript (https://developer.apple.com/documentation/WebKit/WKWebView/evaluateJavaScript(_:completionHandler:)); MDN Element.getClientRects (https://developer.mozilla.org/en-US/docs/Web/API/Element/getClientRects).
+Prüfläufe: `.github/workflows/toddle-reader.yml` (Erfassung und Formular), vorhandener iPad-Simulator-Build. Swift-Playgrounds-Paket und Xcode-Build verwenden dieselben drei Swift-Dateien.
