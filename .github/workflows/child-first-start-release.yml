@@ -14,8 +14,12 @@ jobs:
   verify:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
     env:
-      CHROMIUM_PATH: /usr/bin/google-chrome
+      TEST_SHARD: ${{ matrix.shard }}/6
     steps:
       - uses: actions/checkout@v4
         with:
@@ -25,7 +29,19 @@ jobs:
         with:
           node-version: '22'
       - run: npm install --no-package-lock
-      - run: npm test
+      - run: npx playwright install chromium --only-shell
+      - name: Run shard of the complete test suite
+        run: |
+          node --input-type=module - <<'NODE'
+          import { readFileSync } from 'node:fs'
+          import { execSync } from 'node:child_process'
+          const { scripts } = JSON.parse(readFileSync('package.json','utf8'))
+          const shard = process.env.TEST_SHARD
+          if (!/^[1-6]\/6$/.test(shard) || !scripts.test.startsWith('node --test ')) process.exit(1)
+          const command = scripts.test.replace('node --test --test-concurrency=7 ', `node --test --test-concurrency=3 --test-shard=${shard} `)
+          if (command === scripts.test) process.exit(1)
+          execSync(command,{stdio:'inherit'})
+          NODE
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
