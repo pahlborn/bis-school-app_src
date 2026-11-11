@@ -250,6 +250,7 @@ test('1 Familie: Kind anlegen (Start-QR), Kind wartet bis zur Aufnahme; zweiter 
   const K2 = geraet(t, W.w, { name: 'Kathies neues iPad' });
   K2.klick('#roleStudent'); K2.tippe('#loginUser', 'kathie'); K2.tippe('#loginPw', nq.code); K2.absenden('#loginGo');
   const pwK2 = await passwortWaehlen(K2);
+  await K2.warten(() => K2.sitzung(), 'neues Passwort gespeichert und Kind angemeldet');
   await P.sync();
   assert.match(P.im('#kQrStatus').textContent, /✓ Kathie hat ein neues Passwort\./);
   await K2.warten(() => K2.da('#kidWait') || K2.da('#welcomeGo') || K2.sitzung(), 'neues Passwort: weiter');
