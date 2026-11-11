@@ -205,16 +205,20 @@ async function familie(t, W, { takt } = {}) {
   const code = P.im('#kCode').textContent;
   const K = geraet(t, W, { name: 'Kathies iPad', takt, hash: link(anmStartlink('http://127.0.0.1/', { anmeldename: 'kathie', code, fingerabdruck: P.fp })) });
   K.pw = await registrieren(K);
-  await K.wartenAuf('#kidWait');
+  await K.warten(() => K.sitzung() || K.da('#kidWait'), 'Kind startet lokal oder wartet');
   // (die Uhr laeuft zwischen den Schritten etwas weiter - wie in echt; sonst laegen Kathies erste Eintraege auf derselben
-  // Millisekunde wie die Aufnahme und vor der Anmeldung ihres Geraets)
+  // Millisekunde wie die Aufnahme und vor der spaeteren regulaeren Uebernahme)
   await W.uhr.vor(1000);
   await P.sync();
   await W.uhr.vor(1000);
-  K.klick('#kidWaitAgain');
-  await K.wartenAuf('#welcomeGo');
-  await W.uhr.vor(1000);
-  K.klick('#welcomeGo');
+  if (K.da('#kidWait')) {
+    K.klick('#kidWaitAgain');
+    await K.wartenAuf('#welcomeGo');
+    await W.uhr.vor(1000);
+    K.klick('#welcomeGo');
+  } else {
+    await K.sync();
+  }
   P.klick('#kQrFertig');
   K.kennung = K.sitzung().id;
   await K.sync(); await P.sync();
@@ -538,8 +542,14 @@ test('6 Schluessel woanders erneuert -> Hinweis; entferntes Geraet -> Hinweis, n
   const code = P.im('#kCode').textContent;
   const K3 = geraet(t, W, { name: 'Kathies neues iPad' });
   K3.klick('#roleStudent'); K3.tippe('#loginUser', 'kathie'); K3.tippe('#loginPw', code); K3.absenden('#loginGo');
-  await passwortWaehlen(K3); await K3.wartenAuf('#kidWait');
-  await P.sync(); K3.klick('#kidWaitAgain'); await K3.wartenAuf('#welcomeGo'); K3.klick('#welcomeGo');
+  await passwortWaehlen(K3);
+  await P.sync();
+  await K3.warten(() => K3.da('#kidWait') || K3.da('#welcomeGo') || K3.sitzung(), 'neues Passwort: weiter');
+  if (K3.da('#kidWait')) {
+    K3.klick('#kidWaitAgain');
+    await K3.wartenAuf('#welcomeGo'); K3.klick('#welcomeGo');
+  } else if (K3.da('#welcomeGo')) K3.klick('#welcomeGo');
+  else await K3.sync();
   await W.uhr.vor(MIN);
   assert.doesNotMatch(K.kindText(), /Schlüssel|key|anmelden|log in again|entfernt|removed/i, 'Kind: still');
   for (const G of [P, P2, K, K3]) assert.deepEqual(G.wert('kontoFehlerListe'), [], G.name + ': keine Fehler');

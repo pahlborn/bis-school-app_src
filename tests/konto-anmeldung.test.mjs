@@ -29,6 +29,38 @@ const RUNDEN = 1000;                                          // nur fuer Konten
 const warte = (ms) => new Promise((r) => setTimeout(r, ms));
 const roh = (x) => (x === undefined ? x : JSON.parse(JSON.stringify(x)));
 
+function idbNachbau() {
+  const dbs = new Map();
+  return {
+    open(name) {
+      const r = { result: undefined, onsuccess: null, onerror: null, onupgradeneeded: null };
+      Promise.resolve().then(() => {
+        const neu = !dbs.has(name); if (neu) dbs.set(name, new Map());
+        const daten = dbs.get(name);
+        r.result = {
+          createObjectStore() {}, close() {},
+          transaction() {
+            const t = { oncomplete: null, onerror: null, onabort: null };
+            const s = {
+              put(o) { daten.set(o.kennung, o); return { result: o.kennung }; },
+              delete(k) { daten.delete(k); return { result: undefined }; },
+              clear() { daten.clear(); return { result: undefined }; },
+              getAll() { return { result: [...daten.values()] }; },
+            };
+            t.objectStore = () => s;
+            Promise.resolve().then(() => t.oncomplete && t.oncomplete());
+            return t;
+          }
+        };
+        if (neu && r.onupgradeneeded) r.onupgradeneeded();
+        if (r.onsuccess) r.onsuccess();
+      });
+      return r;
+    },
+    deleteDatabase() {}
+  };
+}
+
 /* eine App-Instanz (ein Geraet) am gemeinsamen Speicher; hash = Startlink in der Adresse */
 function geraet(t, welt, { name, hash = '', speicher = {}, extra = {}, anpassen, praefix = 'bq2_' } = {}) {
   const geteilt = [];
@@ -89,6 +121,10 @@ async function anmelden(G, rolle, name, pw) {
   G.tippe('#loginUser', name); G.tippe('#loginPw', pw);
   G.absenden('#loginGo');
 }
+const syncZeile = (G) => G.S.lauf(() => {
+  const z = G.S.$('#aboutBody').querySelector('#kSync');
+  return z ? { text: z.textContent, html: z.innerHTML } : null;
+});
 /* nach dem Startcode: Vorschlag uebernehmen und speichern -> das gewaehlte Passwort */
 async function passwortWaehlen(G) {
   await G.wartenAuf('#setPwForm');
@@ -226,12 +262,16 @@ test('2 Kind: Startcode getippt -> eigenes Passwort, kein Wiederherstellungscode
   assert.ok(A.text().includes('It works on every device you log in to'), 'Kinder: Englisch');
   assert.ok(A.text().includes('Idea'));
   const pwK = await passwortWaehlen(A);
-  await aufnehmenLassen(W, A, 'mama.b');
-  await A.wartenAuf('#welcomeGo');
+  await A.warten(() => A.sitzung() && A.sitzung().user === 'kathie.b', 'Kind startet sofort');
   assert.equal(A.da('#recCode'), false, 'Kinder haben keinen Wiederherstellungscode');
-  assert.ok(A.text().includes('Welcome to Big Quest!'));
-  A.klick('#welcomeGo');
   const k = A.liste()[0];
+  assert.equal(A.da('#kidWait'), false, 'kein Almost ready beim normalen Erststart');
+  assert.equal(A.S.lauf(() => {
+    const p = A.S.holen('store').get('pendingAdmission', {})[k.id];
+    return !!(p && typeof p.transfer === 'string' && p.transfer.startsWith('pt_') && p.kopiert !== true);
+  }), true, 'pendingAdmission lokal gesetzt');
+  await A.S.lauf(() => A.S.holen('kontoAbgleich')());
+  await W.aufnehmen('mama.b');
   assert.deepEqual([k.user, k.art], ['kathie.b', 'child']);
   assert.deepEqual(A.sitzung(), { user: 'kathie.b', id: k.id }, 'Kind angemeldet, Daten unter seiner Kennung');
   assert.deepEqual(A.wert("store.get('kidsHere',[])"), [k.id]);
@@ -240,7 +280,7 @@ test('2 Kind: Startcode getippt -> eigenes Passwort, kein Wiederherstellungscode
   // ueben schreibt unter der Kennung des Kindes
   A.S.karteOeffnen(A.S.alleKarten().find((x) => !x.studio));
   A.S.frageBeantworten(A.S.zustand().round[0]);
-  assert.ok([...A.S.ablage.keys()].some((x) => x.startsWith('bq2_' + k.id + '__events')), 'Ereignisse unter der Kennung');
+  assert.ok([...A.S.ablage.keys()].some((x) => x === 'bq2_' + k.id + '__events' || x === 'bq2_' + k.id + '__pendingEvents'), 'Ereignisse unter der Kennung');
 
   // ein Geschwisterkind nimmt das iPad, waehrend Kathie noch angemeldet ist ("Someone else?" auf der Anmeldeseite)
   A.S.lauf(() => A.S.holen('showLogin')('student'));
@@ -255,8 +295,10 @@ test('2 Kind: Startcode getippt -> eigenes Passwort, kein Wiederherstellungscode
   // Geschwister am selben Geraet: Lena meldet sich an, Kathies Schluessel verlaesst das Geraet
   await anmelden(A, 'student', 'lena.b', codeL);
   const pwL = await passwortWaehlen(A);
-  await aufnehmenLassen(W, A, 'mama.b');
-  await A.wartenAuf('#welcomeGo'); A.klick('#welcomeGo');
+  await A.warten(() => A.sitzung() && A.sitzung().user === 'lena.b', 'Lena startet sofort');
+  assert.equal(A.da('#kidWait'), false, 'auch Geschwister starten lokal sofort');
+  await A.S.lauf(() => A.S.holen('kontoAbgleich')());
+  await W.aufnehmen('mama.b');
   const lena = A.liste().find((e) => e.user === 'lena.b');
   assert.deepEqual(A.offen(), [lena.id], 'nur das angemeldete Kind behaelt seine Schluesselkopie');
   // Wechsel zurueck zu Kathie ueber "Who's here?" - mit ihrem Passwort
@@ -278,6 +320,167 @@ test('2 Kind: Startcode getippt -> eigenes Passwort, kein Wiederherstellungscode
   assert.equal(B.wert('adultUser'), null);
   const pw2 = await kontoAnmelden({ zugang: W.z, anmeldename: 'lena.b', passwort: pwL });
   assert.equal(pw2.art, 'child', 'Lenas Passwort oeffnet ihr Konto im Speicher');
+});
+
+test('2b Erwachsenenhinweise: offenes Pending spaeter sichtbar, Dauerfehler mit klarer Folgeaktion', async (t) => {
+  const W = await welt();
+  await W.elternteil('mama.b');
+  const adminId = W.offen.admin.kennung, mamaId = W.offen['mama.b'].kennung;
+  const A = geraet(t, W.w, { name: 'Kathies iPad' });
+  await anmelden(A, 'student', 'kathie.b', await W.kind('kathie.b', 'mama.b'));
+  await passwortWaehlen(A);
+  await A.warten(() => A.sitzung() && A.sitzung().user === 'kathie.b', 'Kind startet sofort');
+  const kind = A.liste()[0];
+  const kindText = A.S.lauf(() => ['#home', '#play', '#results', '#subject'].map((s) => A.S.$(s).textContent).join(' | '));
+  assert.doesNotMatch(kindText, /Aufnahme|Abgleich|Speicher|Zugang|Netz/i, 'Kind sieht keinen Techniktext');
+
+  A.S.lauf(() => {
+    A.S.holen('APP_ACCOUNTS').users.push({ id: adminId, user: 'admin', role: 'admin', admin: true }, { id: mamaId, user: 'mama.b', role: 'parent' });
+    A.S.holen('loginDone')({ id: adminId, user: 'admin', role: 'admin', admin: true });
+  });
+  await A.warten(() => !!syncZeile(A), 'Statuszeile');
+  assert.match(syncZeile(A).text, /kathie\.b: Ein Elternteil muss die Aufnahme fertigstellen\./, syncZeile(A).text);
+
+  A.S.lauf(() => {
+    A.S.holen('loginDone')({ id: mamaId, user: 'mama.b', role: 'parent' });
+    A.S.holen('kontoKindPendingSetzen')(kind.id, { status: 'error', reason: 'invite-missing' });
+    A.S.holen('renderSheets')();
+  });
+  await A.warten(() => /Aufnahme fehlgeschlagen\./.test((syncZeile(A) || {}).text || ''), 'Fehlerhinweis');
+  assert.match(syncZeile(A).text, /kathie\.b: Aufnahme fehlgeschlagen\./, syncZeile(A).text);
+  assert.match(syncZeile(A).html, /data-kgoto="familie"/, syncZeile(A).html);
+  A.S.lauf(() => A.S.$('#aboutBody').querySelector('[data-kgoto="familie"]').click());
+  assert.equal(A.S.ctx.location.hash, '#eltern/einstellungen/familie');
+});
+
+test('2c Gegenproben: zweites Kindgeraet wartet vor der Aufnahme; fremder Elternteil sieht keinen Pending-Hinweis', async (t) => {
+  const W = await welt();
+  await W.elternteil('mama.b');
+  await W.elternteil('fremd.b');
+  const A = geraet(t, W.w, { name: 'Kathies iPad' });
+  await anmelden(A, 'student', 'kathie.b', await W.kind('kathie.b', 'mama.b'));
+  const pw = await passwortWaehlen(A);
+  await A.warten(() => A.sitzung() && A.sitzung().user === 'kathie.b', 'Kind startet sofort');
+  const kind = A.liste()[0];
+
+  const B = geraet(t, W.w, { name: 'Kathies Familien-Laptop' });
+  await anmelden(B, 'student', 'kathie.b', pw);
+  await B.wartenAuf('#kidWait');
+  assert.equal(B.sitzung(), null, 'zweites Geraet vor der Aufnahme nicht regulaer angemeldet');
+  assert.equal(B.wert("store.get('pendingAdmission', {})")[kind.id], undefined, 'zweites Geraet legt kein zweites schreibendes Pending an');
+
+  A.S.lauf(() => {
+    A.S.holen('APP_ACCOUNTS').users.push({ id: W.offen['fremd.b'].kennung, user: 'fremd.b', role: 'parent' });
+    A.S.holen('loginDone')({ id: W.offen['fremd.b'].kennung, user: 'fremd.b', role: 'parent' });
+  });
+  await A.warten(() => !!syncZeile(A), 'Statuszeile');
+  assert.doesNotMatch(syncZeile(A).text, /kathie\.b|Aufnahme|Admission/, syncZeile(A).text);
+});
+
+test('2c Geschwisterwechsel: Pending-Hinweise des ersten Kindes bleiben auf dem Geraet erhalten', async (t) => {
+  const W = await welt();
+  await W.elternteil('mama.b');
+  const mamaId = W.offen['mama.b'].kennung;
+  const codeK = await W.kind('kathie.b', 'mama.b'), codeL = await W.kind('lena.b', 'mama.b');
+  const A = geraet(t, W.w, { name: 'Familien-iPad' });
+
+  await anmelden(A, 'student', 'kathie.b', codeK);
+  await passwortWaehlen(A);
+  await A.warten(() => A.sitzung() && A.sitzung().user === 'kathie.b', 'Kathie startet sofort');
+  const kathieId = A.sitzung().id;
+
+  A.S.lauf(() => A.S.holen('showLogin')('student'));
+  await anmelden(A, 'student', 'lena.b', codeL);
+  await passwortWaehlen(A);
+  await A.warten(() => A.sitzung() && A.sitzung().user === 'lena.b', 'Lena startet sofort');
+  const lenaId = A.sitzung().id;
+
+  const pending = A.wert("store.get('pendingAdmission', {})");
+  assert.ok(pending[kathieId], 'Kathies Pending-Marke bleibt erhalten');
+  assert.ok(pending[lenaId], 'Lenas Pending-Marke ist da');
+
+  A.S.lauf(() => {
+    A.S.holen('APP_ACCOUNTS').users.push({ id: mamaId, user: 'mama.b', role: 'parent' });
+    A.S.holen('loginDone')({ id: mamaId, user: 'mama.b', role: 'parent' });
+  });
+  await A.warten(() => !!syncZeile(A), 'Statuszeile');
+  assert.match(syncZeile(A).text, /kathie\.b: Aufnahme noch offen\./, syncZeile(A).text);
+  assert.match(syncZeile(A).text, /lena\.b: Aufnahme noch offen\./, syncZeile(A).text);
+});
+
+test('2d Pending-Daten gehen spaeter genau einmal in den regulaeren Ereignispfad ueber - auch nach Neustart', async (t) => {
+  const W = await welt();
+  await W.elternteil('mama.b');
+  const code = await W.kind('kathie.b', 'mama.b');
+  const idb = idbNachbau();
+  const A = geraet(t, W.w, { name: 'Kathies iPad', extra: { indexedDB: idb } });
+  await anmelden(A, 'student', 'kathie.b', code);
+  await passwortWaehlen(A);
+  await A.warten(() => A.sitzung() && A.S.zustand().screen === 'home', 'Kind startet lokal');
+  const kid = A.sitzung().id, pre = 'bq2_' + kid + '__';
+  const antworten = [];
+  for (let i = 0; i < 2; i++) {
+    A.S.karteOeffnen(A.S.alleKarten().find((x) => !x.studio));
+    const z = A.S.zustand();
+    A.S.frageBeantworten(z.round[z.idx]);
+    antworten.push(JSON.parse(A.S.ablage.get(pre + 'pendingEvents') || '[]').filter((e) => e.type === 'answer').map((e) => e.id).at(-1));
+  }
+  const pendingVorher = JSON.parse(A.S.ablage.get(pre + 'pendingEvents') || '[]').filter((e) => e.type === 'answer').map((e) => e.id);
+  assert.deepEqual(pendingVorher, antworten, 'lokale Startdaten liegen erst im Pending-Log');
+  assert.deepEqual(JSON.parse(A.S.ablage.get(pre + 'events') || '[]').filter((e) => e.type === 'answer'), [], 'regulaeres Log vor der Aufnahme noch leer');
+
+  const B = geraet(t, W.w, { name: 'Kathies iPad nach Neustart', speicher: Object.fromEntries(A.S.ablage), extra: { indexedDB: idb } });
+  await B.warten(() => B.sitzung() && B.S.zustand().screen === 'home', 'Kind bleibt nach Neustart lokal angemeldet');
+  assert.deepEqual(JSON.parse(B.S.ablage.get(pre + 'pendingEvents') || '[]').filter((e) => e.type === 'answer').map((e) => e.id), antworten, 'Neustart verdoppelt nichts');
+
+  await W.aufnehmen('mama.b');
+  await B.S.lauf(() => B.S.holen('kontoAbgleich')());
+  const regulaer = JSON.parse(B.S.ablage.get(pre + 'events') || '[]').filter((e) => e.type === 'answer').map((e) => e.id);
+  assert.deepEqual(regulaer, antworten, 'nach der Aufnahme erscheinen die Startdaten genau einmal regulaer');
+  assert.equal(new Set(regulaer).size, regulaer.length, 'keine doppelten Erst-Ereignisse');
+  assert.equal(B.S.ablage.get(pre + 'pendingEvents'), undefined, 'Pending-Log ist geleert');
+  assert.equal(B.S.lauf(() => B.S.holen('store').get('pendingAdmission', {})[kid]), undefined, 'Pending-Marke ist weg');
+
+  await B.S.lauf(() => B.S.holen('kontoAbgleich')());
+  assert.deepEqual(JSON.parse(B.S.ablage.get(pre + 'events') || '[]').filter((e) => e.type === 'answer').map((e) => e.id), antworten, 'wiederholter Abgleich uebernimmt nicht erneut');
+});
+
+test('2e Pending-Uebernahme: Schreibfehler loescht vorgemerkte Uebungen nicht vorzeitig', async (t) => {
+  const W = await welt();
+  await W.elternteil('mama.b');
+  const code = await W.kind('kathie.b', 'mama.b');
+  const idb = idbNachbau();
+  const A = geraet(t, W.w, { name: 'Kathies iPad', extra: { indexedDB: idb } });
+  await anmelden(A, 'student', 'kathie.b', code);
+  await passwortWaehlen(A);
+  await A.warten(() => A.sitzung() && A.S.zustand().screen === 'home', 'Kind startet lokal');
+  const kid = A.sitzung().id, pre = 'bq2_' + kid + '__';
+  A.S.karteOeffnen(A.S.alleKarten().find((x) => !x.studio));
+  A.S.frageBeantworten(A.S.zustand().round[0]);
+  const antworten = JSON.parse(A.S.ablage.get(pre + 'pendingEvents') || '[]').filter((e) => e.type === 'answer').map((e) => e.id);
+
+  const B = geraet(t, W.w, { name: 'Kathies iPad nach Neustart', speicher: Object.fromEntries(A.S.ablage), extra: { indexedDB: idb } });
+  await B.warten(() => B.sitzung() && B.S.zustand().screen === 'home', 'Kind bleibt nach Neustart lokal angemeldet');
+  await W.aufnehmen('mama.b');
+
+  const origSetItem = B.S.ctx.localStorage.setItem;
+  B.S.ctx.localStorage.setItem = (k, v) => {
+    if (k === pre + 'events') {
+      throw new Error('simulierter Schreibfehler');
+    }
+    return origSetItem(k, v);
+  };
+
+  await B.S.lauf(() => B.S.holen('kontoAbgleich')());
+  assert.deepEqual(JSON.parse(B.S.ablage.get(pre + 'events') || '[]').filter((e) => e.type === 'answer').map((e) => e.id), [], 'regulaeres Log bleibt bei Schreibfehler leer');
+  assert.deepEqual(JSON.parse(B.S.ablage.get(pre + 'pendingEvents') || '[]').filter((e) => e.type === 'answer').map((e) => e.id), antworten, 'Pending-Log bleibt erhalten');
+  assert.ok(B.S.lauf(() => !!B.S.holen('store').get('pendingAdmission', {})[kid]), 'Pending-Marke bleibt erhalten');
+
+  B.S.ctx.localStorage.setItem = origSetItem;
+  await B.S.lauf(() => B.S.holen('kontoAbgleich')());
+  assert.deepEqual(JSON.parse(B.S.ablage.get(pre + 'events') || '[]').filter((e) => e.type === 'answer').map((e) => e.id), antworten, 'spaeterer Abgleich uebernimmt die Uebungen regulaer');
+  assert.equal(B.S.ablage.get(pre + 'pendingEvents'), undefined, 'Pending-Log ist danach leer');
+  assert.equal(B.S.lauf(() => B.S.holen('store').get('pendingAdmission', {})[kid]), undefined, 'Pending-Marke ist danach weg');
 });
 
 test('3 Passwort vergessen (Erwachsene): Wiederherstellungscode -> neues Passwort -> neuer Code; alte gelten nicht mehr', async (t) => {
@@ -483,7 +686,11 @@ test('7 Testinstanz (Praefix bqt_): Anmeldung mit Startcode und auf dem zweiten 
   assert.equal(A.erwachsen().user, 'anna.b');
   A.S.lauf(() => A.S.holen('logout')());
   await anmelden(A, 'student', 'kathie.b', codeK);
-  await passwortWaehlen(A); await aufnehmenLassen(W, A, 'peter.b'); await A.wartenAuf('#welcomeGo'); A.klick('#welcomeGo');
+  await passwortWaehlen(A);
+  await A.warten(() => A.sitzung() && A.sitzung().user === 'kathie.b', 'Testinstanz-Kind startet sofort');
+  assert.equal(A.da('#kidWait'), false);
+  await A.S.lauf(() => A.S.holen('kontoAbgleich')());
+  await W.aufnehmen('peter.b');
   assert.equal(A.sitzung().user, 'kathie.b');
   A.S.karteOeffnen(A.S.alleKarten().find((x) => !x.studio));
   A.S.frageBeantworten(A.S.zustand().round[0]);
@@ -497,6 +704,6 @@ test('7 Testinstanz (Praefix bqt_): Anmeldung mit Startcode und auf dem zweiten 
     assert.ok(neu.includes('bqt_kontoListe') && neu.includes('bqt_evDevice'), G.name + ': ' + neu.join(', '));
   }
   assert.deepEqual(A.liste().map((e) => e.user), ['anna.b', 'kathie.b']);
-  assert.ok([...A.S.ablage.keys()].some((k) => k.startsWith('bqt_' + A.liste()[1].id + '__events')), 'Kathie (Test) uebt unter bqt_<Kennung>');
-  assert.match(A.S.lauf(() => A.S.holen('GLOBAL_KEYS').source), /\|kontoListe\)\$$/, 'Geraeteliste geraeteweit (nie Daten eines Kindes)');
+  assert.ok([...A.S.ablage.keys()].some((k) => k === 'bqt_' + A.liste()[1].id + '__events' || k === 'bqt_' + A.liste()[1].id + '__pendingEvents'), 'Kathie (Test) uebt unter bqt_<Kennung>');
+  assert.match(A.S.lauf(() => A.S.holen('GLOBAL_KEYS').source), /\|kontoListe\|pendingAdmission\)\$$/, 'Geraeteliste und pendingAdmission geraeteweit (nie Daten eines Kindes)');
 });

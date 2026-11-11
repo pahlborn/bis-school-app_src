@@ -196,7 +196,14 @@ test('B Home-Bildschirm-App ohne Zugangscode: zuerst nur "Geraet verbinden"; QR-
     assert.equal(await K.page.locator('#kontoNeuTitel').textContent(), 'Welcome! Choose your password', 'Kind: Englisch');
     await K.page.locator('#kontoNeuUse').click();
     await K.page.locator('#kontoNeuGo').click();
-    await K.page.waitForSelector('#kidWait', { timeout: 30000 });   // das Kind wartet, bis das Geraet der Eltern es aufnimmt
+    await K.page.waitForSelector('#todayBtn', { timeout: 30000 });
+    assert.equal(await zaehle(K.page, '#kidWait'), 0, 'kein Almost ready beim normalen Erststart');
+    assert.equal(await K.page.evaluate(() => {
+      const s = JSON.parse(localStorage.getItem('bq2_session') || localStorage.getItem('bqt_session') || 'null');
+      const p = JSON.parse(localStorage.getItem('bq2_pendingAdmission') || localStorage.getItem('bqt_pendingAdmission') || '{}');
+      const x = s && p ? p[s.id] : null;
+      return !!(x && typeof x.transfer === 'string' && /^pt_/.test(x.transfer) && x.kopiert !== true);
+    }), true, 'pendingAdmission nur lokal gemerkt');
     assert.deepEqual(K.fehler, []);
     await K.ctx.close();
   } finally { await kb.close(); }

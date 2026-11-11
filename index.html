@@ -783,7 +783,7 @@ const TICK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4
    bq2_<id>__<key>; passwords under bq2_pw_<id>. Before (and as a fallback if the move on this device
    failed): the FIRST student account used bq2_<key>, every other one bq2_<user>__<key>. Device-wide keys
    stay shared. */
-const GLOBAL_KEYS=/^(session|sessionPrev|adultSession|adultUnlock|pw_.+|parentPin|muted|parentLang|migr|kidsHere|lastSeen|conceptSeen|glance|evDevice|personEvents|kontoListe)$/;
+const GLOBAL_KEYS=/^(session|sessionPrev|adultSession|adultUnlock|pw_.+|parentPin|muted|parentLang|migr|kidsHere|lastSeen|conceptSeen|glance|evDevice|personEvents|kontoListe|pendingAdmission)$/;
 let ID_STORAGE=false;
 /* account for a stored reference {id} or {user} (id first: login names may change, IDs never do) */
 function accByRef(r){
@@ -818,13 +818,13 @@ del(k){ if(evQuelle(k)) return; try{ localStorage.removeItem(storeKey(k)); }catc
    has no such module: eventHook does nothing there and the app keeps working exactly as before. */
 let eventSink=null, personSink=null; const eventErrors=[], eventNoChild=[], eventNoPerson=[];
 function eventWho(){
-  if(parentAccess){
-    if(!accountsOn()) return {person:'p_eltern', role:'parent'};
-    const a=adultUser && accByRef({user:adultUser.user});
+  if(typeof parentAccess!=='undefined' && parentAccess){
+    if(!evKonten()) return {person:'p_eltern', role:'parent'};
+    const a=typeof adultUser!=='undefined' && adultUser && accByRef({user:adultUser.user});
     return a ? {person:a.id, role:adultUser.admin?'admin':adultUser.role==='teacher'?'teacher':'parent'} : null;
   }
-  if(!accountsOn()) return {person:'p_kind', role:'child'};
-  const s=studentSession(); return s ? {person:s.id, role:'child'} : null;
+  if(!evKonten()) return {person:'p_kind', role:'child'};
+  const id=evAktivesKindId(); return id ? {person:id, role:'child'} : null;
 }
 /* Settings of one person (area person:<id>, task 3b-1c: parentLang, a grown-up's sound, conceptSeen, glance) go to
    the log of the person acting (bq2_personEvents, per person ID), not to the child's. kid (optional): the child the
@@ -843,10 +843,11 @@ function eventHook(type, payload, kid){
       let d=store.get('evDevice',null); if(!d){ d=newDeviceId(); store.set('evDevice',d); }
       const now=()=>Date.now(), mine=()=>(eventWho()||{}).person;
       // the logs keep their list in memory (task 3b-2a: no reading of the whole list per event)
-      eventSink=evSchreiber({read:()=>evKindLog(evPre()).liste(), write:l=>evKindLog(evPre()).schreiben(l), device:d, who:eventWho, now});
+      eventSink=evSchreiber({read:()=>evKindZielLog(evPre()).liste(), write:l=>evKindZielLog(evPre()).schreiben(l), device:d, who:eventWho, now});
       personSink=evSchreiber({read:()=>evPersonLog(mine()).liste(), write:l=>evPersonLog(mine()).schreiben(l), device:d, who:eventWho, now});
     }
     const r=(own?personSink:eventSink).write(type, payload);
+    if(r.ok && !own) evKindNeuLaden(evPre(), {sicht:true});
     if(r.ok && KONTO_UI) kontoNeuEintrag();   // task "Abgleich in der App": send it soon (bundled)
     return r.ok ? r.event : null;
   }catch(e){ eventErrors.push(type+': '+String(e&&e.message||e)); return null; }
@@ -869,16 +870,70 @@ function listEvents(list, oldL, newL){
 const EV_LESEN = typeof lesenArt==='function';
 const evLogs = new Map();
 const evPre = () => storeKey('events').slice(0,-6);              // bq2_ or bq2_<child>__
+const evPendingKey = pre => pre+'pendingEvents';
+const evKindId = pre => { const m=/^bq2_(p_[0-9A-Za-z]{1,40})__$/.exec(pre||''); return m ? m[1] : null; };
 function evRaw(lk){ try{ const v=localStorage.getItem(lk); return v===null?undefined:JSON.parse(v); }catch(e){ return undefined; } }
+function evAktivesKindId(){ const a=accByRef(evRaw(storeKey('session'))||null); return a && a.role==='student' ? a.id : null; }
+function evKindBasis(pre){
+  const w={};
+  for(let i=0;i<localStorage.length;i++){
+    const full=localStorage.key(i);
+    if(!full || !full.startsWith(pre)) continue;
+    const k=full.slice(pre.length);
+    if(pre==='bq2_' && k.includes('__')) continue;
+    if(lesenArt(k)==='kind') w[k]=evRaw(full);
+  }
+  return altStand(w);
+}
 function evKindLog(pre){
-  let p=evLogs.get(pre); if(p) return p;
+  const k='kind:'+pre;
+  let p=evLogs.get(k); if(p) return p;
   p=evProtokoll({
     laden:()=>evRaw(pre+'events'),
-    speichern:l=>{ try{ localStorage.setItem(pre+'events', JSON.stringify(l)); }catch(e){ eventErrors.push('speichern: '+String(e&&e.message||e)); } },
-    basis:()=>{ const w={}; for(let i=0;i<localStorage.length;i++){ const full=localStorage.key(i); if(!full || !full.startsWith(pre)) continue; const k=full.slice(pre.length); if(pre==='bq2_' && k.includes('__')) continue; if(lesenArt(k)==='kind') w[k]=evRaw(full); } return altStand(w); },
+    speichern:l=>{ try{ if(l && l.length) localStorage.setItem(pre+'events', JSON.stringify(l)); else localStorage.removeItem(pre+'events'); }catch(e){ eventErrors.push('speichern: '+String(e&&e.message||e)); } },
+    basis:()=>evKindBasis(pre),
     now:()=>Date.now()
   });
-  evLogs.set(pre,p); return p;
+  evLogs.set(k,p); return p;
+}
+function evKindPendingLog(pre){
+  const k='pending:'+pre;
+  let p=evLogs.get(k); if(p) return p;
+  p=evProtokoll({
+    laden:()=>evRaw(evPendingKey(pre)),
+    speichern:l=>{ try{ if(l && l.length) localStorage.setItem(evPendingKey(pre), JSON.stringify(l)); else localStorage.removeItem(evPendingKey(pre)); }catch(e){ eventErrors.push('speichern: '+String(e&&e.message||e)); } },
+    now:()=>Date.now()
+  });
+  evLogs.set(k,p); return p;
+}
+function evKindSichtLog(pre){
+  const id=evKindId(pre);
+  if(!kontoKindPendingOffen(id) || (typeof parentAccess!=='undefined' && parentAccess) || evAktivesKindId()!==id) return evKindLog(pre);
+  const k='sicht:'+pre;
+  let p=evLogs.get(k); if(p) return p;
+  p=evProtokoll({
+    laden:()=>mergeLog([evKindLog(pre).liste(), evKindPendingLog(pre).liste()], Date.now()).events,
+    speichern:()=>{},
+    basis:()=>evKindBasis(pre),
+    now:()=>Date.now()
+  });
+  evLogs.set(k,p); return p;
+}
+function evKindZielLog(pre){
+  const id=evKindId(pre);
+  if(!kontoKindPendingOffen(id)) return evKindLog(pre);
+  return {
+    liste:()=>mergeLog([evKindLog(pre).liste(), evKindPendingLog(pre).liste()], Date.now()).events,
+    schreiben:l=>{
+      const da=new Set(evKindLog(pre).liste().map(e=>e&&e.id).filter(Boolean));
+      evKindPendingLog(pre).schreiben((Array.isArray(l)?l:[]).filter(e=>e && typeof e==='object' && !da.has(e.id)));
+    }
+  };
+}
+function evKindNeuLaden(pre, {sicht=false}={}){
+  const kind=evLogs.get('kind:'+pre); if(kind) kind.neuLaden();
+  const pending=evLogs.get('pending:'+pre); if(pending) pending.neuLaden();
+  if(sicht){ const view=evLogs.get('sicht:'+pre); if(view) view.neuLaden(); }
 }
 function evPersonLog(pid){
   const id='person:'+pid; let p=evLogs.get(id); if(p) return p;
@@ -894,7 +949,7 @@ function evNeuLaden(){ evLogs.forEach(p=>p.neuLaden()); }
 const evKonten = () => !!(APP_ACCOUNTS && APP_ACCOUNTS.users && (APP_ACCOUNTS.users.length || KONTO_UI));   // = accountsOn (defined further down; the store is read earlier)
 /* changes with every change of the current child's log ('' in the live build) - for caches keyed on stored values */
 function evVersion(){ const q=EV_LESEN && evKindQuelle(); return q ? 'e'+q.log.version() : ''; }
-function evKindQuelle(){ return evKonten() && !childNs() ? null : {log:evKindLog(evPre()), art:'kind'}; }
+function evKindQuelle(){ return evKonten() && !childNs() ? null : {log:evKindSichtLog(evPre()), art:'kind'}; }
 /* which log a key is read from now - or null: the old storage */
 function evQuelle(k){
   const art=EV_LESEN && lesenArt(k); if(!art) return null;
@@ -4540,7 +4595,7 @@ function migrLine(){
    revocable at any time, every step in a log the parents see. Stored in the child's area (grants,
    grantlog). Stage 1 has no syncing: the grantee sees the child only on a device that holds its data. */
 const kidKey = (acc,k) => ID_STORAGE && acc ? 'bq2_'+acc.id+'__'+k : null;
-function kidRead(acc,k,d){ const lk=kidKey(acc,k); if(!lk) return d; if(EV_LESEN && lesenArt(k)==='kind') return evLesen({log:evKindLog('bq2_'+acc.id+'__'), art:'kind'}, k, d);   /* test build: from that child's log (3b-2a) */
+function kidRead(acc,k,d){ const lk=kidKey(acc,k); if(!lk) return d; if(EV_LESEN && lesenArt(k)==='kind') return evLesen({log:evKindSichtLog('bq2_'+acc.id+'__'), art:'kind'}, k, d);   /* test build: from that child's log (3b-2a) */
   try{ const v=localStorage.getItem(lk); return v===null?d:JSON.parse(v); }catch(e){ return d; } }
 function kidWrite(acc,k,v){ const lk=kidKey(acc,k); if(EV_LESEN && lesenArt(k)==='kind') return; if(lk) try{ localStorage.setItem(lk, JSON.stringify(v)); }catch(e){} }
 const grantActive = g => isGrantActive(g, dayKey());
@@ -4927,7 +4982,7 @@ function renderSheets(){
 /* ---------- about ---------- */
 /* A local parental UI lock, separate from the encryption password. This is
    an accidental-access guard, not protection against someone editing code/storage. */
-let parentAccess=false, parentFailures=0, parentBlockedUntil=0, parentEpoch=0;
+var parentAccess=false, parentFailures=0, parentBlockedUntil=0, parentEpoch=0;
 function parentLock(){
   parentEpoch++;
   parentAccess=false; viewUser=null; state.pview=null; pviewPushed=false; leaveParentRoute();
@@ -5080,9 +5135,9 @@ function parentHeaderHTML(){
    they leave the grown-ups area, the app goes to the background or after 5 minutes without use.
    Like the former PIN this is a UI guard on the device; the published file stays protected by the
    long family password, so short children's passwords never protect the app itself. */
-let adultUser=null, loginFails=0, loginBlockedUntil=0;
-const accountsOn = () => !!(APP_ACCOUNTS && APP_ACCOUNTS.users && (APP_ACCOUNTS.users.length || KONTO_UI));   /* with accounts in the storage also before the first login on this device */
-const studentSession = () => { const a=accByRef(store.get('session',null)); return a && a.role==='student' ? sessionOf(a) : null; };
+var adultUser=null, loginFails=0, loginBlockedUntil=0;
+function accountsOn(){ return !!(APP_ACCOUNTS && APP_ACCOUNTS.users && (APP_ACCOUNTS.users.length || KONTO_UI)); }   /* with accounts in the storage also before the first login on this device */
+function studentSession(){ const a=accByRef(store.get('session',null)); return a && a.role==='student' ? sessionOf(a) : null; }
 const accountOf = (name, adult) => APP_ACCOUNTS.users.find(u=>u.user===String(name||'').trim().toLowerCase() && (adult ? u.role!=='student' : u.role==='student'));
 async function pbkdf2Hex(text, salt){
   const m=await crypto.subtle.importKey('raw',new TextEncoder().encode(text),'PBKDF2',false,['deriveBits']);
@@ -5521,7 +5576,12 @@ function kontoNeuZeigen(r){
       loginFails=0;
       const a=await kontoAngemeldet(k);
       kontoNeuWeg();   // the form leaves the page after "submit": now the password manager offers to save name and password
-      if(k.art==='child') return kontoKindStart(a, k.kennung, ()=>renderWelcome(a));
+      if(k.art==='child'){
+        kontoKindPendingSetzen(k.kennung, true);
+        loginDone(a, true);
+        kontoAbgleich();
+        return;
+      }
       if(k.wiederherstellungscode) renderKontoCode(a, k.wiederherstellungscode, ()=>renderWelcome(a));
       else renderWelcome(a);
       kontoAbgleich();   // a new grown-up: the first sync notes his family (module einladung) - in the background
@@ -5581,7 +5641,12 @@ async function kontoErstesPasswort(u, pw){
     const k=await anmErstesMal({zugang:z, code:u.konto.code, passwort:pw, fingerabdruck:u.konto.fp, now:Date.now()});
     kontoLinkFp=null; loginFails=0;
     const a=await kontoAngemeldet(k);
-    if(k.art==='child') return kontoKindStart(a, k.kennung, ()=>renderWelcome(a));
+    if(k.art==='child'){
+      kontoKindPendingSetzen(k.kennung, true);
+      loginDone(a, true);
+      kontoAbgleich();
+      return;
+    }
     if(k.wiederherstellungscode) renderKontoCode(a, k.wiederherstellungscode, ()=>renderWelcome(a));
     else renderWelcome(a);
     kontoAbgleich();   // a new grown-up: the first sync notes his family (module einladung) - in the background
@@ -5776,11 +5841,13 @@ async function kontoAbgleichLauf(){
       if(fehler==='limit') warten=r.limit;
       if(r.bericht) kontoStatus.veraltet=(r.bericht.veraltet||[]).slice();   // keys renewed on another device
       kontoNachAbgleich(r, vorher);
+      if(!fehler) await kontoKindPendingNachAbgleich();
     }catch(err){
       r=null;
       if(err && KONTO_SPEICHERFEHLER.includes(err.code)){ fehler=err.code; if(fehler==='limit') warten=Number.isFinite(err.wartezeit)?err.wartezeit:60000; }
       else kontoFehlerListe.push('abgleich: '+String(err&&err.message||err));
     }
+    const pendingGeaendert=await kontoKindPendingPruefen();
     kontoStatus.fehler=fehler;
     if(fehler==='limit') kontoStatus.wartenBis=Date.now()+Math.max(1000, warten||0);
     if(!fehler) kontoStatus.letzter=Date.now();
@@ -5788,6 +5855,7 @@ async function kontoAbgleichLauf(){
     // the first sync after a login brought the news that this device was removed: new device id, sync once more
     if(!fehler && r && kontoStatus.frisch){ const id=kontoStatus.frisch; kontoStatus.frisch=null; if(kontoOffen.has(id) && kontoNeueKennung(id)) kontoNochmal=true; }
     kontoZeileAuffrischen();
+    if(pendingGeaendert) kontoNeuZeichnen(true);
   }while(kontoNochmal);
   return r;
 }
@@ -5906,6 +5974,10 @@ function kontoZeileHTML(){
   const de=PL()==='de', s=kontoStatus, jetzt=Date.now(), teile=[];
   const neu=kontoNeuAnmelden();
   if(neu) teile.push(`<b>⚠️ ${neu==='entfernt'?(de?'Dieses Gerät wurde entfernt.':'This device was removed.'):(de?'Ihr Zugang wurde auf einem anderen Gerät neu abgesichert.':'Your access was secured again on another device.')} ${de?'Bitte melden Sie sich hier neu an.':'Please log in again here.'}</b> <button type="button" class="btn small primary" id="kNeuAnmelden">${de?'Neu anmelden':'Log in again'}</button>`);
+  for(const h of kontoKindPendingHinweise()){
+    if(h.status==='error') teile.push(`⚠️ ${esc(h.name)}: ${h.selbst?(de?'Aufnahme fehlgeschlagen.':'Admission failed.'):(de?'Aufnahme fehlgeschlagen. Bitte Elternteil fragen.':'Admission failed. Please ask the parent.')} ${h.selbst?`<button type="button" class="btn small" data-kgoto="familie">${de?'Familie öffnen':'Open family'}</button>`:''}`);
+    else teile.push(`⏳ ${esc(h.name)}: ${h.selbst?(de?'Aufnahme noch offen.':'Admission still open.'):(de?'Ein Elternteil muss die Aufnahme fertigstellen.':'A parent needs to finish the admission.')} ${h.selbst?`<button type="button" class="btn small" data-kgoto="familie">${de?'Familie öffnen':'Open family'}</button>`:''}`);
+  }
   if(s.fehler==='offline') teile.push(de?'📴 Kein Netz – wird nachgeholt.':'📴 No connection – will catch up later.');
   else if(s.fehler==='zugang') teile.push(`🔑 ${de?'Der Zugangscode dieses Geräts passt nicht mehr (abgelaufen oder ungültig).':'The access code of this device no longer works (expired or not valid).'} <button type="button" class="btn small" id="kTokenNeu">${de?'Gerät neu verbinden':'Connect again'}</button>`);
   else if(s.fehler==='limit') teile.push(de?`⏳ Gerade zu viele Abgleiche – ab ${kontoUhrzeit(s.wartenBis)} geht es weiter.`:`⏳ Too many syncs just now – it goes on from ${kontoUhrzeit(s.wartenBis)}.`);
@@ -5931,6 +6003,162 @@ function kontoZeileAuffrischen(){
 function kontoZeileBinden(z){
   const a=z.querySelector('#kNeuAnmelden'); if(a) a.addEventListener('click',()=>{ if(!parentAccess) return; parentAbmelden(); showLogin('adult'); });
   const t=z.querySelector('#kTokenNeu'); if(t) t.addEventListener('click',()=>{ if(parentAccess) kontoBlattZeigen({art:'token'}); });
+  z.querySelectorAll('[data-kgoto]').forEach(b=>b.addEventListener('click',()=>{
+    if(!parentAccess) return;
+    pviewPushed=true;
+    location.hash=VIEW_HASH.settings+'/'+b.dataset.kgoto;
+    applyParentRoute();
+  }));
+}
+function kontoKindPending(){
+  const p=store.get('pendingAdmission', null);
+  return p && typeof p==='object' && !Array.isArray(p) ? p : {};
+}
+function kontoKindPendingId(){ return newDeviceId().replace(/^d_/, 'pt_'); }
+function kontoKindPendingStand(id){
+  if(!id) return null;
+  const x=kontoKindPending()[id];
+  if(x===true) return {transfer:kontoKindPendingId(), kopiert:false, status:'pending', reason:null, anker:null};
+  if(!x || typeof x!=='object' || Array.isArray(x)) return null;
+  return {
+    transfer:typeof x.transfer==='string' && x.transfer ? x.transfer : kontoKindPendingId(),
+    kopiert:x.kopiert===true,
+    status:x.status==='error'?'error':'pending',
+    reason:typeof x.reason==='string'?x.reason:null,
+    anker:typeof x.anker==='string' && /^p_[0-9A-Za-z]{1,40}$/.test(x.anker) ? x.anker : null
+  };
+}
+function kontoKindPendingSpeichern(id, stand){
+  if(!id) return;
+  const p=kontoKindPending();
+  if(stand) p[id]={
+    transfer:stand.transfer||kontoKindPendingId(),
+    ...(stand.kopiert?{kopiert:true}:{}),
+    ...(stand.status==='error'?{status:'error'}:{}),
+    ...(stand.reason?{reason:stand.reason}:{}),
+    ...(stand.anker?{anker:stand.anker}:{})
+  };
+  else delete p[id];
+  if(Object.keys(p).length) store.set('pendingAdmission', p);
+  else store.del('pendingAdmission');
+}
+function kontoKindPendingEintrag(id){ return kontoKindPendingStand(id); }
+function kontoKindPendingOffen(id){ const s=kontoKindPendingStand(id); return !!(s && !s.kopiert); }
+function kontoKindPendingHat(id){ return kontoKindPendingOffen(id); }
+function kontoKindPendingSetzen(id, an){
+  if(!id) return;
+  if(an){
+    const s=kontoKindPendingStand(id), kind=kontoKonto(id), anker=kind && kind.anker && kind.anker.role==='parent' ? kind.anker.person : (s&&s.anker)||null;
+    kontoKindPendingSpeichern(id, {
+      transfer:s&&s.transfer||kontoKindPendingId(),
+      kopiert:false,
+      status:an!==true && an && typeof an==='object' && !Array.isArray(an) && an.status==='error' ? 'error' : 'pending',
+      reason:an!==true && an && typeof an==='object' && !Array.isArray(an) && typeof an.reason==='string' ? an.reason : null,
+      anker
+    });
+  }
+  else kontoKindPendingSpeichern(id, null);
+}
+function kontoKindPendingStatus(id){
+  const alt=kontoKindPendingEintrag(id);
+  if(!alt || alt.kopiert) return null;
+  const kind=kontoKonto(id);
+  const anker=kind && kind.anker && kind.anker.role==='parent' ? kind.anker.person : alt.anker;
+  if(!anker || !kontoOffen.has(anker) || kontoOffen.get(anker).art!=='parent') return {status:alt.status, reason:alt.reason, anker};
+  const eltern=kontoKonto(anker);
+  if(!eltern) return {status:alt.status, reason:alt.reason, anker};
+  const offen=kontoVerb(eltern).offen.find(o=>o.art==='child' && o.person===id);
+  const warn=offen && kontoBericht && Array.isArray(kontoBericht.warnungen) ? kontoBericht.warnungen.find(w=>w.id===offen.invite) : null;
+  if(warn) return {status:'error', reason:warn.grund||'warnung', anker};
+  if(!offen) return {status:'error', reason:'invite-missing', anker};
+  return {status:'pending', reason:null, anker};
+}
+function kontoKindPendingHinweise(){
+  if(!adultUser) return [];
+  const de=PL()==='de', akt=accByRef({user:adultUser.user});
+  return Object.keys(kontoKindPending()).map(id=>{
+    const s=kontoKindPendingStatus(id); if(!s) return null;
+    if(!akt || (akt.role!=='admin' && !(akt.role==='parent' && s.anker===akt.id))) return null;
+    const e=kontoListe().find(x=>x.id===id), name=kontoKindName(id, (e&&e.user)||'') || (e&&e.user) || (de?'dieses Kind':'this child');
+    const selbst=!!(akt && akt.role==='parent' && s.anker===akt.id);
+    return {id, name, status:s.status, selbst};
+  }).filter(Boolean);
+}
+async function kontoKindPendingPruefen(){
+  const ids=Object.keys(kontoKindPending());
+  let geaendert=false;
+  for(const id of ids){
+    const kind=kontoKonto(id), inListe=kontoListe().some(x=>x.id===id);
+    if(!kind && !inListe){
+      kontoKindPendingSetzen(id, false);
+      geaendert=true;
+      continue;
+    }
+    if(kind && await kontoKindIstBereit(id)){
+      const hatte=!!kontoKindPendingStand(id);
+      kontoKindPendingUebernehmen(id);
+      if(hatte) geaendert=true;
+      continue;
+    }
+    const alt=kontoKindPendingEintrag(id)||{status:'pending', reason:null};
+    const neu=kontoKindPendingStatus(id)||{status:'pending', reason:null};
+    if(neu.status!==alt.status || (neu.reason||null)!==(alt.reason||null)){
+      kontoKindPendingSetzen(id, neu.status==='pending' && !neu.reason ? true : neu);
+      geaendert=true;
+    }
+  }
+  return geaendert;
+}
+function kontoKindPendingUebernehmen(id){
+  const s=kontoKindPendingStand(id); if(!s) return 0;
+  const pre='bq2_'+id+'__', pend=evKindPendingLog(pre), regular=evKindLog(pre), liste=pend.liste();
+  if(s.kopiert){
+    if(liste.length) pend.schreiben([]);
+    if(Array.isArray(evRaw(evPendingKey(pre))) && evRaw(evPendingKey(pre)).length){
+      evKindNeuLaden(pre, {sicht:true});
+      return 0;
+    }
+    kontoKindPendingSpeichern(id, null);
+    evKindNeuLaden(pre, {sicht:true});
+    return liste.length;
+  }
+  if(!liste.length){
+    kontoKindPendingSpeichern(id, null);
+    evKindNeuLaden(pre, {sicht:true});
+    return 0;
+  }
+  const regulaer=regular.liste();
+  let at=Math.max(Date.now(), ...regulaer.map(e=>Date.parse(e&&e.at)||0));
+  const uebernommen=liste.map(e=>({
+    ...e,
+    at:new Date(++at).toISOString()
+  }));
+  regular.schreiben(mergeLog([regulaer, uebernommen], Date.now()).events);
+  const rawRegular=evRaw(pre+'events');
+  const ids=new Set((Array.isArray(rawRegular)?rawRegular:[]).map(e=>e&&e.id).filter(Boolean));
+  if(!uebernommen.every(e=>ids.has(e.id))){
+    evKindNeuLaden(pre, {sicht:true});
+    return 0;
+  }
+  kontoKindPendingSpeichern(id, {transfer:s.transfer, kopiert:true, anker:s.anker});
+  pend.schreiben([]);
+  if(Array.isArray(evRaw(evPendingKey(pre))) && evRaw(evPendingKey(pre)).length){
+    evKindNeuLaden(pre, {sicht:true});
+    kontoNeuEintrag(); kontoNochmal=true;
+    return uebernommen.length;
+  }
+  kontoKindPendingSpeichern(id, null);
+  evKindNeuLaden(pre, {sicht:true});
+  kontoNeuEintrag(); kontoNochmal=true;
+  return liste.length;
+}
+async function kontoKindPendingNachAbgleich(){
+  for(const id of [...kontoOffen.keys()]){
+    const k=kontoOffen.get(id); if(!k || k.art!=='child') continue;
+    const s=kontoKindPendingStand(id); if(!s) continue;
+    if(s.kopiert){ kontoKindPendingUebernehmen(id); continue; }
+    if(await kontoKindIstBereit(id)) kontoKindPendingUebernehmen(id);
+  }
 }
 /* ---------- a child after its login: practise only once a parent's device took it in ---------- */
 async function kontoKindIstBereit(id){
@@ -5939,9 +6167,11 @@ async function kontoKindIstBereit(id){
   catch(e){ kontoFehlerListe.push('bereit: '+String(e&&e.message||e)); return false; }
 }
 async function kontoKindStart(a, id, weiter){
+  const pending=kontoKindPendingHat(id);
   $('#loginBody').innerHTML=`<h2>One moment …</h2><p class="small" role="status">Getting your things ready.</p>`;
   await kontoAbgleich();
-  if(await kontoKindIstBereit(id)) return weiter();
+  if(await kontoKindIstBereit(id)){ kontoKindPendingUebernehmen(id); return weiter(); }
+  if(pending) return weiter();
   renderKontoWarten(id, weiter);
 }
 function renderKontoWarten(id, weiter){
@@ -5953,7 +6183,7 @@ function renderKontoWarten(id, weiter){
     const m=lb.querySelector('#kidWaitMsg'); if(m) m.textContent='Checking …';
     await kontoAbgleich();
     if(aus || !da()) return;
-    if(await kontoKindIstBereit(id)){ if(aus || !da()) return; aus=true; return weiter(); }
+    if(await kontoKindIstBereit(id)){ if(aus || !da()) return; kontoKindPendingUebernehmen(id); aus=true; return weiter(); }
     const m2=lb.querySelector('#kidWaitMsg'); if(m2) m2.textContent='Not yet – your grown-up’s device has not let you in yet.';
   };
   const takt=()=>{ if(aus || !da()) return; pruefen().then(()=>setTimeout(takt, KONTO_WARTEN_MS)); };

@@ -210,6 +210,23 @@ jedeWelt('US6.5 - untergeschobener Schluessel: getauschter Verzeichniseintrag ->
   assert.deepEqual([k2.stand, k2.pub], [1, K.konto.pub], 'Kathie kommt weiter mit ihrem Passwort hinein');
 });
 
+jedeWelt('US6.5 - manipulierter Anker im Verzeichniseintrag setzt bei der Aufnahme keinen falschen Familienbezug', async (W) => {
+  const { P1 } = await gruender(W);
+  const qr = await kindAnlegen({ zugang: P1.z(), ablage: P1.a, konto: P1.konto, anmeldename: 'kathie', anzeigename: 'Kathie', now: weiter(W) });
+  const K = await einloesen(W, 'd_K1', qr, PW.kathie);
+  const lookup = await kontoLookup('kathie');
+  const echt = await W.geraet('d_X').directory(lookup);
+  const fremd = await newPersonKeys(), fpub = await publicKeysOf(fremd);
+  W.tauschen(lookup, { ...echt, anker: { kennung: 'p_FREMD', pub: fpub } });
+
+  await K.sync();
+  const r = await P1.sync();
+  assert.deepEqual(r.bestaetigt.map((b) => [b.art, b.person]), [['child', K.konto.kennung]], 'Kind wird aufgenommen');
+  const kind = P1.v().kinder.find((c) => c.id === K.konto.kennung);
+  assert.equal(kind.anker.person, P1.konto.kennung, 'Familienbezug bleibt beim ausstellenden Elternteil');
+  assert.deepEqual(kind.anker.pub, P1.konto.pub, 'auch der Anker-Schluessel bleibt der des ausstellenden Elternteils');
+});
+
 /* ---------- US9.5: Passwort des Kindes neu setzen ---------- */
 jedeWelt('US9.5 - Passwort des Kindes neu setzen (neuer Start-QR, neue Schluessel) ohne Datenverlust: Zaehlprobe; auch durch den zweiten Elternteil (Buergschaft); altes Passwort geht nicht mehr', async (W) => {
   const { P1 } = await gruender(W);
