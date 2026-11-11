@@ -30,7 +30,7 @@ export const ABGLEICH_BUENDEL_MAX = 100;
 export const ABGLEICH_GRUENDE = Object.freeze(['entschluesseln', 'eintrag-passt-nicht', ...ANNAHME_GRUENDE, 'nach-entfernung']);
 
 // Older clients advanced their school cursor even after dropping unknown evaluation events.
-const ABG_SCHULE_LESESTAND = 1;
+const ABG_SCHULE_LESESTAND = 2;
 const ABG_KEYS = ['bereich', 'geraet', 'ausgang', 'unterwegs', 'naechsteNr', 'merker', 'wartend', 'log'];
 const abgObj = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
 const abgStr = (x) => typeof x === 'string' && x.length > 0;

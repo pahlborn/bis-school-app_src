@@ -32,6 +32,7 @@ const evField = {
   day: evDayOk,
   evalId: evEvalId,
   evalRevisions: (x) => Array.isArray(x) && x.length >= 2 && new Set(x).size === x.length && x.every(evEvalId),
+  evalDocument: (x) => evObj(x) && Object.keys(x).every(k => ['area','goal','instructions','feedback','criteria'].includes(k)) && ['area','goal','instructions','feedback'].every(k => typeof x[k] === 'string' && x[k].length <= 12000) && x.area.length > 0 && Array.isArray(x.criteria) && x.criteria.length > 0 && x.criteria.length <= 50 && x.criteria.every(c => evObj(c) && Object.keys(c).every(k => ['criterion','rating','evidence'].includes(k)) && typeof c.criterion === 'string' && c.criterion.trim().length > 0 && c.criterion.length <= 2000 && ['RS','C','M','E',''].includes(c.rating) && typeof c.evidence === 'string' && c.evidence.length <= 4000),
   evalTitle: (x) => evStr(x) && x.length <= 160 && x === x.trim() && !/[\x00-\x1f\x7f]/.test(x),
   str: evStr, nstr: (x) => x === null || evStr(x), bool: (x) => typeof x === 'boolean', any: (x) => x !== undefined,
   int: (x) => Number.isInteger(x) && x >= 0, pos: (x) => Number.isInteger(x) && x >= 1, lvl: (x) => x === 1 || x === 2 || x === 3,
@@ -69,7 +70,7 @@ const EV_SPEC = {
   checklist_set: ['studio:str index:int value:bool', 'size:pos'],   // size: number of items (the app stores the whole list, task 3b-1b)
   day_flag: ['flag:enum(greetDay|mysteryDone|bdayParty) day:day', ''],
   school_import: ['asOf:day data:obj', 'source:str'],
-  school_evaluation: [`child:pid evaluation:evalId revision:evalId title:evalTitle day:day standard:enum(${Object.keys(SCHOOL_EVALUATION_TARGETS).join('|')}) rating:enum(RS|C|M|E) focus:enum(${Object.values(SCHOOL_EVALUATION_TARGETS).map((t) => t.focus).join('|')}|none)`, 'base:evalId withdrawn:bool resolves:evalRevisions'],
+  school_evaluation: [`child:pid evaluation:evalId revision:evalId title:evalTitle day:day standard:enum(${Object.keys(SCHOOL_EVALUATION_TARGETS).join('|')}|unmapped) rating:enum(RS|C|M|E|N) focus:enum(${Object.values(SCHOOL_EVALUATION_TARGETS).map((t) => t.focus).join('|')}|none)`, 'base:evalId withdrawn:bool resolves:evalRevisions assessment:evalDocument'],
   grant_set: ['grant:str grantee:pid scope:scope from:day until:day', 'text:str'],
   grant_revoked: ['grant:str grantee:pid', ''],
   grant_opened: ['grant:str grantee:pid', 'scope:scope'],
@@ -162,6 +163,8 @@ export function checkEvent(e) {
     for (const [f, ok] of Object.entries(opt)) if (evHas(e.payload, f) && !ok(e.payload[f])) err.push(`payload.${f}: invalid`);
     if (e.type === 'school_evaluation') {
       const { standard, focus, rating, revision, base, withdrawn, resolves } = e.payload;
+      if (standard === 'unmapped' && (!e.payload.assessment || rating !== 'N' || focus !== 'none')) err.push('payload: unmapped requires assessment and no focus');
+      if (standard !== 'unmapped' && rating === 'N') err.push('payload.rating: invalid mapped rating');
       if (focus !== 'none') {
         if (typeof standard === 'string' && evOwn(SCHOOL_EVALUATION_TARGETS, standard) && focus !== SCHOOL_EVALUATION_TARGETS[standard].focus) err.push('payload.focus: incompatible with standard');
         if (!schoolEvaluationNeedsPractice(rating)) err.push('payload.focus: incompatible with rating');

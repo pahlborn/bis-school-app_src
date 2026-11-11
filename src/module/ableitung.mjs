@@ -329,7 +329,8 @@ function abSchoolManual(revisions) {
   const { evaluation, revision, standard, focus, withdrawn } = active;
   const focusNext = withdrawn || focus === 'none' ? [] : [SCHOOL_EVALUATION_TARGETS[standard].world];
   return {
-    title: active.title, day: active.day, area: 'math', std: { [standard]: active.rating },
+    title: active.title, day: active.day, area: active.assessment?.area || 'math', std: standard === 'unmapped' ? {} : { [standard]: active.rating },
+    ...(active.assessment ? { assessment: abClone(active.assessment), rubric: active.assessment.criteria.map(c => ({crit:c.criterion,teacher:c.rating,self:''})) } : {}),
     quests: focusNext, focusNext,
     manual: { evaluation, revision, standard, focus, withdrawn: !!withdrawn, history,
       conflicts: contenders.map(p => p.revision) },

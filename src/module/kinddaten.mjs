@@ -208,7 +208,7 @@ export async function kindDatenExport({ ablage, konto, kind, now, heute, sprache
   const ga = grantsAblauf(st, heute);
   st.grants = ga.grants; st.grantlog = ga.grantlog;
   const { daten, stellen } = kdtStellen(st, log, T);
-  const schulbewertungen = log.filter((e) => e.type === 'school_import' && kdtObj(e.payload)).map((e) => ({ asOf: e.payload.asOf, source: e.payload.source || null, data: kdtKlon(e.payload.data), eingetragen: e.at }));
+  const schulbewertungen = log.filter((e) => ['school_import','school_evaluation'].includes(e.type) && kdtObj(e.payload)).map((e) => ({ asOf: e.payload.asOf || e.payload.day, source: e.payload.source || null, data: kdtKlon(e.type === 'school_import' ? e.payload.data : e.payload), eingetragen: e.at }));
   const namen = {};                                                    // login names the family knows
   for (const [pid, p] of kdtFamilie(ablage, v.familie, now)) if (typeof p.name === 'string') namen[pid] = p.name;
   if (konto.anmeldename) namen[konto.kennung] = konto.anmeldename;

@@ -1,0 +1,25 @@
+name: Evaluation form integration
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'src/module/**'
+      - 'ios/**'
+      - 'tests/**'
+      - '.github/workflows/evaluation-integration.yml'
+permissions:
+  contents: read
+jobs:
+  integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-package-lock
+      - run: npx playwright install --with-deps chromium
+      - run: node werkzeug/testinstanz.mjs
+      - run: node --test tests/toddle-evaluation-reader.test.mjs tests/evaluation-eltern-browser.test.mjs tests/evaluation-upgrade-browser.test.mjs tests/module/school-evaluation.test.mjs
+      - run: npm test
