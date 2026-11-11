@@ -18,7 +18,8 @@ enum ToddleField {
       const dialogs = [...document.querySelectorAll('[role="dialog"], dialog[open]')].filter(rendered);
       // Nested dialogs are normal. A hit test identifies the foreground view.
       const hits = document.elementsFromPoint(innerWidth / 2, innerHeight / 2);
-      const front = dialogs.find(dialog => hits[0] && dialog.contains(hits[0]));
+      const hitDialogs = dialogs.filter(dialog => hits[0] && dialog.contains(hits[0]));
+      const front = hitDialogs.find(dialog => !hitDialogs.some(other => other !== dialog && dialog.contains(other)));
       const roots = dialogs.filter(dialog => !dialogs.some(other => other !== dialog && other.contains(dialog)));
       let scope;
       if (front) scope = roots.find(root => root.contains(front)) || front;
@@ -31,7 +32,9 @@ enum ToddleField {
         const node = walker.currentNode;
         const parent = node.parentElement;
         if (!parent || parent.closest('script, style, noscript, input, textarea, select, button, nav, [role="navigation"], [contenteditable="true"]') || !rendered(parent)) continue;
-        if (parent.closest('[aria-hidden="true"]')) continue;
+        const ariaHidden = parent.closest('[aria-hidden="true"]');
+        // Some overlays mark an ancestor aria-hidden while their active nested dialog stays visible.
+        if (ariaHidden && !(front && front.contains(parent) && ariaHidden.contains(front))) continue;
         const text = node.textContent.replace(/\s+/g, ' ').trim();
         if (text) lines.push(text);
       }

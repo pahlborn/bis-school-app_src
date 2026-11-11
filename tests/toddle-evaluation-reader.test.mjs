@@ -19,6 +19,8 @@ test('capture reads custom rendered evaluation layouts and nested dialogs withou
   assert.match(result.text, /Learning intentions[\s\S]*Learn rounding[\s\S]*Round to 100\nC/);
   assert.doesNotMatch(result.text,/SECRET|HIDDEN|PASSWORD|Messaging/);
   assert.equal(await page.evaluate(()=>getSelection().toString()), '');
+  await page.setContent('<div role="dialog" aria-hidden="true" style="position:fixed;inset:0">BACKGROUND<div role="dialog" style="position:fixed;inset:10px;background:white">Evaluation<div>Communicate clearly</div><div>C</div></div></div>');
+  assert.equal((await page.evaluate(script)).text,'Evaluation\nCommunicate clearly\nC');
   await page.setContent('<main>Learning intentions<div style="opacity:0">PRIVATE</div><p>Actual goal</p></main>');
   assert.equal((await page.evaluate(script)).text,'Learning intentions\nActual goal');
   await page.setContent('<main>Learning intentions '+ 'x'.repeat(48001) + '</main>');
