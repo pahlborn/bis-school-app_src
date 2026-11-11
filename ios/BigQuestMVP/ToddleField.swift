@@ -2,63 +2,63 @@ import Foundation
 import WebKit
 
 enum ToddleField {
-    private static let host = "web.toddleapp.com"
-
-    struct AssessmentRow {
-        let criterion: String
-        let rating: String
-        let transfer = UUID().uuidString.lowercased()
-    }
-
-    @MainActor
-    private static func selected(from webView: WKWebView, row: Bool) async throws -> Any? {
-        guard webView.url?.scheme == "https", webView.url?.host == host else {
-            throw MVPError.message("Öffne die Evaluation zuerst im Toddle-Familienbereich.")
+    // Captures rendered text only. No table semantics, account state or network endpoints.
+    static let evaluationScript = #"""
+    (() => {
+      if (location.origin !== 'https://web.toddleapp.com') return { error: 'origin' };
+      const rendered = element => {
+        if (!element || !element.getClientRects().length) return false;
+        for (let parent = element; parent; parent = parent.parentElement) {
+          const style = getComputedStyle(parent);
+          if (parent.hidden || parent.hasAttribute('inert') || style.display === 'none' ||
+              style.visibility !== 'visible' || Number(style.opacity) === 0) return false;
         }
-        let script = """
-        (() => {
-          if (location.origin !== 'https://web.toddleapp.com') return null;
-          const selection = window.getSelection();
-          if (!selection || selection.rangeCount !== 1 || selection.isCollapsed) return null;
-          const range = selection.getRangeAt(0);
-          const element = range.startContainer.parentElement;
-          if (!element || element !== range.endContainer.parentElement
-              || element.isContentEditable || element.closest('input, textarea, select, [role="textbox"]')) return null;
-          if (![...range.getClientRects()].some(rect =>
-              rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.right > 0 &&
-              rect.top < innerHeight && rect.left < innerWidth)) return null;
-          const text = selection.toString().trim();
-          if (!\(row ? "true" : "false")) return text;
-          const cell = element.closest('td, [role="cell"], [role="gridcell"]');
-          const tableRow = cell?.closest('tr, [role="row"]');
-          if (!tableRow) return null;
-          const cells = [...tableRow.children].filter(c => c.matches('th, td, [role="cell"], [role="gridcell"], [role="rowheader"]'));
-          if (cells.length !== 2 || cells[1] !== cell || cell.innerText.trim() !== text) return null;
-          return [cells[0].innerText.trim(), text];
-        })()
-        """
-        let result = try await webView.evaluateJavaScript(script)
-        guard webView.url?.scheme == "https", webView.url?.host == host else {
-            throw MVPError.message("Die Toddle-Seite hat sich geändert. Markiere den Wert erneut.")
-        }
-        return result
-    }
-
-    @MainActor
-    static func read(from webView: WKWebView) async throws -> String {
-        guard let value = try await selected(from: webView, row: false) as? String, !value.isEmpty,
-              value.utf8.count <= 240, value.rangeOfCharacter(from: .controlCharacters) == nil else {
-            throw MVPError.message("Markiere einen einzelnen sichtbaren Wert in Toddle und versuche es erneut.")
-        }
-        return value
-    }
+        return true;
+      };
+      const dialogs = [...document.querySelectorAll('[role="dialog"], dialog[open]')].filter(rendered);
+      // Nested dialogs are normal. A hit test identifies the foreground view.
+      const hits = document.elementsFromPoint(innerWidth / 2, innerHeight / 2);
+      const hitDialogs = dialogs.filter(dialog => hits[0] && dialog.contains(hits[0]));
+      const front = hitDialogs.find(dialog => !hitDialogs.some(other => other !== dialog && dialog.contains(other)));
+      const roots = dialogs.filter(dialog => !dialogs.some(other => other !== dialog && other.contains(dialog)));
+      let scope;
+      if (front) scope = roots.find(root => root.contains(front)) || front;
+      else if (roots.length === 1) scope = roots[0];
+      else if (!roots.length) scope = document.querySelector('main, [role="main"]');
+      if (!scope || !rendered(scope)) return {error: 'scope'};
+      const lines = [];
+      const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        const parent = node.parentElement;
+        if (!parent || parent.closest('script, style, noscript, input, textarea, select, button, nav, [role="navigation"], [contenteditable="true"]') || !rendered(parent)) continue;
+        const ariaHidden = parent.closest('[aria-hidden="true"]');
+        // Some overlays mark an ancestor aria-hidden while their active nested dialog stays visible.
+        if (ariaHidden && !(front && front.contains(parent) && ariaHidden.contains(front))) continue;
+        const text = node.textContent.replace(/\s+/g, ' ').trim();
+        if (text) lines.push(text);
+      }
+      const text = lines.join('\n');
+      if (!text || !/Learning intentions|Learning experience description|Assessment|Evaluation/i.test(text)) return {error: 'content'};
+      if (new TextEncoder().encode(text).length > 48000) return {error: 'size'};
+      return {text};
+    })()
+    """#
 
     @MainActor
-    static func readAssessmentRow(from webView: WKWebView) async throws -> AssessmentRow {
-        guard let values = try await selected(from: webView, row: true) as? [String], values.count == 2,
-              !values[0].isEmpty, values[0].utf8.count <= 800, ["RS", "C", "M", "E"].contains(values[1]) else {
-            throw MVPError.message("Markiere die Einstufung in einer sichtbaren Toddle-Zeile mit genau einem Kriterium.")
+    static func readSource(from view: WKWebView) async throws -> String {
+        let url = view.url
+        guard url?.scheme == "https", url?.host == "web.toddleapp.com" else {
+            throw MVPError.message("Öffne die gewünschte Evaluation in Toddle.")
         }
-        return AssessmentRow(criterion: values[0], rating: values[1])
+        let result = try await view.evaluateJavaScript(evaluationScript)
+        guard view.url == url else {
+            throw MVPError.message("Die Seite hat sich während des Lesens geändert. Bitte erneut lesen.")
+        }
+        guard let data = result as? [String: Any], let text = data["text"] as? String,
+              !text.isEmpty, text.utf8.count <= 48000 else {
+            throw MVPError.message("Der Text der Evaluation konnte nicht erfasst werden. Bitte die geöffnete Ansicht prüfen.")
+        }
+        return text
     }
 }

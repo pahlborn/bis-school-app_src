@@ -1,0 +1,21 @@
+name: Toddle evaluation reader
+on:
+  pull_request:
+    paths:
+      - 'ios/**'
+      - 'tests/toddle-evaluation-reader.test.mjs'
+      - '.github/workflows/toddle-reader.yml'
+permissions:
+  contents: read
+jobs:
+  reader:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-package-lock
+      - run: npx playwright install --with-deps chromium
+      - run: node --test tests/toddle-evaluation-reader.test.mjs
+
