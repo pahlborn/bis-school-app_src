@@ -719,6 +719,7 @@ const APP_RELEASES=/*BQ_RELEASES*/null;
    geraet()). null (always in Kathie's app): no accounts in a storage, the login works with konten.json as before. */
 const KONTO_SPEICHER=/*BQ_SPEICHER*/null;
 const SCHULE_TESTFREIGABE=/*BQ_SCHULE_TESTFREIGABE*/null;
+const SCHULE_KI=/*BQ_SCHULE_KI*/false;
 const APP_ACCOUNTS=normAccounts(/*BQ_KONTEN*/null) || kontoKontenStart();
 /* login with accounts in the storage: test build (module konto), a storage, no konten.json (kontoKontenStart) */
 const KONTO_UI=!!(APP_ACCOUNTS && APP_ACCOUNTS.konto);
@@ -6812,6 +6813,74 @@ function schoolEvaluationTarget(){
   const child=kontoVerb(account).kinder.find(c=>c.id===id);
   return child ? {id, author:account.kennung, name:kontoKindName(id, child.name)} : null;
 }
+function schoolEvaluationHostedSource(d){
+  const title=d.title.trim();
+  const day=d.day, date=new Date(day+'T00:00:00Z');
+  if(!title || /[\x00-\x1f\x7f]/.test(title) || title.length>160 || !/^\d{4}-\d{2}-\d{2}$/.test(day) ||
+    !Number.isFinite(+date) || date.toISOString().slice(0,10)!==day || day>dayKey()) throw new Error('school input');
+  const lines=d.source.trim().split(/\r?\n/).filter(line=>line.trim());
+  if(!lines.length || lines.length>30) throw new Error('school input');
+  const rows=lines.map(line=>{
+    const fields=line.split('\t').map(value=>value.trim());
+    if(fields.length!==2 || !fields[0] || fields[0].length>600) throw new Error('school input');
+    return {criterion:fields[0],teacherRating:Object.hasOwn(SL,fields[1]) && fields[1]!=='N'?fields[1]:null};
+  });
+  return {title,day,rows};
+}
+async function schoolEvaluationAiRequest(d){
+  const headers={'Content-Type':'application/json'};
+  const signal=AbortSignal.timeout(35000);
+  if(!SCHULE_KI.url){
+    const response=await fetch('/__bq_school_ai',{method:'POST',headers,body:d.source,signal});
+    if(!response.ok) throw new Error('school extract');
+    return response.json();
+  }
+  const source=schoolEvaluationHostedSource(d), account=kontoIch();
+  if(account?.art!=='parent' || account.kennung!==d.author) throw new Error('school access');
+  const rows=source.rows.map(({criterion},row)=>({row,criterion}));
+  const body=JSON.stringify({account:account.kennung,at:Date.now(),nonce:crypto.randomUUID(),rows});
+  headers['X-BQ-Signature']=await signBytes(account.schluessel,'bq-school-ai-v1\n'+location.origin+'\n'+body);
+  const response=await fetch(SCHULE_KI.url+'/v1/school-assessment',{method:'POST',headers,body,signal,credentials:'omit',redirect:'error'});
+  if(response.status===403) throw new Error('school access');
+  if(!response.ok) throw new Error('school extract');
+  const {matches}=await response.json();
+  if(!Array.isArray(matches)) throw new Error('school extract');
+  return {...source,rows:source.rows.map((row,i)=>{
+    const candidates=matches.filter(m=>m?.row===i);
+    const standard=candidates[0]?.standard;
+    const unique=matches.filter(m=>m?.standard===standard).length===1;
+    return {...row,standard:row.teacherRating && candidates.length===1 && unique && Object.hasOwn(SCHOOL_EVALUATION_TARGETS,standard)?standard:null};
+  })};
+}
+function schoolEvaluationAiHTML(d, child, criteria, lang){
+  const de=lang==='de';
+  if(!d.preview){
+    return `<h3>${de?'Schulauszug prüfen':'Review school extract'}</h3>${child}
+      <p>${de?'Nur geprüfte Kriterientexte werden zur Zuordnung an Claude gesendet. Entfernen Sie Namen und Kennungen aus den Kriterien.':'Only checked criterion text is sent to Claude. Remove names and identifiers from criteria.'}</p>
+      ${SCHULE_KI.url?`<label>${de?'Titel':'Title'} <input name="title" required maxlength="160" value="${esc(d.title)}"${d.busy?' readonly':''}></label>
+      <label>${de?'Bewertungsdatum':'Assessment date'} <input name="day" type="date" required max="${dayKey()}" value="${esc(d.day)}"${d.busy?' readonly':''}></label>
+      <p>${de?'Kopieren Sie die beiden Spalten Kriterium und Lehrkraft-Einstufung ohne Kopfzeile aus der Bewertung.':'Copy the criterion and teacher rating columns from the assessment without the header row.'}</p>`:''}
+      <label>${de?'Schulauszug':'School extract'} <textarea name="schoolSource" rows="6" maxlength="24000" required${d.busy?' readonly':''}>${esc(d.source)}</textarea></label>
+      <button class="btn" type="submit"${d.busy?' disabled':''}>${d.busy?(de?'Zuordnung läuft …':'Matching …'):(de?'KI-Zuordnung anzeigen':'Show AI suggestions')}</button>`;
+  }
+  const rows=d.rows.map((r,i)=>{
+    const name=criteria[r.standard], rating=PSTAND[lang][SL[r.teacherRating]];
+    const choice=name && rating ? `<label><input type="radio" name="schoolRow" value="${i}"${d.row===i?' checked':''}> ${esc(name)}</label>`
+      : de?'Offen':'Unmatched';
+    return `<tr><td>${esc(r.criterion)}</td><td>${rating||'–'}</td><td>${choice}</td></tr>`;
+  }).join('');
+  const exercise=SCHOOL_EVALUATION_EXERCISES[SCHOOL_EVALUATION_TARGETS[d.standard]?.focus];
+  return `<h3>${de?'Geprüfte Vorschau':'Review suggestions'}</h3>${child}
+    <p>${esc(d.title)} · ${fmtDay(d.day)}</p>
+    <table class="dt"><thead><tr><th scope="col">${de?'Kriterium':'Criterion'}</th><th scope="col">${de?'Einstufung':'Rating'}</th><th scope="col">${de?'Vorgeschlagenes Lernziel':'Suggested learning goal'}</th></tr></thead><tbody>${rows}</tbody></table>
+    <p>${d.row===null ? (de?'Wählen Sie ein Kriterium zur Übernahme aus.':'Choose one criterion to save.')
+      : d.focus ? esc(exercise[lang]) : (de?'Ohne zusätzlichen Übungsfokus':'Without additional practice focus')}</p>
+    ${d.strengths?`<h4>${de?'Stärken':'Strengths'}</h4><p>${esc(d.strengths)}</p>`:''}
+    ${d.nextSteps?`<h4>${de?'Nächste Schritte':'Next steps'}</h4><p>${esc(d.nextSteps)}</p>`:''}
+    <p class="small">${de?'Nur das ausgewählte Kriterium wird gespeichert. Die übrigen Zeilen werden nicht übernommen.':'Only the selected criterion will be saved. The other rows will not be imported.'}</p>
+    <button class="btn" type="submit"${d.row===null?' disabled':''}>${de?'Übernehmen':'Save assessment'}</button>
+    <button class="btn small" type="button" data-eval-action="edit">${de?'Auszug bearbeiten':'Edit extract'}</button>`;
+}
 function schoolEvaluationHTML(){
   const target=schoolEvaluationTarget();
   if(!target) return '';
@@ -6822,12 +6891,14 @@ function schoolEvaluationHTML(){
     ? `<p role="status">${schoolEvaluationSyncHTML(schoolEvaluationNotice.revision,anmSchuleAbgeglicheneRevisionen(localStorage, target.id),de)}</p>` : '';
   const criteria=de?STANDARD_TEXT:STANDARD_TEXT_EN;
   const start=`<button type="button" class="btn small" data-eval-action="open">${de?'Evaluation hinzufügen':'Add assessment'}</button>`;
-  if(!d) return `<div id="pSchoolEvaluation">${start}${status}</div>`;
+  const ai=SCHULE_KI?` <button type="button" class="btn small" data-eval-action="ai">${de?'Auszug mit KI prüfen':'Review extract with AI'}</button>`:'';
+  if(!d) return `<div id="pSchoolEvaluation">${start}${ai}${status}</div>`;
   const cancel=`<button type="button" class="btn small" data-eval-action="cancel">${de?'Abbrechen':'Cancel'}</button>`;
   const child=`<p><b>${de?'Kind':'Child'}</b> · ${esc(target.name)}</p>`;
   const error=d.error?`<p role="alert">${esc(d.error)}</p>`:'';
   let content;
-  if(d.withdrawn){
+  if(d.ai) content=schoolEvaluationAiHTML(d, child, criteria, lang);
+  else if(d.withdrawn){
     const title=de?'Bewertung zurücknehmen':'Withdraw assessment';
     const explanation=de?'Der Eintrag bleibt im Fassungsverlauf. Nach dem Abgleich liefert er keine gezielten Karten mehr für neue Tagesrunden.':'The assessment remains in the revision history. After syncing, it stops adding targeted cards to new daily rounds.';
     content=`<h3>${title}</h3>${child}<p>${esc(d.title)} · ${fmtDay(d.day)}</p><p>${explanation}</p>
@@ -6875,24 +6946,63 @@ function bindSchoolEvaluation(body){
       schoolEvaluationNotice=null;
       schoolEvaluationDraft={child:t.id, author:t.author, title:'', day:'', standard:'', rating:'',
         evaluation:crypto.randomUUID(), revision:crypto.randomUUID(), preview:false, focus:false};
+    } else if(action==='ai' && SCHULE_KI){
+      schoolEvaluationNotice=null;
+      schoolEvaluationDraft={child:t.id, author:t.author, ai:true, source:typeof SCHULE_KI==='string'?SCHULE_KI:'',
+        evaluation:crypto.randomUUID(), revision:crypto.randomUUID(), preview:false, row:null, title:'', day:''};
     } else if(action==='cancel') schoolEvaluationDraft=null;
     else if(action==='edit' && current()){ current().preview=false; current().error=''; }
     redraw();
-    body.querySelector('#pSchoolEvaluation input[name="title"], #pSchoolEvaluation [data-eval-action="open"]')?.focus();
+    body.querySelector('#pSchoolEvaluation textarea, #pSchoolEvaluation input[name="title"], #pSchoolEvaluation [data-eval-action="open"]')?.focus();
   });
   box.addEventListener('input',e=>{
     const d=current(), name=e.target.name;
     if(!d) return;
+    if(d.ai && name==='schoolSource'){ d.source=e.target.value; return; }
+    if(d.ai && d.preview && name==='schoolRow'){
+      const i=Number(e.target.value), row=d.rows[i];
+      if(!row || !Object.hasOwn(SCHOOL_EVALUATION_TARGETS,row.standard) || !SL[row.teacherRating]) return;
+      d.row=i; d.standard=row.standard; d.rating=row.teacherRating;
+      d.focus=schoolEvaluationNeedsPractice(d.rating);
+      redraw(); body.querySelector('#pSchoolEvaluation [name="schoolRow"]:checked')?.focus(); return;
+    }
     if(!d.preview && ['title','day','standard','rating'].includes(name)){
       if(name==='rating' && !schoolEvaluationNeedsPractice(d.rating)) d.focus=schoolEvaluationNeedsPractice(e.target.value);
       d[name]=e.target.value;
     }
     if(d.preview && name==='exerciseFocus'){ d.focus=e.target.checked; redraw(); body.querySelector('#pSchoolEvaluation [name="exerciseFocus"]')?.focus(); }
   });
-  box.addEventListener('submit',e=>{
+  box.addEventListener('submit',async e=>{
     e.preventDefault();
     const d=current(), de=PL()==='de';
     if(!d) return;
+    if(d.ai && !d.preview){
+      if(d.busy) return;
+      d.busy=true; d.error=''; redraw();
+      try {
+        const {title,day,rows,strengths,nextSteps}=await schoolEvaluationAiRequest(d);
+        if(typeof title!=='string' || !title || title.length>160 || typeof day!=='string' ||
+          !/^\d{4}-\d{2}-\d{2}$/.test(day) || day>dayKey() || !Array.isArray(rows) || !rows.length ||
+          rows.some(r=>typeof r?.criterion!=='string')) throw new Error('school preview');
+        Object.assign(d,{title,day,rows,strengths,nextSteps,preview:true,row:null,standard:'',rating:'',focus:false});
+      } catch(error) {
+        if(error.message==='school access'){
+          d.error=de?'Dieses Elternkonto ist für die KI-Zuordnung noch nicht freigegeben.':'This parent account is not enabled for AI matching yet.';
+        } else if(error.message==='school input'){
+          d.error=de?'Bitte prüfen Sie Titel und Datum. Kopieren Sie pro Zeile ein Kriterium und seine Einstufung in zwei Spalten.':'Check the title and date. Paste one criterion and its rating as two columns per row.';
+        } else d.error=de?'Die Zuordnung ist fehlgeschlagen. Prüfen Sie den Auszug und versuchen Sie es erneut.'
+          :'Matching failed. Check the extract and try again.';
+      } finally {
+        d.busy=false;
+        const activeBox=body.querySelector('#pSchoolEvaluation');
+        if(current()===d && activeBox?.isConnected){
+          activeBox.outerHTML=schoolEvaluationHTML(); bindSchoolEvaluation(body);
+          body.querySelector('#pSchoolEvaluation [name="schoolRow"], #pSchoolEvaluation textarea')?.focus();
+        }
+      }
+      return;
+    }
+    if(d.ai && (d.row===null || !Object.hasOwn(SCHOOL_EVALUATION_TARGETS,d.standard) || !SL[d.rating])) return;
     if(!d.preview){
       d.title=d.title.trim();
       if(!d.title || /[\x00-\x1f\x7f]/.test(d.title) || !d.day || d.day>dayKey() || !Object.hasOwn(SCHOOL_EVALUATION_TARGETS,d.standard) || !SL[d.rating]){

@@ -150,7 +150,7 @@ export async function testinstanzBauen({ wurzel = WURZEL, ziel = path.join(wurze
   const testbau = moduleEinsetzen(await lies(QUELLEN.app), { bauart: 'test', ordner: path.join(wurzel, 'src', 'module') });
   const ersatz = await ersatzLesen(wurzel);
   // konten und schule bewusst null: die Marken bleiben leer (nicht aus werkzeug/konten.json, werkzeug/schuldaten.json)
-  const app = testinstanzUmwandeln(appZusammensetzen(testbau, v, null, null, schriftenLesen(wurzel)).toString('utf8'), ersatz);
+  const app = testinstanzUmwandeln(appZusammensetzen(testbau, v, null, null, schriftenLesen(wurzel)).toString('utf8'), ersatz, { kiUrl: process.env.BQ_SCHULE_KI_URL });
   const manifest = testinstanzManifest(await lies(QUELLEN.manifest, 'utf8'));
   const { funde, pruefungen } = testinstanzPruefen(app, manifest, await testinstanzKontext(wurzel, ersatz));
   if (funde.length) throw new Error('Suchlauf Testinstanz, nichts geschrieben:\n  - ' + funde.join('\n  - '));
