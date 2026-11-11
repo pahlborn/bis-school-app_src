@@ -380,10 +380,13 @@ export async function anmKindBereit({ ablage, zugang, konto, now }) {
   const logAnker = k && k.anker && k.anker.role === 'parent' && anmPid(k.anker.person) && anmPub(k.anker.pub) ? k.anker : null;
   const hatKontoAnker = Object.prototype.hasOwnProperty.call(konto, 'anker');
   const kontoAnker = konto.anker && konto.anker.role === 'parent' && anmPid(konto.anker.person) && anmPub(konto.anker.pub) ? konto.anker : null;
-  // An explicit anchor on the account must be valid; only older login results without that field may fall back to local family data.
+  // An explicit anchor on the account stays the bootstrap source; a remembered local anchor must still describe the same
+  // parent, and only the remembered anchor (if present) may contradict that bootstrap source.
   const anker = hatKontoAnker ? kontoAnker : logAnker;
   if (!anker) return false;
-  if (logAnker && (logAnker.person !== anker.person || !anmGleichePub(logAnker.pub, anker.pub))) return false;
+  if (logAnker && logAnker.person !== anker.person) return false;
+  const gleicherAnker = !!(logAnker && logAnker.person === anker.person && anmGleichePub(logAnker.pub, anker.pub));
+  const ankerVertraut = hatKontoAnker ? (!logAnker || gleicherAnker) : !!logAnker;
   const area = bereichName('kind:lern', konto.kennung);
   let st = null;
   try { st = JSON.parse(ablage.getItem(GERAETEABGLEICH_SPEICHER.staende) || '{}')[area]; } catch (e) { st = null; }
@@ -391,7 +394,7 @@ export async function anmKindBereit({ ablage, zugang, konto, now }) {
   try {
     const zul = await zulassungAus(log, { area, anker, now });
     const s = await schluesselLesen(zugang, area, { ich: konto.kennung, meineSchluessel: konto.schluessel, mitglieder: aktiveMitglieder(zul) });
-    return !!(s.aktuell && s.keys.has(s.aktuell));
+    return !!(s.aktuell && s.keys.has(s.aktuell)) || !!(ankerVertraut && !s.aktuell && s.lesbar.size);
   } catch (err) {
     if (err && typeof err.code === 'string') return false;
     throw err;
