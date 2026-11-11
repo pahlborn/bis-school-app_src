@@ -70,7 +70,7 @@ async function togglePruefen(page, id, wert, autocomplete) {
   assert.equal(await feld.inputValue(), wert, id + ' Wert verdeckt');
 }
 
-test('Browser: Kind anlegen -> Start-QR-Code -> Kind wartet und geht von selbst weiter; Schluessel erneuern (Felder); eigenes Geraet startet direkt im Erwachsenenbereich', async () => {
+test('Browser: Kind anlegen -> Start-QR-Code -> Kind startet sofort; Schluessel erneuern (Felder); eigenes Geraet startet direkt im Erwachsenenbereich', async () => {
   const P = await geraet();
   // die Einladung des Admins: Zugangscode und Startlink in einem Link
   const linkP = anmEinladungslink(server.url, { zugang: TOKEN, anmeldename: 'peter.a', code: startP.code, fingerabdruck: startP.fingerabdruck });
@@ -100,13 +100,11 @@ test('Browser: Kind anlegen -> Start-QR-Code -> Kind wartet und geht von selbst 
   assert.equal(d, /<path fill="#000" d="([^"]*)"/.exec(qrSvg(linkK, { ecc: 'M', rand: 4 }))[1], 'der QR-Code traegt Zugangscode und Startlink mit Peters Pruefwoertern');
   assert.match(await P.page.locator('#kQrStatus').textContent(), /Warte auf die erste Anmeldung/);
 
-  // das Kind: QR-Link -> verbunden, ohne Rollenwahl zum Passwort -> wartet -> geht von selbst weiter (Takte beider Geraete)
+  // das Kind: QR-Link -> verbunden, ohne Rollenwahl zum Passwort -> Startseite, Aufnahme im Hintergrund
   const K = await geraet();
   await K.page.goto(linkK);
   await registrieren(K.page);
-  await K.page.waitForSelector('#welcomeGo', { timeout: 60000 });
-  await K.page.locator('#welcomeGo').click();
-  await K.page.waitForSelector('#home:not([hidden])');
+  await K.page.waitForSelector('#home:not([hidden])', { timeout: 60000 });
   await P.page.waitForFunction(() => /✓ Kathie ist angemeldet/.test(document.querySelector('#kQrStatus')?.textContent || ''), null, { timeout: 30000 });
   assert.equal(await P.page.locator('#kQrWeg').count(), 0);
   await P.page.locator('#kQrFertig').click();

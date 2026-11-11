@@ -122,6 +122,12 @@ button{font:inherit;color:inherit}
 .profile-dlg{border:0;border-radius:22px;padding:18px;width:min(420px,calc(100vw - 24px));max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px);overflow:auto;background:var(--surface);color:var(--ink);box-shadow:0 10px 40px rgba(15,22,38,.35)}
 .profile-dlg::backdrop{background:rgba(15,22,38,.45)}
 .profile-dlg form{display:flex;flex-direction:column;gap:12px}
+#pfMessage:empty{display:none}
+@media (max-height:580px){
+  #profileDlg{padding:12px}
+  #profileForm{gap:6px}
+  #profileTitle{margin:0}
+}
 .pf-set{border:0;padding:0;margin:0;min-width:0}
 .pf-set legend{font-family:var(--display);font-weight:600;margin-bottom:6px;padding:0}
 .pf-names{display:flex;gap:8px}
@@ -847,7 +853,7 @@ function eventHook(type, payload, kid){
       personSink=evSchreiber({read:()=>evPersonLog(mine()).liste(), write:l=>evPersonLog(mine()).schreiben(l), device:d, who:eventWho, now});
     }
     const r=(own?personSink:eventSink).write(type, payload);
-    if(r.ok && !own) evKindNeuLaden(evPre(), {sicht:true});
+    if(r.ok && !own) evLogs.get('sicht:'+evPre())?.neuLaden();
     if(r.ok && KONTO_UI) kontoNeuEintrag();   // task "Abgleich in der App": send it soon (bundled)
     return r.ok ? r.event : null;
   }catch(e){ eventErrors.push(type+': '+String(e&&e.message||e)); return null; }
@@ -912,7 +918,7 @@ function evKindSichtLog(pre){
   const k='sicht:'+pre;
   let p=evLogs.get(k); if(p) return p;
   p=evProtokoll({
-    laden:()=>mergeLog([evKindLog(pre).liste(), evKindPendingLog(pre).liste()], Date.now()).events,
+    laden:()=>anmKindEreignisseVereinen(evKindLog(pre).liste(), evKindPendingLog(pre).liste(), Date.now()),
     speichern:()=>{},
     basis:()=>evKindBasis(pre),
     now:()=>Date.now()
@@ -923,7 +929,7 @@ function evKindZielLog(pre){
   const id=evKindId(pre);
   if(!kontoKindPendingOffen(id)) return evKindLog(pre);
   return {
-    liste:()=>mergeLog([evKindLog(pre).liste(), evKindPendingLog(pre).liste()], Date.now()).events,
+    liste:()=>anmKindEreignisseVereinen(evKindLog(pre).liste(), evKindPendingLog(pre).liste(), Date.now()),
     schreiben:l=>{
       const da=new Set(evKindLog(pre).liste().map(e=>e&&e.id).filter(Boolean));
       evKindPendingLog(pre).schreiben((Array.isArray(l)?l:[]).filter(e=>e && typeof e==='object' && !da.has(e.id)));
@@ -6133,7 +6139,7 @@ function kontoKindPendingUebernehmen(id){
     ...e,
     at:new Date(++at).toISOString()
   }));
-  regular.schreiben(mergeLog([regulaer, uebernommen], Date.now()).events);
+  regular.schreiben(anmKindEreignisseVereinen(regulaer, uebernommen, Date.now()));
   const rawRegular=evRaw(pre+'events');
   const ids=new Set((Array.isArray(rawRegular)?rawRegular:[]).map(e=>e&&e.id).filter(Boolean));
   if(!uebernommen.every(e=>ids.has(e.id))){

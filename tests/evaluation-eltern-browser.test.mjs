@@ -183,8 +183,7 @@ test('correction drafts preserve the current focus, a synced confirmation replac
   });
   await K.page.goto(anmEinladungslink(server.url, { zugang: TOKEN, anmeldename: LOGIN, code, fingerabdruck: await keyFingerprint(pub) }));
   await register(K.page);
-  await K.page.locator('#welcomeGo').click({ timeout: 60000 });
-  await K.page.waitForSelector('#home:not([hidden])');
+  await K.page.waitForSelector('#home:not([hidden])', { timeout: 60000 });
   await P.page.waitForFunction(() => /ist angemeldet/.test(document.querySelector('#kQrStatus')?.textContent || ''), null, { timeout: 30000 });
   await P.page.locator('#kQrFertig').click();
 

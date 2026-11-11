@@ -44,6 +44,12 @@ import { qrSvg } from './qrcode.mjs';
 import { qrLesen, QRL_HINWEIS } from './qrlesen.mjs';
 import { kindDatenExport, kindDatenLoeschen, kontoDatenLoeschen } from './kinddaten.mjs';
 import { deriveSchool } from './ableitung.mjs';
+import { mergeLog } from './ereignisse.mjs';
+
+/** Merge the regular child log with the temporary first-start events. */
+export function anmKindEreignisseVereinen(regulaer, vorgemerkt, now) {
+  return mergeLog([regulaer, vorgemerkt], now).events;
+}
 
 /* a start code as module konto issues it: 16 random bytes, base64url */
 export const ANM_STARTCODE = /^[A-Za-z0-9_-]{22}$/;

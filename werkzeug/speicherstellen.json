@@ -36,6 +36,7 @@
     { "key": "dayOffset", "bereich": "geraet", "abgleich": "lokal", "sicherung": false, "hinweis": "+1 Tag des Testkonto" },
     { "key": "lastBackup", "bereich": "eltern", "abgleich": "letzte-gilt", "sicherung": false, "hinweis": "ab 3b-1c Ereignis backup_made (Eltern allgemein)" },
     { "key": "vorRueckspielen", "bereich": "geraet", "abgleich": "lokal", "sicherung": false },
+    { "key": "pendingAdmission", "bereich": "geraet", "abgleich": "lokal", "sicherung": false, "hinweis": "Aufnahmefortschritt je Kind auf diesem Geraet, inklusive Transfer-ID und Elternanker" },
     { "key": "session", "bereich": "geraet", "abgleich": "lokal", "sicherung": false },
     { "key": "sessionPrev", "bereich": "geraet", "abgleich": "lokal", "sicherung": false },
     { "key": "adultSession", "bereich": "geraet", "abgleich": "lokal", "sicherung": false },
