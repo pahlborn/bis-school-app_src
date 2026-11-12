@@ -23,6 +23,10 @@ export const RELEASE_NOTES = {
     ],
     bugfixes: [
       {
+        de: 'Sichtbare Rubrik-Einstufungen aus eindeutig zusammengehörigen Kriterienzeilen werden als Originalbeleg erfasst; uneindeutige Werte bleiben offen.',
+        en: 'Visible rubric ratings from unambiguously paired criterion rows are captured as evidence; ambiguous values remain unassigned.'
+      },
+      {
         de: 'Gemeinsames Formular für manuelle und schulische Bewertungsübernahme im isolierten Elternpilot; Geräteabnahme weiterhin offen.',
         en: 'One form for manual and school evaluation import in the isolated parent pilot; live-device acceptance pending.'
       },

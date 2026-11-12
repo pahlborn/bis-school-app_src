@@ -1,5 +1,7 @@
 # Big Quest iPad – Gemeinsames Evaluationsformular
 
+Die installierte native Test-07-Fassung enthält noch den bisherigen Textreader. Die neue Rubrikzeilen-Erfassung wirkt erst nach Installation einer neuen nativen Testfassung; die HTML-Seite allein aktualisiert Swift-Code nicht.
+
 Test 07 öffnet Big Quest unter `/probe-evaluation-form/` auf der Testinstanz. Im Elternbereich das Kind und **Schulische Einstufungen** öffnen.
 
 - **Manuell:** **Evaluation hinzufügen** öffnet das Formular für das gewählte Kind.
