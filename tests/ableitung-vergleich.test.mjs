@@ -82,6 +82,9 @@ const STANDARD = { attempts: [], ev: {}, due: [], total: 0, badges: {}, tried: [
 /** der Verlauf mit echten Klicks (in beiden Bauarten derselbe) */
 async function verlauf(url) {
   const { ctx, page, fehler } = await appOeffnen(browser, url, { zeit: '2026-11-02T09:00:00' });
+  // Rendering effects such as confetti consume Math.random; their timing varies
+  // between the live and event-sourcing builds and must not change quiz selection.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.evaluate(() => { window.print = () => {}; });
   const wartend = { due: 0, boxMax: 0 };
 
