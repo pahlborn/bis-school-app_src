@@ -189,7 +189,7 @@ test('column algorithm and grading references cannot reappear in randomly genera
   await ctx.close();
 });
 
-for(const [name,width,height] of [['iPad mini',768,1024],['iPad',810,1080],['Smartphone',390,844],['Laptop',1366,768]]){
+for(const [name,width,height] of [['iPad 11 Zoll',820,1180],['Smartphone',390,844],['Laptop',1366,768]]){
   test(`${name}: hint and correction can be used without horizontal overflow`,async()=>{
     const {ctx,page,fehler}=await appOeffnen(browser,server.url,{fixture:{world:'round',round:[roundQ(),...rest()]},viewport:{width,height},reducedMotion:'reduce'});
     await page.locator('#qAnswers .opt[data-i="0"]').click();

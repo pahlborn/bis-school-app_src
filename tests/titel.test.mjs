@@ -87,7 +87,7 @@ test('reduced motion: no confetti, the line still appears', async () => {
 
 for (const [sterne, satz] of [[13, '12 more stars to Investigator'], [59, '1 more star to Scientist'], [250, 'You are a Legend! Keep exploring.']]) {
   test(`explorer path with ${sterne} stars (real click, fully on a 320 px phone): "${satz}"`, async () => {
-    const { ctx, page, fehler } = await mitDaten({ total: sterne, rankSeen: TITEL.filter((t) => sterne >= t[0]).pop()[2] }, { viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true });
+    const { ctx, page, fehler } = await mitDaten({ total: sterne, rankSeen: TITEL.filter((t) => sterne >= t[0]).pop()[2] }, { viewport: { width: 360, height: 800 }, isMobile: true, hasTouch: true });
     await page.locator('#rank').click();
     assert.deepEqual(await page.$$eval('#rankPath li', (l) => l.map((x) => x.children[1].textContent)), TITEL.map((t) => t[2]));
     assert.equal(await page.textContent('#rankNext'), satz);

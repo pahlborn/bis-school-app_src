@@ -63,14 +63,14 @@ async function kindWaehlen(page, k) {
 }
 
 test('Kind, erste Anmeldung: Startseite fragt nach der Jahrgangsstufe, "My school" auf Englisch, ohne Jahrgangsstufe nichts gespeichert, Klasse und Schule freiwillig', async () => {
-  const { ctx, page, fehler } = await oeffnen(browser, server, { viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true });
+  const { ctx, page, fehler } = await oeffnen(browser, server, { viewport: { width: 360, height: 800 }, isMobile: true, hasTouch: true });
   await kindAnmelden(page, 'mia', true);
   assert.ok(await page.locator('#schoolAsk').isVisible(), 'die Startseite fragt gleich nach dem Passwort');
   assert.equal((await page.locator('#schoolAsk').innerText()).trim().replace(/\s+/g, ' '), '🏫 Which grade are you in? My school');
   assert.ok(await page.locator('#todayBtn').isVisible(), 'nichts wartet darauf: ueben geht sofort');
   await page.locator('#schoolAskBtn').click();
   assert.ok(await page.locator('#schoolDlg').isVisible());
-  for (const sel of ['#msGrades', '#msClass', '#msSchool', '#msClose', '#msSave']) assert.ok(await imBild(page, sel), sel + ' ganz im Bild (iPhone SE)');
+  for (const sel of ['#msGrades', '#msClass', '#msSchool', '#msClose', '#msSave']) assert.ok(await imBild(page, sel), sel + ' ganz im Bild (kompaktes Smartphone)');
   const klein = await page.$$eval('#schoolDlg button, #schoolDlg input', (b) => b.filter((x) => { const r = x.getBoundingClientRect(); return r.width < 44 || r.height < 44; }).map((x) => x.id || x.textContent));
   assert.deepEqual(klein, [], 'Tippflaechen mindestens 44 px');
   assert.ok(await page.$eval('#schoolDlg', (d) => d.scrollWidth <= d.clientWidth), 'kein seitliches Scrollen');

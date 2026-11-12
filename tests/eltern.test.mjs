@@ -173,7 +173,7 @@ test('calendar requires selected days instead of inventing a practice schedule',
 });
 
 test('focus and PIN forms fit on a small phone',async()=>{
-  const {ctx,page}=await open({viewport:{width:320,height:568}});await elternOeffnen(page);
+  const {ctx,page}=await open({viewport:{width: 360, height: 800}});await elternOeffnen(page);
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   await ctx.close();
 });

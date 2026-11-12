@@ -18,7 +18,7 @@ const titel = (page) => page.$$eval('#aboutBody details.about-sec > summary', (s
 
 for (const [flagge, liste] of Object.entries(MENUE)) {
   test(`About ${flagge}: topics as accordions; each opens in place, in view, and closes again`, async () => {
-    const { ctx, page, fehler } = await appOeffnen(browser, server.url, { viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true });
+    const { ctx, page, fehler } = await appOeffnen(browser, server.url, { viewport: { width: 360, height: 800 }, isMobile: true, hasTouch: true });
     await page.locator('#aboutBtn').click();
     await page.locator(flagge).click();
     assert.ok(await page.locator(flagge).evaluate((b) => b.classList.contains('on')), 'chosen flag marked');

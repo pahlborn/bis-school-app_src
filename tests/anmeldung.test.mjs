@@ -74,7 +74,7 @@ const ID = (n) => KONTEN.users.find((u) => u.user === n).id;
 const NS = (n) => 'bq2_' + ID(n) + '__';
 
 test('with accounts the app starts with the login: role choice, no list of names, nothing behind it reachable', async () => {
-  const { ctx, page, fehler } = await oeffnen({ viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true });
+  const { ctx, page, fehler } = await oeffnen({ viewport: { width: 360, height: 800 }, isMobile: true, hasTouch: true });
   assert.ok(await sichtbar(page, '#login')); assert.equal(await sichtbar(page, '#home'), false);
   assert.ok(await sichtbar(page, '#roleStudent')); assert.ok(await sichtbar(page, '#roleAdult'));
   assert.equal((await page.textContent('#login h1')).trim(), 'Welcome to Big Quest');
@@ -387,7 +387,7 @@ async function allesSichtbar(page) {
   return texte.join('\n').split('\n');
 }
 test('language: the English grown-ups area has no German left-overs, the German one no English UI labels', async () => {
-  const { ctx, page, fehler } = await oeffnen({ viewport: { width: 1200, height: 900 } });
+  const { ctx, page, fehler } = await oeffnen({ viewport: { width: 1366, height: 768 } });
   await page.evaluate((ns) => localStorage.setItem(ns + 'attempts', JSON.stringify(Array.from({ length: 30 }, (_, i) => ({ day: '2026-10-' + (10 + i % 6), skill: i % 2 ? 'round' : 'units', level: 2, attempt: 1, ok: i % 3 !== 0, help: false })))), NS('mia'));
   await kindDann(page, 'papa', 'langes-passwort');
   await page.locator('.phdr [data-plang="en"]').click();

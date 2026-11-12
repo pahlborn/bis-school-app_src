@@ -21,7 +21,7 @@ after(async () => { await browser?.close(); server?.close(); });
 const kapitel = (page) => page.$$eval('#aboutBody details.psec > summary', (s) => s.map((x) => x.textContent.trim()));
 
 test('A1: the welcome names an existing chapter, the concept describes the focus correctly, no "details are in the parent area"', async () => {
-  const { ctx, page, fehler } = await oeffnen(browser, server, { viewport: { width: 1000, height: 900 } });
+  const { ctx, page, fehler } = await oeffnen(browser, server, { viewport: { width: 1366, height: 768 } });
   await anmelden(page, 'student', 'mia', CODES.mia); await passwortSetzen(page, 'Tiger-Lamp-River-4271');
   await page.waitForSelector('#home:not([hidden])');
   await page.locator('#adultBtn').click();

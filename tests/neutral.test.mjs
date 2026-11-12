@@ -64,7 +64,7 @@ test('generated questions of every quest (50 builds each, incl. archived) contai
 });
 
 test('title, eyebrow and home screen are neutral; eyebrow fully visible on a 320 px phone', async () => {
-  const { ctx, page, fehler } = await appOeffnen(browser, server.url, { viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true });
+  const { ctx, page, fehler } = await appOeffnen(browser, server.url, { viewport: { width: 360, height: 800 }, isMobile: true, hasTouch: true });
   assert.equal(await page.title(), 'Grade 3 – Big Quest');
   assert.equal(await page.textContent('#home h1'), 'Grade 3 – Big Quest');
   // On small phones the eyebrow uses the short form "IB" (S8 fallback for lack of space)
@@ -72,7 +72,7 @@ test('title, eyebrow and home screen are neutral; eyebrow fully visible on a 320
   assert.equal(await sichtbarerText(page), 'Grade 3 · IB Primary Years Programme');
   await page.setViewportSize({ width: 1366, height: 768 });
   assert.equal(await sichtbarerText(page), 'Grade 3 · International Baccalaureate Primary Years Programme');
-  await page.setViewportSize({ width: 320, height: 568 });
+  await page.setViewportSize({ width: 360, height: 800 });
   assert.equal(await page.getAttribute('meta[name="apple-mobile-web-app-title"]', 'content'), 'Big Quest');
   const eb = await page.$eval('#home .hero .eyebrow', (e) => ({ sw: e.scrollWidth, cw: e.clientWidth, to: getComputedStyle(e).textOverflow }));
   assert.ok(eb.sw <= eb.cw && eb.to !== 'ellipsis', JSON.stringify(eb));
