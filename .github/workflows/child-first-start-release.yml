@@ -53,8 +53,23 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node werkzeug/testinstanz.mjs
+      - name: Build versioned test instance
+        run: node werkzeug/testinstanz.mjs
+      - name: Check artifact version against source and commit
+        run: |
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs'
+          import { versionAuslesen, versionErmitteln, versionQuelleGleich } from './werkzeug/version.mjs'
+          const actual = versionAuslesen(fs.readFileSync('dist-test/index.html','utf8'))
+          const expected = versionErmitteln(process.cwd())
+          if (!actual || !versionQuelleGleich(actual,expected) || actual.draft) {
+            console.error('Test artifact version does not match package.json and checked-out commit.')
+            process.exit(1)
+          }
+          console.log('Validated:', actual.major+'.'+actual.minor+'.'+actual.patch, actual.kanal, actual.hash, actual.date)
+          NODE
+          echo "BQ_ARTIFACT=big-quest-test-$(node -p "require('./package.json').version")-$(git rev-parse --short=7 HEAD)" >> "$GITHUB_ENV"
       - uses: actions/upload-artifact@v4
         with:
-          name: big-quest-test-0.152.2
+          name: ${{ env.BQ_ARTIFACT }}
           path: dist-test/
