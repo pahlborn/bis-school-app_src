@@ -116,6 +116,11 @@ test('Browser: Kind anlegen -> Start-QR-Code -> Kind startet sofort; Schluessel 
   // This works for another browser/WebView on the same tablet, not only a second screen.
   await P.page.locator('#kVerbindenQr').click();
   await P.page.locator('#kVerbQr svg').waitFor();
+  // On a tablet the copy action must appear before the large QR, without requiring
+  // the parent to discover content hidden below the QR image.
+  const linkBox = await P.page.locator('#kVerbLink').boundingBox();
+  const qrBox = await P.page.locator('#kVerbQr').boundingBox();
+  assert.ok(linkBox && qrBox && linkBox.y < qrBox.y, 'device link appears above QR');
   const deviceLink = await P.page.locator('#kVerbLink').inputValue();
   assert.equal(deviceLink, anmEinladungslink(server.url, { zugang: TOKEN }));
   const qrPath = await P.page.locator('#kVerbQr path').getAttribute('d');
