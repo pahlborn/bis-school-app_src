@@ -112,6 +112,18 @@ test('Browser: Kind anlegen -> Start-QR-Code -> Kind startet sofort; Schluessel 
   // ⚙ "Meine Geraete" -> Zugang neu absichern: Felder fuer den Passwortspeicher
   await P.page.locator('details.psec[data-psec="devices"] > summary').click();
   assert.match(await P.page.locator('details.psec[data-psec="devices"]').textContent(), /Meine Geräte[\s\S]*\(dieses Gerät\)[\s\S]*Zugang neu absichern[\s\S]*anderen Geräten melden Sie sich danach mit dem neuen Passwort neu an/);
+  // Device handoff shows a copyable link AND the same exact URL inside its QR graphic.
+  // This works for another browser/WebView on the same tablet, not only a second screen.
+  await P.page.locator('#kVerbindenQr').click();
+  await P.page.locator('#kVerbQr svg').waitFor();
+  const deviceLink = await P.page.locator('#kVerbLink').inputValue();
+  assert.equal(deviceLink, anmEinladungslink(server.url, { zugang: TOKEN }));
+  const qrPath = await P.page.locator('#kVerbQr path').getAttribute('d');
+  assert.equal(qrPath, /<path fill="#000" d="([^"]*)"/.exec(qrSvg(deviceLink, { ecc: 'M', rand: 4 }))[1]);
+  await P.page.locator('#kVerbCopy').click();
+  assert.equal(await P.page.locator('#kVerbLink').evaluate(e => document.activeElement === e), true);
+  await P.page.locator('#kBack').click();
+
   await P.page.locator('#kErneuern').click();
   await P.page.waitForSelector('#kErnForm');
   assert.match(await P.page.locator('#aboutBody').textContent(), /Zugang neu absichern[\s\S]*Wiederherstellungscode[\s\S]*anderen Geräten melden Sie sich danach mit dem neuen Passwort neu an/);
