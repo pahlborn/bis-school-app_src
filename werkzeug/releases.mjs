@@ -23,6 +23,10 @@ export const RELEASE_NOTES = {
     ],
     bugfixes: [
       {
+        de: 'Gemeinsames Formular für manuelle und Toddle-Übernahme im isolierten Elternpilot; Geräteabnahme weiterhin offen.',
+        en: 'One form for manual and Toddle evaluation in the isolated parent pilot; live-device acceptance pending.'
+      },
+      {
         de: 'Nach dem Upgrade werden zuvor übersprungene Schulbewertungen beim Abgleich nachgeholt.',
         en: 'After an upgrade, sync recovers previously skipped school evaluations.'
       }
