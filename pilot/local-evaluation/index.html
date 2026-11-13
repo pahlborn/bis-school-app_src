@@ -15,7 +15,7 @@ fieldset{border:1px solid #a9bbcf;border-radius:10px;margin:12px 0;padding:12px}
 nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}nav button{flex:1}
 [hidden]{display:none!important}.danger{color:#a42520}#status{font-weight:650;white-space:pre-wrap}.piece{border:1px solid #d3e0eb;border-radius:8px;padding:12px;margin-top:8px}
 </style></head><body>
-<header><h1>Big Quest · KI-Pilot</h1><p>0.153.2 Beta · ausschließlich lokale Testdaten · keine Geräteverbindung</p></header>
+<header><h1>Big Quest · KI-Pilot</h1><p>0.153.3 Beta · ausschließlich lokale Testdaten · keine Geräteverbindung</p></header>
 <main>
 <div class="flag">Testfamilie: <b>max.mustermann</b> · Kind: <b>kind1.mustermann</b>. Keine Anmeldung erforderlich. Daten werden nur in diesem App-Container gespeichert. Keine Synchronisation mit GitHub oder anderen Geräten.</div>
 <nav><button id="tab-evaluation" type="button">Evaluation übernehmen</button><button id="tab-saved" class="secondary" type="button">Gespeicherte Bewertungen</button><button id="tab-practice" class="secondary" type="button">Übungen</button></nav>
@@ -37,8 +37,9 @@ nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}nav button{flex:1}
 <label for="feedback">Lehrkraft-Rückmeldung (Final remarks/comment)</label><textarea id="feedback"></textarea>
 <h3>Bewertungskriterien</h3><div id="criteria"></div>
 <button id="add-criterion" type="button" class="secondary">Kriterium hinzufügen</button>
-<label for="exercise">Passendes Übungsmuster (optional, ausdrücklich auswählen)</label>
-<select id="exercise"><option value="">Keine automatische Zuordnung</option><option value="round">Runden mit Abstandsbegründung</option><option value="subtract">Zweischrittige Subtraktion</option></select>
+<details><summary>Testoption: Übungsmuster manuell auswählen (normalerweise nicht nötig)</summary>
+<label for="exercise">Manuelle Testzuordnung</label>
+<select id="exercise"><option value="">Automatisch aus belegten Kriterien ableiten</option><option value="round">Runden mit Abstandsbegründung</option><option value="subtract">Zweischrittige Subtraktion</option></select></details>
 <button id="preview" type="button">Vorschau anzeigen</button>
 </div>
 <div id="preview-box" hidden><h3>Vorschau – noch nicht gespeichert</h3><div id="preview-content"></div>
@@ -47,7 +48,7 @@ nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}nav button{flex:1}
 </section>
 <section id="view-saved" hidden><h2>Gespeicherte Schulbewertungen</h2><div id="saved-list"></div></section>
 <section id="view-practice" hidden><h2>Lokale Übungskarten</h2>
-<p class="muted">Es werden nur die zwei bereits unterstützten Übungsmuster berücksichtigt. Die KI ordnet hier nichts automatisch zu; ungeeignete oder unbekannte Kriterien erzeugen keine Aufgabe.</p>
+<p class="muted">Bekannte Kriterien mit Einstufung C werden regelbasiert zwei bestehenden Übungsmustern zugeordnet. Unbekannte Kriterien erzeugen keine zusätzliche Karte. Dies ist noch keine KI-generierte Tagesrunde.</p>
 <div id="practice-list"></div></section>
 </main>
 <script>
@@ -74,6 +75,24 @@ function rows(){
   +'<button type="button" class="secondary" data-remove="'+i+'">Kriterium entfernen</button>';
   host.appendChild(f);
  });
+}
+function inferredArea(sourceText, criteria){
+ const source=String(sourceText||'');
+ if(/\bBIS Mathematics\b/i.test(source))return 'Mathematik';
+ if(/\bBIS English\b/i.test(source))return 'Englisch';
+ if((criteria||[]).some(r=>/\b(subtraction|rounds? whole numbers|addition problems)\b/i.test(String(r.criterion||''))))return 'Mathematik';
+ return '';
+}
+function derivedPatterns(item){
+ const candidates=[];
+ for(const row of Array.isArray(item.criteria)?item.criteria:[]){
+  if(row.rating!=='C')continue;
+  const label=String(row.criterion||'').toLowerCase();
+  if(label.includes('subtraction') && /two[\s-]step/.test(label))candidates.push('subtract');
+  if(/rounds? whole numbers/.test(label) && /nearest\s+(?:10|100|1000)/.test(label))candidates.push('round');
+ }
+ if(!candidates.length && ['round','subtract'].includes(item.exercise))candidates.push(item.exercise);
+ return [...new Set(candidates)];
 }
 function readForm(){
  const x={};for(const k of allowedFields)x[k]=$(k).value.trim();
@@ -111,19 +130,20 @@ $('add-criterion').addEventListener('click',()=>{if(state.criteria.length<60){st
 $('preview').addEventListener('click',()=>{
  const x=readForm();
  if(!x.title||!x.area){message('Bitte Titel und Fach ergänzen.',true);return}
+ if(!x.criteria.length){message('Mindestens ein Bewertungskriterium erforderlich.',true);return}
  if(x.criteria.some(r=>!r.criterion||!code.includes(r.rating)&&r.rating)){message('Bitte Kriterien und Einstufungen prüfen.',true);return}
  if(x.criteria.some(r=>!r.rating)){message('Mindestens eine Einstufung fehlt. Prüfe die Quelle; nicht raten.',true);return}
  $('preview-content').innerHTML='<p><b>'+html(x.title)+'</b> · '+html(x.day||'ohne Datum')+' · '+html(x.area)+'</p>'
  +'<p><b>Lernziel:</b> '+html(x.goal)+'</p><p><b>Arbeitsanweisung:</b> '+html(x.instructions)+'</p>'
  +'<p><b>Rückmeldung:</b> '+html(x.feedback)+'</p>'
  +x.criteria.map(r=>'<div class="piece"><b>'+html(r.criterion)+'</b> – '+html(r.rating)+'</div>').join('')
- +'<p>Übungsmuster: '+html(x.exercise||'nicht zugeordnet')+'</p>';
+ +'<p>Abgeleitete Übungsmuster: '+html(derivedPatterns(x).join(', ')||'keine passende Musterregel')+'</p>';
  $('form').hidden=true;$('preview-box').hidden=false;message('Vorschau bereit. Noch nichts gespeichert.');
 });
 $('back').addEventListener('click',()=>{$('form').hidden=false;$('preview-box').hidden=true});
 $('save').addEventListener('click',()=>{
  const x=readForm();
- if(!x.title||!x.area||x.criteria.some(c=>!c.criterion||!c.rating)){message('Unvollständige Evaluation wird nicht gespeichert.',true);return}
+ if(!x.title||!x.area||!x.criteria.length||x.criteria.some(c=>!c.criterion||!c.rating)){message('Unvollständige Evaluation wird nicht gespeichert.',true);return}
  const d=data(), id=state.current||crypto.randomUUID();
  const item={...x,id,parent:'max.mustermann',child:'kind1.mustermann',updated:new Date().toISOString()};
  const i=d.findIndex(v=>v.id===id);if(i>=0)d[i]=item;else d.push(item);
@@ -145,19 +165,22 @@ function listSaved(){
 }
 function listPractice(){
  const host=$('practice-list');host.textContent='';
- const list=data().filter(v=>v.exercise);
- if(!list.length){host.textContent='Noch kein passendes Übungsmuster ausdrücklich zugeordnet.';return}
- list.forEach((x,i)=>{
-  let text='';
-  if(x.exercise==='round') {
-   const value=142+((i*37)%250), lower=Math.floor(value/100)*100,upper=lower+100;
-   text='Runde '+value+' auf den nächsten Hunderter. Erkläre mit den Abständen zu '+lower+' und '+upper+'.';
+ let count=0;
+ for(const evaluation of data()){
+  for(const pattern of derivedPatterns(evaluation)){
+   let text='';
+   if(pattern==='round'){
+    const value=142+((count*37)%250), lower=Math.floor(value/100)*100, upper=lower+100;
+    text='Runde '+value+' auf den nächsten Hunderter. Erkläre mit den Abständen zu '+lower+' und '+upper+'.';
+   }else if(pattern==='subtract')text='Rechne 532 − 140 − 27. Erkläre beide Rechenschritte.';
+   if(!text)continue;
+   const card=document.createElement('div');card.className='piece';
+   card.innerHTML='<b>'+html(evaluation.title)+'</b><p>'+html(text)+'</p>'
+     +'<small>Regelbasiert aus belegter Einstufung C abgeleitet · '+html(pattern)+'</small>';
+   host.appendChild(card);count++;
   }
-  if(x.exercise==='subtract')text='Rechne 532 − 140 − 27. Erkläre deine beiden Rechenschritte.';
-  const c=document.createElement('div');c.className='piece';
-  c.innerHTML='<b>'+html(x.title)+'</b><p>'+html(text)+'</p>';
-  host.appendChild(c);
- });
+ }
+ if(!count)host.textContent='Keine anhand der bekannten Kriterien ableitbare Übung vorhanden.';
 }
 function source(context,transfer,txt){
  if(context!==FAMILY||typeof txt!=='string'||!txt.trim()||new TextEncoder().encode(txt).length>48000)return 'invalid';
@@ -177,7 +200,7 @@ $('ai').addEventListener('click',async()=>{
  try{
   const result=await bridge.postMessage({source:sourceText});
   if(!result||!Array.isArray(result.criteria))throw Error('Ungültige Claude-Antwort.');
-  const x={title:result.title||'',day:result.date||'',goal:result.goal||'',instructions:result.instructions||'',feedback:result.feedback||'',criteria:result.criteria};
+  const x={title:result.title||'',day:result.date||'',area:inferredArea(sourceText,result.criteria),goal:result.goal||'',instructions:result.instructions||'',feedback:result.feedback||'',criteria:result.criteria};
   fill(x); $('source').value=sourceText; state.source=sourceText;
   const missing=Array.isArray(result.missing)?result.missing:[];
   message(missing.length?'Bitte prüfen: '+missing.join('; '):'KI-Entwurf übernommen. Fach, Kriterien und Einstufungen prüfen.');
