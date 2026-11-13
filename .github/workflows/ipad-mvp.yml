@@ -15,6 +15,11 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify protected parent entry and native bridge guard
+        run: node --test tests/ios-parent-entry.test.mjs
       - name: Build iPad app for the simulator
         run: >-
           xcodebuild -project ios/BigQuestMVP.xcodeproj
