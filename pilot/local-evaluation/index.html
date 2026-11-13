@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Big Quest – isolierter KI-Pilot 0.153.2</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;color:#1b293b;background:#edf3f9}
+*{box-sizing:border-box}body{margin:0}header{background:#17324e;color:white;padding:16px max(16px,calc((100vw - 840px)/2));}
+header h1{font-size:1.3rem;margin:0}header p{font-size:.85rem;margin:.5rem 0 0}
+main{max-width:840px;margin:auto;padding:18px 16px 80px}section{background:white;border:1px solid #c6d5e3;border-radius:14px;padding:18px;margin:14px 0}
+h2{font-size:1.12rem;margin-top:0}h3{font-size:1rem}label{display:block;font-weight:650;margin:12px 0 5px}
+input,select,textarea,button{font:inherit}input,select,textarea{width:100%;border:1px solid #8199b0;border-radius:8px;padding:10px;background:#fff;color:#162435}
+textarea{min-height:90px;resize:vertical}button{border:0;border-radius:8px;background:#205584;color:#fff;padding:11px 14px;margin:6px 7px 5px 0;cursor:pointer}
+button.secondary{background:#e3eaf1;color:#17324e;border:1px solid #95a9bf}button:disabled{opacity:.5}
+small,.muted{color:#4f6276}.flag{background:#fff3d8;color:#604516;padding:9px;border-radius:9px;margin-top:12px;font-size:.9rem}
+fieldset{border:1px solid #a9bbcf;border-radius:10px;margin:12px 0;padding:12px}legend{font-weight:bold}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}nav button{flex:1}
+[hidden]{display:none!important}.danger{color:#a42520}#status{font-weight:650;white-space:pre-wrap}.piece{border:1px solid #d3e0eb;border-radius:8px;padding:12px;margin-top:8px}
+</style></head><body>
+<header><h1>Big Quest · KI-Pilot</h1><p>0.153.2 Beta · ausschließlich lokale Testdaten · keine Geräteverbindung</p></header>
+<main>
+<div class="flag">Testfamilie: <b>max.mustermann</b> · Kind: <b>kind1.mustermann</b>. Keine Anmeldung erforderlich. Daten werden nur in diesem App-Container gespeichert. Keine Synchronisation mit GitHub oder anderen Geräten.</div>
+<nav><button id="tab-evaluation" type="button">Evaluation übernehmen</button><button id="tab-saved" class="secondary" type="button">Gespeicherte Bewertungen</button><button id="tab-practice" class="secondary" type="button">Übungen</button></nav>
+<section id="view-evaluation">
+<h2>Evaluation übernehmen</h2>
+<p class="muted">Manuelle Eingabe und Toddle-/Claude-Übernahme verwenden dasselbe Formular. Angaben bleiben zunächst ein Entwurf.</p>
+<details id="source-details"><summary>Erfasster Evaluationstext / Quelle</summary>
+<label for="source">Toddle-Quelltext (bitte nur anonymisierte Inhalte)</label>
+<textarea id="source" rows="7"></textarea>
+<button id="ai" type="button">Mit Claude ins Formular übertragen</button>
+<p class="muted">Claude ist nur über die native iPad-Test-App verfügbar. Der Text wird beim Aufruf an Anthropic gesendet. Nicht mit realen personenbezogenen Schuldaten verwenden.</p>
+</details>
+<div id="form">
+<label for="title">Titel der Evaluation</label><input id="title" maxlength="160">
+<label for="day">Bewertungsdatum</label><input id="day" type="date">
+<label for="area">Fach</label><select id="area"><option value="">Bitte wählen</option><option>Mathematik</option><option>Englisch</option><option>Deutsch</option><option>Sachunterricht</option><option>Sonstiges</option></select>
+<label for="goal">Lernziel (Learning intentions)</label><textarea id="goal"></textarea>
+<label for="instructions">Arbeitsanweisung (Student instructions)</label><textarea id="instructions"></textarea>
+<label for="feedback">Lehrkraft-Rückmeldung (Final remarks/comment)</label><textarea id="feedback"></textarea>
+<h3>Bewertungskriterien</h3><div id="criteria"></div>
+<button id="add-criterion" type="button" class="secondary">Kriterium hinzufügen</button>
+<label for="exercise">Passendes Übungsmuster (optional, ausdrücklich auswählen)</label>
+<select id="exercise"><option value="">Keine automatische Zuordnung</option><option value="round">Runden mit Abstandsbegründung</option><option value="subtract">Zweischrittige Subtraktion</option></select>
+<button id="preview" type="button">Vorschau anzeigen</button>
+</div>
+<div id="preview-box" hidden><h3>Vorschau – noch nicht gespeichert</h3><div id="preview-content"></div>
+<button id="back" class="secondary" type="button">Bearbeiten</button><button id="save" type="button">Evaluation bestätigen und lokal speichern</button></div>
+<p id="status" role="status"></p>
+</section>
+<section id="view-saved" hidden><h2>Gespeicherte Schulbewertungen</h2><div id="saved-list"></div></section>
+<section id="view-practice" hidden><h2>Lokale Übungskarten</h2>
+<p class="muted">Es werden nur die zwei bereits unterstützten Übungsmuster berücksichtigt. Die KI ordnet hier nichts automatisch zu; ungeeignete oder unbekannte Kriterien erzeugen keine Aufgabe.</p>
+<div id="practice-list"></div></section>
+</main>
+<script>
+(function(){
+'use strict';
+const KEY='bq_local_eval_pilot_01532';
+const FAMILY='max.mustermann / kind1.mustermann';
+const $=id=>document.getElementById(id);
+const code=['RS','C','M','E'];
+const blank=()=>({criterion:'',rating:'',evidence:''});
+const state={criteria:[blank()],source:'',current:null,busy:false};
+const allowedFields=['title','day','area','goal','instructions','feedback','exercise'];
+const html=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function data(){try{const d=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(d)?d:[]}catch{return []}}
+function saveData(d){localStorage.setItem(KEY,JSON.stringify(d))}
+function message(s,err=false){$('status').textContent=s;$('status').className=err?'danger':''}
+function rows(){
+ const host=$('criteria');host.textContent='';
+ state.criteria.forEach((v,i)=>{
+  const f=document.createElement('fieldset');
+  f.innerHTML='<legend>Kriterium '+(i+1)+'</legend><label>Kriterientext<textarea data-criterion="'+i+'">'+html(v.criterion)+'</textarea></label>'
+  +'<label>Einstufung<select data-rating="'+i+'"><option value="">Nicht angegeben / noch prüfen</option>'+code.map(c=>'<option value="'+c+'"'+(c===v.rating?' selected':'')+'>'+c+'</option>').join('')+'</select></label>'
+  +(v.evidence?'<details><summary>Quellenbeleg</summary><p>'+html(v.evidence)+'</p></details>':'')
+  +'<button type="button" class="secondary" data-remove="'+i+'">Kriterium entfernen</button>';
+  host.appendChild(f);
+ });
+}
+function readForm(){
+ const x={};for(const k of allowedFields)x[k]=$(k).value.trim();
+ x.criteria=state.criteria.map(v=>({...v,criterion:v.criterion.trim(),rating:v.rating.trim()})).filter(v=>v.criterion||v.rating);
+ return x;
+}
+function reset(){
+ state.current=null;state.criteria=[blank()];state.source='';for(const id of allowedFields)$(id).value='';
+ $('source').value='';$('form').hidden=false;$('preview-box').hidden=true;rows();message('');
+}
+function fill(x){
+ for(const k of allowedFields)if(k in x)$(k).value=x[k]||'';
+ state.criteria=Array.isArray(x.criteria)&&x.criteria.length?x.criteria.map(r=>({criterion:String(r.criterion||''),rating:code.includes(r.rating)?r.rating:'',evidence:String(r.evidence||'')})):[blank()];
+ rows();
+}
+function tab(v){
+ for(const n of ['evaluation','saved','practice']){
+  $('view-'+n).hidden=n!==v;
+  $('tab-'+n).className=n===v?'':'secondary';
+ }
+ if(v==='saved')listSaved();if(v==='practice')listPractice();
+}
+for(const n of ['evaluation','saved','practice'])$('tab-'+n).addEventListener('click',()=>tab(n));
+$('criteria').addEventListener('input',e=>{
+ const i=e.target.dataset.criterion;
+ if(i!==undefined){state.criteria[Number(i)].criterion=e.target.value;state.criteria[Number(i)].evidence=''}
+});
+$('criteria').addEventListener('change',e=>{
+ const i=e.target.dataset.rating;if(i!==undefined)state.criteria[Number(i)].rating=e.target.value;
+});
+$('criteria').addEventListener('click',e=>{
+ const i=e.target.dataset.remove;if(i!==undefined){state.criteria.splice(Number(i),1);if(!state.criteria.length)state.criteria.push(blank());rows()}
+});
+$('add-criterion').addEventListener('click',()=>{if(state.criteria.length<60){state.criteria.push(blank());rows()}else message('Maximal 60 Kriterien.',true)});
+$('preview').addEventListener('click',()=>{
+ const x=readForm();
+ if(!x.title||!x.area){message('Bitte Titel und Fach ergänzen.',true);return}
+ if(x.criteria.some(r=>!r.criterion||!code.includes(r.rating)&&r.rating)){message('Bitte Kriterien und Einstufungen prüfen.',true);return}
+ if(x.criteria.some(r=>!r.rating)){message('Mindestens eine Einstufung fehlt. Prüfe die Quelle; nicht raten.',true);return}
+ $('preview-content').innerHTML='<p><b>'+html(x.title)+'</b> · '+html(x.day||'ohne Datum')+' · '+html(x.area)+'</p>'
+ +'<p><b>Lernziel:</b> '+html(x.goal)+'</p><p><b>Arbeitsanweisung:</b> '+html(x.instructions)+'</p>'
+ +'<p><b>Rückmeldung:</b> '+html(x.feedback)+'</p>'
+ +x.criteria.map(r=>'<div class="piece"><b>'+html(r.criterion)+'</b> – '+html(r.rating)+'</div>').join('')
+ +'<p>Übungsmuster: '+html(x.exercise||'nicht zugeordnet')+'</p>';
+ $('form').hidden=true;$('preview-box').hidden=false;message('Vorschau bereit. Noch nichts gespeichert.');
+});
+$('back').addEventListener('click',()=>{$('form').hidden=false;$('preview-box').hidden=true});
+$('save').addEventListener('click',()=>{
+ const x=readForm();
+ if(!x.title||!x.area||x.criteria.some(c=>!c.criterion||!c.rating)){message('Unvollständige Evaluation wird nicht gespeichert.',true);return}
+ const d=data(), id=state.current||crypto.randomUUID();
+ const item={...x,id,parent:'max.mustermann',child:'kind1.mustermann',updated:new Date().toISOString()};
+ const i=d.findIndex(v=>v.id===id);if(i>=0)d[i]=item;else d.push(item);
+ try{saveData(d)}catch{message('Lokales Speichern fehlgeschlagen.',true);return}
+ reset();message('Evaluation ausschließlich auf diesem Gerät gespeichert. Keine GitHub-Synchronisation.');tab('saved');
+});
+function listSaved(){
+ const d=data();const host=$('saved-list');host.textContent='';
+ if(!d.length){host.textContent='Noch keine gespeicherten Evaluationen.';return}
+ for(const x of d){
+  const c=document.createElement('div');c.className='piece';
+  c.innerHTML='<b>'+html(x.title)+'</b><p>'+html(x.area)+' · '+html(x.day||'ohne Datum')+'</p>'
+    +'<p>'+x.criteria.map(r=>html(r.criterion)+' ('+html(r.rating)+')').join('; ')+'</p>'
+    +'<button type="button" class="secondary">Bearbeiten</button>';
+  c.querySelector('button').addEventListener('click',()=>{
+   state.current=x.id;fill(x);tab('evaluation');$('form').hidden=false;$('preview-box').hidden=true;message('Lokalen Eintrag bearbeiten.');
+  });host.appendChild(c);
+ }
+}
+function listPractice(){
+ const host=$('practice-list');host.textContent='';
+ const list=data().filter(v=>v.exercise);
+ if(!list.length){host.textContent='Noch kein passendes Übungsmuster ausdrücklich zugeordnet.';return}
+ list.forEach((x,i)=>{
+  let text='';
+  if(x.exercise==='round') {
+   const value=142+((i*37)%250), lower=Math.floor(value/100)*100,upper=lower+100;
+   text='Runde '+value+' auf den nächsten Hunderter. Erkläre mit den Abständen zu '+lower+' und '+upper+'.';
+  }
+  if(x.exercise==='subtract')text='Rechne 532 − 140 − 27. Erkläre deine beiden Rechenschritte.';
+  const c=document.createElement('div');c.className='piece';
+  c.innerHTML='<b>'+html(x.title)+'</b><p>'+html(text)+'</p>';
+  host.appendChild(c);
+ });
+}
+function source(context,transfer,txt){
+ if(context!==FAMILY||typeof txt!=='string'||!txt.trim()||new TextEncoder().encode(txt).length>48000)return 'invalid';
+ if($('preview-box').hidden===false)return 'busy';
+ reset();state.source=txt;$('source').value=txt;$('source-details').open=true;
+ tab('evaluation');message('Toddle-Text übernommen. Klicke auf „Mit Claude ins Formular übertragen“.');
+ return 'opened';
+}
+Object.defineProperty(window,'bigQuestEvaluationForm',{value:Object.freeze({context:()=>FAMILY,source})});
+$('ai').addEventListener('click',async()=>{
+ if(state.busy)return;
+ const sourceText=$('source').value.trim();
+ if(!sourceText){message('Zuerst Evaluationstext erfassen.',true);return}
+ const bridge=window.webkit?.messageHandlers?.bigQuestEvaluation;
+ if(!bridge){message('Claude ist nur in der nativen Swift-Playgrounds-Test-App verfügbar.',true);return}
+ state.busy=true;$('ai').disabled=true;message('Claude verarbeitet den anonymisierten Testtext …');
+ try{
+  const result=await bridge.postMessage({source:sourceText});
+  if(!result||!Array.isArray(result.criteria))throw Error('Ungültige Claude-Antwort.');
+  const x={title:result.title||'',day:result.date||'',goal:result.goal||'',instructions:result.instructions||'',feedback:result.feedback||'',criteria:result.criteria};
+  fill(x); $('source').value=sourceText; state.source=sourceText;
+  const missing=Array.isArray(result.missing)?result.missing:[];
+  message(missing.length?'Bitte prüfen: '+missing.join('; '):'KI-Entwurf übernommen. Fach, Kriterien und Einstufungen prüfen.');
+ }catch(e){message('Claude-Übernahme fehlgeschlagen: '+(e.message||String(e)),true)}
+ finally{state.busy=false;$('ai').disabled=false}
+});
+rows();tab('evaluation');
+})();
+</script></body></html>
