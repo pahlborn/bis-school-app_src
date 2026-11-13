@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 jobs:
-  test08:
+  test09:
     runs-on: macos-15
     timeout-minutes: 15
     steps:
@@ -27,16 +27,16 @@ jobs:
         run: node werkzeug/ipad-playgrounds-paket.mjs
       - name: Confirm source copies and package contents
         run: |
-          unzip -t dist-playgrounds/Big-Quest-iPad-Test-08.zip
-          diff ios/BigQuestMVP/ToddleField.swift dist-playgrounds/Big-Quest-iPad-Test-08.swiftpm/App/ToddleField.swift
-          diff ios/BigQuestMVP/ClaudeClient.swift dist-playgrounds/Big-Quest-iPad-Test-08.swiftpm/App/ClaudeClient.swift
-          diff ios/BigQuestMVP/BigQuestApp.swift dist-playgrounds/Big-Quest-iPad-Test-08.swiftpm/App/BigQuestApp.swift
-          shasum -a 256 dist-playgrounds/Big-Quest-iPad-Test-08.zip
+          unzip -t dist-playgrounds/Big-Quest-iPad-Test-09.zip
+          diff ios/BigQuestMVP/ToddleField.swift dist-playgrounds/Big-Quest-iPad-Test-09.swiftpm/App/ToddleField.swift
+          diff ios/BigQuestMVP/ClaudeClient.swift dist-playgrounds/Big-Quest-iPad-Test-09.swiftpm/App/ClaudeClient.swift
+          diff ios/BigQuestMVP/BigQuestApp.swift dist-playgrounds/Big-Quest-iPad-Test-09.swiftpm/App/BigQuestApp.swift
+          shasum -a 256 dist-playgrounds/Big-Quest-iPad-Test-09.zip
       - name: Upload importable iPad test package
         uses: actions/upload-artifact@v4
         with:
-          name: Big-Quest-iPad-Test-08-0.153.1
+          name: Big-Quest-iPad-Test-09-0.153.2
           path: |
-            dist-playgrounds/Big-Quest-iPad-Test-08.zip
-            dist-playgrounds/TEST-08-INFO.txt
+            dist-playgrounds/Big-Quest-iPad-Test-09.zip
+            dist-playgrounds/TEST-09-INFO.txt
           retention-days: 14

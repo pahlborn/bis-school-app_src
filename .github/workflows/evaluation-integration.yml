@@ -5,6 +5,7 @@ on:
       - 'index.html'
       - 'src/module/**'
       - 'ios/**'
+      - 'pilot/local-evaluation/**'
       - 'tests/**'
       - '.github/workflows/evaluation-integration.yml'
 permissions:
@@ -45,5 +46,6 @@ jobs:
           name: ${{ env.BQ_ARTIFACT }}
           path: dist-test/
           retention-days: 7
+      - run: node --test tests/evaluation-local-pilot-browser.test.mjs
       - run: node --test tests/toddle-evaluation-reader.test.mjs tests/evaluation-eltern-browser.test.mjs tests/evaluation-upgrade-browser.test.mjs tests/module/school-evaluation.test.mjs
       - run: npm test
