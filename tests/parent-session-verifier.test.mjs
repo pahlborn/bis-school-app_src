@@ -40,7 +40,8 @@ test('tampering or a mismatched issuer, audience, role or child is rejected',asy
   {exp:f.now+1000},{iat:f.now+70},{nbf:f.now+70}
  ]) await assert.rejects(f.verify(f.request(await f.token({...f.claims,...edit})),'p_child'));
  await assert.rejects(f.verify(f.request(await f.token(f.claims,{...f.header,alg:'none'})),'p_child'));
- assert.equal(f.calls(),0);
+ // A correctly signed token for a foreign parent reaches the independent revocation/membership check once.
+ assert.equal(f.calls(),1);
 });
 test('revocation is checked against current server-side family registry',async()=>{
  const f=await fixture();const signed=await f.token();
