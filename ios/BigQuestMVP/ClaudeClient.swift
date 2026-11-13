@@ -101,9 +101,23 @@ enum ClaudeClient {
             ]
         ]
         let raw = try await respond(source, key: key, schema: schema)
-        guard let result = try? JSONDecoder().decode(Evaluation.self, from: Data(raw.utf8)),
+        guard var result = try? JSONDecoder().decode(Evaluation.self, from: Data(raw.utf8)),
               result.criteria.count <= 60, result.missing.count <= 20 else {
             throw MVPError.message("Claude lieferte kein gültiges Evaluationsformular.")
+        }
+        if let rubric = ToddleRubric.extract(source) {
+            // Replace ambiguous model ratings with evidence-backed original grading.
+            result.criteria = rubric.rows.map {
+                Evaluation.Criterion(criterion: $0.criterion, rating: $0.rating, evidence: $0.evidence)
+            }
+            if rubric.complete {
+                result.missing.removeAll { warning in
+                    let w = warning.lowercased()
+                    return (w.contains("kriter") && (w.contains("rating") || w.contains("einstuf")
+                        || w.contains("bewertungsstuf") || w.contains("zuordn")))
+                        || (w.contains("code") && w.contains("isoliert"))
+                }
+            }
         }
         let normalized = source.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.joined(separator: " ")
         for row in result.criteria {
@@ -178,5 +192,87 @@ enum ClaudeClient {
             throw MVPError.message("Claude-Antwort enthält kein lesbares Formular.")
         }
         return raw
+    }
+}
+
+// Source-bound pairing of Toddle's original Assessment Criteria. Never infer a grade
+// from learner profile attributes, OREO instructional words, or model output.
+enum ToddleRubric {
+    struct Criterion {
+        var criterion: String
+        var rating: String
+        var evidence: String
+    }
+    struct Result {
+        var rows: [Criterion]
+        var complete: Bool
+    }
+    private static let codes: Set<String> = ["RS", "C", "M", "E"]
+    private static func clean(_ s: String) -> String {
+        s.split(whereSeparator: { $0.isWhitespace }).joined(separator: " ")
+    }
+    private static func label(_ line: String, _ wanted: String) -> Bool {
+        line.caseInsensitiveCompare(wanted) == .orderedSame
+    }
+    private static func heading(_ line: String) -> Bool {
+        if line == "-" || line == "–" || line == "—" { return true }
+        if ["Standards", "Assessment Criteria", "Learning goals"].contains(where: { label(line, $0) }) { return true }
+        let letters = line.unicodeScalars.filter { CharacterSet.letters.contains($0) }
+        return letters.count >= 6 && letters.allSatisfy { !CharacterSet.lowercaseLetters.contains($0) }
+    }
+    private static func splitRated(_ text: String) -> (String, String)? {
+        let p = clean(text)
+        if codes.contains(p) { return ("", p) }
+        guard let last = p.lastIndex(of: " ") else { return nil }
+        let grade = String(p[p.index(after: last)...])
+        guard codes.contains(grade) else { return nil }
+        return (String(p[..<last]), grade)
+    }
+    static func extract(_ source: String) -> Result? {
+        let lines = source.components(separatedBy: .newlines).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        guard let begin = lines.firstIndex(where: { label($0, "Assessment Criteria") }),
+              begin+1 < lines.count,
+              let end = lines[(begin+1)...].firstIndex(where: { label($0, "Your response") }), end > begin else { return nil }
+        let section = Array(lines[(begin+1)..<end])
+        let exactSection = clean(section.joined(separator: " "))
+        var rows: [Criterion] = []
+        var pending: [String] = []
+        var gradeCount = 0
+        for raw in section {
+            let line = clean(raw)
+            if line.isEmpty { continue }
+            if heading(line) { pending.removeAll(); continue }
+            if let (prefix, grade) = splitRated(line) {
+                gradeCount += 1
+                let criterion = clean((pending+[prefix]).joined(separator: " "))
+                let evidence = criterion + " " + grade
+                if criterion.count >= 20 && exactSection.contains(evidence)
+                    && !rows.contains(where: { $0.criterion == criterion }) {
+                    rows.append(Criterion(criterion: criterion, rating: grade, evidence: evidence))
+                }
+                pending.removeAll()
+            } else {
+                pending.append(line)
+            }
+        }
+        // Visual fallback must also be verbatim in the original Assessment Criteria section.
+        if let visual = lines.firstIndex(where: { label($0, "Visible rubric criterion and rating in the same row:") }) {
+            for raw in lines[(visual+1)...] {
+                guard let (criterion, grade) = splitRated(raw), criterion.count >= 20,
+                      exactSection.contains(criterion) else { continue }
+                if let i = rows.firstIndex(where: { $0.criterion == criterion }) {
+                    if rows[i].rating != grade { rows[i].rating = ""; rows[i].evidence = criterion }
+                } else {
+                    rows.append(Criterion(criterion: criterion, rating: grade, evidence: criterion+" "+grade))
+                }
+            }
+        }
+        let trailing = clean(pending.joined(separator: " "))
+        if trailing.count >= 20 && !rows.contains(where: { $0.criterion == trailing }) {
+            rows.append(Criterion(criterion: trailing, rating: "", evidence: trailing))
+        }
+        let complete = !rows.isEmpty && gradeCount == rows.filter { !$0.rating.isEmpty }.count
+            && rows.allSatisfy { !$0.rating.isEmpty }
+        return Result(rows: rows, complete: complete)
     }
 }

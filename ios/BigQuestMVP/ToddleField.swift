@@ -48,6 +48,11 @@ enum ToddleField {
         const value = el.matches('input,select') ? el.value : (el.textContent || '').trim() || (el.getAttribute('aria-label') || '').trim();
         return code.test(String(value || '').trim());
       });
+      const rubricStart = lines.findIndex(x => x.toLowerCase() === 'assessment criteria');
+      const rubricEnd = lines.findIndex((x,i) => i > rubricStart && x.toLowerCase() === 'your response');
+      const rubricText = rubricStart >= 0 && rubricEnd > rubricStart
+        ? lines.slice(rubricStart + 1, rubricEnd).join(' ').replace(/\s+/g,' ').trim()
+        : '';
       const pairs = [];
       if (grades.length <= 96) for (const grade of grades) {
         const rating = grade.matches('input,select') ? grade.value.trim()
@@ -72,7 +77,7 @@ enum ToddleField {
                 && rect.bottom >= gradeRect.top && rect.top <= gradeRect.bottom) nearby.push(value);
           }
           const criterion = words.join(' ').replace(/\s+/g, ' ').trim();
-          if (criterion.length >= 30 && criterion.length <= 700 && nearby.length
+          if (criterion.length >= 30 && criterion.length <= 700 && rubricText.includes(criterion) && nearby.length
               && !pairs.some(p => p.row === row || p.text === criterion)) {
             pairs.push({row, text: criterion, rating});
             break;
