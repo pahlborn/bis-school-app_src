@@ -21,3 +21,7 @@ jobs:
           -scheme BigQuestMVP
           -destination 'generic/platform=iOS Simulator'
           CODE_SIGNING_ALLOWED=NO build
+      - name: Deterministic Toddle rubric Swift regression
+        run: |
+          swiftc -parse-as-library ios/BigQuestMVP/ClaudeClient.swift tests/ios-toddle-rubric.swift -o /tmp/bq-toddle-rubric
+          /tmp/bq-toddle-rubric

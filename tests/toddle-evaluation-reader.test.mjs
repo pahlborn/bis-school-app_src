@@ -45,7 +45,7 @@ test('captures six explicitly paired rubric grades even when shown as controls',
    return '<div role="row" style="display:flex;align-items:center;min-height:72px;width:720px">'
     +'<div style="width:590px">'+label+'</div><div>'+grade+'</div></div>';
   }).join('');
-  await page.setContent('<main>Learning intentions<section aria-label="Evaluation" style="width:720px">'+rows+'</section></main>');
+  await page.setContent('<main>Learning intentions<div>Assessment Criteria</div><section aria-label="Evaluation" style="width:720px">'+rows+'</section><div>Your response</div></main>');
   const captured = await page.evaluate(script);
   assert.ok(captured.text, 'source text returned');
   for (let i=0;i<labels.length;i++){
@@ -62,11 +62,32 @@ test('ambiguous grades in one rubric row are not assigned to a criterion', async
   const page=await browser.newPage({ viewport:{width:820,height:1180}});
   await page.route('**/*',route=>route.fulfill({contentType:'text/html',body:'<html><body></body></html>'}));
   await page.goto('https://web.toddleapp.com/');
-  await page.setContent('<main>Learning intentions<div style="display:flex;width:720px;align-items:center">'
+  await page.setContent('<main>Learning intentions<div>Assessment Criteria</div><div style="display:flex;width:720px;align-items:center">'
     +'<div style="width:580px">A synthetic but sufficiently long criterion statement</div>'
-    +'<button>C</button><button>M</button></div></main>');
+    +'<button>C</button><button>M</button></div><div>Your response</div></main>');
   const captured=await page.evaluate(script);
   assert.ok(captured.text);
   assert.doesNotMatch(captured.text,/Visible rubric criterion and rating in the same row:/);
  } finally { await browser.close(); }
+});
+
+
+test('OREO instructional E outside Assessment Criteria cannot become a rubric grade', async () => {
+ const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined});
+ try{
+  const page=await browser.newPage({viewport:{width:820,height:1180}});
+  await page.route('**/*',route=>route.fulfill({contentType:'text/html',body:'<html><body></body></html>'}));
+  await page.goto('https://web.toddleapp.com/');
+  await page.setContent('<main>Learning intentions'
+    +'<div style="display:flex;width:720px;align-items:center"><div style="width:560px">Use O pinion, R eason, E xample, O pinion. Explain a convincing viewpoint.</div><button>E</button></div>'
+    +'<div>Assessment Criteria</div><div>SPEAKING AND LISTENING STRAND</div><div>-</div>'
+    +'<div style="display:flex;align-items:center"><div style="width:600px">Communicate with listeners respectfully and clearly</div><button>C</button></div>'
+    +'<div style="display:flex;align-items:center"><div style="width:600px">Present a clear opinion supported by relevant examples</div><button>M</button></div>'
+    +'<div>Your response</div></main>');
+  const result=await page.evaluate(script);
+  const appended=result.text.split('Visible rubric criterion and rating in the same row:')[1]||'';
+  assert.match(appended,/Communicate with listeners respectfully and clearly C/);
+  assert.match(appended,/Present a clear opinion supported by relevant examples M/);
+  assert.doesNotMatch(appended,/Explain a convincing viewpoint|O pinion/);
+ }finally{await browser.close()}
 });
