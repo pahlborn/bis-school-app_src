@@ -9,11 +9,11 @@ import { execFileSync } from 'node:child_process';
 const root = path.resolve(import.meta.dirname, '..');
 const read = f => fs.readFileSync(path.join(root, f), 'utf8');
 const pkg = JSON.parse(read('package.json'));
-if (pkg.version !== '0.153.1-beta') {
-  throw new Error('Test-08 export requires reviewed version 0.153.1-beta');
+if (pkg.version !== '0.153.2-beta') {
+  throw new Error('Test-09 export requires reviewed version 0.153.2-beta');
 }
 const sourceFiles = ['BigQuestApp.swift', 'ClaudeClient.swift', 'ToddleField.swift'];
-const packageName = 'Big-Quest-iPad-Test-08.swiftpm';
+const packageName = 'Big-Quest-iPad-Test-09.swiftpm';
 const dest = path.join(root, 'dist-playgrounds');
 const directory = path.join(dest, packageName);
 const app = path.join(directory, 'App');
@@ -25,15 +25,15 @@ import PackageDescription
 import AppleProductTypes
 
 let package = Package(
-    name: "Big Quest iPad Test 08",
+    name: "Big Quest iPad Test 09",
     platforms: [.iOS("16.0")],
     products: [
         .iOSApplication(
-            name: "Big Quest iPad Test 08",
+            name: "Big Quest iPad Test 09",
             targets: ["AppModule"],
             bundleIdentifier: "de.bigquest.ipad.test08",
-            displayVersion: "0.153.1",
-            bundleVersion: "8",
+            displayVersion: "0.153.2",
+            bundleVersion: "9",
             appIcon: .placeholder(icon: .pencil),
             accentColor: .presetColor(.blue),
             supportedDeviceFamilies: [.pad],
@@ -55,12 +55,12 @@ for (const name of sourceFiles) {
 }
 const commit=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();
 const info = [
-  'Big Quest iPad Test 08 — ' + pkg.version,
+  'Big Quest iPad Test 09 — ' + pkg.version,
   'Quell-Commit: '+commit,
   'Reader-Quelle: ios/BigQuestMVP/ToddleField.swift',
   'Neuer Reader: auf eindeutig sichtbare Rubrikzeilen begrenzt',
   'Automatische Tests beweisen NICHT das Verhalten in der echten Toddle-WebView.',
-  'Test 07 bleibt unangetastet; Gerät und Keychain können eine neue Anmeldung erfordern.',
+  'Lokaler Modus: keine GitHub-Anmeldung oder Geräteverbindung. Schlüssel bleibt im iPad-Keychain.',
   'Keine echten Schuldaten für diesen Test verwenden.',
   '',
   'Quellintegritaet (SHA-256):',
@@ -68,7 +68,7 @@ const info = [
 ].join('\n');
 fs.writeFileSync(path.join(dest,'TEST-08-INFO.txt'),info);
 fs.writeFileSync(path.join(directory,'README.txt'),info);
-const zip=path.join(dest,'Big-Quest-iPad-Test-08.zip');
+const zip=path.join(dest,'Big-Quest-iPad-Test-09.zip');
 execFileSync('zip',['-q','-r',path.basename(zip),packageName],{cwd:dest});
 const list=execFileSync('unzip',['-Z','-1',zip],{encoding:'utf8'}).split('\n').filter(Boolean);
 for(const p of [packageName+'/Package.swift',...sourceFiles.map(n=>packageName+'/App/'+n)]){

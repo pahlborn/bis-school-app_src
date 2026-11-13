@@ -33,7 +33,7 @@ private final class BrowserPage: NSObject, ObservableObject, WKScriptMessageHand
         guard let activeURL = view.url, activeURL.scheme == "https",
               activeURL.host == "big-quest-test.github.io",
               activeURL.port == nil || activeURL.port == 443 else { return false }
-        return ["/probe-evaluation-form", "/probe-evaluation-form/", "/probe-evaluation-form/index.html"].contains(activeURL.path)
+        return ["/probe-evaluation-form", "/probe-evaluation-form/", "/probe-evaluation-form/index.html", "/probe-evaluation-local", "/probe-evaluation-local/", "/probe-evaluation-local/index.html"].contains(activeURL.path)
     }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage,
@@ -65,7 +65,7 @@ private struct BrowserPane: UIViewRepresentable {
 @MainActor
 private struct BigQuestScreen: View {
     @StateObject private var bigQuest = BrowserPage(
-        url: URL(string: "https://big-quest-test.github.io/probe-evaluation-form/")!, persistent: true
+        url: URL(string: "https://big-quest-test.github.io/probe-evaluation-local/")!, persistent: true
     )
     @StateObject private var toddle = BrowserPage(
         url: URL(string: "https://web.toddleapp.com/")!, persistent: false

@@ -1,14 +1,15 @@
-# Big Quest iPad – Gemeinsames Evaluationsformular
+# Big Quest iPad – lokaler KI-Test 09 (0.153.2 Beta)
 
-Die installierte native Test-07-Fassung enthält noch den bisherigen Textreader. Die neue Rubrikzeilen-Erfassung wirkt erst nach Installation einer neuen nativen Testfassung; die HTML-Seite allein aktualisiert Swift-Code nicht.
+Test 09 öffnet die isolierte Demo unter `/probe-evaluation-local/`. Es gibt **keine GitHub-Geräteverbindung** und keinen Zugang zu den anderen Testkonten oder geschützten Schulbewertungen.
 
-Test 07 öffnet Big Quest unter `/probe-evaluation-form/` auf der Testinstanz. Im Elternbereich das Kind und **Schulische Einstufungen** öffnen.
+Fiktiver Testbenutzer `max.mustermann`, fiktives Kind `kind1.mustermann` sind sichtbar vorausgewählt; die lokale Testoberfläche benötigt kein Passwort. Bewertungen werden nur im WebView-App-Container gespeichert (kein GitHub- oder Mehrgeräteabgleich). Beim Wechsel zu einem anderen Browser/Device gibt es dort andere lokale Testdaten.
 
-- **Manuell:** **Evaluation hinzufügen** öffnet das Formular für das gewählte Kind.
-- **Mit KI:** **Evaluation aus Toddle** öffnen, die Bewertung anzeigen und **Evaluation ins Formular übernehmen** wählen. Den erfassten Text im selben Big-Quest-Formular prüfen und persönliche Angaben entfernen. **Mit Claude ins Formular übertragen** befüllt den Entwurf.
+Der Menüpunkt **Evaluation aus Toddle** und der native Claude-API-Aufruf bleiben im iPad-Wrapper; der Anthropic-Key liegt im Keychain. Reale Personen-/Schuldaten dürfen nicht an die KI gesendet werden.
 
-Fach und Originalkriterien prüfen und gegebenenfalls ergänzen. Über **Vorschau anzeigen** und **Evaluation bestätigen** beim angezeigten Kind speichern. Der bestehende Geräteabgleich überträgt die gespeicherte Bewertung. Die App zeigt den Abgleichstatus an. Die vorhandenen Übungsmuster für Runden und zweischrittige Subtraktion können bei passenden Bewertungen ausdrücklich zugeordnet werden.
+Manuelle Eingabe und Claude-Befüllung nutzen dasselbe einfache lokale Formular. Vorschau speichert nicht, Bestätigung speichert lokal. Die beiden vordefinierten Übungsmuster werden nur nach ausdrücklicher Auswahl eingeblendet; sie sind keine LLM-generierten Aufgaben und **nicht** der vollständige End-to-End-Nachweis des originalen mehrgerätefähigen Big-Quest-Schulsystems.
 
-Der API-Schlüssel bleibt im iPad-Schlüsselbund. Der Aufruf ist auf das Formular der Testinstanz im Hauptfenster beschränkt. Die App liest den gerenderten Toddle-Text. Bilder und noch nicht geladene Inhalte können fehlen. Quellenbelege bleiben eine Prüfhilfe für Eltern.
+## Sicherheits- und Upgrade-Grenzen
 
-Die automatisierte Browserprüfung nutzt den echten Formular-, Rechte- und Speicherpfad mit Testkonten und einer synthetischen Claude-Antwort. Der Lauf mit echter Toddle-Sitzung und Claude erfolgt anschließend auf dem iPad.
+Die Bundle ID bleibt wie bei Test 08 `de.bigquest.ipad.test08`; dies erlaubt ein Update der Test-App statt eine neue App mit neuem Keychain-Container. Die WebView-Origin und der Pfad des lokalen Demoformulars sind getrennt von der bisherigen Integrationsseite. Es gibt keinen GitHub-Schreibschlüssel in diesem Build.
+
+Die alte, geschützte Integrationsseite `/probe-evaluation-form/` bleibt unverändert und muss später separat inklusive Konten- und Gerätesynchronisation abgenommen werden.

@@ -23,6 +23,10 @@ export const RELEASE_NOTES = {
     ],
     bugfixes: [
       {
+        de: 'Eigenständiger lokaler KI-Testmodus mit fiktiver Familie ohne GitHub-Gerätecode; keine Mehrgeräte-Synchronisation.',
+        en: 'Separate local AI pilot with a fictional family and no GitHub device token; no multi-device synchronization.'
+      },
+      {
         de: 'Sichtbare Rubrik-Einstufungen aus eindeutig zusammengehörigen Kriterienzeilen werden als Originalbeleg erfasst; uneindeutige Werte bleiben offen.',
         en: 'Visible rubric ratings from unambiguously paired criterion rows are captured as evidence; ambiguous values remain unassigned.'
       },
