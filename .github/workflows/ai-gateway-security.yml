@@ -3,7 +3,9 @@ on:
   pull_request:
     paths:
       - 'server/claude-evaluation-gateway.mjs'
+      - 'server/parent-session-verifier.mjs'
       - 'tests/claude-evaluation-gateway.test.mjs'
+      - 'tests/parent-session-verifier.test.mjs'
       - '.github/workflows/ai-gateway-security.yml'
 permissions:
   contents: read
@@ -17,4 +19,4 @@ jobs:
         with:
           node-version: '22'
       - name: Verify fail-closed identity, privacy, quota and Anthropic isolation
-        run: node --test tests/claude-evaluation-gateway.test.mjs
+        run: node --test tests/claude-evaluation-gateway.test.mjs tests/parent-session-verifier.test.mjs
