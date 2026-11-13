@@ -31,7 +31,7 @@ let package = Package(
         .iOSApplication(
             name: "Big Quest iPad Test 11",
             targets: ["AppModule"],
-            bundleIdentifier: "de.bigquest.ipad.test08",
+            bundleIdentifier: "de.bigquest.ipad.test11",
             displayVersion: "0.153.4",
             bundleVersion: "11",
             appIcon: .placeholder(icon: .pencil),
