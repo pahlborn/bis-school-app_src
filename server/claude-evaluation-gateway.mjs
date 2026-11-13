@@ -93,7 +93,7 @@ export function createClaudeEvaluationGateway({
         || !body.source.trim() || utf8Bytes(body.source) > 48000) return result(400, 'invalid-input');
 
     let session;
-    try { session = await authorize(req); } catch { return result(401, 'unauthorized'); }
+    try { session = await authorize(req, body.childId); } catch { return result(401, 'unauthorized'); }
     if (!asObject(session) || session.role !== 'parent' || !CHILD.test(session.parentId)
         || !Array.isArray(session.children) || !session.children.includes(body.childId)) {
       return result(403, 'forbidden');
