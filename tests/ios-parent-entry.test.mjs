@@ -17,7 +17,7 @@ test('native Claude message handler stays tied to exact HTTPS test origin and ma
   assert.match(source, /message\.frameInfo\.securityOrigin\.host == "big-quest-test\.github\.io"/);
   assert.match(source, /isEvaluationPage, !busy/);
   assert.match(source, /return \["\/", "\/index\.html",/);
-  assert.match(source, /\bcontext = context; error = nil; showToddle = true/);
+  assert.match(source, /evaluationContext = context; error = nil; showToddle = true/);
 });
 
 test('the native wrapper never embeds a Claude credential', () => {
