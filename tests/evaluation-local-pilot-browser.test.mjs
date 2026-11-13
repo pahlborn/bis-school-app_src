@@ -16,9 +16,8 @@ test('local pilot: no GitHub auth, manual save survives reload, two supported ex
  assert.equal(await page.locator('#verbLink').count(),0);
  await page.locator('#title').fill('Fiktives Runden');
  await page.locator('#area').selectOption('Mathematik');
- await page.locator('[data-criterion="0"]').fill('Runde Zahlen auf den nächsten Hunderter');
+ await page.locator('[data-criterion="0"]').fill('Rounds whole numbers to 9999 to the nearest 10, 100 and 1000');
  await page.locator('[data-rating="0"]').selectOption('C');
- await page.locator('#exercise').selectOption('round');
  await page.locator('#preview').click();
  assert.match(await page.locator('#preview-content').innerText(),/Fiktives Runden/);
  assert.equal(await page.evaluate(()=>localStorage.length),0,'preview must not persist');
@@ -58,4 +57,48 @@ test('local pilot: Toddle bridge and synthetic Claude response fill SAME form, f
  await page.locator('#area').selectOption('Mathematik');
  await page.locator('#preview').click();
  assert.equal(await page.locator('#preview-box').isVisible(),true);
+});
+
+
+test('local pilot: stored C subtraction produces task without selecting an exercise, M rounding does not',async(t)=>{
+ const server=createServer((req,res)=>{res.writeHead(200,{'content-type':'text/html; charset=utf-8'});res.end(html)});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));t.after(()=>server.close());
+ const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined});t.after(()=>browser.close());
+ const page=await browser.newPage();
+ await page.goto('http://127.0.0.1:'+server.address().port);
+ await page.evaluate(()=>{
+  const key='bq_local_eval_pilot_01532';
+  localStorage.setItem(key,JSON.stringify([
+   {id:'math1',title:'Milestone',area:'Mathematik',criteria:[
+     {criterion:'Rounds whole numbers to 9999 to the nearest 10, 100 and 1000',rating:'M'},
+     {criterion:'Selects appropriate mental and written strategies to solve real life subtraction problems to 9999, including two-step problems',rating:'C'}
+   ],exercise:''},
+   {id:'math2',title:'Travel for Work',area:'Sonstiges',criteria:[
+     {criterion:'Rounds whole numbers to 9999 to the nearest 10, 100 and 1000',rating:'C'}
+   ],exercise:''},
+   {id:'empty',title:'Lesson 4',area:'Mathematik',criteria:[],exercise:''}
+  ]));
+ });
+ await page.locator('#tab-practice').click();
+ const cards=page.locator('#practice-list .piece');
+ assert.equal(await cards.count(),2);
+ assert.match(await cards.nth(0).innerText(),/532 − 140 − 27/);
+ assert.match(await cards.nth(1).innerText(),/Runde \d+ auf den nächsten Hunderter/);
+ assert.doesNotMatch(await page.locator('#practice-list').innerText(),/Lesson 4/);
+ await page.reload();
+ await page.locator('#tab-practice').click();
+ assert.equal(await page.locator('#practice-list .piece').count(),2);
+});
+
+test('local pilot: evaluation without any rubric criteria cannot be saved',async(t)=>{
+ const server=createServer((req,res)=>{res.writeHead(200,{'content-type':'text/html; charset=utf-8'});res.end(html)});
+ await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));t.after(()=>server.close());
+ const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||undefined});t.after(()=>browser.close());
+ const page=await browser.newPage();
+ await page.goto('http://127.0.0.1:'+server.address().port);
+ await page.locator('#title').fill('Unvollständige Bewertung');
+ await page.locator('#area').selectOption('Mathematik');
+ await page.locator('#preview').click();
+ assert.match(await page.locator('#status').innerText(),/Mindestens ein Bewertungskriterium/);
+ assert.equal(await page.evaluate(()=>localStorage.length),0);
 });
