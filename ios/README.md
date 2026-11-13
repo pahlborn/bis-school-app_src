@@ -1,15 +1,18 @@
-# Big Quest iPad – lokaler KI-Test 09 (0.153.2 Beta)
+# Big Quest iPad – Integrationstest 11 (0.153.4 Beta)
 
-Test 09 öffnet die isolierte Demo unter `/probe-evaluation-local/`. Es gibt **keine GitHub-Geräteverbindung** und keinen Zugang zu den anderen Testkonten oder geschützten Schulbewertungen.
+Test 11 verbindet den auf dem iPad geprüften Toddle-Reader und den nativen Claude-Aufruf mit der bestehenden geschützten Big-Quest-Testoberfläche unter `https://big-quest-test.github.io/probe-evaluation-form/`.
 
-Fiktiver Testbenutzer `max.mustermann`, fiktives Kind `kind1.mustermann` sind sichtbar vorausgewählt; die lokale Testoberfläche benötigt kein Passwort. Bewertungen werden nur im WebView-App-Container gespeichert (kein GitHub- oder Mehrgeräteabgleich). Beim Wechsel zu einem anderen Browser/Device gibt es dort andere lokale Testdaten.
+**Wichtig:** Das ist nur der Integrations-Branch, kein Nachweis einer bereits veröffentlichten Testseite oder einer bestandenen Geräteabnahme. Die Testseite muss mit dem passenden Stand aus diesem Branch veröffentlicht werden. Test 10 bleibt als lokale, unabhängig verwendbare Referenz bestehen.
 
-Der Menüpunkt **Evaluation aus Toddle** und der native Claude-API-Aufruf bleiben im iPad-Wrapper; der Anthropic-Key liegt im Keychain. Reale Personen-/Schuldaten dürfen nicht an die KI gesendet werden.
+Der Elternteil meldet sich im geschützten Testkonto an, prüft das ausgewählte fiktive Kind unter „Schulische Einstufungen“ und beginnt über „Evaluation aus Toddle“. Der Quelltext wird ausschließlich beim identischen angemeldeten Kind in das gemeinsame Formular übernommen. Nach „Mit Claude ins Formular übertragen“ bleiben ursprüngliche Kriterien und Bewertungen prüfbar. „Vorschau anzeigen“ schreibt nichts; „Evaluation bestätigen“ schreibt das Ereignis beim ausgewählten Kind und stößt den regulären Abgleich an. Speicherung und Abgleich sind auf dem echten iPad nochmals zu prüfen.
 
-Manuelle Eingabe und Claude-Befüllung nutzen dasselbe einfache lokale Formular. Vorschau speichert nicht, Bestätigung speichert lokal. Die beiden vordefinierten Übungsmuster werden nur nach ausdrücklicher Auswahl eingeblendet; sie sind keine LLM-generierten Aufgaben und **nicht** der vollständige End-to-End-Nachweis des originalen mehrgerätefähigen Big-Quest-Schulsystems.
+Der Anthropic-Schlüssel bleibt lokal im iPad-Keychain. Die native Claude-Brücke ist auf das zulässige HTTPS-Test-Origin, die Whitelist der Formularpfade und den Hauptframe beschränkt. Der Toddle-WebView ist nicht persistent. Im Test dürfen keine personenbezogenen Schuldaten an Claude gesendet werden.
 
-## Sicherheits- und Upgrade-Grenzen
+## Abnahmefolge
+1. Vorhandenen Test-10-Stand unangetastet lassen; Test-11-Paket separat importieren.
+2. Auf der geschützten Seite als `max.mustermann` anmelden, zu `kind1.mustermann` und „Schulische Einstufungen“ wechseln. Bei falscher oder fehlender Kindanzeige stoppen.
+3. Echte bereits geprüfte Toddle-Evaluation übernehmen, mit Claude übertragen und Kriterien/Originaleinstufungen gegenprüfen; nur für das fiktive Testkonto.
+4. „Vorschau anzeigen“ und anschließend „Evaluation bestätigen“. Erfolgreichen Datenabgleich abwarten und denselben Eintrag nach App-Neustart erneut öffnen.
+5. Neue Tagesrunde für das Testkind starten und nur bei fachlich passender expliziter Übungszuordnung die erzeugte Übung kontrollieren. Unzugeordnete Kriterien dürfen keine künstliche Übung erhalten.
 
-Die Bundle ID bleibt wie bei Test 08 `de.bigquest.ipad.test08`; dies erlaubt ein Update der Test-App statt eine neue App mit neuem Keychain-Container. Die WebView-Origin und der Pfad des lokalen Demoformulars sind getrennt von der bisherigen Integrationsseite. Es gibt keinen GitHub-Schreibschlüssel in diesem Build.
-
-Die alte, geschützte Integrationsseite `/probe-evaluation-form/` bleibt unverändert und muss später separat inklusive Konten- und Gerätesynchronisation abgenommen werden.
+Keine Veröffentlichung der produktiven App, kein Zugriff auf reale Kinderkonten und kein stillschweigender Merge.
