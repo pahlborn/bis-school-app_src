@@ -28,7 +28,7 @@ before(async () => {
 after(async () => { await browser?.close(); server?.close(); });
 
 async function oeffnen() {
-  const ctx = await browser.newContext({ viewport: { width: 1000, height: 900 } });
+  const ctx = await browser.newContext({ viewport: { width: 1366, height: 768 } });
   await ctx.route('**/*', (r) => (r.request().url().startsWith(server.url) ? r.continue() : r.abort()));
   await ctx.addInitScript(() => { window.claude = { hot: { snapshot(fn) { try { window.__bq = JSON.parse(JSON.stringify(fn())); } catch (e) {} } } }; window.AudioContext = undefined; });
   const page = await ctx.newPage(); const fehler = []; page.on('pageerror', (e) => fehler.push(e.message));

@@ -86,7 +86,7 @@ async function filtern(page, f) {
 const fmtDe = (d) => d.split('-').reverse().join('.');
 
 test('T1–T3 table, filters, sorting and fixed outline (German, 60 assignments)', async () => {
-  const { ctx, page, fehler } = await oeffnen(browser, server, { viewport: { width: 1000, height: 900 } });
+  const { ctx, page, fehler } = await oeffnen(browser, server, { viewport: { width: 1366, height: 768 } });
   await kindAnmelden(page); await erwachsen(page, 'papa');
   await kapitelOeffnen(page);
   const heute = await page.evaluate(() => { const d = new Date(), p = (n) => String(n).padStart(2, '0'); return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()); });
@@ -168,7 +168,7 @@ test('T1–T3 table, filters, sorting and fixed outline (German, 60 assignments)
 });
 
 test('T4 English: the same view, no German', async () => {
-  const { ctx, page, fehler } = await oeffnen(browser, server, { viewport: { width: 1000, height: 900 } });
+  const { ctx, page, fehler } = await oeffnen(browser, server, { viewport: { width: 1366, height: 768 } });
   await kindAnmelden(page); await erwachsen(page, 'papa');
   await page.locator('.phdr [data-plang="en"]').click();
   await kapitelOeffnen(page);
@@ -213,7 +213,7 @@ test('T5 iPhone width: cards instead of the table, nothing sticks out', async ()
 });
 
 test('T6 the child sees none of it; a teacher only with the grant "school data" - then the same view', async () => {
-  const { ctx, page, fehler } = await oeffnen(browser, server, { viewport: { width: 1000, height: 900 } });
+  const { ctx, page, fehler } = await oeffnen(browser, server, { viewport: { width: 1366, height: 768 } });
   await kindAnmelden(page);
   const kind = await page.evaluate(() => document.body.innerText);
   for (const w of ['Schulische Einstufungen', 'School assessments', 'Task 01', 'Glows check', 'Stand der Daten', 'Data as of']) assert.ok(!kind.includes(w), 'child sees ' + w);

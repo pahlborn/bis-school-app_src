@@ -131,7 +131,13 @@ export function anmEingefuegt(text, adresse) {
   if (!t) return null;
   const i = t.indexOf('#');
   if (i >= 0) {
-    if (i > 0 && adresse !== undefined && anmBasis(t.slice(0, i)) !== anmBasis(adresse)) return /^https?:\/\//i.test(t) ? { fremd: true } : null;
+    // The isolated Big Quest evaluation pilot uses the SAME protected test storage as the
+    // main test app. Accept only its exact main-test origin as an invitation source.
+    // Never permit this cross-path exception for production, other hosts or other preview paths.
+    const incoming = anmBasis(t.slice(0, i)), current = anmBasis(adresse);
+    const knownTestRoot = current === 'https://big-quest-test.github.io/probe-evaluation-form'
+      && incoming === 'https://big-quest-test.github.io';
+    if (i > 0 && adresse !== undefined && incoming !== current && !knownTestRoot) return /^https?:\/\//i.test(t) ? { fremd: true } : null;
     return anmEinladungLesen(t.slice(i));
   }
   if (/^https?:\/\//i.test(t) || /[=&/]/.test(t) || /\s/.test(roh)) return null;          // only the code: one word

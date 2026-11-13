@@ -23,6 +23,18 @@ export const RELEASE_NOTES = {
     ],
     bugfixes: [
       {
+        de: 'Eigenständiger lokaler KI-Testmodus mit fiktiver Familie ohne GitHub-Gerätecode; keine Mehrgeräte-Synchronisation.',
+        en: 'Separate local AI pilot with a fictional family and no GitHub device token; no multi-device synchronization.'
+      },
+      {
+        de: 'Sichtbare Rubrik-Einstufungen aus eindeutig zusammengehörigen Kriterienzeilen werden als Originalbeleg erfasst; uneindeutige Werte bleiben offen.',
+        en: 'Visible rubric ratings from unambiguously paired criterion rows are captured as evidence; ambiguous values remain unassigned.'
+      },
+      {
+        de: 'Gemeinsames Formular für manuelle und schulische Bewertungsübernahme im isolierten Elternpilot; Geräteabnahme weiterhin offen.',
+        en: 'One form for manual and school evaluation import in the isolated parent pilot; live-device acceptance pending.'
+      },
+      {
         de: 'Nach dem Upgrade werden zuvor übersprungene Schulbewertungen beim Abgleich nachgeholt.',
         en: 'After an upgrade, sync recovers previously skipped school evaluations.'
       }

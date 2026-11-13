@@ -139,6 +139,20 @@ button{font:inherit;color:inherit}
 .pf-names .field.ms-class{flex:0 0 34%}
 .school-ask{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .profile-dlg .row > .btn{flex:1 1 100px}
+/* Keep the complete profile form, including Close/Save, inside a 320x568 iPhone viewport.
+   Retain the 44px touch targets and the existing scroll fallback for larger text. */
+@media (max-width:359px) and (max-height:640px){
+  #profileDlg{padding:8px 10px;max-height:calc(100dvh - 8px);font-size:.93rem}
+  #profileDlg form{gap:5px}
+  #profileDlg .pf-set legend{margin-bottom:2px}
+  #profileDlg .pf-emojis{gap:3px}
+  #profileDlg .pf-names .field input{padding:5px 7px;min-height:44px}
+  #profileDlg .pf-foot{gap:4px}
+  #profileDlg .pf-foot .btn{padding:5px 7px}
+  #profileDlg .pf-bday{gap:4px}
+  #profileDlg h2{margin:0}
+}
+
 .login-body{display:flex;flex-direction:column;gap:14px;background:var(--surface);border:2px solid var(--line);border-radius:22px;padding:20px;margin-top:8px}
 .login-copy{display:grid;gap:4px;margin-top:8px;color:var(--muted);text-align:center}.login-copy p{margin:0}
 .login-roles{display:flex;flex-direction:column;gap:12px}
@@ -6042,7 +6056,7 @@ function kontoBlattHTML(){
   if(b.art==='verbinden'){
     const z=anmZugangscode(KONTO_SPEICHER, localStorage); if(!z) return back;
     const link=anmEinladungslink(location.href, {zugang:z});
-    return back+`<h2 class="psubjtitle">📲 ${de?'Weiteres Gerät verbinden':'Connect another device'}</h2><p class="small">${de?'Auf dem anderen Gerät Big Quest öffnen und „📷 QR-Code scannen“ tippen – auch in der App auf dem Home-Bildschirm. Danach melden Sie sich dort mit Ihrem Namen und Passwort an. Der Code verbindet nur das Gerät; er ist nicht Ihr Passwort. Nur persönlich zeigen.':'On the other device, open Big Quest and tap “📷 Scan QR code” – in the Home Screen app, too. Then log in there with your name and password. The code only connects the device; it is not your password. Show it in person only.'}</p><div class="kqr" id="kVerbQr">${anmQr(link, de?'Gerät verbinden':'Connect device')}</div>`;
+    return back+`<h2 class="psubjtitle">📲 ${de?'Weiteres Gerät verbinden':'Connect another device'}</h2><p class="small">${de?'Auf dem anderen Gerät Big Quest öffnen und „📷 QR-Code scannen“ tippen – auch in der App auf dem Home-Bildschirm. Danach melden Sie sich dort mit Ihrem Namen und Passwort an. Der Code verbindet nur das Gerät; er ist nicht Ihr Passwort. Nur persönlich zeigen.':'On the other device, open Big Quest and tap “📷 Scan QR code” – in the Home Screen app, too. Then log in there with your name and password. The code only connects the device; it is not your password. Show it in person only.'}</p><p class="small">${de?'Auf demselben Gerät: Link kopieren und in Big Quest einfügen.':'On the same device: copy the link and paste it into Big Quest.'}</p><div class="field"><label for="kVerbLink">${de?'Verbindungslink':'Device connection link'}</label><input id="kVerbLink" readonly value="${esc(link)}" autocomplete="off"></div><p><button type="button" class="btn small" id="kVerbCopy">${de?'Link kopieren':'Copy link'}</button></p><p id="kVerbCopyStatus" class="small" role="status"></p><div class="kqr" id="kVerbQr">${anmQr(link, de?'Gerät verbinden':'Connect device')}</div>`;
   }
   if(b.art==='wegkind') return back+`<h2 class="psubjtitle">${de?'Gerät entfernen':'Remove device'}</h2><p>${de?`„${esc(b.gname)}“ von ${esc(b.name)} entfernen? Was dieses Gerät danach schickt, zählt nicht mehr.`:`Remove “${esc(b.gname)}” of ${esc(b.name)}? Whatever this device sends afterwards no longer counts.`}</p><p><button type="button" class="btn primary" id="kWegJa">${de?'Entfernen':'Remove'}</button></p>${msg}`;
   if(b.art==='frageneu') return `<h2 class="psubjtitle">${de?`Jetzt neues Passwort für ${esc(b.name)}?`:`New password for ${esc(b.name)} now?`}</h2><p>${de?`Das Gerät ist entfernt. Bis ${esc(b.name)} ein neues Passwort hat, kann es noch lesen, was es schon hatte. Mit dem neuen Passwort ist auch das vorbei; der Lernstand bleibt erhalten.`:`The device is removed. Until ${esc(b.name)} has a new password, it can still read what it already had. A new password ends that; the progress stays.`}</p><p><button type="button" class="btn primary" id="kNeuJa">${de?'Ja, Start-QR-Code zeigen':'Yes, show start QR code'}</button> <button type="button" class="btn" id="kNeuSpaeter">${de?'Später':'Later'}</button></p>${msg}`;
@@ -6194,6 +6208,15 @@ function kontoBinden(body){
   an('#kAdminElternEinladen',()=>kontoBlattZeigen({art:'adminEltern'}));
   an('#kErneuern',()=>kontoBlattZeigen({art:'erneuern'}));
   an('#kVerbindenQr',()=>kontoBlattZeigen({art:'verbinden'}));
+  an('#kVerbCopy',()=>{
+    const input=body.querySelector('#kVerbLink'), status=body.querySelector('#kVerbCopyStatus');
+    if(!input) return;
+    input.focus(); input.select();
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(input.value).then(()=>{ if(status) status.textContent=PL()==='de'?'Link kopiert.':'Link copied.'; },
+        ()=>{ if(status) status.textContent=PL()==='de'?'Link ist markiert: Kopieren wählen.':'Link selected: choose Copy.'; });
+    } else if(status) status.textContent=PL()==='de'?'Link ist markiert: Kopieren wählen.':'Link selected: choose Copy.';
+  });
   body.querySelectorAll('[data-kneu]').forEach(b=>b.addEventListener('click',()=>{ if(parentAccess) kontoKindNeuStarten(b.dataset.kneu); }));
   body.querySelectorAll('[data-kzurueck]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess) return; const id=b.dataset.kzurueck; kontoSchritt(null, async()=>{ const z=kontoZugang(); await anmZurueckziehen({zugang:z, ablage:localStorage, konto:kontoIch(), id, now:Date.now()}); await kontoAbgleich(); renderSheets(); }); }));
   body.querySelectorAll('[data-kweg]').forEach(b=>b.addEventListener('click',()=>{
@@ -6496,7 +6519,7 @@ const SCHOOL_FILTER0={area:'', period:'all', weak:false, sort:'date'};
 const SCHOOL_UI={de:{asOf:'Stand der Daten',latest:'neueste Bewertung',who:'Einstufungen der Lehrkraft; Ihr Kind sieht sie nicht.',subject:'Fach',all:'Alle',period:'Zeitraum',p:{all:'Alles','8w':'Letzte 8 Wochen',year:'Dieses Schuljahr'},weak:'Nur „Braucht Unterstützung“ / „Wird sicherer“',sort:'Sortieren',s:{date:'Datum (neueste zuerst)',subject:'Fach',level:'Einstufung (schwächste zuerst)'},count:'{n} von {m} Aufgaben',empty:'Keine Aufgabe passt zu diesem Filter.',reset:'Filter zurücksetzen',date:'Datum',task:'Aufgabe',rating:'Einstufung',details:'Details',close:'Schließen',standards:'Standards',rubric:'Bewertungsraster',crit:'Kriterium',teacher:'Lehrkraft',self:'Selbst',strengths:'Stärken',none:'keine Angabe',atl:{ES:'mit Unterstützung','Obs.':'beobachtet','Ind.':'selbstständig'},turnedIn:'abgegeben'},
                  en:{asOf:'Data as of',latest:'latest evaluation',who:'The teacher’s assessments; your child never sees them.',subject:'Subject',all:'All',period:'Period',p:{all:'All','8w':'Last 8 weeks',year:'This school year'},weak:'Only “Needs support” / “Getting there”',sort:'Sort by',s:{date:'Date (newest first)',subject:'Subject',level:'Rating (weakest first)'},count:'{n} of {m} assignments',empty:'No assignment matches this filter.',reset:'Reset filters',date:'Date',task:'Assignment',rating:'Rating',details:'Details',close:'Close',standards:'Standards',rubric:'Rubric',crit:'Criterion',teacher:'Teacher',self:'Self',strengths:'Strengths',none:'none given',atl:{ES:'emerging with support','Obs.':'observed','Ind.':'independent'},turnedIn:'turned in'}};
 /* the ratings of an assignment, weakest first, with how many standards got each: [['c',4],['m',2]] */
-function schoolTaskLevels(t){ const n={}; Object.values(t.std||{}).forEach(r=>{ const k=SL[r]; if(k) n[k]=(n[k]||0)+1; }); return SCHOOL_ORDER.filter(k=>n[k]).map(k=>[k,n[k]]); }
+function schoolTaskLevels(t){ const n={}; (t.assessment?t.assessment.criteria.map(c=>c.rating):Object.values(t.std||{})).forEach(r=>{ const k=SL[r]; if(k) n[k]=(n[k]||0)+1; }); return SCHOOL_ORDER.filter(k=>n[k]).map(k=>[k,n[k]]); }
 const schoolWeakest = t => { const l=schoolTaskLevels(t); return l.length?SCHOOL_ORDER.indexOf(l[0][0]):SCHOOL_ORDER.length; };
 const schoolAreaIdx = a => { const i=SCHOOL_AREAS.indexOf(a); return i<0?SCHOOL_AREAS.length:i; };
 /* the school year starts on 1 August (the school calendar of the platform starts in August) */
@@ -6522,7 +6545,8 @@ function schoolDetailHTML(t, U, T, de){
   const rub=(t.rubric||[]).map(x=>`<tr><td>${esc(x.crit)}</td><td>${SL[x.teacher]?schoolWord(SL[x.teacher]):'–'}</td><td>${SL[x.self]?schoolWord(SL[x.self]):'–'}</td></tr>`).join('');
   const list=s=>{ const p=schoolPoints(s); return p.length?`<ul>${p.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:none; };
   const fq=names(t.focusNext), pq=names(t.quests);
-  return `<h4>${U.standards}</h4>${std?`<ul>${std}</ul>`:none}`
+  const documentText=t.assessment?`<h4>Lernziel</h4><p>${esc(t.assessment.goal)}</p><h4>Arbeitsanweisung</h4><p>${esc(t.assessment.instructions)}</p><h4>Lehrkraft-Rückmeldung</h4><p>${esc(t.assessment.feedback)}</p>`:'';
+  return documentText+`<h4>${U.standards}</h4>${std?`<ul>${std}</ul>`:none}`
     +`<h4>${U.rubric}</h4>${rub?`<table class="dt psrub"><thead><tr><th>${U.crit}</th><th>${U.teacher}</th><th>${U.self}</th></tr></thead><tbody>${rub}</tbody></table>`:none}`
     +`<h4>${U.strengths}</h4>${list(t.good&&t.good[L])}`
     +`<h4>${T.next}</h4>${list(t.next&&t.next[L])}`
@@ -6545,7 +6569,7 @@ function schoolEvaluationHistory(t, de, synced){
     const current=p.revision===m.revision, proposal=m.conflicts.includes(p.revision);
     const status=p.withdrawn?(de?'Zurückgenommen':'Withdrawn'):current?(de?'Aktive Fassung':'Active revision'):proposal?(de?'Vorschlag':'Proposal'):(de?'Frühere Fassung':'Earlier revision');
     const choose=proposal||current&&m.conflicts.length;
-    return `<li>${esc(p.title)} · ${fmtDay(p.day)} · ${esc(standards[p.standard])} · ${PSTAND[lang][SL[p.rating]]} · <b>${status}</b> · ${schoolEvaluationSyncHTML(p.revision,synced,de)}`
+    return `<li>${esc(p.title)} · ${fmtDay(p.day)} · ${esc(p.assessment?'Evaluation':standards[p.standard])} · ${p.assessment?'':PSTAND[lang][SL[p.rating]]} · <b>${status}</b> · ${schoolEvaluationSyncHTML(p.revision,synced,de)}`
       +`${choose?' '+button('resolve',de?'Diese Fassung wählen':'Choose this revision',p.revision):''}</li>`;
   }).join('');
   const actions=m.conflicts.length
@@ -6576,12 +6600,23 @@ function schoolEvaluationTarget(){
   const child=kontoVerb(account).kinder.find(c=>c.id===id);
   return child ? {id, author:account.kennung, name:kontoKindName(id, child.name)} : null;
 }
+function schoolDocumentNew(){ return {area:'',goal:'',instructions:'',feedback:'',criteria:[{criterion:'',rating:'',evidence:''}]}; }
+function schoolDocumentHTML(d,target){
+  const doc=d.assessment, field=(name,label,value,type='text')=>`<label style="display:block;margin:1rem 0;font-weight:700">${label}<input style="display:block;width:100%;margin-top:.4rem" name="${name}" type="${type}" value="${esc(value)}"${name==='title'?' maxlength="160"':''}></label>`, text=(name,label,value)=>`<label style="display:block;margin:1rem 0;font-weight:700">${label}<textarea style="display:block;width:100%;min-height:7rem;margin-top:.4rem" name="doc-${name}">${esc(value)}</textarea></label>`;
+  const criteria=doc.criteria.map((c,i)=>`<fieldset style="margin:1rem 0;padding:1rem;border:1px solid #d5dee9;border-radius:12px"><legend>Kriterium ${i+1}</legend><textarea style="width:100%" aria-label="Kriterium ${i+1}" data-doc-criterion="${i}">${esc(c.criterion)}</textarea><label>Einstufung <select data-doc-rating="${i}"><option value="">Nicht angegeben / noch prüfen</option>${['RS','C','M','E'].map(r=>`<option${r===c.rating?' selected':''}>${r}</option>`).join('')}</select></label>${c.evidence?`<details><summary>Quellenbeleg</summary><p>${esc(c.evidence)}</p></details>`:''}<button type="button" class="btn small" data-doc-remove="${i}">Kriterium entfernen</button></fieldset>`).join('');
+  const preview=`<h3>Vorschau</h3><h4>${esc(d.title)}</h4><p>${fmtDay(d.day)} · ${esc(doc.area)}</p><h4>Lernziel</h4><p>${esc(doc.goal)}</p><h4>Arbeitsanweisung</h4><p>${esc(doc.instructions)}</p><h4>Lehrkraft-Rückmeldung</h4><p>${esc(doc.feedback)}</p>${doc.criteria.map(c=>`<p><b>${esc(c.criterion)}</b> — ${esc(c.rating||'Nicht angegeben')}</p>`).join('')}${d.standard!=='unmapped'?'<p>'+esc(PSTAND[PL()][SL[d.rating]])+'</p>':''}
+    ${d.standard!=='unmapped'&&schoolEvaluationNeedsPractice(d.rating)?`<label><input type="checkbox" name="exerciseFocus"${d.focus?' checked':''}> ${esc(SCHOOL_EVALUATION_EXERCISES[SCHOOL_EVALUATION_TARGETS[d.standard].focus][PL()])}</label>`:''}
+    <p>${d.standard==='unmapped'?'Gespeichert als schulische Evaluation. Noch keine Zuordnung zu einem unterstützten Übungsmuster.':d.focus?'Zusätzliche passende Übungskarten werden berücksichtigt.':'Kein zusätzlicher Übungsfokus.'}</p><button class="btn" type="submit">${d.resolves?'Konfliktauflösung bestätigen':d.base?'Korrektur bestätigen':'Evaluation bestätigen'}</button> <button class="btn small" type="button" data-eval-action="edit">Bearbeiten</button>`;
+  return `<div id="pSchoolEvaluation"><form class="login-form" style="max-width:54rem;background:#fff;padding:1.2rem;border:1px solid #d5dee9;border-radius:16px"><h3>Evaluation übernehmen</h3><p style="position:sticky;top:0;background:#fff;padding:.6rem 0;z-index:1"><b>Kind: ${esc(target.name)}</b></p>${d.preview?preview:`${d.source?`<details${d.extracted?'':' open'}><summary>Erfasster Evaluationstext</summary><p>Prüfe den Text vor dem Senden an Claude. Entferne Namen und andere persönliche Angaben.</p><textarea name="source"${d.busy||d.extracted?' readonly':''} style="width:100%;min-height:10rem">${esc(d.source)}</textarea></details><button class="btn" type="button" data-eval-action="ai"${d.busy?' disabled':''}>${d.busy?'Claude verarbeitet …':'Mit Claude ins Formular übertragen'}</button>`:''}${field('title','Titel der Evaluation',d.title)}${field('day','Bewertungsdatum',d.day,'date')}${field('doc-area','Fach',doc.area)}${text('goal','Lernziel',doc.goal)}${text('instructions','Arbeitsanweisung',doc.instructions)}${text('feedback','Lehrkraft-Rückmeldung',doc.feedback)}<h3>Bewertungskriterien</h3>${criteria}<button type="button" class="btn small" data-eval-action="add-criterion">Kriterium hinzufügen</button><details><summary>Passende Übungen (optional)</summary><p>Nur zuordnen, wenn das Lernziel tatsächlich passt.</p><select name="standard" aria-label="Übungsmuster"><option value="unmapped">Noch keine Zuordnung</option>${Object.keys(SCHOOL_EVALUATION_TARGETS).map(k=>`<option value="${k}"${d.standard===k?' selected':''}>${esc(STANDARD_TEXT[k])}</option>`).join('')}</select><label>Einstufung für dieses Übungsmuster <select name="rating"><option value="N">Bitte auswählen</option>${['RS','C','M','E'].map(r=>`<option${d.rating===r?' selected':''}>${r}</option>`).join('')}</select></label></details><p><button class="btn" type="submit"${d.busy?' disabled':''}>Vorschau anzeigen</button></p>`}<button class="btn small" type="button" data-eval-action="cancel"${d.busy?' disabled':''}>Abbrechen</button>${d.error?`<p role="alert">${esc(d.error)}</p>`:''}</form></div>`;
+}
+
 function schoolEvaluationHTML(){
   const target=schoolEvaluationTarget();
   if(!target) return '';
   const de=PL()==='de', lang=de?'de':'en';
   const draft=schoolEvaluationDraft;
   const d=draft?.child===target.id && draft.author===target.author ? draft : null;
+  if(d?.assessment && !d.withdrawn) return schoolDocumentHTML(d,target);
   const status=schoolEvaluationNotice?.child===target.id && schoolEvaluationNotice.author===target.author
     ? `<p role="status">${schoolEvaluationSyncHTML(schoolEvaluationNotice.revision,anmSchuleAbgeglicheneRevisionen(localStorage, target.id),de)}</p>` : '';
   const criteria=de?STANDARD_TEXT:STANDARD_TEXT_EN;
@@ -6627,18 +6662,43 @@ function schoolEvaluationHTML(){
 function bindSchoolEvaluation(body){
   const box=body.querySelector('#pSchoolEvaluation');
   if(!box) return;
-  const redraw=()=>{ box.outerHTML=schoolEvaluationHTML(); bindSchoolEvaluation(body); };
+  const redraw=()=>{
+    const activeBox=body.querySelector("#pSchoolEvaluation");
+    if(!activeBox) return;
+    activeBox.outerHTML=schoolEvaluationHTML();
+    bindSchoolEvaluation(body);
+  };
   const current=()=>{
     const t=schoolEvaluationTarget(), d=schoolEvaluationDraft;
     return t && d?.child===t.id && d.author===t.author ? d : null;
   };
-  box.addEventListener('click',e=>{
+  box.addEventListener('click',async e=>{
+    const remove=e.target.closest('[data-doc-remove]');
+    if(remove && current()?.assessment){ current().assessment.criteria.splice(Number(remove.dataset.docRemove),1); redraw(); return; }
     const action=e.target.closest('[data-eval-action]')?.dataset.evalAction, t=schoolEvaluationTarget();
     if(!action || !t) return;
     if(action==='open'){
       schoolEvaluationNotice=null;
-      schoolEvaluationDraft={child:t.id, author:t.author, title:'', day:'', standard:'', rating:'',
+      schoolEvaluationDraft={child:t.id, author:t.author, title:'', day:'', standard:'unmapped', rating:'N', assessment:schoolDocumentNew(),
         evaluation:crypto.randomUUID(), revision:crypto.randomUUID(), preview:false, focus:false};
+    } else if(action==='add-criterion' && current()?.assessment){ current().assessment.criteria.push({criterion:'',rating:'',evidence:''});
+    } else if(action==='ai' && current()?.assessment){
+      const d=current(), submitted=d.source;
+      if(d.busy || !submitted?.trim()) return;
+      d.busy=true; d.error=''; redraw();
+      try {
+        const bridge=window.webkit?.messageHandlers?.bigQuestEvaluation;
+        if(!bridge) throw new Error('KI-Übernahme ist in der iPad-Test-App verfügbar. Die manuelle Eingabe funktioniert hier.');
+        const result=await bridge.postMessage({source:submitted});
+        if(current()!==d || d.source!==submitted) return;
+        if(!result || !Array.isArray(result.criteria)) throw new Error('Ungültiger KI-Entwurf.');
+        d.title=result.title||'';d.day=result.date||'';
+        d.assessment={area:d.assessment.area,goal:result.goal||'',instructions:result.instructions||'',feedback:result.feedback||'',criteria:result.criteria.length?result.criteria:schoolDocumentNew().criteria};
+        d.extracted=true;
+        d.standard='unmapped'; d.rating='N'; d.focus=false;
+        d.error='Bitte Fach, Angaben und Einstufungen prüfen. Fehlende Einstufungen bleiben offen.';
+      } catch(error){if(current()===d)d.error=error.message||String(error);}
+      finally {d.busy=false;}
     } else if(action==='cancel') schoolEvaluationDraft=null;
     else if(action==='edit' && current()){ current().preview=false; current().error=''; }
     redraw();
@@ -6646,7 +6706,21 @@ function bindSchoolEvaluation(body){
   });
   box.addEventListener('input',e=>{
     const d=current(), name=e.target.name;
-    if(!d) return;
+    if(!d || d.busy) return;
+    if(!d.preview && d.assessment){
+      if(name.startsWith('doc-')) d.assessment[name.slice(4)]=e.target.value;
+      if(e.target.dataset.docCriterion!==undefined){
+        const row=d.assessment.criteria[Number(e.target.dataset.docCriterion)];
+        row.criterion=e.target.value; row.evidence='';
+        e.target.closest('fieldset')?.querySelector('details')?.remove();
+      }
+      if(e.target.dataset.docRating!==undefined){
+        const row=d.assessment.criteria[Number(e.target.dataset.docRating)];
+        row.rating=e.target.value; row.evidence='';
+        e.target.closest('fieldset')?.querySelector('details')?.remove();
+      }
+      if(name==='source' && !d.extracted) d.source=e.target.value;
+    }
     if(!d.preview && ['title','day','standard','rating'].includes(name)){
       if(name==='rating' && !schoolEvaluationNeedsPractice(d.rating)) d.focus=schoolEvaluationNeedsPractice(e.target.value);
       d[name]=e.target.value;
@@ -6656,10 +6730,14 @@ function bindSchoolEvaluation(body){
   box.addEventListener('submit',e=>{
     e.preventDefault();
     const d=current(), de=PL()==='de';
-    if(!d) return;
+    if(!d || d.busy) return;
     if(!d.preview){
       d.title=d.title.trim();
-      if(!d.title || /[\x00-\x1f\x7f]/.test(d.title) || !d.day || d.day>dayKey() || !Object.hasOwn(SCHOOL_EVALUATION_TARGETS,d.standard) || !SL[d.rating]){
+      if(d.assessment){
+        d.standard=d.standard||'unmapped';
+        if(d.standard==='unmapped'){d.rating='N';d.focus=false;}else d.focus=schoolEvaluationNeedsPractice(d.rating);
+      }
+      if(!d.title || /[\x00-\x1f\x7f]/.test(d.title) || !d.day || d.day>dayKey() || (!Object.hasOwn(SCHOOL_EVALUATION_TARGETS,d.standard) && !(d.assessment && d.standard==='unmapped')) || !SL[d.rating] || (d.assessment && (!d.assessment.area.trim() || !d.assessment.criteria.length || d.assessment.criteria.some(c=>!c.criterion.trim()))) || (d.standard!=='unmapped' && d.rating==='N')){
         d.error=de?'Bitte prüfen Sie Titel, Datum, Kriterium und Einstufung.':'Check the title, date, criterion and rating.';
       } else {
         d.error=''; d.preview=true; d.focus=schoolEvaluationNeedsPractice(d.rating) && d.focus;
@@ -6668,6 +6746,7 @@ function bindSchoolEvaluation(body){
     }
     const {child,evaluation,revision,title,day,standard,rating}=d;
     const payload={child,evaluation,revision,title,day,standard,rating,focus:d.focus?SCHOOL_EVALUATION_TARGETS[standard].focus:'none'};
+    if(d.assessment) payload.assessment=JSON.parse(JSON.stringify(d.assessment));
     if(d.base){
       const active=schoolFromAccount(child)?.tasks.find(t=>t.manual?.evaluation===evaluation)?.manual;
       const conflicts=active?.conflicts||[];
@@ -6732,7 +6811,7 @@ function bindSchoolList(body){
       schoolEvaluationNotice=null;
       schoolEvaluationDraft={child:target.id,author:target.author,evaluation:m.evaluation,revision:crypto.randomUUID(),
         base:m.revision,resolves:resolving?m.conflicts.slice():null,title:p.title,day:p.day,standard:p.standard,rating:p.rating,
-        focus:!withdrawn && p.focus!=='none',preview:withdrawn||resolving,withdrawn};
+        focus:!withdrawn && p.focus!=='none',preview:withdrawn||resolving,withdrawn,...(p.assessment?{assessment:JSON.parse(JSON.stringify(p.assessment))}:{})};
       const form=body.querySelector('#pSchoolEvaluation');
       form.outerHTML=schoolEvaluationHTML();
       bindSchoolEvaluation(body);

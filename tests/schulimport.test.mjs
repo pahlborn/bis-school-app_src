@@ -407,7 +407,7 @@ jedeWelt('Upgrade stellt einen zuvor selbst gesendeten Schuleintrag auch im App-
   const states = JSON.parse(P.a.getItem('bq_abgleich'));
   const school = states[area];
   assert.ok(school.merker.stand[P.d] > 0);
-  assert.equal(school.merker.schuleLesestand, 1);
+  assert.equal(school.merker.schuleLesestand, 2);
   const next = school.naechsteNr;
   const learning = states['kind:lern:' + child].merker;
   // Older builds preserve the cursor but omit the unsupported event when merging.
@@ -421,6 +421,6 @@ jedeWelt('Upgrade stellt einen zuvor selbst gesendeten Schuleintrag auch im App-
   assert.deepEqual(P.log(child).filter(e => e.id === assessment.id), [assessment]);
   const after = JSON.parse(P.a.getItem('bq_abgleich'));
   assert.equal(after[area].naechsteNr, next);
-  assert.equal(after[area].merker.schuleLesestand, 1);
+  assert.equal(after[area].merker.schuleLesestand, 2);
   assert.deepEqual(after['kind:lern:' + child].merker, learning);
 });

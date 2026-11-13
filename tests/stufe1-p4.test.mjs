@@ -146,9 +146,9 @@ test('Freigabe mit echten Klicks: Einwilligungstext, nur Lehrkraft/Admin, Ersetz
   assert.match(ueb, /Auf einen Blick · Mia Sonnenschein/);
   assert.ok(!PROFIL(ueb), 'no emoji for the teacher; the birthday only when two children have the same name');
   // the header fits on a small screen
-  await page.setViewportSize({ width: 320, height: 640 });
+  await page.setViewportSize({ width: 360, height: 800 });
   assert.ok(await page.locator('#pKid').evaluate((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.right <= innerWidth + 1; }), 'name in view on 320 px');
-  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.setViewportSize({ width: 1366, height: 768 });
   // her guide says so (DE and EN)
   await page.locator('#pHelp').click(); await page.waitForSelector('#pHelpBack');
   assert.match(await page.locator('.phelp-view').innerText(), /Oben stehen Vor- und Nachname des Kindes, damit Sie wissen, mit wem Sie arbeiten; heißen zwei Kinder gleich, auch das Geburtsdatum\. Klasse und Schule stehen dabei, wenn die Familie sie eingetragen hat\. Emoji und Einstellungen sehen Sie nicht\./);

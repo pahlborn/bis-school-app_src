@@ -38,6 +38,58 @@ enum ToddleField {
         const text = node.textContent.replace(/\s+/g, ' ').trim();
         if (text) lines.push(text);
       }
+      // A rubric level may be in a button/select next to the criterion text.
+      // Do not collect general controls: only an unambiguous SAME visible row,
+      // with the criterion left of its single, explicitly rendered grade.
+      const code = /^(?:RS|C|M|E)$/;
+      const grades = [...scope.querySelectorAll('*')].filter(el => {
+        if (!rendered(el) || el.closest('script,style,noscript,nav,[role="navigation"],[aria-hidden="true"]')) return false;
+        if (el.children.length && !el.matches('input,select')) return false;
+        const value = el.matches('input,select') ? el.value : (el.textContent || '').trim() || (el.getAttribute('aria-label') || '').trim();
+        return code.test(String(value || '').trim());
+      });
+      const rubricStart = lines.findIndex(x => x.toLowerCase() === 'assessment criteria');
+      const rubricEnd = lines.findIndex((x,i) => i > rubricStart && x.toLowerCase() === 'your response');
+      const rubricText = rubricStart >= 0 && rubricEnd > rubricStart
+        ? lines.slice(rubricStart + 1, rubricEnd).join(' ').replace(/\s+/g,' ').trim()
+        : '';
+      const pairs = [];
+      if (grades.length <= 96) for (const grade of grades) {
+        const rating = grade.matches('input,select') ? grade.value.trim()
+          : (grade.textContent || '').trim() || (grade.getAttribute('aria-label') || '').trim();
+        const gradeRect = grade.getBoundingClientRect();
+        for (let row = grade.parentElement; row && row !== scope; row = row.parentElement) {
+          if (row.getBoundingClientRect().height > 260) break;
+          if (grades.filter(g => row.contains(g)).length !== 1) break;
+          const words = [], nearby = [];
+          const textNodes = document.createTreeWalker(row, NodeFilter.SHOW_TEXT);
+          while (textNodes.nextNode()) {
+            const n = textNodes.currentNode, parent = n.parentElement;
+            if (!parent || !rendered(parent) || parent.closest('script,style,noscript,button,input,textarea,select,nav,[role="navigation"],[aria-hidden="true"]')
+                || grades.some(g => g.contains(parent))) continue;
+            const value = n.textContent.replace(/\s+/g, ' ').trim();
+            if (!value || code.test(value)) continue;
+            words.push(value);
+            const range = document.createRange();
+            range.selectNodeContents(n);
+            const rect = range.getBoundingClientRect();
+            if (rect.width > 0 && rect.right <= gradeRect.left + 8
+                && rect.bottom >= gradeRect.top && rect.top <= gradeRect.bottom) nearby.push(value);
+          }
+          const criterion = words.join(' ').replace(/\s+/g, ' ').trim();
+          if (criterion.length >= 30 && criterion.length <= 700 && rubricText.includes(criterion) && nearby.length
+              && !pairs.some(p => p.row === row || p.text === criterion)) {
+            pairs.push({row, text: criterion, rating});
+            break;
+          }
+        }
+      }
+      // The appended pair is derived only from observed DOM content, never
+      // from visual order or model inference. Missing/ambiguous ratings stay empty.
+      if (pairs.length) {
+        lines.push('Visible rubric criterion and rating in the same row:');
+        for (const pair of pairs) lines.push(pair.text + ' ' + pair.rating);
+      }
       const text = lines.join('\n');
       if (!text || !/Learning intentions|Learning experience description|Assessment|Evaluation/i.test(text)) return {error: 'content'};
       if (new TextEncoder().encode(text).length > 48000) return {error: 'size'};

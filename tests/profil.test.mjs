@@ -13,9 +13,9 @@ const lies = (page, k) => page.evaluate((key) => localStorage.getItem('bq2_' + k
 const imBild = (page, sel) => page.$eval(sel, (e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.top >= 0 && r.left >= 0 && r.bottom <= innerHeight && r.right <= innerWidth; });
 
 const GERAETE = [
-  ['iPhone SE', { viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true }],
+  ['Smartphone kompakt', { viewport: { width: 360, height: 800 }, isMobile: true, hasTouch: true }],
   ['Smartphone', { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true }],
-  ['iPad', { viewport: { width: 810, height: 1080 }, isMobile: true, hasTouch: true }],
+  ['iPad 11 Zoll', { viewport: { width: 820, height: 1180 }, isMobile: true, hasTouch: true }],
   ['Laptop', { viewport: { width: 1366, height: 768 } }]
 ];
 

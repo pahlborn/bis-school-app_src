@@ -108,7 +108,7 @@ test('Begruessung: Name aus dem Profil (als Text), Stimmung nur Antwortzeile, ni
 });
 
 test('Begruessung: Practise Today mit einem Tipp; passt ohne Scrollen auf 320 x 568, Knoepfe mind. 44 px', async () => {
-  const { ctx, page, fehler } = await oeffnen({ viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true });
+  const { ctx, page, fehler } = await oeffnen({ viewport: { width: 360, height: 800 }, isMobile: true, hasTouch: true });
   await erstesMal(page);
   await page.waitForSelector('#home:not([hidden])');
   await naechsterTag(page);

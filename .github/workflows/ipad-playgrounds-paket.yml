@@ -1,0 +1,42 @@
+name: Big Quest iPad Playgrounds Testpaket
+
+on:
+  pull_request:
+    paths:
+      - 'werkzeug/ipad-playgrounds-paket.mjs'
+      - '.github/workflows/ipad-playgrounds-paket.yml'
+      - 'ios/BigQuestMVP/**'
+      - 'package.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test10:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build versioned Swift Playgrounds app package
+        run: node werkzeug/ipad-playgrounds-paket.mjs
+      - name: Confirm source copies and package contents
+        run: |
+          unzip -t dist-playgrounds/Big-Quest-iPad-Test-10.zip
+          diff ios/BigQuestMVP/ToddleField.swift dist-playgrounds/Big-Quest-iPad-Test-10.swiftpm/App/ToddleField.swift
+          diff ios/BigQuestMVP/ClaudeClient.swift dist-playgrounds/Big-Quest-iPad-Test-10.swiftpm/App/ClaudeClient.swift
+          diff ios/BigQuestMVP/BigQuestApp.swift dist-playgrounds/Big-Quest-iPad-Test-10.swiftpm/App/BigQuestApp.swift
+          shasum -a 256 dist-playgrounds/Big-Quest-iPad-Test-10.zip
+      - name: Upload importable iPad test package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Big-Quest-iPad-Test-10-0.153.3
+          path: |
+            dist-playgrounds/Big-Quest-iPad-Test-10.zip
+            dist-playgrounds/TEST-10-INFO.txt
+          retention-days: 14

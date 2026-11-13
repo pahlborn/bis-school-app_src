@@ -161,7 +161,7 @@ test('upgrade recovers an assessment rejected by the exact legacy app without re
   assert.equal(identity.session.user, LOGIN);
   assert.ok(identity.session.id && identity.device);
   const area = 'schule:' + identity.session.id;
-  await K.page.waitForFunction((a) => JSON.parse(localStorage.getItem('bq_abgleich') || '{}')[a]?.merker?.schuleLesestand === 1, area, { timeout: 65000 });
+  await K.page.waitForFunction((a) => JSON.parse(localStorage.getItem('bq_abgleich') || '{}')[a]?.merker?.schuleLesestand === 2, area, { timeout: 65000 });
   const oldResponse = await K.page.goto(server.url + 'historisch');
   assert.equal(oldResponse.headers()['x-bq-qa-source'], 'eb354e31');
   await K.page.waitForSelector('#home:not([hidden])');
@@ -180,8 +180,12 @@ test('upgrade recovers an assessment rejected by the exact legacy app without re
   await form.getByRole('button', { name: 'Evaluation hinzufügen' }).click();
   await form.getByLabel('Titel').fill(TITLE);
   await form.getByLabel('Bewertungsdatum').fill(await P.page.evaluate(() => new Date().toISOString().slice(0, 10)));
-  await form.getByLabel('Kriterium').selectOption('M-N5');
-  await form.getByLabel('Einstufung').selectOption('C');
+  await form.getByLabel('Fach', { exact: true }).fill('math');
+  await form.getByLabel('Kriterium 1', { exact: true }).fill('Zweischrittige Subtraktion');
+  await form.locator('[data-doc-rating="0"]').selectOption('C');
+  await form.getByText('Passende Übungen (optional)', { exact: true }).click();
+  await form.getByLabel('Übungsmuster', { exact: true }).selectOption('M-N5');
+  await form.getByLabel('Einstufung für dieses Übungsmuster').selectOption('C');
   await form.getByRole('button', { name: 'Vorschau anzeigen' }).click();
   assert.deepEqual(await evaluationEvents(P.page), []);
   await form.getByRole('button', { name: 'Evaluation bestätigen' }).click();
@@ -210,7 +214,7 @@ test('upgrade recovers an assessment rejected by the exact legacy app without re
   await K.page.waitForSelector('#home:not([hidden])');
   await K.page.waitForFunction(({ area, id }) => {
     const school = JSON.parse(localStorage.getItem('bq_abgleich') || '{}')[area];
-    return school?.merker?.schuleLesestand === 1 && school.log.some(({ event }) => event.id === id);
+    return school?.merker?.schuleLesestand === 2 && school.log.some(({ event }) => event.id === id);
   }, { area, id }, { timeout: 70000 });
   const upgraded = await schoolState(K.page);
   assert.equal(upgraded.log.filter(({ event }) => event.id === id).length, 1);

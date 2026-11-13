@@ -235,8 +235,12 @@ test('correction drafts preserve the current focus, a synced confirmation replac
   await form.getByRole('button', { name: 'Evaluation hinzufügen' }).click();
   await form.getByLabel('Titel').fill(roundingTitle);
   await form.getByLabel('Bewertungsdatum').fill(today);
-  await form.getByLabel('Kriterium').selectOption('M-N3');
-  await form.getByLabel('Einstufung').selectOption('C');
+  await form.getByLabel('Fach', { exact: true }).fill('math');
+  await form.getByLabel('Kriterium 1', { exact: true }).fill('Runden mit Abstandsbegründung');
+  await form.locator('[data-doc-rating="0"]').selectOption('C');
+  await form.getByText('Passende Übungen (optional)', { exact: true }).click();
+  await form.getByLabel('Übungsmuster', { exact: true }).selectOption('M-N3');
+  await form.getByLabel('Einstufung für dieses Übungsmuster').selectOption('C');
   await form.getByRole('button', { name: 'Vorschau anzeigen' }).click();
   assert.match(await form.innerText(), /Vorschau[\s\S]*Runden mit Abstandsbegründung[\s\S]*Wird sicherer/);
   assert.equal(await form.getByRole('checkbox', { name: 'Runden mit Abstandsbegründung in Practise Today üben' }).isChecked(), true);
@@ -275,7 +279,7 @@ test('correction drafts preserve the current focus, a synced confirmation replac
   let detail = await showDetails(P.page, roundingTitle);
   await detail.getByRole('button', { name: 'Bewertung korrigieren', exact: true }).click();
   assert.equal(await form.getByLabel('Titel').inputValue(), roundingTitle);
-  assert.equal(await form.getByLabel('Kriterium').inputValue(), 'M-N3');
+  assert.equal(await form.getByLabel('Übungsmuster', { exact: true }).inputValue(), 'M-N3');
   await form.getByLabel('Titel').fill(correctedTitle);
   await form.getByRole('button', { name: 'Vorschau anzeigen' }).click();
   await form.getByRole('button', { name: 'Korrektur bestätigen', exact: true }).waitFor();
@@ -321,6 +325,39 @@ test('correction drafts preserve the current focus, a synced confirmation replac
   assert.match(await detail.innerText(), /zurückgenommen/i);
   assert.ok((await detail.innerText()).includes(roundingTitle), 'withdrawal retains the previous history');
   t.diagnostic('Observed exact sets of school-revision cards before confirmation, after correction sync, and after withdrawal sync.');
+  const english = 'Fiktive Sprachbewertung';
+  const transfer = '00000000-0000-4000-8000-000000000190';
+  const openSource = () => P.page.evaluate((id) => {
+    const bridge = window.bigQuestEvaluationForm;
+    return [bridge.source('wrong-child', id, 'Evaluation'), bridge.source(bridge.context(), id, 'Evaluation')];
+  }, transfer);
+  assert.deepEqual(await openSource(), ['context', 'opened']);
+  assert.equal(await form.getByLabel('Titel').inputValue(), '');
+  assert.match(await form.innerText(), new RegExp(CHILD));
+  await P.page.evaluate(({ title, date }) => {
+    // Synthetic reply at the iPad bridge boundary. Real Claude is tested on device.
+    window.webkit = { messageHandlers: { bigQuestEvaluation: { postMessage: async ({ source }) => {
+      if (source !== 'Evaluation') throw new Error('Unexpected source');
+      return {title,date,goal:'Explain an opinion',instructions:'Write a letter',feedback:'Add reasons',
+        criteria:[{criterion:'Explain a viewpoint',rating:'M',evidence:'Explain a viewpoint M'}]};
+    } } } };
+  }, { title: english, date: today });
+  await form.getByRole('button', { name: 'Mit Claude ins Formular übertragen' }).click();
+  await P.page.waitForFunction(title => document.querySelector('#pSchoolEvaluation input[name=title]')?.value === title, english);
+  await form.getByLabel('Fach', { exact: true }).fill('english');
+  await form.getByRole('button', { name: 'Vorschau anzeigen' }).click();
+  assert.equal((await evaluationEvents(P.page)).length, 4);
+  await form.getByRole('button', { name: 'Evaluation bestätigen', exact: true }).click();
+  assert.deepEqual(await openSource(), ['context', 'saved']);
+  const saved = (await evaluationEvents(P.page)).find(({ payload }) => payload.title === english).payload;
+  assert.equal(saved.child, rounding.child);
+  assert.equal(saved.focus, 'none');
+  assert.equal(saved.assessment.criteria[0].criterion, 'Explain a viewpoint');
+  await waitForRevision(K.page, saved.revision);
+  await checkRoundRevisions(K.page, [revision]);
+  const englishDetail = await showDetails(P.page, english);
+  assert.match(await englishDetail.innerText(), /Explain a viewpoint/);
+  assert.match(await englishDetail.innerText(), /Add reasons/);
   assert.deepEqual(P.errors, []);
   assert.deepEqual(K.errors, []);
 });

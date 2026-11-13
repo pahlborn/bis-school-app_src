@@ -2,18 +2,18 @@
 //   node --test tests/geraete.test.mjs
 //
 // Anlass (Geraetepruefung 29.10.): Nach dem Antworten lag "Weiter" auf dem
-// iPhone SE bei 43 von 48 Fragen unter dem Bildschirmrand, auf dem Laptop
+// Historischer Befund: auf einem iPhone SE lagen 43 von 48 Weiter-Schaltflächen unter dem Rand; auf einem Laptop
 // 1366x768 bei 21 von 48. Das Kind musste selbst suchen.
 
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { appServer, browserStarten, appOeffnen, questStarten, frageBeantworten, zustand, klick } from './app-hilfen.mjs';
 
-const IPHONE_SE = { viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 };
+const KOMPAKT = { viewport: { width: 360, height: 800 }, isMobile: true, hasTouch: true, deviceScaleFactor: 3 };
 // [Name, Kontext, Wartezeit nach der Antwort] - mit Bewegung scrollt die App weich, das dauert.
 const GERAETE = [
-  ['iPhone SE', { ...IPHONE_SE, reducedMotion: 'reduce' }, 0],
-  ['iPhone SE, weiches Scrollen', { ...IPHONE_SE, reducedMotion: 'no-preference' }, 800],
+  ['Smartphone kompakt', { ...KOMPAKT, reducedMotion: 'reduce' }, 0],
+  ['Smartphone breit 414', { viewport: { width: 414, height: 896 }, isMobile: true, hasTouch: true, deviceScaleFactor: 3, reducedMotion: 'no-preference' }, 800],
   ['Laptop 1366', { viewport: { width: 1366, height: 768 }, reducedMotion: 'reduce' }, 0]
 ];
 const QUESTS = ['Time & Numbers', 'Forces', 'Bar Graphs'];
@@ -24,8 +24,8 @@ before(async () => { server = await appServer(); browser = await browserStarten(
 after(async () => { await browser?.close(); server?.close(); });
 
 // Geraetepruefung 29.10.: auf dem Handy war beim Start keine einzige Quest zu sehen.
-test('iPhone SE: beim Start sind Practise Today und mindestens vier Faecher zu sehen', async () => {
-  const { ctx, page } = await appOeffnen(browser, server.url, IPHONE_SE);
+test('Smartphone kompakt: beim Start sind Practise Today und mindestens vier Faecher zu sehen', async () => {
+  const { ctx, page } = await appOeffnen(browser, server.url, KOMPAKT);
   const ganz = await page.evaluate(() => {
     const drin = (e) => { const r = e.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; };
     return { heute: drin(document.querySelector('#todayBtn')), faecher: [...document.querySelectorAll('#subjects button.subject')].filter(drin).length };

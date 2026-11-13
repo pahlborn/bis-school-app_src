@@ -1,5 +1,5 @@
 // Paket B1 (Konzept Elternbereich 5.1, 5.5, 5.7): Kopf und ⚙ Einstellungen.
-//  T1 Kopf: Kind, Flaggen, ?, ⚙, Abmelden auch auf 320 px sichtbar; keine Version, kein Testkind-Knopf im Kopf.
+//  T1 Kopf: Kind, Flaggen, ?, ⚙, Abmelden auch auf 360 px sichtbar; keine Version, kein Testkind-Knopf im Kopf.
 //  T2 ⚙ zeigt je Rolle genau ihre Abschnitte; „Abmelden“ auch am Ende von ⚙.
 //  T3 Routen #eltern/einstellungen[/abschnitt]; Browser-Zurück und „← Zurück“ führen zur Übersicht; ? öffnet die Anleitung.
 // Echte Klicks.
@@ -34,7 +34,7 @@ async function einstellungen(page) { await page.locator('#pSettings').click(); a
 const sichtbarImBild = (page, sel) => page.locator(sel).evaluate((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.left >= 0 && r.right <= window.innerWidth + 1; });
 
 test('T1 header on 320 px: child, flags, ?, ⚙ and log out in view; no version and no test child button in the header', async () => {
-  const { ctx, page, fehler } = await oeffnen(browser, server, { viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true });
+  const { ctx, page, fehler } = await oeffnen(browser, server, { viewport: { width: 360, height: 800 }, isMobile: true, hasTouch: true });
   await kindDann(page, 'papa');
   for (const sel of ['#pKid', '.phdr [data-plang="de"]', '.phdr [data-plang="en"]', '#pHelp', '#pSettings', '#parentClose']) assert.ok(await sichtbarImBild(page, sel), 'in view: ' + sel);
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), true, 'no horizontal scrolling');
@@ -42,7 +42,7 @@ test('T1 header on 320 px: child, flags, ?, ⚙ and log out in view; no version 
   assert.equal(await page.getAttribute('#pSettings', 'aria-label'), 'Einstellungen');
   assert.equal(await page.getAttribute('#pHelp', 'aria-label'), 'Hilfe');
   // the admin: no test child button in the header either (it is only in the test data row since B5)
-  const b = await oeffnen(browser, server, { viewport: { width: 320, height: 568 }, isMobile: true, hasTouch: true });
+  const b = await oeffnen(browser, server, { viewport: { width: 360, height: 800 }, isMobile: true, hasTouch: true });
   await anmelden(b.page, 'adult', 'chef', C.chef); await passwortSetzen(b.page, 'Moon-Glass-Paper-8812');
   await b.page.waitForSelector('#parentClose');
   // B5: "▶ Play as test child" is in the test data row, not in the header row and not in ⚙

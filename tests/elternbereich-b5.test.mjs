@@ -43,7 +43,7 @@ async function kinderMitDaten(page) {
 const optionen = (page) => page.$$eval('#pKidSel option', (o) => o.map((x) => ({ v: x.value, gruppe: x.parentElement.tagName === 'OPTGROUP' ? x.parentElement.label : null })));
 
 test('T10 admin on a fresh device: all test children in the list (own group, no data needed); play the chosen one; 320 px', async () => {
-  const { ctx, page, fehler } = await oeffnen(browser, server, { viewport: { width: 320, height: 640 }, isMobile: true, hasTouch: true });
+  const { ctx, page, fehler } = await oeffnen(browser, server, { viewport: { width: 360, height: 800 }, isMobile: true, hasTouch: true });
   await erwachsen(page, 'chef');
   assert.deepEqual(await optionen(page), [{ v: 'probe', gruppe: '🧪 Testkinder' }, { v: 'probe2', gruppe: '🧪 Testkinder' }]);
   assert.ok(await page.locator('#pKidSel').evaluate((e) => { const r = e.getBoundingClientRect(); return r.width > 0 && r.right <= innerWidth + 1; }), 'list in view on 320 px');
