@@ -135,8 +135,17 @@ export function anmEingefuegt(text, adresse) {
     // main test app. Accept only its exact main-test origin as an invitation source.
     // Never permit this cross-path exception for production, other hosts or other preview paths.
     const incoming = anmBasis(t.slice(0, i)), current = anmBasis(adresse);
-    const knownTestRoot = current === 'https://big-quest-test.github.io/probe-evaluation-form'
-      && incoming === 'https://big-quest-test.github.io';
+    // Only the integration form may accept a link from the root of the same HTTPS origin.
+    // Do not encode a test-host address into the family/production source bundle.
+    const knownTestRoot = (() => {
+      try {
+        const target = new URL(current), source = new URL(incoming);
+        return target.protocol === 'https:' && target.origin === source.origin
+          && target.pathname === '/probe-evaluation-form'
+          && source.pathname === '/' && !target.username && !source.username
+          && !target.password && !source.password;
+      } catch { return false; }
+    })();
     if (i > 0 && adresse !== undefined && incoming !== current && !knownTestRoot) return /^https?:\/\//i.test(t) ? { fremd: true } : null;
     return anmEinladungLesen(t.slice(i));
   }
