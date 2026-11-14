@@ -53,7 +53,7 @@ jobs:
       - name: Upload locally testable pilot build
         uses: actions/upload-artifact@v4
         with:
-          name: bq-local-pilot-0.153.3
+          name: bq-local-pilot-0.153.4
           path: dist-local/
           retention-days: 7
       - run: node --test tests/toddle-evaluation-reader.test.mjs tests/evaluation-eltern-browser.test.mjs tests/evaluation-upgrade-browser.test.mjs tests/module/school-evaluation.test.mjs
