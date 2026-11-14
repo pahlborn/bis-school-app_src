@@ -1,0 +1,48 @@
+name: Big Quest Test 11 - review build blob
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/test11-review-blob.yml'
+      - 'index.html'
+      - 'src/module/**'
+      - 'werkzeug/**'
+      - 'package.json'
+      - 'tests/**'
+      - 'docs/pruefung/**'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  review-build:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.ref == 'feature/bq-evaluation-end-to-end-test11'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node werkzeug/testinstanz.mjs
+      - name: Store validated test-only HTML as a Git blob (no deployment)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            const html = fs.readFileSync('dist-test/index.html');
+            const manifest = fs.readFileSync('dist-test/manifest.webmanifest');
+            if (html.length < 100000 || html.includes(Buffer.from('id="tresor"'))) throw Error('Unexpected test build');
+            const encoded = html.toString('base64');
+            const r = await github.rest.git.createBlob({
+              owner: context.repo.owner, repo: context.repo.repo,
+              content: encoded, encoding: 'base64'
+            });
+            const m = await github.rest.git.createBlob({
+              owner: context.repo.owner, repo: context.repo.repo,
+              content: manifest.toString('base64'), encoding: 'base64'
+            });
+            core.info('TEST11_INDEX_BLOB_SHA=' + r.data.sha);
+            core.info('TEST11_MANIFEST_BLOB_SHA=' + m.data.sha);
+            core.info('TEST11_BYTES=' + html.length);
+            core.info('SOURCE_SHA=' + context.sha);

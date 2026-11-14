@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import {
   ANM_STARTCODE, ANM_EINTRAG, anmIstStartcode, anmStartlinkLesen, anmStartlink, anmCodeEintrag, anmNameAusEintrag,
   anmCodeDatei, anmEintragAus, anmListe, anmListeMit, anmGeraetKonten, anmPunkteErsetzen,
-  anmVerworfen, anmGeraetEntfernt, anmGeraetNeu, anmSpeicherFremd, ANM_VERWORFEN_ZAEHLT
+  anmVerworfen, anmGeraetEntfernt, anmGeraetNeu, anmSpeicherFremd, ANM_VERWORFEN_ZAEHLT, anmEingefuegt
 } from '../../src/module/anmeldung.mjs';
 import { ABGLEICH_GRUENDE } from '../../src/module/abgleich.mjs';
 import { normAccounts } from '../../src/module/rechte.mjs';
@@ -186,4 +186,20 @@ test('Abgleich in der App: Zahl des nicht Uebernommenen; Geraet entfernt? (nur d
   assert.equal(await anmSpeicherFremd({ verbunden: async () => true }), false);
   assert.equal(await anmSpeicherFremd({ verbunden: async () => { const e = new Error('x'); e.code = 'offline'; throw e; } }), false, 'Speicherfehler: die normalen Meldungen');
   await assert.rejects(anmSpeicherFremd({ verbunden: async () => { throw new Error('Programmfehler'); } }), /Programmfehler/);
+});
+
+test('Test 11: QR-Einladung vom gleichen HTTPS-Teststamm nur ins integrierte Formular', () => {
+  const code='ACCESSCODE1234567890';
+  const root='https://big-quest-test.github.io/';
+  const form=root+'probe-evaluation-form/';
+  const link=root+'#zugang='+code;
+  assert.deepEqual(anmEingefuegt(link,form), {zugang:code,start:null});
+  assert.deepEqual(anmEingefuegt(form+'#zugang='+code,form), {zugang:code,start:null});
+  for(const alien of [
+    'https://other.example/#zugang='+code,
+    'http://big-quest-test.github.io/#zugang='+code,
+    root+'some-other-path/#zugang='+code,
+  ]) assert.deepEqual(anmEingefuegt(alien,form),{fremd:true},alien);
+  assert.deepEqual(anmEingefuegt(link,root+'other-preview/'),{fremd:true});
+  assert.deepEqual(anmEingefuegt(link,'https://other.example/probe-evaluation-form/'),{fremd:true});
 });

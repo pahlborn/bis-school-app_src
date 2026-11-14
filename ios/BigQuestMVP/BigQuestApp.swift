@@ -65,7 +65,7 @@ private struct BrowserPane: UIViewRepresentable {
 @MainActor
 private struct BigQuestScreen: View {
     @StateObject private var bigQuest = BrowserPage(
-        url: URL(string: "https://big-quest-test.github.io/probe-evaluation-local/")!, persistent: true
+        url: URL(string: "https://big-quest-test.github.io/probe-evaluation-form/")!, persistent: true
     )
     @StateObject private var toddle = BrowserPage(
         url: URL(string: "https://web.toddleapp.com/")!, persistent: false

@@ -428,7 +428,7 @@ test('5 Erwachsene sehen den Abgleich: letzter, kein Netz, Zugang, Limit (warten
   await W.uhr.vor(30000);
   const z = P.zeile();
   assert.match(z, /🔑 Der Zugangscode dieses Geräts passt nicht mehr \(abgelaufen oder ungültig\)\.\s*Gerät neu verbinden/, z);
-  for (const x of [FALSCH, TOKEN, 'github_pat', '401', '403', 'zugang', 'Bearer']) assert.equal(P.S.lauf(() => P.S.$('#aboutBody').innerHTML).includes(x), false, 'nicht in der Anzeige: ' + x);
+  for (const x of [FALSCH, TOKEN, 'github_pat', '401', '403', 'zugang', 'Bearer']) assert.equal(P.S.lauf(() => P.S.$('#aboutBody').textContent).includes(x), false, 'nicht in der Anzeige: ' + x);
   P.klick('#kTokenNeu');
   await P.wartenAuf('#kTokenForm');
   P.tippe('#kTokenNeuWert', '  ' + TOKEN + ' '); P.absenden('#kTokenGo');
