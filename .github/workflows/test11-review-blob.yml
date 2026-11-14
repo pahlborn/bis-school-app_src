@@ -7,6 +7,8 @@ on:
       - 'src/module/**'
       - 'werkzeug/**'
       - 'package.json'
+      - 'tests/**'
+      - 'docs/pruefung/**'
   workflow_dispatch:
 permissions:
   contents: write
