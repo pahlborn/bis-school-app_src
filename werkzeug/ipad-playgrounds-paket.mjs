@@ -66,7 +66,7 @@ const info = [
   'Quellintegritaet (SHA-256):',
   ...checks,''
 ].join('\n');
-fs.writeFileSync(path.join(dest,'TEST-10-INFO.txt'),info);
+fs.writeFileSync(path.join(dest,'TEST-11-INFO.txt'),info);
 fs.writeFileSync(path.join(directory,'README.txt'),info);
 const zip=path.join(dest,'Big-Quest-iPad-Test-11.zip');
 execFileSync('zip',['-q','-r',path.basename(zip),packageName],{cwd:dest});
