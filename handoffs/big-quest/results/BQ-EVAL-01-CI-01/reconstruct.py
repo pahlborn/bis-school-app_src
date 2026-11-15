@@ -157,7 +157,7 @@ def table(name, rows):
     write(ROOT/(name+'.json'), rows)
     with (ROOT/(name+'.csv')).open('w',encoding='utf-8',newline='') as f:
         if rows:
-            w=csv.DictWriter(f,fieldnames=list(rows[0]));w.writeheader();w.writerows(rows)
+            w=csv.DictWriter(f,fieldnames=list(rows[0]),lineterminator='\n');w.writeheader();w.writerows(rows)
 
 def calculate():
     runs={}

@@ -13,3 +13,7 @@ Der rekursive Big-Quest-main-Baum enthält genau eine Workflowdefinition: `.gith
 Vor Peters Korrektur wurde einmal `github_create_tree` für `pahlborn/agentarium` mit den Ergebnisdateien und dessen main-Basis abgesendet. Das Werkzeug gab wörtlich **`user rejected MCP tool call`** zurück. Es gab dort keinen bestätigten Baum, Commit, Branch oder Journal-Schreibvorgang. Dieser abgewiesene Aufruf wird dort nicht wiederholt. Die Publikation erfolgt auf Peters ausdrückliche Zielkorrektur im Big-Quest-Repository, nicht durch einen alternativen Schreibweg in das abgewiesene Repository.
 
 Die im Recovery-Auftrag vorgesehene Archivzuordnung ist `big-quest / BQ-EVAL-01 / BQ-EVAL-01-CI-01`. Die Ergebnisablage ist von einer Kundenannahme getrennt; diese entscheidet die zentrale Steuerung.
+
+## Integritätskorrektur vor Rückgabe
+
+Der erste Big-Quest-Ergebniscommit `4fea1965d8464b025ceb1ce525f601430c35a56b` wurde öffentlich zurückgelesen. Dabei fiel eine CSV-Zeilenendenabweichung auf: Die Textübergabe hatte CRLF zu LF normalisiert, das zunächst erstellte Manifest bezog sich noch auf lokale CRLF-Bytes. Der Berechnungsinhalt war unverändert, die erste Manifestfassung war für diese CSV-Bytes ungültig. Das Rechenskript erzeugt jetzt ausdrücklich LF, und das Manifest wurde auf dieser deterministischen Fassung neu berechnet. Die abschließende Prüfung liest alle Ergebnisdateien erneut öffentlich zurück; ausschließlich diese geprüfte Nachfolgefassung wird als geliefert zurückgegeben. Die erste Fassung bleibt als fehlgeschlagener Integritätsstand in der Historie erhalten.
