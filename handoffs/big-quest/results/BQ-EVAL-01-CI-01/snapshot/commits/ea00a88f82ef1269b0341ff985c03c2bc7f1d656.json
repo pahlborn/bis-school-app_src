@@ -1,0 +1,16 @@
+{
+  "sha": "ea00a88f82ef1269b0341ff985c03c2bc7f1d656",
+  "source": "https://api.github.com/repos/pahlborn/bis-school-app_src/commits/ea00a88f82ef1269b0341ff985c03c2bc7f1d656",
+  "message": "Test 11 getrennt von Test 10 installieren und referenzierbar halten",
+  "parents": [
+    "8d2fb639478380c1cc2dc6322509070af1590ecc"
+  ],
+  "files": [
+    {
+      "filename": "werkzeug/ipad-playgrounds-paket.mjs",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1
+    }
+  ]
+}

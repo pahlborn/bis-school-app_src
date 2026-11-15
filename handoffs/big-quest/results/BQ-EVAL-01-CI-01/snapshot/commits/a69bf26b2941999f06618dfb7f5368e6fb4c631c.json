@@ -1,0 +1,16 @@
+{
+  "sha": "a69bf26b2941999f06618dfb7f5368e6fb4c631c",
+  "source": "https://api.github.com/repos/pahlborn/bis-school-app_src/commits/a69bf26b2941999f06618dfb7f5368e6fb4c631c",
+  "message": "Regression coverage for strictly same-origin Test 11 device invitations",
+  "parents": [
+    "ddd67c3e83e8097f9ea0c549efe6aa16b8422386"
+  ],
+  "files": [
+    {
+      "filename": "tests/module/anmeldung.test.mjs",
+      "status": "modified",
+      "additions": 17,
+      "deletions": 1
+    }
+  ]
+}

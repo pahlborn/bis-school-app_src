@@ -1,0 +1,175 @@
+{
+  "source": "https://api.github.com/repos/pahlborn/bis-school-app_src/actions/runs/43560933572/attempts/1",
+  "run": {
+    "id": 43560933572,
+    "name": "Evaluation form integration",
+    "workflow_id": 414907507,
+    "path": ".github/workflows/evaluation-integration.yml",
+    "event": "pull_request",
+    "head_branch": "feature/bq-evaluation-end-to-end-test11",
+    "head_sha": "73eee068d5d034b959150c5c953c0426fe9ba29a",
+    "run_number": 49,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-11-14T05:19:01Z",
+    "updated_at": "2026-11-14T05:36:06Z",
+    "run_started_at": "2026-11-14T05:19:01Z",
+    "html_url": "https://github.com/pahlborn/bis-school-app_src/actions/runs/43560933572",
+    "check_suite_id": 117951189772
+  },
+  "pr_numbers": [
+    198
+  ],
+  "jobs": [
+    {
+      "id": 132344219781,
+      "run_id": 43560933572,
+      "run_attempt": 1,
+      "name": "integration",
+      "head_sha": "73eee068d5d034b959150c5c953c0426fe9ba29a",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-14T05:19:04Z",
+      "completed_at": "2026-11-14T05:36:05Z",
+      "html_url": "https://github.com/pahlborn/bis-school-app_src/actions/runs/43560933572/job/132344219781",
+      "runner_id": 1000005090,
+      "runner_name": "GitHub Actions 1000005090",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "steps": [
+        {
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:19:05Z",
+          "completed_at": "2026-11-14T05:19:06Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "number": 2,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:19:06Z",
+          "completed_at": "2026-11-14T05:19:08Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "number": 3,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:19:08Z",
+          "completed_at": "2026-11-14T05:19:09Z"
+        },
+        {
+          "name": "Run npm install --no-package-lock",
+          "number": 4,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:19:09Z",
+          "completed_at": "2026-11-14T05:19:11Z"
+        },
+        {
+          "name": "Run google-chrome --version",
+          "number": 5,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:19:11Z",
+          "completed_at": "2026-11-14T05:19:14Z"
+        },
+        {
+          "name": "Run node werkzeug/testinstanz.mjs",
+          "number": 6,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:19:14Z",
+          "completed_at": "2026-11-14T05:19:14Z"
+        },
+        {
+          "name": "Verify built version matches branch source",
+          "number": 7,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:19:14Z",
+          "completed_at": "2026-11-14T05:19:14Z"
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "number": 8,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:19:14Z",
+          "completed_at": "2026-11-14T05:19:15Z"
+        },
+        {
+          "name": "Run node --test tests/evaluation-local-pilot-browser.test.mjs",
+          "number": 9,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:19:15Z",
+          "completed_at": "2026-11-14T05:19:29Z"
+        },
+        {
+          "name": "Build separately versioned local pilot",
+          "number": 10,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:19:29Z",
+          "completed_at": "2026-11-14T05:19:29Z"
+        },
+        {
+          "name": "Upload locally testable pilot build",
+          "number": 11,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:19:29Z",
+          "completed_at": "2026-11-14T05:19:30Z"
+        },
+        {
+          "name": "Run node --test tests/toddle-evaluation-reader.test.mjs tests/evaluation-eltern-browser.test.mjs tests/evaluation-upgrade-browser.test.mjs tests/module/school-evaluation.test.mjs",
+          "number": 12,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:19:30Z",
+          "completed_at": "2026-11-14T05:22:57Z"
+        },
+        {
+          "name": "Run npm test",
+          "number": 13,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:22:57Z",
+          "completed_at": "2026-11-14T05:36:03Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "number": 25,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:36:03Z",
+          "completed_at": "2026-11-14T05:36:04Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "number": 26,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:36:04Z",
+          "completed_at": "2026-11-14T05:36:04Z"
+        },
+        {
+          "name": "Complete job",
+          "number": 27,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:36:04Z",
+          "completed_at": "2026-11-14T05:36:04Z"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "sha": "fafc53be0a5f1177137d1ddc22698cf9a4caa11b",
+  "source": "https://api.github.com/repos/pahlborn/bis-school-app_src/commits/fafc53be0a5f1177137d1ddc22698cf9a4caa11b",
+  "message": "Integrate and verify child first start for Beta 0.152.2",
+  "parents": [
+    "dc8427570540c2e22c2f98fb5a55205dd389b408",
+    "d709d11bbd15223349a19ee11cfbc858f2dd9fbf",
+    "5dc76cd5914c4b707131f30fcd19ac8a2c584889"
+  ],
+  "files": [
+    {
+      "filename": ".github/workflows/child-first-start-release.yml",
+      "status": "added",
+      "additions": 44,
+      "deletions": 0
+    },
+    {
+      "filename": "index.html",
+      "status": "modified",
+      "additions": 251,
+      "deletions": 21
+    },
+    {
+      "filename": "package.json",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1
+    },
+    {
+      "filename": "src/module/anmeldung.mjs",
+      "status": "modified",
+      "additions": 12,
+      "deletions": 3
+    },
+    {
+      "filename": "tests/abgleich-app.test.mjs",
+      "status": "modified",
+      "additions": 18,
+      "deletions": 8
+    },
+    {
+      "filename": "tests/erstanmeldung-browser.test.mjs",
+      "status": "modified",
+      "additions": 8,
+      "deletions": 1
+    },
+    {
+      "filename": "tests/erstanmeldung.test.mjs",
+      "status": "modified",
+      "additions": 9,
+      "deletions": 5
+    },
+    {
+      "filename": "tests/familienfassung.test.mjs",
+      "status": "modified",
+      "additions": 12,
+      "deletions": 4
+    },
+    {
+      "filename": "tests/konto-anmeldung.test.mjs",
+      "status": "modified",
+      "additions": 217,
+      "deletions": 10
+    },
+    {
+      "filename": "tests/konto-einladungen.test.mjs",
+      "status": "modified",
+      "additions": 20,
+      "deletions": 9
+    },
+    {
+      "filename": "tests/module/anmeldung.test.mjs",
+      "status": "modified",
+      "additions": 20,
+      "deletions": 5
+    },
+    {
+      "filename": "tests/module/einladung.test.mjs",
+      "status": "modified",
+      "additions": 17,
+      "deletions": 0
+    },
+    {
+      "filename": "tests/testinstanz.test.mjs",
+      "status": "modified",
+      "additions": 14,
+      "deletions": 8
+    }
+  ]
+}

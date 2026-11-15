@@ -1,0 +1,16 @@
+{
+  "sha": "ace238c1ce60c0a30eab47e83c3d008b03eac484",
+  "source": "https://api.github.com/repos/pahlborn/bis-school-app_src/commits/ace238c1ce60c0a30eab47e83c3d008b03eac484",
+  "message": "Wait for the password reset before checking the parent sync",
+  "parents": [
+    "4ba9c7e6a75bca52efd03db429166940dd08837c"
+  ],
+  "files": [
+    {
+      "filename": "tests/konto-einladungen.test.mjs",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0
+    }
+  ]
+}

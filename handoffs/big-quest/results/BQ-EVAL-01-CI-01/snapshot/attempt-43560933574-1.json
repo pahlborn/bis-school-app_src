@@ -1,0 +1,95 @@
+{
+  "source": "https://api.github.com/repos/pahlborn/bis-school-app_src/actions/runs/43560933574/attempts/1",
+  "run": {
+    "id": 43560933574,
+    "name": "Big Quest iPad build",
+    "workflow_id": 413750400,
+    "path": ".github/workflows/ipad-mvp.yml",
+    "event": "pull_request",
+    "head_branch": "feature/bq-evaluation-end-to-end-test11",
+    "head_sha": "73eee068d5d034b959150c5c953c0426fe9ba29a",
+    "run_number": 62,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-11-14T05:19:01Z",
+    "updated_at": "2026-11-14T05:19:24Z",
+    "run_started_at": "2026-11-14T05:19:01Z",
+    "html_url": "https://github.com/pahlborn/bis-school-app_src/actions/runs/43560933574",
+    "check_suite_id": 117951189782
+  },
+  "pr_numbers": [
+    198
+  ],
+  "jobs": [
+    {
+      "id": 132344220559,
+      "run_id": 43560933574,
+      "run_attempt": 1,
+      "name": "simulator",
+      "head_sha": "73eee068d5d034b959150c5c953c0426fe9ba29a",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-14T05:19:04Z",
+      "completed_at": "2026-11-14T05:19:23Z",
+      "html_url": "https://github.com/pahlborn/bis-school-app_src/actions/runs/43560933574/job/132344220559",
+      "runner_id": 1000005093,
+      "runner_name": "GitHub Actions 1000005093",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions",
+      "labels": [
+        "macos-15"
+      ],
+      "steps": [
+        {
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:19:04Z",
+          "completed_at": "2026-11-14T05:19:04Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "number": 2,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:19:04Z",
+          "completed_at": "2026-11-14T05:19:06Z"
+        },
+        {
+          "name": "Build iPad app for the simulator",
+          "number": 3,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:19:06Z",
+          "completed_at": "2026-11-14T05:19:17Z"
+        },
+        {
+          "name": "Deterministic Toddle rubric Swift regression",
+          "number": 4,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:19:17Z",
+          "completed_at": "2026-11-14T05:19:20Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "number": 8,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:19:20Z",
+          "completed_at": "2026-11-14T05:19:21Z"
+        },
+        {
+          "name": "Complete job",
+          "number": 9,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:19:21Z",
+          "completed_at": "2026-11-14T05:19:21Z"
+        }
+      ]
+    }
+  ]
+}

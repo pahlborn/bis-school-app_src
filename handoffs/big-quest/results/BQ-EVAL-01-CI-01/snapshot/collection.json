@@ -1,0 +1,15 @@
+{
+  "label": "RECONSTRUCTION / Rekonstruktion, not recovered originals",
+  "collected_at": "2026-11-15T12:58:28.074778+00:00",
+  "repository": "pahlborn/bis-school-app_src",
+  "start_inclusive": "2026-11-10T23:00:00Z",
+  "end_exclusive": "2026-11-14T23:00:00Z",
+  "timezone": "Europe/Berlin (UTC+01:00)",
+  "selection": "run.created_at in interval AND explicit PR association or exact PR head branch plus commit membership; all attempts of selected runs",
+  "pages": 3,
+  "listed_runs": 219,
+  "selected_runs": 47,
+  "selected_attempts": 48,
+  "runner_and_steps": "API observations; runner names/labels not billing SKU evidence",
+  "privacy": "Normalized allowlist, no actors, email, credentials, private addresses or billing values"
+}

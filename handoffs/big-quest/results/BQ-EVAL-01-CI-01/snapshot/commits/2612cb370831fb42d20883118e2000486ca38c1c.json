@@ -1,0 +1,16 @@
+{
+  "sha": "2612cb370831fb42d20883118e2000486ca38c1c",
+  "source": "https://api.github.com/repos/pahlborn/bis-school-app_src/commits/2612cb370831fb42d20883118e2000486ca38c1c",
+  "message": "Scope QR invitation cross-path exception to same HTTPS origin without test host in family build",
+  "parents": [
+    "3c623123a76379b14e3aed73114dff68646c362d"
+  ],
+  "files": [
+    {
+      "filename": "src/module/anmeldung.mjs",
+      "status": "modified",
+      "additions": 11,
+      "deletions": 2
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "source": "https://api.github.com/repos/pahlborn/bis-school-app_src/actions/runs/43561866948/attempts/1",
+  "run": {
+    "id": 43561866948,
+    "name": "Evaluation form integration",
+    "workflow_id": 414907507,
+    "path": ".github/workflows/evaluation-integration.yml",
+    "event": "pull_request",
+    "head_branch": "feature/bq-evaluation-end-to-end-test11",
+    "head_sha": "f88e82ab013daf6f8a095224af6cd4d7ef0dc880",
+    "run_number": 53,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "failure",
+    "created_at": "2026-11-14T05:30:38Z",
+    "updated_at": "2026-11-14T05:30:42Z",
+    "run_started_at": "2026-11-14T05:30:38Z",
+    "html_url": "https://github.com/pahlborn/bis-school-app_src/actions/runs/43561866948",
+    "check_suite_id": 117953622381
+  },
+  "pr_numbers": [
+    198
+  ],
+  "jobs": [
+    {
+      "id": 132347132171,
+      "run_id": 43561866948,
+      "run_attempt": 1,
+      "name": "integration",
+      "head_sha": "f88e82ab013daf6f8a095224af6cd4d7ef0dc880",
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-11-14T05:30:38Z",
+      "completed_at": "2026-11-14T05:30:41Z",
+      "html_url": "https://github.com/pahlborn/bis-school-app_src/actions/runs/43561866948/job/132347132171",
+      "runner_id": 0,
+      "runner_name": "",
+      "runner_group_id": 0,
+      "runner_group_name": "",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "steps": []
+    }
+  ]
+}

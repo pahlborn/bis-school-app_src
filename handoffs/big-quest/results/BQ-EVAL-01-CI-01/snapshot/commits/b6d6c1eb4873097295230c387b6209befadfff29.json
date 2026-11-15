@@ -1,0 +1,22 @@
+{
+  "sha": "b6d6c1eb4873097295230c387b6209befadfff29",
+  "source": "https://api.github.com/repos/pahlborn/bis-school-app_src/commits/b6d6c1eb4873097295230c387b6209befadfff29",
+  "message": "Account for local first-start storage in the child export",
+  "parents": [
+    "ace238c1ce60c0a30eab47e83c3d008b03eac484"
+  ],
+  "files": [
+    {
+      "filename": "src/module/kinddaten.mjs",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0
+    },
+    {
+      "filename": "werkzeug/speicherstellen.json",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 0
+    }
+  ]
+}

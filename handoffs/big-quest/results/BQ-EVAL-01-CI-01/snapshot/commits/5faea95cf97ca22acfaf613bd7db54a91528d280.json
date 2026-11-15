@@ -1,0 +1,16 @@
+{
+  "sha": "5faea95cf97ca22acfaf613bd7db54a91528d280",
+  "source": "https://api.github.com/repos/pahlborn/bis-school-app_src/commits/5faea95cf97ca22acfaf613bd7db54a91528d280",
+  "message": "Test visible account sync text, not incidental markup attributes, for leaked HTTP codes",
+  "parents": [
+    "2612cb370831fb42d20883118e2000486ca38c1c"
+  ],
+  "files": [
+    {
+      "filename": "tests/abgleich-app.test.mjs",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1
+    }
+  ]
+}

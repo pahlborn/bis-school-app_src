@@ -1,0 +1,60 @@
+name: Evaluation form integration
+on:
+  pull_request:
+    paths:
+      - 'index.html'
+      - 'src/module/**'
+      - 'ios/**'
+      - 'pilot/local-evaluation/**'
+      - 'werkzeug/local-pilot-build.mjs'
+      - 'tests/**'
+      - '.github/workflows/evaluation-integration.yml'
+permissions:
+  contents: read
+jobs:
+  integration:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CHROMIUM_PATH: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-package-lock
+      - run: google-chrome --version
+      - run: node werkzeug/testinstanz.mjs
+      - name: Verify built version matches branch source
+        run: |
+          node --input-type=module - <<'NODE'
+          import fs from 'node:fs'
+          import { versionAuslesen, versionErmitteln, versionQuelleGleich } from './werkzeug/version.mjs'
+          const actual = versionAuslesen(fs.readFileSync('dist-test/index.html','utf8'))
+          const expected = versionErmitteln(process.cwd())
+          if (!actual || !versionQuelleGleich(actual,expected) || actual.draft) {
+            console.error('Build version differs from package.json and source commit.')
+            process.exit(1)
+          }
+          console.log('Version checked:', actual.major+'.'+actual.minor+'.'+actual.patch, actual.hash, actual.date)
+          NODE
+          echo "BQ_ARTIFACT=big-quest-pilot-$(node -p "require('./package.json').version")-$(git rev-parse --short=7 HEAD)" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BQ_ARTIFACT }}
+          path: dist-test/
+          retention-days: 7
+      - run: node --test tests/evaluation-local-pilot-browser.test.mjs
+      - name: Build separately versioned local pilot
+        run: node werkzeug/local-pilot-build.mjs
+      - name: Upload locally testable pilot build
+        uses: actions/upload-artifact@v4
+        with:
+          name: bq-local-pilot-0.153.4
+          path: dist-local/
+          retention-days: 7
+      - run: node --test tests/toddle-evaluation-reader.test.mjs tests/evaluation-eltern-browser.test.mjs tests/evaluation-upgrade-browser.test.mjs tests/module/school-evaluation.test.mjs
+      - run: npm test

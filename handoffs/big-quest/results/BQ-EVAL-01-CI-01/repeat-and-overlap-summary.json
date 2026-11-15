@@ -1,0 +1,20 @@
+{
+  "overlap_seconds": 5572,
+  "overlap_job_count": 22,
+  "executed_same_sha_multiple_runs": [],
+  "refusal_annotation_job_ids": [
+    132347042043,
+    132347042056,
+    132347042063,
+    132347042582,
+    132347132171,
+    132347132221,
+    132347132283,
+    132347132783,
+    132348875682
+  ],
+  "no_step_classifications": {
+    "no_steps_refusal_inferred_same_run": 1,
+    "start_refused_annotation": 9
+  }
+}

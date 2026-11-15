@@ -1,0 +1,119 @@
+{
+  "source": "https://api.github.com/repos/pahlborn/bis-school-app_src/actions/runs/43561301334/attempts/1",
+  "run": {
+    "id": 43561301334,
+    "name": "Toddle evaluation reader",
+    "workflow_id": 413824960,
+    "path": ".github/workflows/toddle-reader.yml",
+    "event": "pull_request",
+    "head_branch": "feature/bq-evaluation-end-to-end-test11",
+    "head_sha": "2b51475de274fb9f8dc05b7e0da192763e105293",
+    "run_number": 57,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-11-14T05:23:27Z",
+    "updated_at": "2026-11-14T05:23:50Z",
+    "run_started_at": "2026-11-14T05:23:27Z",
+    "html_url": "https://github.com/pahlborn/bis-school-app_src/actions/runs/43561301334",
+    "check_suite_id": 117952125509
+  },
+  "pr_numbers": [
+    198
+  ],
+  "jobs": [
+    {
+      "id": 132345349559,
+      "run_id": 43561301334,
+      "run_attempt": 1,
+      "name": "reader",
+      "head_sha": "2b51475de274fb9f8dc05b7e0da192763e105293",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-14T05:23:29Z",
+      "completed_at": "2026-11-14T05:23:49Z",
+      "html_url": "https://github.com/pahlborn/bis-school-app_src/actions/runs/43561301334/job/132345349559",
+      "runner_id": 1000005094,
+      "runner_name": "GitHub Actions 1000005094",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "steps": [
+        {
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:23:30Z",
+          "completed_at": "2026-11-14T05:23:31Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "number": 2,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:23:31Z",
+          "completed_at": "2026-11-14T05:23:32Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "number": 3,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:23:32Z",
+          "completed_at": "2026-11-14T05:23:33Z"
+        },
+        {
+          "name": "Run npm install --no-package-lock",
+          "number": 4,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:23:33Z",
+          "completed_at": "2026-11-14T05:23:36Z"
+        },
+        {
+          "name": "Run google-chrome --version",
+          "number": 5,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:23:36Z",
+          "completed_at": "2026-11-14T05:23:37Z"
+        },
+        {
+          "name": "Run node --test tests/toddle-evaluation-reader.test.mjs",
+          "number": 6,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:23:37Z",
+          "completed_at": "2026-11-14T05:23:47Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "number": 11,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:23:47Z",
+          "completed_at": "2026-11-14T05:23:47Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "number": 12,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:23:47Z",
+          "completed_at": "2026-11-14T05:23:48Z"
+        },
+        {
+          "name": "Complete job",
+          "number": 13,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:23:48Z",
+          "completed_at": "2026-11-14T05:23:48Z"
+        }
+      ]
+    }
+  ]
+}

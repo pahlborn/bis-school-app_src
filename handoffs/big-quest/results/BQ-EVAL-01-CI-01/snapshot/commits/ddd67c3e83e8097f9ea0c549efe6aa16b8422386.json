@@ -1,0 +1,16 @@
+{
+  "sha": "ddd67c3e83e8097f9ea0c549efe6aa16b8422386",
+  "source": "https://api.github.com/repos/pahlborn/bis-school-app_src/commits/ddd67c3e83e8097f9ea0c549efe6aa16b8422386",
+  "message": "Document single real iPad End-to-End acceptance and strict stop criteria",
+  "parents": [
+    "2b51475de274fb9f8dc05b7e0da192763e105293"
+  ],
+  "files": [
+    {
+      "filename": "docs/pruefung/2026-11-14-test11-end-to-end-abnahme.md",
+      "status": "added",
+      "additions": 35,
+      "deletions": 0
+    }
+  ]
+}

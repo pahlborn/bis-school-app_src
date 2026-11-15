@@ -1,0 +1,119 @@
+{
+  "source": "https://api.github.com/repos/pahlborn/bis-school-app_src/actions/runs/43560682502/attempts/1",
+  "run": {
+    "id": 43560682502,
+    "name": "Big Quest iPad Playgrounds Testpaket",
+    "workflow_id": 416346178,
+    "path": ".github/workflows/ipad-playgrounds-paket.yml",
+    "event": "pull_request",
+    "head_branch": "feature/bq-evaluation-end-to-end-test11",
+    "head_sha": "5faea95cf97ca22acfaf613bd7db54a91528d280",
+    "run_number": 26,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-11-14T05:15:53Z",
+    "updated_at": "2026-11-14T05:16:04Z",
+    "run_started_at": "2026-11-14T05:15:53Z",
+    "html_url": "https://github.com/pahlborn/bis-school-app_src/actions/runs/43560682502",
+    "check_suite_id": 117950528595
+  },
+  "pr_numbers": [
+    198
+  ],
+  "jobs": [
+    {
+      "id": 132343437288,
+      "run_id": 43560682502,
+      "run_attempt": 1,
+      "name": "test11",
+      "head_sha": "5faea95cf97ca22acfaf613bd7db54a91528d280",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-14T05:15:56Z",
+      "completed_at": "2026-11-14T05:16:03Z",
+      "html_url": "https://github.com/pahlborn/bis-school-app_src/actions/runs/43560682502/job/132343437288",
+      "runner_id": 1000005085,
+      "runner_name": "GitHub Actions 1000005085",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions",
+      "labels": [
+        "macos-15"
+      ],
+      "steps": [
+        {
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:15:56Z",
+          "completed_at": "2026-11-14T05:15:56Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "number": 2,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:15:56Z",
+          "completed_at": "2026-11-14T05:15:58Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "number": 3,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:15:58Z",
+          "completed_at": "2026-11-14T05:15:59Z"
+        },
+        {
+          "name": "Build versioned Swift Playgrounds app package",
+          "number": 4,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:15:59Z",
+          "completed_at": "2026-11-14T05:15:59Z"
+        },
+        {
+          "name": "Confirm source copies and package contents",
+          "number": 5,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:15:59Z",
+          "completed_at": "2026-11-14T05:15:59Z"
+        },
+        {
+          "name": "Upload importable iPad test package",
+          "number": 6,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:15:59Z",
+          "completed_at": "2026-11-14T05:16:00Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "number": 11,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:16:00Z",
+          "completed_at": "2026-11-14T05:16:00Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "number": 12,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:16:00Z",
+          "completed_at": "2026-11-14T05:16:00Z"
+        },
+        {
+          "name": "Complete job",
+          "number": 13,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-14T05:16:00Z",
+          "completed_at": "2026-11-14T05:16:01Z"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "sha": "3c623123a76379b14e3aed73114dff68646c362d",
+  "source": "https://api.github.com/repos/pahlborn/bis-school-app_src/commits/3c623123a76379b14e3aed73114dff68646c362d",
+  "message": "Align isolated reference pilot display with Test 11 build version",
+  "parents": [
+    "ea00a88f82ef1269b0341ff985c03c2bc7f1d656"
+  ],
+  "files": [
+    {
+      "filename": "pilot/local-evaluation/index.html",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1
+    }
+  ]
+}

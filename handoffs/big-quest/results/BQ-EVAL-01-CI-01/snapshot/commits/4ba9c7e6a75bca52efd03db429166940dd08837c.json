@@ -1,0 +1,16 @@
+{
+  "sha": "4ba9c7e6a75bca52efd03db429166940dd08837c",
+  "source": "https://api.github.com/repos/pahlborn/bis-school-app_src/commits/4ba9c7e6a75bca52efd03db429166940dd08837c",
+  "message": "Keep parent writes out of the child first-start queue",
+  "parents": [
+    "4582bc4a817ef3c8da949448878fefb9f5b52721"
+  ],
+  "files": [
+    {
+      "filename": "index.html",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1
+    }
+  ]
+}

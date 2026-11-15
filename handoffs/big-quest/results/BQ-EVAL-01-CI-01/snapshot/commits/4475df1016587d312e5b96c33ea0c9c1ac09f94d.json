@@ -1,0 +1,16 @@
+{
+  "sha": "4475df1016587d312e5b96c33ea0c9c1ac09f94d",
+  "source": "https://api.github.com/repos/pahlborn/bis-school-app_src/commits/4475df1016587d312e5b96c33ea0c9c1ac09f94d",
+  "message": "Run the complete release suite in parallel shards",
+  "parents": [
+    "fafc53be0a5f1177137d1ddc22698cf9a4caa11b"
+  ],
+  "files": [
+    {
+      "filename": ".github/workflows/child-first-start-release.yml",
+      "status": "modified",
+      "additions": 18,
+      "deletions": 2
+    }
+  ]
+}

@@ -1,0 +1,669 @@
+{
+  "source": "https://api.github.com/repos/pahlborn/bis-school-app_src/actions/runs/43065509793/attempts/1",
+  "run": {
+    "id": 43065509793,
+    "name": "Verify child first start release",
+    "workflow_id": 414942130,
+    "path": ".github/workflows/child-first-start-release.yml",
+    "event": "pull_request",
+    "head_branch": "release/2026-0014-kind-erststart-0.152.2",
+    "head_sha": "4475df1016587d312e5b96c33ea0c9c1ac09f94d",
+    "run_number": 2,
+    "run_attempt": 1,
+    "status": "completed",
+    "conclusion": "failure",
+    "created_at": "2026-11-11T17:10:15Z",
+    "updated_at": "2026-11-11T17:13:43Z",
+    "run_started_at": "2026-11-11T17:10:15Z",
+    "html_url": "https://github.com/pahlborn/bis-school-app_src/actions/runs/43065509793",
+    "check_suite_id": 116623284327
+  },
+  "pr_numbers": [
+    193
+  ],
+  "jobs": [
+    {
+      "id": 130679269558,
+      "run_id": 43065509793,
+      "run_attempt": 1,
+      "name": "build",
+      "head_sha": "4475df1016587d312e5b96c33ea0c9c1ac09f94d",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-11T17:10:19Z",
+      "completed_at": "2026-11-11T17:10:27Z",
+      "html_url": "https://github.com/pahlborn/bis-school-app_src/actions/runs/43065509793/job/130679269558",
+      "runner_id": 1000004848,
+      "runner_name": "GitHub Actions 1000004848",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "steps": [
+        {
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:20Z",
+          "completed_at": "2026-11-11T17:10:21Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "number": 2,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:21Z",
+          "completed_at": "2026-11-11T17:10:22Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "number": 3,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:22Z",
+          "completed_at": "2026-11-11T17:10:23Z"
+        },
+        {
+          "name": "Run node werkzeug/testinstanz.mjs",
+          "number": 4,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:23Z",
+          "completed_at": "2026-11-11T17:10:23Z"
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "number": 5,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:23Z",
+          "completed_at": "2026-11-11T17:10:25Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "number": 9,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:25Z",
+          "completed_at": "2026-11-11T17:10:25Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "number": 10,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:25Z",
+          "completed_at": "2026-11-11T17:10:25Z"
+        },
+        {
+          "name": "Complete job",
+          "number": 11,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:25Z",
+          "completed_at": "2026-11-11T17:10:25Z"
+        }
+      ]
+    },
+    {
+      "id": 130679269570,
+      "run_id": 43065509793,
+      "run_attempt": 1,
+      "name": "verify (1)",
+      "head_sha": "4475df1016587d312e5b96c33ea0c9c1ac09f94d",
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-11-11T17:10:18Z",
+      "completed_at": "2026-11-11T17:12:56Z",
+      "html_url": "https://github.com/pahlborn/bis-school-app_src/actions/runs/43065509793/job/130679269570",
+      "runner_id": 1000004847,
+      "runner_name": "GitHub Actions 1000004847",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "steps": [
+        {
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:20Z",
+          "completed_at": "2026-11-11T17:10:20Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "number": 2,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:20Z",
+          "completed_at": "2026-11-11T17:10:22Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "number": 3,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:22Z",
+          "completed_at": "2026-11-11T17:10:23Z"
+        },
+        {
+          "name": "Run npm install --no-package-lock",
+          "number": 4,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:23Z",
+          "completed_at": "2026-11-11T17:10:25Z"
+        },
+        {
+          "name": "Run npx playwright install chromium --only-shell",
+          "number": 5,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:25Z",
+          "completed_at": "2026-11-11T17:10:29Z"
+        },
+        {
+          "name": "Run shard of the complete test suite",
+          "number": 6,
+          "status": "completed",
+          "conclusion": "failure",
+          "started_at": "2026-11-11T17:10:29Z",
+          "completed_at": "2026-11-11T17:12:47Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "number": 11,
+          "status": "completed",
+          "conclusion": "skipped",
+          "started_at": "2026-11-11T17:12:47Z",
+          "completed_at": "2026-11-11T17:12:47Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "number": 12,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:12:47Z",
+          "completed_at": "2026-11-11T17:12:47Z"
+        },
+        {
+          "name": "Complete job",
+          "number": 13,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:12:47Z",
+          "completed_at": "2026-11-11T17:12:47Z"
+        }
+      ]
+    },
+    {
+      "id": 130679269816,
+      "run_id": 43065509793,
+      "run_attempt": 1,
+      "name": "verify (3)",
+      "head_sha": "4475df1016587d312e5b96c33ea0c9c1ac09f94d",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-11T17:10:19Z",
+      "completed_at": "2026-11-11T17:11:57Z",
+      "html_url": "https://github.com/pahlborn/bis-school-app_src/actions/runs/43065509793/job/130679269816",
+      "runner_id": 1000004852,
+      "runner_name": "GitHub Actions 1000004852",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "steps": [
+        {
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:20Z",
+          "completed_at": "2026-11-11T17:10:21Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "number": 2,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:21Z",
+          "completed_at": "2026-11-11T17:10:23Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "number": 3,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:23Z",
+          "completed_at": "2026-11-11T17:10:24Z"
+        },
+        {
+          "name": "Run npm install --no-package-lock",
+          "number": 4,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:24Z",
+          "completed_at": "2026-11-11T17:10:26Z"
+        },
+        {
+          "name": "Run npx playwright install chromium --only-shell",
+          "number": 5,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:26Z",
+          "completed_at": "2026-11-11T17:10:30Z"
+        },
+        {
+          "name": "Run shard of the complete test suite",
+          "number": 6,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:30Z",
+          "completed_at": "2026-11-11T17:11:53Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "number": 11,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:11:53Z",
+          "completed_at": "2026-11-11T17:11:54Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "number": 12,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:11:54Z",
+          "completed_at": "2026-11-11T17:11:54Z"
+        },
+        {
+          "name": "Complete job",
+          "number": 13,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:11:54Z",
+          "completed_at": "2026-11-11T17:11:54Z"
+        }
+      ]
+    },
+    {
+      "id": 130679269868,
+      "run_id": 43065509793,
+      "run_attempt": 1,
+      "name": "verify (4)",
+      "head_sha": "4475df1016587d312e5b96c33ea0c9c1ac09f94d",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-11T17:10:19Z",
+      "completed_at": "2026-11-11T17:11:42Z",
+      "html_url": "https://github.com/pahlborn/bis-school-app_src/actions/runs/43065509793/job/130679269868",
+      "runner_id": 1000004850,
+      "runner_name": "GitHub Actions 1000004850",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "steps": [
+        {
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:20Z",
+          "completed_at": "2026-11-11T17:10:21Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "number": 2,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:21Z",
+          "completed_at": "2026-11-11T17:10:24Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "number": 3,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:24Z",
+          "completed_at": "2026-11-11T17:10:25Z"
+        },
+        {
+          "name": "Run npm install --no-package-lock",
+          "number": 4,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:25Z",
+          "completed_at": "2026-11-11T17:10:27Z"
+        },
+        {
+          "name": "Run npx playwright install chromium --only-shell",
+          "number": 5,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:27Z",
+          "completed_at": "2026-11-11T17:10:32Z"
+        },
+        {
+          "name": "Run shard of the complete test suite",
+          "number": 6,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:32Z",
+          "completed_at": "2026-11-11T17:11:39Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "number": 11,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:11:39Z",
+          "completed_at": "2026-11-11T17:11:39Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "number": 12,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:11:39Z",
+          "completed_at": "2026-11-11T17:11:40Z"
+        },
+        {
+          "name": "Complete job",
+          "number": 13,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:11:40Z",
+          "completed_at": "2026-11-11T17:11:40Z"
+        }
+      ]
+    },
+    {
+      "id": 130679269878,
+      "run_id": 43065509793,
+      "run_attempt": 1,
+      "name": "verify (6)",
+      "head_sha": "4475df1016587d312e5b96c33ea0c9c1ac09f94d",
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-11-11T17:10:18Z",
+      "completed_at": "2026-11-11T17:12:50Z",
+      "html_url": "https://github.com/pahlborn/bis-school-app_src/actions/runs/43065509793/job/130679269878",
+      "runner_id": 1000004849,
+      "runner_name": "GitHub Actions 1000004849",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "steps": [
+        {
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:20Z",
+          "completed_at": "2026-11-11T17:10:20Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "number": 2,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:20Z",
+          "completed_at": "2026-11-11T17:10:22Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "number": 3,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:22Z",
+          "completed_at": "2026-11-11T17:10:23Z"
+        },
+        {
+          "name": "Run npm install --no-package-lock",
+          "number": 4,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:23Z",
+          "completed_at": "2026-11-11T17:10:26Z"
+        },
+        {
+          "name": "Run npx playwright install chromium --only-shell",
+          "number": 5,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:26Z",
+          "completed_at": "2026-11-11T17:10:30Z"
+        },
+        {
+          "name": "Run shard of the complete test suite",
+          "number": 6,
+          "status": "completed",
+          "conclusion": "failure",
+          "started_at": "2026-11-11T17:10:30Z",
+          "completed_at": "2026-11-11T17:12:48Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "number": 11,
+          "status": "completed",
+          "conclusion": "skipped",
+          "started_at": "2026-11-11T17:12:48Z",
+          "completed_at": "2026-11-11T17:12:48Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "number": 12,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:12:48Z",
+          "completed_at": "2026-11-11T17:12:49Z"
+        },
+        {
+          "name": "Complete job",
+          "number": 13,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:12:49Z",
+          "completed_at": "2026-11-11T17:12:49Z"
+        }
+      ]
+    },
+    {
+      "id": 130679270343,
+      "run_id": 43065509793,
+      "run_attempt": 1,
+      "name": "verify (5)",
+      "head_sha": "4475df1016587d312e5b96c33ea0c9c1ac09f94d",
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-11-11T17:10:19Z",
+      "completed_at": "2026-11-11T17:13:42Z",
+      "html_url": "https://github.com/pahlborn/bis-school-app_src/actions/runs/43065509793/job/130679270343",
+      "runner_id": 1000004851,
+      "runner_name": "GitHub Actions 1000004851",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "steps": [
+        {
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:21Z",
+          "completed_at": "2026-11-11T17:10:21Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "number": 2,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:22Z",
+          "completed_at": "2026-11-11T17:10:24Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "number": 3,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:24Z",
+          "completed_at": "2026-11-11T17:10:24Z"
+        },
+        {
+          "name": "Run npm install --no-package-lock",
+          "number": 4,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:24Z",
+          "completed_at": "2026-11-11T17:10:27Z"
+        },
+        {
+          "name": "Run npx playwright install chromium --only-shell",
+          "number": 5,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:27Z",
+          "completed_at": "2026-11-11T17:10:31Z"
+        },
+        {
+          "name": "Run shard of the complete test suite",
+          "number": 6,
+          "status": "completed",
+          "conclusion": "failure",
+          "started_at": "2026-11-11T17:10:31Z",
+          "completed_at": "2026-11-11T17:13:39Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "number": 11,
+          "status": "completed",
+          "conclusion": "skipped",
+          "started_at": "2026-11-11T17:13:39Z",
+          "completed_at": "2026-11-11T17:13:39Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "number": 12,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:13:39Z",
+          "completed_at": "2026-11-11T17:13:40Z"
+        },
+        {
+          "name": "Complete job",
+          "number": 13,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:13:40Z",
+          "completed_at": "2026-11-11T17:13:40Z"
+        }
+      ]
+    },
+    {
+      "id": 130679270985,
+      "run_id": 43065509793,
+      "run_attempt": 1,
+      "name": "verify (2)",
+      "head_sha": "4475df1016587d312e5b96c33ea0c9c1ac09f94d",
+      "status": "completed",
+      "conclusion": "failure",
+      "started_at": "2026-11-11T17:10:19Z",
+      "completed_at": "2026-11-11T17:11:30Z",
+      "html_url": "https://github.com/pahlborn/bis-school-app_src/actions/runs/43065509793/job/130679270985",
+      "runner_id": 1000004853,
+      "runner_name": "GitHub Actions 1000004853",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions",
+      "labels": [
+        "ubuntu-24.04"
+      ],
+      "steps": [
+        {
+          "name": "Set up job",
+          "number": 1,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:20Z",
+          "completed_at": "2026-11-11T17:10:22Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "number": 2,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:22Z",
+          "completed_at": "2026-11-11T17:10:23Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "number": 3,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:23Z",
+          "completed_at": "2026-11-11T17:10:24Z"
+        },
+        {
+          "name": "Run npm install --no-package-lock",
+          "number": 4,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:24Z",
+          "completed_at": "2026-11-11T17:10:26Z"
+        },
+        {
+          "name": "Run npx playwright install chromium --only-shell",
+          "number": 5,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:10:26Z",
+          "completed_at": "2026-11-11T17:10:30Z"
+        },
+        {
+          "name": "Run shard of the complete test suite",
+          "number": 6,
+          "status": "completed",
+          "conclusion": "failure",
+          "started_at": "2026-11-11T17:10:30Z",
+          "completed_at": "2026-11-11T17:11:29Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "number": 11,
+          "status": "completed",
+          "conclusion": "skipped",
+          "started_at": "2026-11-11T17:11:29Z",
+          "completed_at": "2026-11-11T17:11:29Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "number": 12,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:11:29Z",
+          "completed_at": "2026-11-11T17:11:29Z"
+        },
+        {
+          "name": "Complete job",
+          "number": 13,
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-11T17:11:29Z",
+          "completed_at": "2026-11-11T17:11:29Z"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+[
+  {
+    "number": 193,
+    "head_ref": "release/2026-0014-kind-erststart-0.152.2",
+    "head_sha": "b6d6c1eb4873097295230c387b6209befadfff29",
+    "base_ref": "main",
+    "commit_shas": [
+      "6e12f3c9537b66dfd22288a9f4b849a2d9879ddc",
+      "f9ab4e4765b5ca507837c7e745f114260f99b667",
+      "d709d11bbd15223349a19ee11cfbc858f2dd9fbf",
+      "f0aba0e3227b73bb7dbd8444056b05bde6d6e1ca",
+      "896c1352b333383fc103bd38ada8a72e6997f2bb",
+      "2740b86ce9e11e96741a1ee5216c9a478e02a263",
+      "5dc76cd5914c4b707131f30fcd19ac8a2c584889",
+      "fafc53be0a5f1177137d1ddc22698cf9a4caa11b",
+      "4475df1016587d312e5b96c33ea0c9c1ac09f94d",
+      "fdbd4fbacd6ef596a04bee8620eb30b59aafad7b",
+      "4582bc4a817ef3c8da949448878fefb9f5b52721",
+      "4ba9c7e6a75bca52efd03db429166940dd08837c",
+      "ace238c1ce60c0a30eab47e83c3d008b03eac484",
+      "b6d6c1eb4873097295230c387b6209befadfff29"
+    ],
+    "source": "https://api.github.com/repos/pahlborn/bis-school-app_src/pulls/193"
+  },
+  {
+    "number": 198,
+    "head_ref": "feature/bq-evaluation-end-to-end-test11",
+    "head_sha": "f88e82ab013daf6f8a095224af6cd4d7ef0dc880",
+    "base_ref": "feature/bq-evaluation-gemeinsames-formular",
+    "commit_shas": [
+      "454882623d1cc2e5f61bf56239757c34ecca832b",
+      "baa30ee6bbc5fd73113e1e5a8fe62e9d053657f2",
+      "ddbce959d7986d9f9dc9bdab45f7faa2a12435c0",
+      "e5acab23b70d096c3f3f259ba78842ac3d625271",
+      "b0f1b1bbe37e8883d1e874d67600a92ff22546f4",
+      "8d2fb639478380c1cc2dc6322509070af1590ecc",
+      "ea00a88f82ef1269b0341ff985c03c2bc7f1d656",
+      "3c623123a76379b14e3aed73114dff68646c362d",
+      "2612cb370831fb42d20883118e2000486ca38c1c",
+      "5faea95cf97ca22acfaf613bd7db54a91528d280",
+      "73eee068d5d034b959150c5c953c0426fe9ba29a",
+      "2df9ee8af10bc8051cbe83ec78b113922474f520",
+      "2b51475de274fb9f8dc05b7e0da192763e105293",
+      "ddd67c3e83e8097f9ea0c549efe6aa16b8422386",
+      "a69bf26b2941999f06618dfb7f5368e6fb4c631c",
+      "f88e82ab013daf6f8a095224af6cd4d7ef0dc880"
+    ],
+    "source": "https://api.github.com/repos/pahlborn/bis-school-app_src/pulls/198"
+  }
+]

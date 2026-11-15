@@ -1,0 +1,16 @@
+{
+  "sha": "2b51475de274fb9f8dc05b7e0da192763e105293",
+  "source": "https://api.github.com/repos/pahlborn/bis-school-app_src/commits/2b51475de274fb9f8dc05b7e0da192763e105293",
+  "message": "Keep Test 11 package filenames and CI artifact labels consistent",
+  "parents": [
+    "2df9ee8af10bc8051cbe83ec78b113922474f520"
+  ],
+  "files": [
+    {
+      "filename": ".github/workflows/evaluation-integration.yml",
+      "status": "modified",
+      "additions": 1,
+      "deletions": 1
+    }
+  ]
+}

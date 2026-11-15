@@ -1,0 +1,16 @@
+{
+  "sha": "fdbd4fbacd6ef596a04bee8620eb30b59aafad7b",
+  "source": "https://api.github.com/repos/pahlborn/bis-school-app_src/commits/fdbd4fbacd6ef596a04bee8620eb30b59aafad7b",
+  "message": "Update release assertions for Beta 0.152.2",
+  "parents": [
+    "4475df1016587d312e5b96c33ea0c9c1ac09f94d"
+  ],
+  "files": [
+    {
+      "filename": "tests/version.test.mjs",
+      "status": "modified",
+      "additions": 2,
+      "deletions": 2
+    }
+  ]
+}

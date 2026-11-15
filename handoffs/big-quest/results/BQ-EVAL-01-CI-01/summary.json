@@ -1,0 +1,66 @@
+{
+  "runs": 47,
+  "attempts": 48,
+  "jobs": 85,
+  "executed_jobs": 75,
+  "executed_seconds": 11471,
+  "unknown_executed_duration_jobs": [],
+  "groups": {
+    "193 / Verify child first start release": {
+      "jobs": 44,
+      "executed_jobs": 44,
+      "executed_seconds": 5638,
+      "no_steps_jobs": 0,
+      "no_steps_span_seconds": 0
+    },
+    "198 / Evaluation form integration": {
+      "jobs": 9,
+      "executed_jobs": 7,
+      "executed_seconds": 5434,
+      "no_steps_jobs": 2,
+      "no_steps_span_seconds": 6
+    },
+    "198 / Big Quest iPad build": {
+      "jobs": 8,
+      "executed_jobs": 7,
+      "executed_seconds": 161,
+      "no_steps_jobs": 1,
+      "no_steps_span_seconds": 2
+    },
+    "198 / Big Quest iPad Playgrounds Testpaket": {
+      "jobs": 9,
+      "executed_jobs": 7,
+      "executed_seconds": 48,
+      "no_steps_jobs": 2,
+      "no_steps_span_seconds": 4
+    },
+    "198 / Toddle evaluation reader": {
+      "jobs": 10,
+      "executed_jobs": 7,
+      "executed_seconds": 165,
+      "no_steps_jobs": 3,
+      "no_steps_span_seconds": 9
+    },
+    "198 / Big Quest Test 11 - review build blob": {
+      "jobs": 5,
+      "executed_jobs": 3,
+      "executed_seconds": 25,
+      "no_steps_jobs": 2,
+      "no_steps_span_seconds": 6
+    }
+  },
+  "previous_report": {
+    "runs": 47,
+    "attempts": 48,
+    "jobs": 85,
+    "executed_jobs": 75,
+    "executed_seconds": 11471
+  },
+  "delta": {
+    "runs": 0,
+    "attempts": 0,
+    "jobs": 0,
+    "executed_jobs": 0,
+    "executed_seconds": 0
+  }
+}
