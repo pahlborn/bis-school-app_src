@@ -1,0 +1,26 @@
+{
+  "task": "BQ-EVAL-01-INT-01",
+  "kind": "verification of existing originals; no reconstruction",
+  "original_source_commit": "d26af4a38bdc15d3cbfb5305def012f91aacbb28",
+  "source_tree": "a7bc188f4531c8d0c7bafec8900bdc98f9470974",
+  "source_files": 233,
+  "source_member_sha256_bytes_modes": "all match original manifest",
+  "archive_crc": "both published originals PASS; extra testbuild also checked locally but excluded",
+  "archive_original_sha256": "both published originals match historical manifest",
+  "evidence_members": 33,
+  "application_tests": "NOT_RUN",
+  "missing_requested_archives": [],
+  "historical_status": "BLOCKED",
+  "publication_remote_verification": "returned blob SHAs match local expected Git object SHAs; binary redownload unsupported by connector",
+  "archives": [
+    {
+      "file": "BQ-EVAL-01-INT-01-evidence-v1.zip",
+      "git_blob_sha": "d646be6e0b63f9b61cd17ceaf4f8e3fb7c7fd451"
+    },
+    {
+      "file": "BQ-EVAL-01-INT-01-source-v1.zip",
+      "git_blob_sha": "c68e4a101bf1304ca62206fa3985d6a1f4413da6"
+    }
+  ],
+  "scope": "only explicitly user-authorized sanitized source and evidence originals, manifests and integrity documentation; no testbuild publication"
+}
