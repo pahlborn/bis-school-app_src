@@ -1,6 +1,7 @@
 name: Big Quest iPad build
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - 'ios/**'
