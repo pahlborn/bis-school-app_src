@@ -27,7 +27,7 @@ Eine Einstufung der Lehrkraft aus Toddle soll in Big Quest **dasselbe bewirken w
 1. Sie legt die Startschwierigkeit fest.
 2. Eine schwache Einstufung (RS oder C) wird zur **Lücke**.
 3. Die Quests dieses Standards kommen in den **Fokus**.
-4. „Practise Today“ übt sie, höchstens 2 von 8 Aufgaben, bis die Lücke geschlossen ist (Konzept `elternbereich.md`, Kapitel 6).
+4. „Practise Today“ übt sie, bis die Lücke geschlossen ist: neben anderen aktuellen Themen höchstens 2 von 8 Aufgaben; gibt es keine anderen aktuellen Themen, darf die Lücke die ganze Runde füllen (Konzept `elternbereich.md`, 6.5; D5).
 
 Big Quest erfindet dabei keine neuen Übungen. Es wählt aus den vorhandenen Quests. Für einen Standard ohne Quest gibt es keine Übung.
 
@@ -110,7 +110,7 @@ Der **Claude-Aufruf** ist gegen die aktuelle API-Referenz geprüft und korrekt: 
 Das ist die eigentliche Lücke zwischen Toddle und der Übungslogik (B1). Grundzüge hier; vollständige Quellenreihenfolge mit Liste bekannter Kriterien und Wortähnlichkeit in U6 (Entscheidung O4):
 
 1. **Toddle nennt den Standard:** Steht in der Evaluation ein Abschnitt „Standards“ (der Parser kennt die Überschrift), wird er mit `STANDARD_TEXT` abgeglichen. Das ist fest programmiert, ohne KI.
-2. **KI-Vorschlag:** Wo das nicht reicht, schlägt Claude je Kriterium einen Standard vor. Erlaubt sind **nur** Kürzel aus der festen Liste: Antwortschema mit `enum`, wie im Spike, aber mit allen Standards, die eine Quest haben. Unklar bedeutet „kein passender Standard“.
+2. **KI-Vorschlag:** Wo das nicht reicht, schlägt Claude je Kriterium einen Standard vor. Erlaubt sind **nur** Kürzel aus der festen Liste: Antwortschema mit `enum`, wie im Spike, aber mit **allen Standards der gepflegten Liste**, auch ohne Quest (D2). Unklar bedeutet „kein passender Standard“.
 3. **Die Eltern bestätigen** jede Zuordnung in der Vorschau oder korrigieren sie.
 
 Beispiel (echte Mathe-Evaluation aus dem Spike): Mit 2 erlaubten Standards wurden 2 von 6 Kriterien zugeordnet. Mit der vollen Liste kämen etwa „Reads and writes numbers … C“ → **M-N1** (Quest „Time & Numbers“) und „… addition problems … C“ → **M-N4** dazu.
@@ -168,7 +168,7 @@ Browser und App rufen denselben Dienst mit derselben Anfrage und Antwort auf wie
 | U3 | Standardliste | **Alle Standards des Schuljahres**, mit verständlichem Namen (`STANDARD_TEXT`), DE/EN; ersetzt die Zweierliste `SCHOOL_EVALUATION_TARGETS` als Auswahl. **Entschieden (O5):** Standards ohne Quest sind wählbar, mit dem Hinweis „wird angezeigt, keine Übung in Big Quest“. Kommt später eine Quest dazu (E7), wirken frühere Einstufungen sofort. Laut Peter (17.11.) decken die heutigen rund 15 Standards nur einen **Teil des ersten Quartals** der Klasse 3 ab; weitere kommen hinzu. Die Liste ist deshalb eine **Pflegeaufgabe je Quartal** (Quelle: Abschnitt „Standards“ in Toddle, Unterlagen der Schule). | B1 |
 | U4 | Formular | Je Kriterium ein Auswahlfeld „Bereich in Big Quest“; „Fach“ als Auswahlliste; Farben aus dem Design der App; in der Vorschau „Kriterium → Standard · Einstufung“. | B1, B5, B7 |
 | U5 | Ein Speicherweg | Alle Füllwege speichern über U1. Der Werkzeug-Import des ganzen Bestands bleibt nur für Altdaten. | B2 |
-| U6 | Zuordnungsvorschlag | **Entschieden (O4): immer ein Vorschlag mit Korrekturmöglichkeit**, in Alltagssprache. Quellen in dieser Reihenfolge: 1) Abschnitt „Standards“ aus Toddle; 2) **Liste bekannter Kriterien** (aus bestätigten Zuordnungen, im Code gepflegt). Laut Peter (17.11.) ist das Raster **innerhalb einer Klasse** wortgleich, in einer Klassenstufe nicht unbedingt (abhängig von der Lehrkraft). Deshalb nur **wortgleiche** Treffer als „bekannt“ vorschlagen; andere Klassen fallen auf Quelle 3 zurück; 3) **Wortähnlichkeit** mit `STANDARD_TEXT`; 4) im Playground zusätzlich **Claude** mit `enum` aller Standards (Spike erweitern). Unsicher bedeutet „Kein passender Bereich“, nie geraten. Eltern bestätigen mit einem Tipp oder korrigieren. Als Modul, das Browser und App nutzen. | B1 |
+| U6 | Zuordnungsvorschlag | **Entschieden (O4): immer ein Vorschlag mit Korrekturmöglichkeit**, in Alltagssprache. Quellen in dieser Reihenfolge: 1) Abschnitt „Standards“ aus Toddle; 2) **Liste bekannter Kriterien** (aus bestätigten Zuordnungen, im Code gepflegt). Laut Peter (17.11.) ist das Raster **innerhalb einer Klasse** wortgleich, in einer Klassenstufe nicht unbedingt (abhängig von der Lehrkraft). Deshalb nur **wortgleiche** Treffer als „bekannt“ vorschlagen; andere Klassen fallen auf die nächsten Quellen zurück; 3) im Playground **Claude** mit `enum` aller Standards der gepflegten Liste (Spike erweitern); 4) **Wortähnlichkeit** mit `STANDARD_TEXT`. Im Browser ohne Claude: 1) → 2) → 4) (D1). Unsicher bedeutet „Kein passender Bereich“, nie geraten. Eltern bestätigen mit einem Tipp oder korrigieren. Als Modul, das Browser und App nutzen. | B1 |
 | U13 | Nachzuordnung | Kriterien mit „Kein passender Bereich“ bleiben mit Originaltext gespeichert. Wächst die Standardliste (U3), läuft der Vorschlag (U6) für diese Kriterien erneut. Im Elternbereich erscheint ein ruhiger Hinweis „Neue Zuordnungen möglich“ mit Vorschau und Bestätigung. Nichts wird ohne Bestätigung geändert. | B1 |
 | U7 | Prüfung im Ersatzweg verschärfen | Eine Einstufung gilt nur am **Ende** des Belegs als Einstufung, nicht irgendwo als Wort. | B6 |
 | U8 | Playground stabil | Feste App-Kennung `de.bigquest.ipad` für alle Testpakete; Zugangscode für die Geräteverbindung zusätzlich im Schlüsselbund; Diagnose mit iOS-Codes (Speichern, Zurücklesen, Lesen beim Start, Access Group) ohne Anzeige des Schlüssels. | B3, B4 |
@@ -177,9 +177,10 @@ Browser und App rufen denselben Dienst mit derselben Anfrage und Antwort auf wie
 | U11 | Anmeldung ohne GitHub-Token beim Endnutzer | Voraussetzung für TestFlight mit fremden Familien (Plan 13.11., Stufe B) | B8 |
 | U12 | App-Store-Voraussetzungen | Impressum (Backlog), Datenschutzerklärung, Prüfrichtlinien für Apps im Umfeld von Kindern, Konto löschen in der App | – |
 
-**Abhängigkeit zu offenen Aufträgen** (`dev-auftraege-2026-11-03.md`):
-- **Auftrag 1, Grundlage-Aufgaben:** Mit U1–U6 entstehen mehr Lücken. Für 10 Quests fehlen die kleinen Einstiegsaufgaben.
-- **Auftrag 2, ehrlicher Lückenbalken ohne 14-Tage-Regel:** gilt auch für übernommene Lücken.
+**Aufträge vom 03.11.** (`dev-auftraege-2026-11-03.md`): **beide erledigt** (Korrektur nach dem Abgleich von Atlas, 17.11.).
+- **Auftrag 1, Grundlage-Aufgaben:** erledigt mit #112 (`docs/pruefung/2026-11-03-auftrag1-grundlage.md`). Befund „10 Quests ohne Grundlage“ beruhte auf dem älteren Test-11-Zweig und gilt für `main` nicht.
+- **Auftrag 2, ehrlicher Lückenbalken ohne 14-Tage-Regel:** erledigt mit #109 (`docs/pruefung/2026-11-03-auftrag2-bestaetigt.md`); die Wirkung in EV-7 schützen.
+- **Neu (D4):** zusätzliche ausgearbeitete **Beispiele** für die Grundlage-Aufgaben dieser zehn Quests, soweit sie den Lernerfolg sinnvoll unterstützen (andere passende Aufgabe mit Lösungsweg; auf der niedrigsten Stufe darf das Beispiel gleich niedrig sein, neutral beschriftet). Ausnahmen ohne Lernnutzen werden je Aufgabenart kurz begründet. Vor oder mit M2.
 
 Beide sollten **vor oder mit M2** erledigt sein (siehe Abschnitt 7).
 
@@ -198,9 +199,7 @@ Ziel: Eine echte Evaluation wird auf dem iPad aus Toddle übernommen. Danach sin
 | **M3 · Vorschlag mit Korrektur** | Kriterien bekommen einen vorgeschlagenen Bereich: im Browser aus Toddle-Standards, bekannten Kriterien und Wortähnlichkeit, im Playground zusätzlich von Claude. Eltern bestätigen nur noch. | U6, U13 | Die echte Mathe-Evaluation: die eindeutigen Kriterien (Stellenwert, Runden, Addition, Subtraktion) korrekt vorgeschlagen, nichts außerhalb der Liste, unsichere „Kein passender Bereich“. Einstufungen unverändert aus der Quelle. Eine bestätigte Zuordnung wird beim nächsten wortgleichen Kriterium als bekannt vorgeschlagen. Nach Ergänzung eines Standards erscheint für ein früher nicht zugeordnetes, passendes Kriterium der Hinweis „Neue Zuordnungen möglich“ (U13). |
 | **M4 · Abnahme Ziel 1 auf dem iPad** | Die ganze Kette funktioniert auf dem echten Gerät. | – | Echte Evaluation aus Toddle → Formular mit Vorschlägen → bestätigen → Lücke aktiv → Practise Today mit passender Übung → Neustart von Playgrounds → alles noch da. |
 
-**Voraussetzungen aus den offenen Aufträgen** (`dev-auftraege-2026-11-03.md`), vor oder mit M2:
-- Auftrag 1: Grundlage-Aufgaben für die Quests mit Hauptstandard.
-- Auftrag 2: ehrlicher Lückenbalken ohne 14-Tage-Regel.
+**Vor oder mit M2:** zusätzliche Grundlage-Beispiele nach D4 (siehe Abschnitt 6). Die Aufträge 1 und 2 vom 03.11. sind erledigt (#112, #109).
 
 ### Ziel 2 · später, nur bei erkennbarem Bedarf
 
@@ -219,8 +218,8 @@ Ziel: Eine echte Evaluation wird auf dem iPad aus Toddle übernommen. Danach sin
 
 ## 8. Leitplanken: was der App nicht im Weg steht (E4)
 
-- **Datenmodell und Formular** gehören zu Big Quest selbst. Die Swift-Hülle liefert nur Text an das Formular und, bis M5, den Claude-Aufruf.
-- **Die KI-Schnittstelle** (Anfrage/Antwort wie `ClaudeClient.Evaluation`) bleibt stabil. In M5 wechselt nur der Empfänger: vom Gerät zum Dienst.
+- **Datenmodell und Formular** gehören zu Big Quest selbst. Die Swift-Hülle liefert nur Text an das Formular und, bis M7, den Claude-Aufruf.
+- **Die KI-Schnittstelle** (Anfrage/Antwort wie `ClaudeClient.Evaluation`) bleibt stabil. In M7 wechselt nur der Empfänger: vom Gerät zum Dienst (D3).
 - **Keine Schlüssel im Browser.** Keine Logik, die nur im Playground funktioniert.
 - **Feste App-Kennung** ab M1. Sie kann später die TestFlight- und App-Store-Kennung werden.
 - **Tests mit erfundenen Daten** für jeden Schritt; Gerätetests nur, wo der Browser es nicht kann.
@@ -240,6 +239,16 @@ Ziel: Eine echte Evaluation wird auf dem iPad aus Toddle übernommen. Danach sin
 - Die rund 15 Standards sind nur ein Teil des ersten Quartals. Folge: Standardliste als Pflegeaufgabe je Quartal (U3) und Nachzuordnung (U13).
 
 ---
+
+**Entscheidungen D1–D5 (Peter, 17.11., aus dem Abgleich von Atlas, PR #206):**
+
+| Nr. | Entscheidung |
+|---|---|
+| D1 | Reihenfolge der Vorschläge im Playground: Toddle-Standards → bekannte Kriterien → Claude → Wortähnlichkeit. Im Browser ohne Claude. |
+| D2 | Claude darf aus der **ganzen** gepflegten Standardliste wählen, auch Standards ohne Quest. |
+| D3 | Schreibfehler berichtigt: Der KI-Dienst ist M7, nicht M5. |
+| D4 | Zusätzliche ausgearbeitete Beispiele für die Grundlage-Aufgaben sind Pflicht in Ziel 1, soweit sie den Lernerfolg sinnvoll unterstützen; begründete Ausnahmen erlaubt. |
+| D5 | Die bestehende Regel aus dem Elternkonzept 6.5 bleibt: neben anderen aktuellen Themen höchstens 2 von 8 Lückenaufgaben; ohne andere aktuelle Themen darf die Lücke die ganze Runde füllen. Beide Fälle werden getestet. |
 
 ## 10. Quellen
 

@@ -23,7 +23,7 @@ Jedes Kriterium bekommt beim Übernehmen seinen **Lernbereich in Big Quest**. Bi
 
 1. Eine Einstufung **RS** oder **C** wird zur **Lücke**.
 2. Die passenden Übungen kommen in den **Fokus**.
-3. **Practise Today** übt sie mit, höchstens 2 von 8 Aufgaben, in kleinen Schritten.
+3. **Practise Today** übt sie mit, in kleinen Schritten: neben anderen Themen höchstens 2 von 8 Aufgaben, sonst auch mehr.
 4. Sitzt der Bereich in der App sicher, oder bewertet die Schule ihn später besser, ist die Lücke **geschlossen**.
 
 ## So läuft es für die Eltern
