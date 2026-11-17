@@ -177,7 +177,7 @@ button{font:inherit;color:inherit}
 .pcard{background:var(--surface);border:2px solid var(--line);border-radius:16px;padding:12px 14px}
 .pcard h2{font-size:1.1rem;margin-bottom:6px}
 .about-sub{margin:8px 0}.about-sub>summary{cursor:pointer;font-weight:700}
-.pguide-h{font-size:1.05rem;margin:4px 0 6px}a.pgo{font-weight:700;white-space:nowrap}
+.pguide-h{font-size:1.05rem;margin:4px 0 6px}a.pgo{font-weight:700;white-space:normal;overflow-wrap:anywhere}
 .pglance{margin:10px 0}.pglance p{margin:4px 0}.pglance .pgmore{text-align:right;margin-top:6px}
 .ph{font-weight:800;margin:10px 0 2px}
 .pdisc{font-size:.8rem;color:var(--muted);border-top:1px solid var(--line);margin-top:10px;padding-top:6px}
@@ -340,12 +340,14 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 .pstab{font-size:.95rem}
 .pstab>tbody>tr>td{vertical-align:top}
 .pslv{display:flex;flex-wrap:wrap;gap:4px}
-.pstab>tbody>tr.psdet>td{background:var(--soft)}
+.pstab>tbody>tr.psdet>td{background:var(--soft);overflow-wrap:anywhere}
 .psdet h4{margin:10px 0 2px;font-size:.95rem}
 .psdet h4:first-child{margin-top:2px}
 .psdet ul{margin:0 0 4px 20px;padding:0}
-.psrub{font-size:.9rem;margin:2px 0 4px}
+.psrub{font-size:.9rem;margin:2px 0 4px;table-layout:fixed;overflow-wrap:anywhere}
 .psrub th,.psrub td{padding:4px 6px}
+.psrub th:first-child{width:40%}
+.psrub .pst{max-width:100%}
 .pspend ul{margin:0 0 4px 20px;padding:0}
 @media (max-width:600px){
   .pstab,.pstab>tbody,.pstab>tbody>tr,.pstab>tbody>tr>td{display:block;width:100%;box-sizing:border-box}
@@ -6743,8 +6745,16 @@ function schoolEvaluationHistory(t, de, synced){
     const current=p.revision===m.revision, proposal=m.conflicts.includes(p.revision);
     const status=p.withdrawn?(de?'Zurückgenommen':'Withdrawn'):current?(de?'Aktive Fassung':'Active revision'):proposal?(de?'Vorschlag':'Proposal'):(de?'Frühere Fassung':'Earlier revision');
     const choose=proposal||current&&m.conflicts.length;
-    return `<li>${esc(p.title)} · ${fmtDay(p.day)} · ${esc(standards[p.standard])} · ${PSTAND[lang][SL[p.rating]]} · <b>${status}</b> · ${schoolEvaluationSyncHTML(p.revision,synced,de)}`
-      +`${choose?' '+button('resolve',de?'Diese Fassung wählen':'Choose this revision',p.revision):''}</li>`;
+    const criteria=p.assessment?.criteria, criterionHistory=criteria&&(p.standard==='unmapped'||criteria.some(c=>Object.hasOwn(c,'standard')));
+    const grade=criterionHistory?'':` · ${esc(standards[p.standard])} · ${PSTAND[lang][SL[p.rating]]}`;
+    const details=criterionHistory?`<ul class="pseval-criteria">${criteria.map(c=>{
+      const area=!Object.hasOwn(c,'standard')?(de?'Kein zugeordneter Bereich':'No assigned area')
+        :c.standard==='none'?(de?'Kein passender Bereich':'No matching area'):(standards[c.standard]||c.standard);
+      const rating=c.rating?PSTAND[lang][SL[c.rating]]:(de?'Keine Einstufung':'Not rated');
+      return `<li>${esc(c.criterion)} → ${esc(area)} · ${esc(rating)}</li>`;
+    }).join('')}</ul>`:'';
+    return `<li data-eval-history="${esc(p.revision)}">${esc(p.title)} · ${fmtDay(p.day)}${grade} · <b>${status}</b> · ${schoolEvaluationSyncHTML(p.revision,synced,de)}`
+      +`${choose?' '+button('resolve',de?'Diese Fassung wählen':'Choose this revision',p.revision):''}${details}</li>`;
   }).join('');
   const actions=m.conflicts.length
     ? `<p role="status">${de?'Konkurrierende Änderungen. Die bisherige Fassung bleibt aktiv, bis Sie eine Fassung wählen und bestätigen.':'Conflicting changes. The previous revision stays active until you choose and confirm a revision.'}</p>`

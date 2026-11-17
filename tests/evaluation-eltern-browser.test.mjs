@@ -19,8 +19,8 @@ async function register(page) {
   await page.locator('#kontoNeuGo').click();
 }
 
-async function device(browser, allowed) {
-  const context = await browser.newContext({ timezoneId: 'UTC' });
+async function device(browser, allowed, options = {}) {
+  const context = await browser.newContext({ timezoneId: 'UTC', ...options });
   await context.route('**/*', (route) => allowed.some((url) => route.request().url().startsWith(url)) ? route.continue() : route.abort());
   const page = await context.newPage();
   const errors = [];
@@ -135,7 +135,7 @@ async function checkRoundRevisions(page, expected, solve = new Map()) {
   await leaveRound(page);
 }
 
-test('correction drafts preserve the current focus, a synced confirmation replaces it, and withdrawal stops future cards', { timeout: 300000 }, async (t) => {
+async function evaluationFamily(t, options = {}) {
   const storage = await githubNachbau({ token: TOKEN, repos: [REPO] });
   t.after(() => storage.schliessen());
   const access = githubSpeicher({ repo: REPO, token: TOKEN, basis: storage.basis }).geraet('d_Werkzeug1');
@@ -143,12 +143,12 @@ test('correction drafts preserve the current focus, a synced confirmation replac
   const admin = await ersteAnmeldung({ zugang: access, code: adminCode.code, passwort: 'Werkzeug-Admin-Passwort-1', now: Date.now() });
   const parentCode = await startcodeAusstellen({ zugang: access, aussteller: admin, anmeldename: 'mira.sonnenweg', art: 'parent', now: Date.now() });
   const config = JSON.stringify({ art: 'github', repo: REPO, wurzel: '', basis: storage.basis });
-  const server = await appServer({ bauart: 'test', anpassen: (h) => h.replace('/*BQ_SPEICHER*/null', () => config) });
+  const server = await appServer({ bauart: 'test', anpassen: (h) => h.replace('/*BQ_SPEICHER*/null', () => config).replace(/\}\)\(\);\s*<\/script>/, 'window.__evaluationIntegration={eventHook,schoolEvaluationTarget,schoolFromAccount,renderSheets};})();</script>') });
   t.after(() => server.close());
   const browser = await browserStarten();
   t.after(() => browser.close());
   const allowed = [server.url, storage.basis];
-  const P = await device(browser, allowed);
+  const P = await device(browser, allowed, options);
   const K = await device(browser, allowed);
 
   await P.page.goto(anmEinladungslink(server.url, { zugang: TOKEN, anmeldename: 'mira.sonnenweg', code: parentCode.code, fingerabdruck: parentCode.fingerabdruck }));
@@ -187,6 +187,11 @@ test('correction drafts preserve the current focus, a synced confirmation replac
   await P.page.waitForFunction(() => /ist angemeldet/.test(document.querySelector('#kQrStatus')?.textContent || ''), null, { timeout: 30000 });
   await P.page.locator('#kQrFertig').click();
 
+  return { P, K };
+}
+
+test('correction drafts preserve the current focus, a synced confirmation replaces it, and withdrawal stops future cards', { timeout: 300000 }, async (t) => {
+  const { P, K } = await evaluationFamily(t);
   await elternSeite(P.page, 'school');
   const form = P.page.locator('#pSchoolEvaluation');
   await form.getByRole('button', { name: 'Evaluation hinzufügen' }).click();
@@ -311,4 +316,142 @@ test('correction drafts preserve the current focus, a synced confirmation replac
   t.diagnostic('Observed exact sets of school-revision cards before confirmation, after correction sync, and after withdrawal sync.');
   assert.deepEqual(P.errors, []);
   assert.deepEqual(K.errors, []);
+});
+
+// Explicitly invented assessment data, stored through the genuine app eventHook.
+const INTEGRATION_TITLE = 'Fiktive Kriterienprüfung / invented criteria check';
+const INTEGRATION_CRITERIA = [
+  { criterion: 'Fiktiv / invented: clear writing ' + 'ZusammenhängendesTestlernwort'.repeat(5), standard: 'E-W1', rating: 'E' },
+  { criterion: 'Fiktiv / invented: organizing ideas', standard: 'E-W1', rating: 'C' },
+  { criterion: 'Fiktiv / invented: speaking to an audience', standard: 'E-S1', rating: 'RS' },
+  { criterion: 'Fiktiv / invented: number position, not assessed', standard: 'M-N1', rating: '' },
+  { criterion: 'Fiktiv / invented: no matching area', standard: 'none', rating: 'M' },
+];
+const integrationPayload = () => ({
+  evaluation: '8c97af5e-6e19-46b8-85c6-d3c950a77680', revision: '8c97af5e-6e19-46b8-85c6-d3c950a77681',
+  title: INTEGRATION_TITLE, day: new Date().toISOString().slice(0, 10),
+  assessment: { area: 'english', goal: 'Fiktives Lernziel / invented goal', instructions: '', feedback: '', criteria: structuredClone(INTEGRATION_CRITERIA) },
+});
+async function storeIntegrationAssessment(page, payload) {
+  const event = await page.evaluate(payload => {
+    const app = window.__evaluationIntegration, target = app.schoolEvaluationTarget();
+    if (!target) throw new Error('Expected the real parent and child target');
+    const event = app.eventHook('school_evaluation', { ...payload, child: target.id }, target.id);
+    if (!event) throw new Error('The app rejected the invented integration assessment');
+    app.renderSheets();
+    return event;
+  }, payload);
+  assert.deepEqual(event.payload.assessment.criteria, payload.assessment.criteria, 'original criteria persisted unchanged');
+  return event;
+}
+async function settledSchoolLayout(page) {
+  // Font metrics and the layout after this render must be settled before measuring.
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    await new Promise(resolve => requestAnimationFrame(resolve));
+  });
+}
+
+test('integration F1: stored criterion assessments show original grades, empty rating and none in revision history DE/EN', async t => {
+  const { P } = await evaluationFamily(t);
+  await elternSeite(P.page, 'school');
+  const original = integrationPayload();
+  await storeIntegrationAssessment(P.page, original);
+  const correction = { ...original, base: original.revision, revision: '8c97af5e-6e19-46b8-85c6-d3c950a77682', title: INTEGRATION_TITLE + ' 2' };
+  await storeIntegrationAssessment(P.page, correction);
+  const derived = await P.page.evaluate(title => {
+    const app = window.__evaluationIntegration;
+    const task = app.schoolFromAccount(app.schoolEvaluationTarget().id).tasks.find(task => task.title === title);
+    return { std: task.std, rubric: task.rubric };
+  }, correction.title);
+  assert.deepEqual(derived.std, { 'E-W1': 'C', 'E-S1': 'RS' });
+  assert.deepEqual(derived.rubric, INTEGRATION_CRITERIA.map(c => ({ crit: c.criterion, teacher: c.rating, self: '' })));
+  for (const lang of ['de', 'en']) {
+    await P.page.locator(`.phdr [data-plang="${lang}"]`).click();
+    await elternSeite(P.page, 'school');
+    const details = await showDetails(P.page, correction.title);
+    assert.doesNotMatch(await details.innerText(), /undefined/, 'all visible criterion history values are defined');
+    const history = details.locator('[data-eval-history]');
+    assert.equal(await history.count(), 2, 'original and correction remain in the existing history');
+    for (const revision of [original.revision, correction.revision]) {
+      const rows = details.locator(`[data-eval-history="${revision}"] .pseval-criteria > li`);
+      assert.equal(await rows.count(), 5);
+      for (let i = 0; i < INTEGRATION_CRITERIA.length; i++) assert.ok((await rows.nth(i).innerText()).includes(INTEGRATION_CRITERIA[i].criterion));
+      for (const [i, pattern] of (lang === 'de' ? [[0, /Darüber hinaus/], [1, /Wird sicherer/], [2, /Braucht Unterstützung/], [3, /Keine Einstufung/], [4, /Kein passender Bereich.*Sicher/s]] : [[0, /Going beyond/], [1, /Getting there/], [2, /Needs support/], [3, /Not rated/], [4, /No matching area.*Secure/s]])) assert.match(await rows.nth(i).innerText(), pattern);
+    }
+    assert.deepEqual(await details.locator('.psrub tbody tr td:first-child').allTextContents(), INTEGRATION_CRITERIA.map(c => c.criterion));
+    assert.match(await history.nth(0).innerText(), lang === 'de' ? /Frühere Fassung/ : /Earlier revision/);
+    assert.match(await history.nth(1).innerText(), lang === 'de' ? /Aktive Fassung/ : /Active revision/);
+  }
+  const withdrawn = { ...correction, base: correction.revision, revision: '8c97af5e-6e19-46b8-85c6-d3c950a77683', withdrawn: true };
+  await storeIntegrationAssessment(P.page, withdrawn);
+  const details = await showDetails(P.page, withdrawn.title);
+  assert.match(await details.locator('[data-eval-history]').last().innerText(), /Withdrawn/);
+  assert.doesNotMatch(await details.innerText(), /undefined/);
+  assert.equal((await evaluationEvents(P.page)).length, 3);
+  assert.deepEqual(P.errors, []);
+});
+
+test('integration F2: stored long criteria, rubric and parent links fit 320 px after layout, DE/EN and keyboard', async t => {
+  const { P } = await evaluationFamily(t, { viewport: { width: 320, height: 800 } });
+  await elternSeite(P.page, 'school');
+  await storeIntegrationAssessment(P.page, integrationPayload());
+  for (const lang of ['de', 'en']) {
+    await P.page.locator(`.phdr [data-plang="${lang}"]`).click();
+    await elternSeite(P.page, 'school');
+    const row = P.page.locator('.psrow').filter({ hasText: INTEGRATION_TITLE });
+    const button = row.locator('[data-psdet]');
+    await button.focus();
+    if (await button.getAttribute('aria-expanded') === 'true') await P.page.keyboard.press('Enter');
+    await P.page.keyboard.press('Enter');
+    assert.equal(await button.getAttribute('aria-expanded'), 'true');
+    const details = P.page.locator(`[data-psdetrow="${await button.getAttribute('data-psdet')}"]`);
+    await settledSchoolLayout(P.page);
+    const width = await P.page.evaluate(() => ({ document: document.documentElement.scrollWidth, viewport: window.innerWidth,
+      overflowing: [...document.querySelectorAll('.psrub, .psrub th, .psrub td, a.pgo')].filter(e => e.getClientRects().length && e.getBoundingClientRect().right > innerWidth).map(e => ({ tag: e.tagName, class: e.className, right: e.getBoundingClientRect().right })) }));
+    assert.ok(width.document <= width.viewport, `320 px without overflow: ${JSON.stringify(width)}`);
+    assert.deepEqual(width.overflowing, [], 'rubric and links stay inside the viewport');
+    assert.deepEqual(await details.locator('.psrub tbody tr td:first-child').allTextContents(), INTEGRATION_CRITERIA.map(c => c.criterion), 'long stored text remains complete');
+    const cells = await details.locator('.psrub td').evaluateAll(elements => elements.map(e => [e.scrollWidth, e.clientWidth]));
+    assert.ok(cells.every(([scroll, client]) => scroll <= client), `cell text wraps: ${JSON.stringify(cells)}`);
+    await P.page.locator('#pHelp').click();
+    await settledSchoolLayout(P.page);
+    assert.ok(await P.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'parent help links also fit 320 px');
+    const link = P.page.locator('a.pgo:visible').first();
+    await link.focus();
+    await P.page.keyboard.press('Enter');
+    await P.page.locator('#pSetBack').waitFor();
+    await P.page.locator('#pSetBack').click();
+  }
+  assert.deepEqual(P.errors, []);
+});
+
+test('integration F1 unmapped: Test-11 history retains criterion grades without displaying technical N as a teacher grade', async t => {
+  const { P } = await evaluationFamily(t);
+  await elternSeite(P.page, 'school');
+  const payload = integrationPayload();
+  payload.evaluation = '8c97af5e-6e19-46b8-85c6-d3c950a77690';
+  payload.revision = '8c97af5e-6e19-46b8-85c6-d3c950a77691';
+  payload.title = 'Fiktiver Test-11-Altbestand / invented legacy assessment';
+  Object.assign(payload, { standard: 'unmapped', rating: 'N', focus: 'none' });
+  payload.assessment.criteria = payload.assessment.criteria.map(({ standard, ...criterion }) => ({ ...criterion, evidence: '' }));
+  await storeIntegrationAssessment(P.page, payload);
+  for (const lang of ['de', 'en']) {
+    await P.page.locator(`.phdr [data-plang="${lang}"]`).click();
+    await elternSeite(P.page, 'school');
+    const details = await showDetails(P.page, payload.title);
+    assert.doesNotMatch(await details.innerText(), /undefined/);
+    const rows = details.locator('.pseval-criteria > li');
+    assert.equal(await rows.count(), 5);
+    for (let i = 0; i < payload.assessment.criteria.length; i++) {
+      assert.ok((await rows.nth(i).innerText()).includes(payload.assessment.criteria[i].criterion));
+      assert.match(await rows.nth(i).innerText(), lang === 'de' ? /Kein zugeordneter Bereich/ : /No assigned area/);
+      assert.ok(!(await rows.nth(i).innerText()).endsWith(' · N'), 'technical N is not a criterion grade');
+    }
+    assert.match(await rows.nth(0).innerText(), lang === 'de' ? /Darüber hinaus/ : /Going beyond/);
+    assert.match(await rows.nth(1).innerText(), lang === 'de' ? /Wird sicherer/ : /Getting there/);
+    assert.match(await rows.nth(3).innerText(), lang === 'de' ? /Keine Einstufung/ : /Not rated/);
+  }
+  assert.deepEqual(P.errors, []);
 });

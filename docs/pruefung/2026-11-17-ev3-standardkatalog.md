@@ -44,3 +44,44 @@ EV-3.2 ist für den vorhandenen Katalog umgesetzt. Die Tests schützen die beste
 EV-3.1 ist **noch nicht als ganze Story abgenommen**: Die neue Leseliste ist keine Auswahl je Kriterium. Das alte Einzelevaluationsformular bleibt auf seinen bisherigen Umfang beschränkt. Auswahl und Speicherung aller Standards je Kriterium sowie der durchgängige Nachweis „ohne Quest speichern → Hauptquest ergänzen → Lücke/Fokus“ benötigen EV-2 und EV-4 mit gemeinsamem Integrationstest.
 
 EV-3.3 (Beispiele für Grundlage-Aufgaben) bleibt ein eigener, notwendiger nachfolgender Teil vor oder mit M2. Dieser Katalogteil ersetzt ihn nicht. Kein Gerätetest, Merge, Deployment oder abschließender Nachweis von Ziel 1.
+
+## Integrationskorrektur F1/F2 am 17.11.2026
+
+### Problem
+
+Gemeinsame Startbasis `e86c2a51deb0d17155c0e11d95ee89ba02653f8a`, Baum `6bcb0911b0ee421c42a3197b9546fc664d90fa2d`, aus PR #209 (`3d910802`), #210 (`6b61221b`) und #211 (`f868e0e`), Produktmain `bb10457`. Die von Atlas berichteten 922 grünen Basistests ersetzten keine Prüfung der danach belegten UI-Fehler.
+
+F1: Der vorhandene Fassungsverlauf las ausschließlich `standard`/`rating` auf Evaluationsebene. Gültige neue Kriterienevents zeigten dadurch `undefined`. Im wieder erlaubten Test-11-Format `unmapped` entstand außerdem aus dem technischen Gesamtwert `N` fälschlich „Braucht Unterstützung“ statt der ursprünglichen Einzelnoten.
+
+F2: Lange gespeicherte Kriterien verbreiterten die automatisch aufgeteilte Rubriktabelle; Elternlinks mit `white-space:nowrap` konnten ebenfalls über schmale Ansichten hinausragen. Der von Atlas berichtete historische CI-Fehler auf `d077fbc`, Run `44110229601`, Job `134133511798`, maß im alten 60-Aufgaben-EV3-Test 336/320 px. Seine genaue Ursache bleibt unbekannt. Eine Schriftursache wurde nicht nachgewiesen.
+
+### Umgesetzt
+
+- Der bestehende Verlauf zeigt je Revision Originalkriterium, zugeordneten Bereich und ursprüngliche Einzelnote. Leere Einstufung, ausdrücklich `none` und fehlende Test-11-Zuordnung erhalten eindeutige DE/EN-Texte. Der technische Gesamtwert `N` wird dabei nicht als Lehrkraftnote verwendet. Die bisherigen M-N3/M-N5-Zeilen und Revisionsaktionen bleiben erhalten.
+- Nur betroffene Darstellungen angepasst: Rubrik mit festen Spalten und umbrechenden Zellinhalten/Noten, Umbruch langer Texte in Schuldetails und Umbruch der bestehenden Elternlinks. Kein Abschneiden und kein globales Verstecken horizontalen Überlaufs.
+- Regressionen speichern ausdrücklich erfundene Daten über den echten `eventHook` nach Anmeldung/Kindregistrierung und öffnen die vorhandene Elternanzeige. Sie prüfen Ableitung `{E-W1:C,E-S1:RS}`, Originalrubrik, E/C/RS, unbewertetes M-N1, `none`, Original-/Korrektur-/Rücknahmeverlauf, Test-11-Altdaten sowie 320 px und Tastaturbedienung in DE/EN.
+- Breitenmessungen erfolgen nach `document.fonts.ready` und zwei Renderframes, damit Schriftmetriken und Layout nach dem Rendern feststehen. Die Breitenassertion bleibt unverändert streng bei 320 px. Dies ist eine Messbedingung, keine Erklärung des historischen CI-Fehlers.
+
+### Prüfung
+
+Eigene native Prüfungen dieser Fortsetzung, keine Übernahme fremder oder früherer PASS-Ergebnisse. Tatsächlich abgefragte Versionen: `/usr/bin/chromium` = **156.0.8078.79**, `/workspace/.cache/bq-playwright/chromium_headless_shell-1194/chrome-linux/headless_shell` = **141.0.7390.37**; vorhandenes Playwright 1.56.1. Nur lokale App und vorhandener GitHub-Nachbau mit erfundenen Testdaten, keine Produktionszugriffe.
+
+| Prüfung | Tatsächliches Ergebnis |
+|---|---|
+| Neue F1/F2-Browserregression, Produktindex unverändert `e86c2a5`, Chromium 156 | **2 rot, Exit 1**: sichtbares `undefined`; Langwort-Rubrik 1453/320 px |
+| Dieselben Gegenproben, Produktindex unverändert `e86c2a5`, Chromium 141 | **2 rot, Exit 1**, gleiche Fehler; Rubrikrand 1452,75 px |
+| Zusätzlicher Test-11-unmapped-Fall vor seiner Korrektur, Chromium 141 | **Rot, Exit 1**: `undefined` und fälschlich aus `N` abgeleitetes „Braucht Unterstützung“ |
+| Erster Fix: gesamte `evaluation-eltern-browser.test.mjs` und `schulische-einstufungen.test.mjs`, Chromium 141 | 9 bestanden, Exit 0, 201521 ms; einschließlich bestehender langer Legacy-/Zweigerätekette und alter 60-Aufgaben-Ansicht |
+| Finaler F1/F2/unmapped-Fokus, Chromium 141 | **3 bestanden, Exit 0**, 26482 ms |
+| Finaler F1/F2/unmapped-Fokus, Chromium 156 | **3 bestanden, Exit 0**, 26874 ms |
+| Alter EV3-60-Aufgaben-Fokus zusätzlich auf Chromium 156 | bestanden, Exit 0 |
+| Ein vollständiger `CHROMIUM_PATH=…/headless_shell npm test` auf eingefrorenem finalen Kandidaten | Offen: folgt nach Commit/Push und Anlage der gemeinsamen Draft-PR |
+| `git diff --check` | bestanden |
+
+Reproduktion der neuen Fälle: `CHROMIUM_PATH=<einer der beiden Pfade> node --test --test-name-pattern='integration F' tests/evaluation-eltern-browser.test.mjs`. F1/F2 wurden zuerst mit den neuen Tests gegen den unveränderten Basisindex ausgeführt, anschließend mit der Korrektur. Das zusätzliche unmapped-Gegenbeispiel wurde auf dem Zwischenstand vor dieser speziellen Anzeigeanpassung ausgeführt.
+
+### Gefunden und Grenzen
+
+Die feste Tabellenaufteilung und der erlaubte Wortumbruch beseitigen den tatsächlich reproduzierten Überlauf; die beiden Browser zeigten beim Langkriterien-Gegenbeispiel denselben Defekt. Das erklärt nicht rückwirkend den einzelnen historischen 336-px-CI-Fall. Historische PASS- und FAIL-Ergebnisse oben bleiben erhalten.
+
+Datenmodell, Katalogvertrag und native Quellen sind unverändert. Keine neue EV4-Auswahl oder Formularfunktion, keine neue Lückenregel, keine Veröffentlichung, kein Main-Merge und keine Geräteabnahme. Reale Ausführungskosten sind **unbekannt**; es liegt keine belastbare Kostentelemetrie vor.

@@ -105,6 +105,12 @@ test('EV3: alle Lernbereiche nach Fach, ohne Quest mit Hinweis, DE/EN und per Ta
       assert.equal(await row.evaluate(element => element.closest('[data-standard-subject]').dataset.standardSubject), entry.subject);
     }
     assert.match(await catalog.locator('[data-standard-code="E-S1"]').innerText(), lang === 'de' ? /wird angezeigt, keine Übung in Big Quest/ : /shown here, no exercise in Big Quest/);
+    // Measure final font metrics and the layout after rendering, without relaxing the width limit.
+    await page.evaluate(async () => {
+      await document.fonts.ready;
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      await new Promise(resolve => requestAnimationFrame(resolve));
+    });
     const width = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
     assert.ok(width[0] <= width[1], `320 px ohne Überlauf: ${width}`);
   }
