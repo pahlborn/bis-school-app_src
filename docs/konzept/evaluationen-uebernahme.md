@@ -1,6 +1,6 @@
 # Konzept: Evaluationen aus Toddle in Big Quest übernehmen (Entwurf)
 
-Stand 17.11.2026 · Status: **Entwurf zur Abstimmung mit Peter** · Grundlage: Gespräch Peter/Claude vom 16.–17.11., Prototyp-Zweige bis Test 11 (`feature/bq-evaluation-end-to-end-test11`, 0.153.4-beta), KI-Spike (`spike/bq-schulbewertung-ki`), Plan „BQ-KI Elternintegration“ (13.11.), Machbarkeitsstudie Schulbewertungen (08.11.).
+Stand 17.11.2026 · Status: **Entwurf, Entscheidungen O1–O5 von Peter am 17.11. getroffen** · Grundlage: Gespräch Peter/Claude vom 16.–17.11., Prototyp-Zweige bis Test 11 (`feature/bq-evaluation-end-to-end-test11`, 0.153.4-beta), KI-Spike (`spike/bq-schulbewertung-ki`), Plan „BQ-KI Elternintegration“ (13.11.), Machbarkeitsstudie Schulbewertungen (08.11.).
 
 ---
 
@@ -13,6 +13,8 @@ Stand 17.11.2026 · Status: **Entwurf zur Abstimmung mit Peter** · Grundlage: G
 | E3 | Die Komfortfunktion (automatisches Auslesen, KI) kommt **später**, wenn eine richtige App entsteht. |
 | E4 | Es wird **nichts gebaut, was einer richtigen App im Weg steht**. |
 | E5 | Datenschutz ist für den **jetzigen Testbetrieb** (eigene Familie) zu vernachlässigen. Für andere Familien gilt Abschnitt 4.5. |
+| E6 | **Nichts vermischen:** Ziel 1 ist die Lösung Formular + Playground + KI, komplett und richtig, einschließlich Standard je Kriterium. Claude in Chrome und Datei-Import sind Ziel 2, nur bei erkennbarem Bedarf. |
+| E7 | Später werden Quests für das **ganze Schuljahr** eingearbeitet, danach für Klasse 4 und weitere Jahre. |
 
 ---
 
@@ -82,7 +84,7 @@ Der **Claude-Aufruf** ist gegen die aktuelle API-Referenz geprüft und korrekt: 
 | Kann Big Quest eine Datei annehmen? | **Ja.** Jede Webseite darf eine Datei annehmen, die die Person auswählt („Datei auswählen“), auf iPad, iPhone und Computer. Text einfügen geht ebenso. |
 | Kann der Browser Claude direkt aufrufen? | Technisch ja (Header `anthropic-dangerous-direct-browser-access: true`). Der Schlüssel läge aber im Browser, und alle Seiten unter `big-quest-test.github.io` teilen diesen Speicher. Deshalb **nicht vorgesehen** (G6). |
 | Kurzbefehl („JavaScript auf Webseite ausführen“) oder Lesezeichen als Leser in Safari | Möglich. Ob die Sicherheitsregeln von Toddle (CSP) das zulassen, ist ungeprüft. Das ist **kein Teil des Plans**, nur eine Reserve, falls der Playground-Weg scheitert. |
-| Claude in Chrome | läuft auf dem **Computer**, nicht auf iPad/iPhone. Ob es alle Evaluationen sauber ausliest, ist ungeprüft (M0). |
+| Claude in Chrome | läuft auf dem **Computer**, nicht auf iPad/iPhone. Ob es alle Evaluationen sauber ausliest, ist ungeprüft (Ziel 2, M5). |
 
 ### 4.2 Verteilungswege für iPad-Apps
 
@@ -103,7 +105,7 @@ Der **Claude-Aufruf** ist gegen die aktuelle API-Referenz geprüft und korrekt: 
 
 ### 4.4 Zuordnung Kriterium → Standard
 
-Das ist die eigentliche Lücke zwischen Toddle und der Übungslogik (B1). Zwei Quellen, in dieser Reihenfolge:
+Das ist die eigentliche Lücke zwischen Toddle und der Übungslogik (B1). Grundzüge hier; vollständige Quellenreihenfolge mit Liste bekannter Kriterien und Wortähnlichkeit in U6 (Entscheidung O4):
 
 1. **Toddle nennt den Standard:** Steht in der Evaluation ein Abschnitt „Standards“ (der Parser kennt die Überschrift), wird er mit `STANDARD_TEXT` abgeglichen. Das ist fest programmiert, ohne KI.
 2. **KI-Vorschlag:** Wo das nicht reicht, schlägt Claude je Kriterium einen Standard vor. Erlaubt sind **nur** Kürzel aus der festen Liste: Antwortschema mit `enum`, wie im Spike, aber mit allen Standards, die eine Quest haben. Unklar bedeutet „kein passender Standard“.
@@ -130,7 +132,7 @@ Browser und App rufen denselben Dienst mit derselben Anfrage und Antwort auf wie
 ```
            ┌───────────── Füllwege ─────────────┐
  manuell   │  Claude in Chrome     iPad-Leser    │
- (Browser) │  (Text/Datei, M4)     (Playground → │
+ (Browser) │  (Ziel 2, M5)     (Playground → │
            │                        TestFlight → │
            │                        App Store)   │
            └──────────────┬──────────────────────┘
@@ -148,7 +150,7 @@ Browser und App rufen denselben Dienst mit derselben Anfrage und Antwort auf wie
 
 | Phase | Wer | Oberfläche | Füllwege | KI |
 |---|---|---|---|---|
-| 1 | Familie Peter | Playground + Browser | manuell, iPad-Leser, (Claude in Chrome) | Schlüssel auf dem Gerät (Übergang) |
+| 1 | Familie Peter | Playground + Browser | manuell, iPad-Leser | Schlüssel auf dem Gerät (Übergang) |
 | 1 | andere Testeltern | Browser | manuell | keine |
 | 2 | Testeltern mit iPad | TestFlight + Browser | manuell, iPad-Leser | Big-Quest-Dienst |
 | 3 | alle | App Store + Browser | manuell, iPad-Leser | Big-Quest-Dienst |
@@ -160,14 +162,14 @@ Browser und App rufen denselben Dienst mit derselben Anfrage und Antwort auf wie
 | Nr. | Arbeitspaket | Inhalt | Befund |
 |---|---|---|---|
 | U1 | Datenmodell | `school_evaluation` erhält je Kriterium `standard` (Kürzel oder `none`). `school_import` und alte Einträge bleiben lesbar. Die Ableitung erzeugt `std` aus den Kriterien. | B1, B2 |
-| U2 | Regel für mehrere Kriterien desselben Standards | Was gilt, wenn eine Evaluation zwei Kriterien mit demselben Standard enthält, etwa C und M? Vorschlag: die **schwächere** Einstufung. **Entscheidung Peter (O3).** | B1 |
-| U3 | Standardliste | Alle Standards mit mindestens einer Quest, mit verständlichem Namen (`STANDARD_TEXT`), DE/EN. Ersetzt die Zweierliste `SCHOOL_EVALUATION_TARGETS` als Auswahl. | B1 |
+| U2 | Regel für mehrere Kriterien desselben Standards | **Entschieden (O3):** Gespeichert wird jedes Kriterium mit eigener Einstufung. Beim Auswerten zählt je Standard und Evaluation die **schwächere**. Die Vorschau zeigt das („E-W1: C (schwächere von C und M)“), und Eltern können umstellen. | B1 |
+| U3 | Standardliste | **Alle Standards des Schuljahres**, mit verständlichem Namen (`STANDARD_TEXT`), DE/EN; ersetzt die Zweierliste `SCHOOL_EVALUATION_TARGETS` als Auswahl. **Entschieden (O5):** Standards ohne Quest sind wählbar, mit dem Hinweis „wird angezeigt, keine Übung in Big Quest“. Kommt später eine Quest dazu (E7), wirken frühere Einstufungen sofort. Zu prüfen: ob die heutigen rund 15 Standards alle Standards der Klasse 3 sind. | B1 |
 | U4 | Formular | Je Kriterium ein Auswahlfeld „Bereich in Big Quest“; „Fach“ als Auswahlliste; Farben aus dem Design der App; in der Vorschau „Kriterium → Standard · Einstufung“. | B1, B5, B7 |
 | U5 | Ein Speicherweg | Alle Füllwege speichern über U1. Der Werkzeug-Import des ganzen Bestands bleibt nur für Altdaten. | B2 |
-| U6 | Zuordnungsvorschlag | 1) Abgleich mit dem Abschnitt „Standards“ aus Toddle; 2) Claude-Vorschlag mit `enum` aller Standards (Spike erweitern); 3) Bestätigung der Eltern. Als Modul, das Browser und App nutzen. | B1 |
+| U6 | Zuordnungsvorschlag | **Entschieden (O4): immer ein Vorschlag mit Korrekturmöglichkeit**, in Alltagssprache. Quellen in dieser Reihenfolge: 1) Abschnitt „Standards“ aus Toddle; 2) **Liste bekannter Kriterien** (aus bestätigten Zuordnungen, im Code gepflegt; das Raster ist für alle Kinder einer Klassenstufe wortgleich, von Peter zu bestätigen); 3) **Wortähnlichkeit** mit `STANDARD_TEXT`; 4) im Playground zusätzlich **Claude** mit `enum` aller Standards (Spike erweitern). Unsicher bedeutet „Kein passender Bereich“, nie geraten. Eltern bestätigen mit einem Tipp oder korrigieren. Als Modul, das Browser und App nutzen. | B1 |
 | U7 | Prüfung im Ersatzweg verschärfen | Eine Einstufung gilt nur am **Ende** des Belegs als Einstufung, nicht irgendwo als Wort. | B6 |
 | U8 | Playground stabil | Feste App-Kennung `de.bigquest.ipad` für alle Testpakete; Zugangscode für die Geräteverbindung zusätzlich im Schlüsselbund; Diagnose mit iOS-Codes (Speichern, Zurücklesen, Lesen beim Start, Access Group) ohne Anzeige des Schlüssels. | B3, B4 |
-| U9 | Text/Datei-Import (Claude in Chrome) | Feste Anleitung für Claude (Prompt, Standardliste, Format); Feld „Text einfügen“ und „Datei auswählen“; jede Evaluation öffnet nacheinander das Formular. **Nur wenn M0 positiv ist.** | – |
+| U9 | Text/Datei-Import (Claude in Chrome) | Feste Anleitung für Claude (Prompt, Standardliste, Format); Feld „Text einfügen“ und „Datei auswählen“; jede Evaluation öffnet nacheinander das Formular. **Ziel 2, nur bei Bedarf und nach erfolgreicher Prüfung (M5).** | – |
 | U10 | Big-Quest-KI-Dienst | wie 4.5; dieselbe Schnittstelle wie `ClaudeClient` | B8 |
 | U11 | Anmeldung ohne GitHub-Token beim Endnutzer | Voraussetzung für TestFlight mit fremden Familien (Plan 13.11., Stufe B) | B8 |
 | U12 | App-Store-Voraussetzungen | Impressum (Backlog), Datenschutzerklärung, Prüfrichtlinien für Apps im Umfeld von Kindern, Konto löschen in der App | – |
@@ -176,24 +178,39 @@ Browser und App rufen denselben Dienst mit derselben Anfrage und Antwort auf wie
 - **Auftrag 1, Grundlage-Aufgaben:** Mit U1–U6 entstehen mehr Lücken. Für 10 Quests fehlen die kleinen Einstiegsaufgaben.
 - **Auftrag 2, ehrlicher Lückenbalken ohne 14-Tage-Regel:** gilt auch für übernommene Lücken.
 
-Beide sollten **vor oder mit M2** erledigt sein.
+Beide sollten **vor oder mit M2** erledigt sein (siehe Abschnitt 7).
 
 ---
 
-## 7. Meilensteine und Zielsetzungen
+## 7. Ziele und Meilensteine
+
+### Ziel 1 · Formular + Playground + KI, komplett und richtig (E6)
+
+Ziel: Eine echte Evaluation wird auf dem iPad aus Toddle übernommen. Danach sind die passende Lücke aktiv und die Übung in Practise Today vorhanden, auch nach einem Neustart. Die manuelle Eingabe im Browser für andere Eltern entsteht dabei ohne Mehraufwand: dasselbe Formular, nur ohne den Knopf „Aus Toddle“.
 
 | Meilenstein | Ziel (woran man es merkt) | Pakete | Abnahme |
 |---|---|---|---|
-| **M0 · Klären ohne Bauen** | Wir wissen, ob Claude in Chrome Evaluationen sauber ausliest, und ob Toddle einen Abschnitt „Standards“ zeigt. | – | Drei bekannte Evaluationen mit Claude in Chrome auslesen und Feld für Feld gegen Toddle prüfen. Bei einer Evaluation den Abschnitt „Standards“ ansehen. Ergebnis kurz im Prüfbericht. |
-| **M1 · Playground stabil** | Ein neues Testpaket startet **ohne** neue Geräteverbindung und ohne neue Schlüsseleingabe. Oder wir wissen sicher, dass Playgrounds den Schlüsselbund zurücksetzt. | U8 | Paket N und N+1 nacheinander auf dem iPad: Verbindung bleibt; Diagnose zeigt die Codes vor und nach dem Neustart. Bei bestätigtem Zurücksetzen: Schlüssel je Sitzung eingeben, kein weiterer Reparaturversuch. |
-| **M2 · Ein Formular, Standard je Kriterium (Browser)** | Testeltern tragen eine Evaluation **im Browser von Hand** ein, wählen je Kriterium den Bereich. Eine RS- oder C-Einstufung erzeugt eine Lücke, und Practise Today übt sie. | U1–U5, U7 | Test mit erfundenen Daten: eine Evaluation mit drei Kriterien (M-N1 C, M-N3 M, kein Standard) → Lücke M-N1 aktiv, M-N3 keine Lücke, drittes Kriterium nur angezeigt. Alte Importdaten unverändert. Doppelte Bestätigung erzeugt keinen zweiten Eintrag. Kindwechsel verhindert Speichern. |
-| **M3 · Zuordnung per Vorschlag** | Im Playground füllt der iPad-Leser das Formular **inklusive** Standardvorschlägen; Eltern bestätigen nur noch. | U6 | Die echte Mathe-Evaluation aus dem Spike: mindestens die eindeutigen Kriterien (Stellenwert, Runden, Addition, Subtraktion) korrekt vorgeschlagen; nichts außerhalb der Liste; unklare Kriterien „kein passender Standard“. Einstufungen unverändert aus der Quelle. |
-| **M4 · Text/Datei-Import** (nur bei positivem M0) | Familie Peter überträgt alle Evaluationen eines Halbjahres mit Claude in Chrome und bestätigt sie nacheinander. | U9 | Eingefügter Text mit drei Evaluationen öffnet dreimal das Formular; Ergebnis gleich wie bei manueller Eingabe. |
-| **M5 · KI-Dienst** | Die App braucht keinen Schlüssel mehr auf dem Gerät. | U10 | Aufruf nur mit gültigem Elternkonto und eigenem Kind; Kostenlimit greift; Schlüssel in keinem Bundle, Speicher oder Protokoll. |
-| **M6 · TestFlight** | Andere Testfamilien installieren die App über TestFlight und nutzen den iPad-Leser. | U8 (feste Kennung), U10, U11, Developer Program | Interne Testgruppe; Installation, Anmeldung ohne GitHub-Token, Übernahme einer Evaluation, Lücke entsteht. |
-| **M7 · App Store** | Big Quest ist regulär (oder unlisted) im App Store. | U12 | Apple-Prüfung bestanden. |
+| **M1 · Playground stabil** | Ein neues Testpaket startet **ohne** neue Geräteverbindung und ohne neue Schlüsseleingabe. Oder wir wissen sicher, dass Playgrounds den Schlüsselbund zurücksetzt. | U8 | Paket N und N+1 nacheinander auf dem iPad: Verbindung bleibt; Diagnose zeigt die iOS-Codes vor und nach dem Neustart. Bei bestätigtem Zurücksetzen: Schlüssel je Sitzung eingeben, kein weiterer Reparaturversuch. |
+| **M2 · Standard je Kriterium** | Eine Evaluation mit mehreren Kriterien ergibt je Standard eine Einstufung; RS oder C erzeugt eine Lücke, und Practise Today übt sie. Im Browser von Hand bedienbar. | U1–U5, U7 | Test mit erfundenen Daten: drei Kriterien (M-N1 C, M-N3 M, kein Standard) → Lücke M-N1 aktiv, M-N3 keine Lücke, drittes nur angezeigt. Zwei Kriterien E-W1 (C, M) → C. Standard ohne Quest wählbar, mit Hinweis. Alte Importdaten unverändert. Doppelte Bestätigung erzeugt keinen zweiten Eintrag. Kindwechsel verhindert Speichern. |
+| **M3 · Vorschlag mit Korrektur** | Kriterien bekommen einen vorgeschlagenen Bereich: im Browser aus Toddle-Standards, bekannten Kriterien und Wortähnlichkeit, im Playground zusätzlich von Claude. Eltern bestätigen nur noch. | U6 | Die echte Mathe-Evaluation: die eindeutigen Kriterien (Stellenwert, Runden, Addition, Subtraktion) korrekt vorgeschlagen, nichts außerhalb der Liste, unsichere „Kein passender Bereich“. Einstufungen unverändert aus der Quelle. Eine bestätigte Zuordnung wird beim nächsten gleichen Kriterium als bekannt vorgeschlagen. |
+| **M4 · Abnahme Ziel 1 auf dem iPad** | Die ganze Kette funktioniert auf dem echten Gerät. | – | Echte Evaluation aus Toddle → Formular mit Vorschlägen → bestätigen → Lücke aktiv → Practise Today mit passender Übung → Neustart von Playgrounds → alles noch da. |
 
-**Reihenfolge:** M0 und M1 sofort und parallel. Dann M2, das Herzstück; es nützt auch den Browser-Testeltern. Dann M3. M4 nur bei positivem M0. M5–M7 erst, „wenn die Anerkennung so groß ist, dass wir eine richtige App bauen“ (E3).
+**Voraussetzungen aus den offenen Aufträgen** (`dev-auftraege-2026-11-03.md`), vor oder mit M2:
+- Auftrag 1: Grundlage-Aufgaben für die Quests mit Hauptstandard.
+- Auftrag 2: ehrlicher Lückenbalken ohne 14-Tage-Regel.
+
+### Ziel 2 · später, nur bei erkennbarem Bedarf
+
+| Meilenstein | Ziel | Pakete |
+|---|---|---|
+| **M5 · Claude in Chrome + Text/Datei** | Erst prüfen (drei Evaluationen auslesen und gegen Toddle vergleichen), dann ggf. Einfügen oder Datei füllt nacheinander das Formular. | U9 |
+| **M6 · Einfügen im Browser ohne KI** | Text aus Toddle einfügen, der Parser (heute Swift) füllt Kriterien und Einstufungen, als JavaScript-Modul. Erleichtert den Browser-Eltern das Abtippen. | – |
+| **M7 · KI-Dienst** | Kein Schlüssel mehr auf dem Gerät; Browser und App nutzen denselben Dienst. | U10 |
+| **M8 · TestFlight** | Testfamilien installieren die App; Anmeldung ohne GitHub-Token. | U8 (feste Kennung), U10, U11, Developer Program |
+| **M9 · App Store** | regulär oder unlisted im App Store | U12 |
+| **Quests für das ganze Schuljahr, Klasse 4 ff.** (E7) | weniger Kriterien ohne Übung | – |
+
+**Reihenfolge:** M1 sofort. Dann M2 (Herzstück), dann M3, Abschluss mit M4. Ziel 2 erst danach und nur bei Bedarf; M7–M9, „wenn die Anerkennung so groß ist, dass wir eine richtige App bauen“ (E3).
 
 ---
 
@@ -205,15 +222,19 @@ Beide sollten **vor oder mit M2** erledigt sein.
 - **Feste App-Kennung** ab M1. Sie kann später die TestFlight- und App-Store-Kennung werden.
 - **Tests mit erfundenen Daten** für jeden Schritt; Gerätetests nur, wo der Browser es nicht kann.
 
-## 9. Offene Entscheidungen für Peter
+## 9. Entscheidungen zu O1–O5 (Peter, 17.11.)
 
-| Nr. | Frage | Vorschlag |
+| Nr. | Frage | Entscheidung |
 |---|---|---|
-| O1 | Soll M4 (Claude in Chrome) überhaupt gebaut werden, wenn M0 positiv ist? | Ja, weil es für die Familie die schnellste Übernahme vieler Evaluationen ist. |
-| O2 | Wann das Developer Program abschließen (99 $/Jahr)? | Erst vor M6. |
-| O3 | Mehrere Kriterien, ein Standard: welche Einstufung gilt? | Die schwächere (U2). |
-| O4 | Sollen Testeltern im Browser auch die Zuordnung je Kriterium selbst wählen müssen, oder reicht zunächst „kein Standard“? | Selbst wählen. Sonst nützt die Eingabe dem Üben nichts. |
-| O5 | Welche Standards ohne Quest (z. B. E-S1, E-S2) sollen trotzdem wählbar sein? | Wählbar, aber mit dem Hinweis „wird angezeigt, keine Übung in Big Quest“. |
+| O1 | Claude in Chrome / Datei-Import bauen? | **Nicht jetzt.** Ziel 2, nur bei erkennbarem Bedarf (E6). |
+| O2 | Wann das Apple Developer Program abschließen? | **Erst vor TestFlight** (M8). |
+| O3 | Mehrere Kriterien, ein Standard: welche Einstufung gilt? | **Die schwächere**, als Vorschlag in der Vorschau, von den Eltern änderbar. Gespeichert wird jedes Kriterium einzeln (U2). |
+| O4 | Wählen die Eltern den Standard je Kriterium selbst? | **Vorschlag mit Korrekturmöglichkeit**, weil viele Eltern sich nicht einarbeiten können. Quellen siehe U6; unsicher heißt „Kein passender Bereich“. |
+| O5 | Sind Standards ohne Quest wählbar? | **Ja**, mit Hinweis „keine Übung in Big Quest“. Ziel ist, später Quests für das ganze Schuljahr einzuarbeiten (E7). |
+
+**Noch offen (klein):**
+- Ist das Bewertungsraster für alle Kinder einer Klassenstufe wortgleich? Davon hängt die Liste bekannter Kriterien ab (U6).
+- Sind die rund 15 Standards in `STANDARD_TEXT` alle Standards der Klasse 3 (U3)?
 
 ---
 
