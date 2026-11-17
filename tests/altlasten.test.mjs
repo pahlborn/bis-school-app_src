@@ -35,7 +35,9 @@ test('Quelltext: nichts liest, schreibt oder wandelt die alte Fokus-Form; parent
   const B = new Function('return ' + quelltext.match(/const BACKUP_KEYS=(\{[^;]*\});/)[1])();
   for (const k of ALT) assert.ok(!B.exact.includes(k), 'backup: ' + k);
   // parentPin: read and written only by the PIN gate, which runs only without accounts
-  const gate = quelltext.slice(quelltext.indexOf('function renderParentGate(){'), quelltext.indexOf('const STANDARD_TEXT={'));
+  const gateStart = quelltext.indexOf('function renderParentGate(){'), gateEnd = quelltext.indexOf('const STANDARD_TEXT=');
+  assert.ok(gateStart >= 0 && gateEnd > gateStart, 'PIN gate has both source boundaries');
+  const gate = quelltext.slice(gateStart, gateEnd);
   assert.match(gate, /^function renderParentGate\(\)\{\s*if\(accountsOn\(\)\)\{[^\n]*return; \}/, 'with accounts the gate returns before the PIN');
   const ausserhalb = quelltext.replace(gate, '').match(/store\.(get|set|del)\(\s*'parentPin'/g);
   assert.equal(ausserhalb, null, 'no other place uses parentPin');

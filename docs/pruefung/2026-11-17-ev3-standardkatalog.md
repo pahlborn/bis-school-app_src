@@ -21,7 +21,7 @@ Alle hier aufgeführten Ergebnisse wurden in dieser Arbeitsrunde am 17.11.2026 a
 | `node --test tests/module/standardkatalog.test.mjs tests/module/rahmen.test.mjs` | 14 bestanden |
 | `CHROMIUM_PATH=/usr/bin/chromium node --test --test-concurrency=2 tests/module/school-evaluation.test.mjs tests/schulimport.test.mjs tests/schulische-einstufungen.test.mjs tests/elternbereich-c1.test.mjs tests/elternbereich-d1.test.mjs` | 34 bestanden |
 | Neuer Browserfall in `schulische-einstufungen.test.mjs` | Alle 15 Einträge ohne Duplikate, Fachgruppen, DE/EN, Hinweis ohne Quest, Tastatur und 320 px ohne Überlauf bestanden |
-| `npm test` vollständig | Offen: abgestimmtes Testfenster nach dem EV-1-Lauf |
+| `CHROMIUM_PATH=/usr/bin/chromium npm test` auf `1986e95` | 906 Tests, 905 bestanden, 1 fehlgeschlagen; 423251 ms. Einziger Fehler: alter Objektliteral-Zugriff im Hilfetext-Test. Erneuter Gesamtlauf nach Testanpassung offen. |
 | `git diff --check` | bestanden |
 
 Die Funktionstests prüfen echte Produktfunktionen im App-Skript: ein synthetischer neuer Standard benötigt nur einen Katalogeintrag; `E-S1` ohne Quest erzeugt keine Lücke und keinen Fokus. Auch `E-S2`, `M-N5` und `M-N6` werden durch ihre Nebenbezüge nicht zu Hauptstandards. Mit einer nur im Test ergänzten, freigegebenen Hauptzuordnung zur bestehenden Vorschauquest `times` entsteht über die unveränderte Lückenregel eine Lücke mit Fokus. Das beweist die technische Erweiterbarkeit, noch nicht den neuen Speicher-/Formularweg.
@@ -32,6 +32,8 @@ Die Funktionstests prüfen echte Produktfunktionen im App-Skript: ein synthetisc
 2. Den unveränderten Basisindex von `bb10457` mit `git show` nur im Arbeitsspeicher gelesen und mit dem aktuellen Modulrahmen in `appSandbox` ausgeführt. Zugriff auf die neue Leseliste scheitert dort mit `schoolStandardCatalogHTML is not defined`. Keine Quellkopie in einem anderen Repo oder einer Ablage.
 
 ## Gefunden und offen
+
+Die erste Gesamtsuite fand einen überholten Testzugriff: `sohelfen.test.mjs` erwartete `STANDARDS` als Objektliteral. Der Test verwendet die abgeleitete Katalogsicht und prüft weiterhin dieselben fünf Hilfeteile in beiden Sprachen. Der Endmarker des PIN-Scope-Tests in `altlasten.test.mjs` wird passend zur abgeleiteten Textsicht gesetzt und mit einer Grenzprüfung abgesichert; dadurch kann ein fehlender Marker den geprüften Bereich nicht unbemerkt vergrößern. Keine fachliche Erwartung wurde abgeschwächt.
 
 EV-3.2 ist für den vorhandenen Katalog umgesetzt. Die Tests schützen die bestehende Lern-/Altdatenwirkung; Ereignisschema, Speicherweg, Lückenregel und D5 wurden in diesem Teil nicht geändert.
 
