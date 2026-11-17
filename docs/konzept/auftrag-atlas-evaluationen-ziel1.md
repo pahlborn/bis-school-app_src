@@ -161,6 +161,10 @@ So kommt die Sperre bei einem späteren Wechsel auf privat nicht wieder.
   - Testbefehle
   - was ausdrücklich **nicht** zu tun ist
 - **Ein Worktree und Zweig je Worker.** Worker mergen nicht selbst.
+- **Eine Quelle für Code und Dokumente: `pahlborn/bis-school-app_src`.** Worker lesen direkt dort (das Repo ist öffentlich). Aufgaben verweisen auf Zweig, Commit, Pfad und Zeile, statt Inhalte zu kopieren.
+  - Keine Kopien von Quelltext oder Dokumenten in andere Repos (z. B. Agentarium) oder Ablagen.
+  - Verlangt ein Werkzeug technisch eine Kopie (z. B. ein Relay, das seine Eingaben anderswo liest), ist das eine **Abweichung**: einmal Peter vorlegen, mit Grund und Alternative. Wird sie genehmigt, muss jede Kopie ihren Quell-Commit nennen, und sie darf nur vorübergehend existieren. Nach der Aufgabe wird sie entfernt; sie ist nie Grundlage für Änderungen.
+  - Hintergrund: Am 17.11. hatte Atlas Swift-Quelltextkopien im Agentarium vorgesehen, weil der Forge-Relay dort liest. Die automatische Freigabeprüfung lehnte das ab, und Atlas hat den Weg verworfen.
 - **`index.html` ist ein Engpass.** Plane Aufgaben so, dass nicht zwei Worker gleichzeitig dieselben Bereiche ändern. Logik möglichst in Module (`src/module/`) verlagern, wie in den Leitplanken vorgesehen.
 - **Stärken nutzen:**
   - Swift/iPad-Hülle (EV-1, EV-5.4)
