@@ -75,7 +75,7 @@ Eigene native Prüfungen dieser Fortsetzung, keine Übernahme fremder oder früh
 | Finaler F1/F2/unmapped-Fokus, Chromium 141 | **3 bestanden, Exit 0**, 26482 ms |
 | Finaler F1/F2/unmapped-Fokus, Chromium 156 | **3 bestanden, Exit 0**, 26874 ms |
 | Alter EV3-60-Aufgaben-Fokus zusätzlich auf Chromium 156 | bestanden, Exit 0 |
-| Ein vollständiger `CHROMIUM_PATH=…/headless_shell npm test` auf eingefrorenem finalen Kandidaten | Offen: folgt nach Commit/Push und Anlage der gemeinsamen Draft-PR |
+| Genau ein vollständiger `CHROMIUM_PATH=…/headless_shell npm test` auf eingefrorenem `91bf85b21ff2baf918e9972f54b678751d2ba890` | **925/925 bestanden, 0 Fehler, 0 übersprungen, Exit 0**, 307149 ms; mit Chromium 141.0.7390.37 ausgeführt und am 17.11. um 16:28 UTC als beendet bestätigt |
 | `git diff --check` | bestanden |
 
 Reproduktion der neuen Fälle: `CHROMIUM_PATH=<einer der beiden Pfade> node --test --test-name-pattern='integration F' tests/evaluation-eltern-browser.test.mjs`. F1/F2 wurden zuerst mit den neuen Tests gegen den unveränderten Basisindex ausgeführt, anschließend mit der Korrektur. Das zusätzliche unmapped-Gegenbeispiel wurde auf dem Zwischenstand vor dieser speziellen Anzeigeanpassung ausgeführt.
@@ -85,3 +85,5 @@ Reproduktion der neuen Fälle: `CHROMIUM_PATH=<einer der beiden Pfade> node --te
 Die feste Tabellenaufteilung und der erlaubte Wortumbruch beseitigen den tatsächlich reproduzierten Überlauf; die beiden Browser zeigten beim Langkriterien-Gegenbeispiel denselben Defekt. Das erklärt nicht rückwirkend den einzelnen historischen 336-px-CI-Fall. Historische PASS- und FAIL-Ergebnisse oben bleiben erhalten.
 
 Datenmodell, Katalogvertrag und native Quellen sind unverändert. Keine neue EV4-Auswahl oder Formularfunktion, keine neue Lückenregel, keine Veröffentlichung, kein Main-Merge und keine Geräteabnahme. Reale Ausführungskosten sind **unbekannt**; es liegt keine belastbare Kostentelemetrie vor.
+
+Nach diesem vollständigen Lauf wurden nur dieses Prüfprotokoll und die freigegebene Aussage zu Dokumentupdates in bestehenden Code-PRs im EV-1-Prüfbericht korrigiert. Der Arbeitsbaum war während des Laufs sauber, der geprüfte Kopf blieb `91bf85b`. Produkt- und Testgleichheit des anschließenden Berichtskopfs wird durch `git diff --name-only 91bf85b HEAD` (nur die beiden Berichte) und eine leere Differenz aller übrigen Dateien belegt. Kein weiterer Gesamtlauf und keine Produktänderung nach diesem Nachweis; die gemeinsame Draft-PR wird einmalig auf dem abschließenden Berichtskopf eröffnet.
