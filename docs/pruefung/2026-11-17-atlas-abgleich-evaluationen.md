@@ -1,8 +1,18 @@
 # Atlas · Evaluationen Ziel 1: Abgleich und erste Rückmeldung
 
-Stand: 17.11.2026 · Epic **2026.0005** · Rückgabe nach Abschnitt 9 des Auftrags an Atlas.
+## Kurzfassung für Peter
 
-**Ergebnis:** Der Bestandsabgleich ist abgeschlossen. Die Nummerierung und D1–D5 sind im Chat einzeln entschieden. Ziel 1 selbst ist noch nicht implementiert oder abgenommen. Die Grundlage-Aufgaben und der Lückenbalken sind vorhandener Bestand; zusätzliche sinnvolle Beispiele bleiben erforderlich. K1 ist im begrenzten Vertrag bestanden. Der erfolgreiche Test 11 bleibt erfolgreich; seine undokumentierten Teile werden nicht rekonstruiert.
+**Was ist erledigt?** Die bisherigen Arbeiten sind geprüft und zugeordnet. Die einfachen Einstiegsaufgaben und der verständliche Fortschrittsbalken sind bereits vorhanden. Das Lesen von Evaluationen, ihre Übernahme ins Formular und die Einstufungen wurden auf dem iPad erfolgreich getestet. Frühere Fehler in den Integrationsprüfungen sind im damals geprüften Stand behoben. Deine Entscheidungen sind inzwischen im Konzept übernommen.
+
+**Was kommt als Nächstes?** Die iPad-Fassung soll Verbindung und Schlüssel zuverlässiger behalten. Jede einzelne Bewertung bekommt einen Lernbereich, damit passende Übungen folgen. Die Liste dieser Lernbereiche wird vollständig und pflegbar. Zusätzlich entstehen vorgerechnete Beispiele, soweit sie beim Lernen helfen. Die Entwickler arbeiten getrennt im Produktrepo und liefern eigene Änderungsvorschläge. Ein nicht verfügbarer Entwicklungsweg wird nach höchstens einer Stunde zurückgestellt.
+
+**Was brauche ich von dir?** Zunächst deine Prüfung dieses ergänzten Plans; keine Wiederholung der bereits getroffenen Grundsatzentscheidungen. Später testen wir gemeinsam die verlangten Schritte auf deinem iPad. Eine Veröffentlichung der App erfolgt erst nach deiner ausdrücklichen Freigabe.
+
+## Technischer Abgleich und Umsetzungsplan
+
+Stand: 17.11.2026 · Epic **2026.0005** · ergänzt nach PR #207/#208 und Peters Startvorgabe. Führendes main: `bb10457ade11490b785ab16e6f231c442e3affd2`. Rückgabe nach Abschnitt 9 des Auftrags an Atlas.
+
+**Ergebnis:** Der Bestandsabgleich ist abgeschlossen. Die Nummerierung und D1–D5 sind im Chat einzeln entschieden. Ziel 1 selbst ist noch nicht implementiert oder abgenommen. Die ursprünglichen Aufträge 1/2 sind erledigter Bestand; zusätzliche sinnvolle Beispiele sind die eigene Story **EV-3.3**. K1 ist im begrenzten Vertrag bestanden. Der erfolgreiche Test 11 bleibt erfolgreich; seine undokumentierten Teile werden nicht rekonstruiert.
 
 Diese PR enthält ausschließlich diesen Bericht. Produktcode, Konzepte, Workflows, Quellpakete und Bereitstellung werden durch diese PR nicht geändert. Eine Kundenannahme wird nicht vorweggenommen.
 
@@ -10,19 +20,19 @@ Diese PR enthält ausschließlich diesen Bericht. Produktcode, Konzepte, Workflo
 
 | Quelle | Fest geprüfter Stand |
 |---|---|
-| Aktueller Auftrag | `main@91b8e8ff797904092445e0ddf1e65ad373bde4ec`, `docs/konzept/auftrag-atlas-evaluationen-ziel1.md`, einschließlich der Ein-Quellen-Regel aus dem gemergten PR #205, Abschnitt 7 |
+| Aktueller Auftrag | `main@bb10457ade11490b785ab16e6f231c442e3affd2`, `docs/konzept/auftrag-atlas-evaluationen-ziel1.md`, einschließlich Abschnitt 7 und der in PR #207 ergänzten auftragsspezifischen Regeln aus Abschnitt 7a |
 | Konzept | Auf derselben Hauptbasis: `docs/konzept/evaluationen-uebernahme.md`, `evaluationen-ziel1-zusammenfassung.md`, `evaluationen-ziel1-epics.md`; Aufträge vom 03.11. und `elternbereich.md`, Kapitel 6 |
 | Vorarbeiten | Pläne/Prüfberichte vom 05., 08., 11., 12., 13. und 14.11. in den benannten Produktzweigen; konkrete Branchköpfe in Anhang B |
 | Unabhängiger Abgleich | Scout: Altaufträge/Originalrückgaben; Argus: Zweige/Commitbeziehungen/Mergekonflikte; Sentinel: Aufträge 1/2, Test11-/K1-/Abnahmeevidenz. Diese drei Prüfbeiträge wurden tatsächlich durchgeführt; keine neue Produkt-QA daraus abgeleitet |
-| Versionierung dieser Prüfbeiträge | Ausgangsbasis `0cb4b5c1f2ddac5fd0d4141228b751e7e1d4219c`. Atlas las anschließend PR203/204 und PR205. Zwischen dieser Ausgangsbasis und heutigem main änderten sich nur Auftrags-/Prüfdokumente, kein Produktcode |
+| Versionierung dieser Prüfbeiträge | Ausgangsbasis `0cb4b5c1f2ddac5fd0d4141228b751e7e1d4219c`. Atlas las anschließend PR203/204/205 sowie die gemergten PR207/208. D1–D5 sind jetzt im Konzept und in den Epics enthalten; Beispiele werden als EV-3.3 geführt. Zwischen dieser Ausgangsbasis und heutigem main änderten sich nur Auftrags-/Prüfdokumente, kein Produktcode |
 | Historisches Journal | 1329 Kommentare bis `6929952724` vom 16.11.2026 technisch geladen und auftragsbezogen durchsucht. 130 wörtliche BQ-Task-IDs indexiert, zusätzlich reine Dokument-/Page-Aufträge erfasst. Das sind keine 130 Produktlieferungen. Anhang C nennt jeden dieser Einträge mit Originalkommentaren |
 | Aktuelle Steuerung | Peters spätere Einzelentscheidungen und Monitorauftrag aus diesem Chat sind in Abschnitt 3 berücksichtigt. Archiv-/Monitorabschluss bedeutet keine fachliche Annahme; Peters Ballregel bleibt unverändert |
 
 Der ergänzte Upload `auftrag-atlas-evaluationen-ziel1 (1).md` wurde gelesen. Seine Aufforderung, den kurzen Test11-Nachtrag anzulegen, ist durch den bereits vorhandenen [Nachtrag auf main][test11] erfüllt. Kein Doppelbericht und keine Rekonstruktion fehlender Erinnerungen.
 
-Die Auftragsfassung nach PR #205 wurde vor einer neuen Workerbeauftragung nachgelesen. **Code und Dokumente bleiben im Produktrepo; Aufgaben verweisen auf Zweig, Commit, Pfad und Zeile.** Es gibt keinen genehmigten Ausnahmeweg für Quelltextkopien. Die geplante öffentliche Ablage eines Forge-Eingabepakets in Agentarium wurde von der automatischen Freigabeprüfung abgelehnt und nicht ausgeführt; Peter untersagte sie anschließend ausdrücklich. Es wurde kein neuer Forge-Lauf ausgelöst. Die dafür erzeugten separaten Quelltextkopien wurden verworfen. Es werden keine zusätzlichen Archive oder Belegpakete veröffentlicht.
+Die aktuelle Auftragsfassung einschließlich Abschnitt 7a nach PR #207 und die Konzeptfortschreibung nach PR #208 wurden vor einer neuen Workerbeauftragung nachgelesen. **Code und Dokumente bleiben im Produktrepo; Aufgaben verweisen auf Zweig, Commit, Pfad und Zeile.** Es gibt keinen genehmigten Ausnahmeweg für Quelltextkopien. Die geplante öffentliche Ablage eines Forge-Eingabepakets in Agentarium wurde von der automatischen Freigabeprüfung abgelehnt und nicht ausgeführt; Peter untersagte sie anschließend ausdrücklich. Es wurde kein neuer Forge-Lauf ausgelöst. Die dafür erzeugten separaten Quelltextkopien wurden verworfen. Es werden keine zusätzlichen Archive oder Belegpakete veröffentlicht.
 
-Der konkrete technische Grund für den verworfenen Weg war die V2-Relay-Vorbereitung: Sie liest ihre benannten Eingaben aus dem Agentarium-Commit ([Vorbereitung Zeile 345][relay-read], [Dateiladen Zeile 361][relay-copy]). Das ist eine Werkzeugbeschränkung, keine Verpflichtung aus dem Produktauftrag. Sie wiegt nicht gegen Abschnitt 7. Die nachfolgende Planung verlangt einen direkten Ausführungsweg im Produktrepo; dessen Verfügbarkeit ist vor Dispatch zu bestätigen.
+Der konkrete technische Grund für den verworfenen Weg war die V2-Relay-Vorbereitung: Sie liest ihre benannten Eingaben aus dem Agentarium-Commit ([Vorbereitung Zeile 345][relay-read], [Dateiladen Zeile 361][relay-copy]). Das ist eine Werkzeugbeschränkung, keine Verpflichtung aus dem Produktauftrag. Sie wiegt nicht gegen Abschnitt 7. Die nachfolgende Planung begrenzt den direkten Forge-Versuch auf höchstens eine Stunde. Ein gezielter Versuch ist abgeschlossen: keine lokale Claude-Laufzeit, kein direkt aufrufbarer Claude-/Forge-Kanal und kein solcher Ausführungsworkflow im Produkt-main festgestellt. Peters ausdrücklich vorgegebene Alternative gilt: tatsächliche Entwicklungsworker lesen und ändern direkt im Produktrepo auf eigenen Zweigen und liefern PRs. Sie werden als ihre wirklichen nativen Instanzen benannt, nicht als fingierte Forge-Läufe. Die Relay-Frage ist zurückgestellt; dafür wird keine weitere Infrastrukturarbeit begonnen.
 
 ## 2. Altaufträge: belegter Stand und Verbleib
 
@@ -49,7 +59,7 @@ Die Gruppenkürzel dienen auch dem vollständigen Alt-ID-Index in Anhang C.
 
 | Eintrag | Quelle / belegter Stand | Einordnung | Verbleib / nächste Aktion | Verantwortlicher |
 |---|---|---|---|---|
-| Auftrag 1 · Grundlage | PR112, integrierter Commit `87dfa3f21a6144322c3ed6099e20f1db0a72fd52`, [Prüfbericht][a1] | Grundlagebasis erledigt; Beispielteil weiterhin erforderlich | Vorhandene zehn Quests erhalten. Zusätzliche sinnvolle ausgearbeitete Beispiele vor/mit M2; begründete Ausnahmen nach Lernnutzen, D4 | Forge; Sentinel unabhängig |
+| Auftrag 1 · Grundlage | PR112, integrierter Commit `87dfa3f21a6144322c3ed6099e20f1db0a72fd52`, [Prüfbericht][a1] | Auftrag 1 erledigt; Zusatzstory EV-3.3 weiterhin erforderlich | Vorhandene zehn Quests erhalten. Zusätzliche sinnvolle ausgearbeitete Beispiele als EV-3.3 vor/mit M2; begründete Ausnahmen nach Lernnutzen, D4 | Forge; Sentinel unabhängig |
 | Auftrag 2 · Lückenbalken | PR109, integrierter Commit `8c582817316a37438f1d617c3cfd027288b23d58`, [Prüfbericht][a2] | erledigt | Keine erneute Implementierung. Betroffene Wirkung in EV-7 schützen; 14-Tage-Rückschau nicht mit abgeschaffter Bestätigungsschwelle verwechseln | Sentinel |
 | Auftrag 3 · automatisch veröffentlichen | Auftragsdatei vom 03.11.: zurückgestellter Entwurf | weiter gültig, nicht im neuen Konzept | Zurückgestellt lassen; keine Aktivierung aus diesem Bericht | Atlas / Peter |
 | Importvorbereitung / Studie 2026.0005 | PR141/161, Prüfberichte 05./08.11. | erledigte Vorarbeit; CSV-zuerst-Vorschlag überholt | Altlesen EV-2.4; Datei/Chrome nur Ziel 2 bei Bedarf | Atlas / Forge |
@@ -82,7 +92,7 @@ Die Gruppenkürzel dienen auch dem vollständigen Alt-ID-Index in Anhang C.
 
 **Nummerierung entschieden:** Peter bestätigte EV-1 bis EV-7 als Teilpakete unter **2026.0005**. EV-Kennungen bleiben lesbare Arbeitsnamen, ältere BQ-IDs/Belege unverändert.
 
-Die folgenden Fragen wurden Peter einzeln vorgelegt und im Chat entschieden. Es ist keine erneute pauschale Genehmigung dieser Punkte nötig. In dieser PR werden die Beschlüsse dokumentiert; die übrigen Konzeptdateien werden nicht mitgeändert.
+Die folgenden Fragen wurden Peter einzeln vorgelegt und im Chat entschieden. Es ist keine erneute pauschale Genehmigung dieser Punkte nötig. PR #208 hat diese Beschlüsse bereits ins führende Konzept und die Epics übernommen, D4 als Story EV-3.3. In dieser PR wird der abgeglichene Stand dokumentiert; die übrigen Konzeptdateien werden nicht nochmals mitgeändert.
 
 | Punkt | Widerspruch / bisheriger Stand → Beschluss | Begründung / Folge | Genehmigung |
 |---|---|---|---|
@@ -94,7 +104,7 @@ Die folgenden Fragen wurden Peter einzeln vorgelegt und im Chat entschieden. Es 
 
 **Bereits im führenden Auftrag entschieden:** Playground statt altem Web-only-V1; Browser-Eltern erfassen manuell ohne KI; keine Providerkeys im Browser; Standard je Kriterium und ein bestätigter Ereignispfad; Chrome/Datei, zentraler KI-Dienst, TestFlight/Store nach Ziel 2. Die entgegenstehenden alten Issue-/OPS-Anweisungen sind nicht weiterzuführen.
 
-**Keine weitere Konzeptabweichung aus diesem Abgleich zur Genehmigung offen.** Die verbotene Kopienroute wird nicht als Ausnahme erneut beantragt. Eine künftig tatsächlich unvermeidbare Abweichung wäre nach Abschnitt 7 einmal mit konkretem Grund und Alternative vorzulegen. Der nächste Umsetzungspfad muss zunächst direkt im Produktrepo lesbar und ausführbar sein.
+**Keine weitere Konzeptabweichung aus diesem Abgleich zur Genehmigung offen.** Die verbotene Kopienroute wird nicht als Ausnahme erneut beantragt; die neuen Worker arbeiten entsprechend Peters Startvorgabe direkt auf Produktzweigen. Eine künftig tatsächlich unvermeidbare Abweichung wäre nach Abschnitt 7 einmal mit konkretem Grund und Alternative vorzulegen. Der nächste Umsetzungspfad muss zunächst direkt im Produktrepo lesbar und ausführbar sein.
 
 ## 4. Stand der roten Integrationsprüfung
 
@@ -109,7 +119,7 @@ K1 ist keine vollständige Ziel-1-Repositorybasis: Das bereinigte Paket hat kein
 
 ## 5. PR #198, Zweige und Integrationsbasis
 
-**Empfehlung:** heutiges Produkt-main `91b8e8ff797904092445e0ddf1e65ad373bde4ec` als Basis. Die seit dem unabhängig geprüften Stand hinzugekommenen Änderungen sind Dokumentation. Reader/Formular und passende Gerätebeiträge gezielt auf diese Basis übernehmen; kein pauschaler Gesamtmerge alter Zweige.
+**Integrationsbasis:** aktuelles Produkt-main `bb10457ade11490b785ab16e6f231c442e3affd2` nach PR #208. Die seit dem unabhängig geprüften Stand hinzugekommenen Änderungen sind Dokumentation. Reader/Formular und passende Gerätebeiträge gezielt auf diese Basis übernehmen; kein pauschaler Gesamtmerge alter Zweige.
 
 - [PR198][pr198] ist weiterhin offen und Draft, Kopf `f88e82ab013daf6f8a095224af6cd4d7ef0dc880`, tatsächliche PR-Basis PR192 (`e6d7ff4…`).
 - Gegen die fest geprüfte Hauptbasis bestehen genau zwei textuelle Konflikte: `package.json` und `tests/version.test.mjs`, Version 0.152.2-beta gegen 0.153.4-beta. Atlas bestätigte sie erneut gegen b78; PR205 ändert nur den Auftrag. Textuell sauberes Zusammenführen anderer Dateien beweist keine semantische Verträglichkeit.
@@ -122,17 +132,27 @@ Der heutige Funktionsbruch ist bereits lokalisiert: Alte Einzelbewertung/ableitu
 
 ## 6. Erster Umsetzungsabschnitt: EV-1, parallel EV-2 und EV-3
 
-**Plan, kein behaupteter Dispatch.** Ein eigener Worktree/Zweig je tatsächlichem Worker; Atlas integriert. Genau ein Halter für betroffene Bereiche von `index.html`. Aufgaben enthalten Ziel, Quellverweise, Dateigrenzen, vollständige AK, Testbefehle und Ausschlüsse. Keine Kopien in Agentarium oder andere Ablagen.
+**Ausführungsplan nach Peters Startfreigabe.** Statusmeldungen werden erst beim tatsächlichen Start fortgeschrieben. Ein eigener Worktree/Zweig je tatsächlichem Worker; Atlas integriert. Genau ein Halter für betroffene Bereiche von `index.html`. Aufgaben enthalten Ziel, Quellverweise, Dateigrenzen, vollständige AK, Testbefehle und Ausschlüsse. Keine Kopien in Agentarium oder andere Ablagen.
 
 | Aufgabe | Agent | Abhängigkeit / Quellbezug | Abnahme | Status / nächste Aktion |
 |---|---|---|---|---|
-| Ausführbare Produktübergabe herstellen | Atlas, regulärer Forge | Aktueller Auftrag §7; direkte Lesbarkeit des Produktzweigs und tatsächlicher Rückgabe-/Testweg | Benannte Instanz/Halter, vollständige lesbare Inputs, erlaubte Änderungen und realer Executor; ohne Quellkopien. Kein Testlauf oder Agentenstart bloß aus einer Definition ableiten | Noch nicht bestätigt. Verbotene Relaykopien verworfen; vor Workerstart direkten Produktweg klären |
-| EV-1.1/1.2: feste Kennung, Keychain-Diagnose | Forge, Swift/Paket-Worker | main plus Native-Quelle `feature/bq-evaluation-end-to-end-test11@f88…`; [Paketwerkzeug Zeile 34][paket], [Keychain Zeile 21][keychain] | Feste ID `de.bigquest.ipad`; Speichern/sofortiges Zurücklesen/Startcodes und Access Group, nie Schlüsselwert; −25300/−34018/−25308 unterscheidbar. Automatische Prüfung; N/N+1 und Neustart mit Peter | Noch nicht gestartet. Vollständigen konkreten Quell-/Ausführungsvertrag direkt im Produktrepo vorbereiten |
-| EV-1.3: Geräteverbindung; EV-1.4 nur bedingt | Forge, derselbe native Halter; Webanschluss in reserviertem UI-Zeitfenster | EV-1.1/1.2, PR194/US202-Referenzen | Nach bestätigter Bindung Zugangscode merken; bei fehlender Webbindung wiedergeben; ungültig/abgelaufen regulär verbinden ohne Schleife. RAM-Key einmal pro Sitzung ausschließlich nach verlangtem realen Negativbefund | Offen; Code-/Gerätebeleg nötig. Diagnoseergebnis nicht mit bewiesener Persistenz gleichsetzen |
-| EV-2.1–2.5: Kriteriendaten, Ableitung, ein Save | Forge, Daten-Worker; Archibald nur für konkrete verbleibende Vertragsfrage | [Ereignisse][ereignisse]/[Ableitung][ableitung], EV-Story-AK; gemeinsamer Katalogvertrag mit EV-3 | Kriterienstandard, bekannte Codes/Maximalzahl/Textprüfung, schwächere Aggregation ohne Verlust der Originalnoten; Altformate unverändert; Revision/Rücknahme, genau einmal, Kind-/Kontowechsel sperrt, zwei Geräte behalten beide Evaluationen | Offen; modular parallel zu EV-1/EV-3. Kein zweiter Speicherweg; Elternänderung der aggregierten Vorschläge im selben bestätigten Revisionsweg konkretisieren |
-| EV-3.1/3.2: Standardliste | Forge, Katalog-Worker | [Bestehende Standardtexte Zeile 6568][standard-text], Standards/Questbezüge auf gleichem Commit; mit EV-2 gemeinsamer Vertrag | Alle bekannten Codes, Fach und DE/EN, optionale existierende Quests; eindeutige Codes; alle Quest-Hauptstandards enthalten. Ohne Quest wählbar/kein Fokus, später passende Quest wirkt; Pflegeanleitung | Offen; parallel vorbereiten. Keine erfundenen zukünftigen Schulstandards. Umstellung der UI durch einzigen UI-Halter |
-| Zusätzliche Grundlage-Beispiele aus D4 | Forge, eigener begrenzter Inhalt-/Hilfenauftrag | Grundlagebasis PR112; [Beispielauswahl Zeile 3384][beispiele]; vor/mit M2. Quests: numbers, combos, wordprob, forces, units, graphs, sentences, words, anleitung, library | Sinnvolle andere Beispielaufgabe samt Lösungsweg, eigene Aufgabe bleibt offen; korrekte Hilfsbuchung; vorhandener Schulweg. Ausnahmen ohne Lernnutzen je Aufgabenart knapp begründen. Alte Pauschaltests gegen Stufe-1-Beispiele gezielt anpassen; sinnvolle rote Gegenprobe | Verbindlich eingeplant, noch nicht implementiert; Module/Inhalt parallel, UI nur im reservierten Zeitfenster. Nicht nach Ziel 2 verschieben |
-| Integration und unabhängiger Abschnittsnachweis | Atlas; Sentinel für Verhalten, Argus für einen benannten entscheidenden Risiko-/AK-Punkt | Exakter gemeinsamer Kandidat aus den genannten Produktzweigen | Vollständiges npm test, erforderliche Swift-CI am exakten Stand, neue Funktion sinnvoll gegen alten Zustand/gezielte Mutation rot, Prüfbericht. Geräte-AK nur mit Peter | Offen; keine neue Prüfer-/Cadence-Beteiligung behauptet. Cadence bewertet verfügbare tatsächliche Kosten/Ergebnisse am vorgesehenen Abschlussereignis |
+| Ausführbare Produktübergabe herstellen | Atlas | Aktueller Auftrag §7 und Peters Startvorgabe; aktuelles main nach PR208 | **Ein begrenzter Versuch, höchstens 1 Stunde.** Bei nicht verfügbarem direktem Forge-Weg eigene Produktzweige und PRs der tatsächlichen Worker verwenden; Relay-Frage zurückstellen. Keine zusätzliche Infrastruktur ohne Peters Zustimmung | Versuch 1 beendet: direkter Claude-/Forge-Kanal und lokale Claude-Laufzeit hier nicht verfügbar. Freigegebener Weg: native Entwicklungsworker direkt im Produktrepo, eigene Worktrees/Zweige/PRs; kein weiterer Relayversuch |
+| EV-1.1/1.2: feste Kennung, Keychain-Diagnose | Entwicklungsworker iPad, tatsächliche native Instanz | main plus Native-Quelle `feature/bq-evaluation-end-to-end-test11@f88…`; [Paketwerkzeug Zeile 34][paket], [Keychain Zeile 21][keychain] | Feste ID `de.bigquest.ipad`; Speichern/sofortiges Zurücklesen/Startcodes und Access Group, nie Schlüsselwert; −25300/−34018/−25308 unterscheidbar. Automatische Prüfung; N/N+1 und Neustart mit Peter | Start nach Ergänzung dieser PR; Quell-/Ausführungsvertrag direkt im Produktrepo, eigener Zweig und PR |
+| EV-1.3: Geräteverbindung; EV-1.4 nur bedingt | Derselbe iPad-Worker; Webanschluss in reserviertem UI-Zeitfenster | EV-1.1/1.2, PR194/US202-Referenzen | Nach bestätigter Bindung Zugangscode merken; bei fehlender Webbindung wiedergeben; ungültig/abgelaufen regulär verbinden ohne Schleife. RAM-Key einmal pro Sitzung ausschließlich nach verlangtem realen Negativbefund | Offen; Code-/Gerätebeleg nötig. Diagnoseergebnis nicht mit bewiesener Persistenz gleichsetzen |
+| EV-2.1–2.5: Kriteriendaten, Ableitung, ein Save | Entwicklungsworker Daten; konkrete Vertragsfragen an Atlas, bei Bedarf Archibald | [Ereignisse][ereignisse]/[Ableitung][ableitung], EV-Story-AK; gemeinsamer Katalogvertrag mit EV-3 | Kriterienstandard, bekannte Codes/Maximalzahl/Textprüfung, schwächere Aggregation ohne Verlust der Originalnoten; Altformate unverändert; Revision/Rücknahme, genau einmal, Kind-/Kontowechsel sperrt, zwei Geräte behalten beide Evaluationen | Offen; modular parallel zu EV-1/EV-3. Kein zweiter Speicherweg; Elternänderung der aggregierten Vorschläge im selben bestätigten Revisionsweg konkretisieren |
+| EV-3.1/3.2: Standardliste | Entwicklungsworker Katalog | [Bestehende Standardtexte Zeile 6568][standard-text], Standards/Questbezüge auf gleichem Commit; mit EV-2 gemeinsamer Vertrag | Alle bekannten Codes, Fach und DE/EN, optionale existierende Quests; eindeutige Codes; alle Quest-Hauptstandards enthalten. Ohne Quest wählbar/kein Fokus, später passende Quest wirkt; Pflegeanleitung | Offen; parallel vorbereiten. Keine erfundenen zukünftigen Schulstandards. Umstellung der UI durch einzigen UI-Halter |
+| EV-3.3: Grundlage-Beispiele | Eigener begrenzter Entwicklungsauftrag nach Katalog-/UI-Zeitfenster | Grundlagebasis PR112; [Beispielauswahl Zeile 3384][beispiele]; vor/mit M2. Quests: numbers, combos, wordprob, forces, units, graphs, sentences, words, anleitung, library | Sinnvolle andere Beispielaufgabe samt Lösungsweg, eigene Aufgabe bleibt offen; korrekte Hilfsbuchung; vorhandener Schulweg. Ausnahmen ohne Lernnutzen je Aufgabenart knapp begründen. Alte Pauschaltests gegen Stufe-1-Beispiele gezielt anpassen; sinnvolle rote Gegenprobe | Verbindlich eingeplant, noch nicht implementiert; Module/Inhalt parallel, UI nur im reservierten Zeitfenster. Nicht nach Ziel 2 verschieben |
+| Integration und unabhängiger Abschnittsnachweis | Atlas; Sentinel für Verhalten, Argus für einen benannten entscheidenden Risiko-/AK-Punkt | Exakter gemeinsamer Kandidat aus den genannten Produktzweigen | Vollständiges npm test, erforderliche Swift-CI am exakten Stand, neue Funktion sinnvoll gegen alten Zustand/gezielte Mutation rot, Prüfbericht. Geräte-AK nur mit Peter | Offen; keine neue Prüfer-/Cadence-Beteiligung behauptet. Argus beginnt mit der Zweckfrage; Cadence liest die täglichen Statuszeilen und meldet Haltepunkte direkt an Peter gemäß Abschnitt 7a |
+
+### Regeln für Argus und Cadence bei jedem Einsatz
+
+Abschnitt 7a des aktuellen Auftrags hat in diesem Projekt Vorrang vor ihren allgemeinen Regeln. Atlas gibt den jeweils betroffenen Teil von Abschnitt 7a und die gemeinsamen Regeln **bei jedem Einsatz wörtlich** mit; die konkrete Quelle wird über main-Commit, Pfad und Zeile gebunden.
+
+- **Argus beginnt jede Prüfung mit der Zweckfrage:** Welches Abnahmekriterium aus den Ziel-1-Epics oder welche ausdrücklich genehmigte Aufgabe erfüllt die Arbeit? „Keines“ ist ein Befund. Zusätzlich prüft er die Haltepunkte aus Abschnitt 6 und die Ein-Quellen-Regel aus Abschnitt 7. Weitere Belege können einen Zweck-/Haltebefund nicht ausgleichen.
+- **Cadence liest täglich die drei Statuszeilen.** Direkte Meldung an Peter ohne Atlas-Freigabe bei zweimal keinem neuen Abnahmekriterium, einer Story länger als einem Arbeitstag ohne Merge, dem dritten Anlauf eines Problems, Arbeit ohne Story-/Auftragsbezug oder ausbleibendem Status. Meldung: was auffällt, seit wann, Empfehlung weitermachen/anhalten/zurückstellen.
+- **Beide dürfen Peter jederzeit direkt ansprechen.** Atlas verhindert, genehmigt oder lenkt diese Meldungen nicht um. Beide widersprechen auch dem Mandat, wenn es nicht zu Ziel 1 oder einer genehmigten Aufgabe passt.
+
+Die tägliche Cadence-Lesung ist eine Verpflichtung im Plan, **kein behaupteter bereits laufender Dienst**. Eine direkte tägliche Cadence-Ausführung ist in dieser Sitzung noch nicht nachgewiesen. Dieser offene Aufruf-/Meldeweg bleibt ausdrücklich sichtbar; die Produktworker werden deshalb nicht in eine neue Relay-/Infrastrukturrunde geschickt. Bei einem tatsächlichen Einsatz gelten die obigen Regeln und der direkte Meldeweg unverändert.
 
 **Anschließende Reihenfolge unverändert:** EV-4 → EV-5 → EV-6 → EV-7. Abschluss erst mit protokollierter iPad-Kette und manueller Browserparität. Kein Erfolg allein aus CI. Grundlagebeispiele vor/mit M2; bestehender ehrlicher Balken wird erhalten.
 
@@ -140,15 +160,15 @@ Für die Durchführung gelten die aktuellen Halteregeln: drei erfolglose Anläuf
 
 ## 7. Tatsächlich verbleibende Arbeiten, priorisiert
 
-1. Peters Prüfung dieser Berichts-PR gegen das Konzept; keine Wiederholung der bereits entschiedenen D1–D5. Eigene Story-AK und Freigaben bleiben unverändert.
-2. Direkten technischen Entwicklungsweg im Produktrepo vor Dispatch bestätigen und konkrete Aufgaben mit ausschließlich Quellverweisen bereitstellen. Keine neue allgemeine ACCESS-/Architekturstudie und kein erneuter Kopien-Ausnahmeversuch nach der aktuellen Ablehnung.
+1. Diese Ergänzung um Kurzfassung, Abschnitt 7a und begrenzten direkten Entwicklungsversuch; Peters Prüfung der Berichts-PR gegen das aktuelle Konzept; keine Wiederholung der bereits entschiedenen D1–D5. Eigene Story-AK und Freigaben bleiben unverändert.
+2. Den nach einem negativen begrenzten Versuch ausdrücklich freigegebenen direkten Workerweg nutzen: eigene Worktrees/Zweige/PRs im Produktrepo und konkrete Aufträge mit Quellverweisen. Relay-Frage zurückgestellt; keine weitere Infrastrukturarbeit ohne neue Zustimmung.
 3. EV-1 parallel EV-2/EV-3, zusätzliche sinnvolle Beispiele. Kind-/Revisions-/Entzugs- und bestätigten Offline-Schutz dem tatsächlich verwendeten Pfad zuordnen; vorhandenen ROT-Auftrag respektieren.
 4. EV-4, EV-5, EV-6 und anschließende durchgehende Übungswirkung EV-7. Sicherheitsbefunde nicht durch Archivierung erledigen; reale Familien-/Gerätetests nur im beschriebenen autorisierten Umfang.
 5. Ziel 2 bleibt offen und getrennt: M5 Chrome/Text/Datei bei Bedarf, M6 Parser, M7 KI-Dienst samt vorhandenen Dienst-/US403-/Betriebsbeiträgen, M8 tokenfreie Fremdfamilienanmeldung/TestFlight, M9 Store. Neue Infrastruktur oder App-Veröffentlichung sind nicht Bestandteil dieser PR.
 
 ## 8. Prüfung dieses Berichts
 
-Geprüft wurden Quellen/Originalrückgaben und die beschriebenen Commit-/Branchbeziehungen. PR198-Kopf und heutiges main wurden nochmals gelesen; PR205 ist gemergt und betrifft ausschließlich den Auftrag. Keine neue Produkt-, Browser-, Swift- oder Geräteprüfung. Historische Testergebnisse bleiben ausdrücklich historische Ergebnisse. Markdown-Verweise, Tabellenstruktur, 130 eindeutige historische Journal-IDs und Whitespace wurden kontrolliert. Diese PR enthält genau einen Dokumentationspfad.
+Geprüft wurden Quellen/Originalrückgaben und die beschriebenen Commit-/Branchbeziehungen. PR198-Kopf und heutiges main wurden nochmals gelesen; PR205/207 ändern den Auftrag, PR208 übernimmt die entschiedenen Konzeptpunkte. Gegenüber der geprüften Produktbasis sind dies Dokumentänderungen. Keine neue Produkt-, Browser-, Swift- oder Geräteprüfung. Historische Testergebnisse bleiben ausdrücklich historische Ergebnisse. Markdown-Verweise, Tabellenstruktur, 130 eindeutige historische Journal-IDs und Whitespace wurden kontrolliert. Diese PR enthält genau einen Dokumentationspfad.
 
 Die drei unabhängigen Phase-A-Beiträge sind tatsächlich erfolgt; reguläre neue Forge-/Archibald-/Cadence-Läufe sind nicht erfolgt. Kein Erfolg, Kostenwert, Workerbeginn oder Kundenannahme wurde aus einem Plan abgeleitet. Native Sitzungskosten unbekannt; kein bezahlter neuer Claude-Lauf gestartet.
 
@@ -159,10 +179,10 @@ Die drei unabhängigen Phase-A-Beiträge sind tatsächlich erfolgt; reguläre ne
 - Originalrollen-/Teilauftragskommentare: vollständiger Index in Anhang C. Zusätzliche nur separat zurückgegebene US403-/OPS01-/ROT-Aufträge sind in Abschnitt 2 ausdrücklich mit ihren Nachweisgrenzen geführt.
 - Für die hier verwendeten Produktcodeverweise ist main `91b8e8ff797904092445e0ddf1e65ad373bde4ec` der feste Bezug; Native-Quellen liegen noch am Kopf `f88e82ab013daf6f8a095224af6cd4d7ef0dc880` des Test11-Zweigs. Es wird kein Quelltext in diesen Bericht kopiert.
 
-[auftrag]: https://github.com/pahlborn/bis-school-app_src/blob/91b8e8ff797904092445e0ddf1e65ad373bde4ec/docs/konzept/auftrag-atlas-evaluationen-ziel1.md#L154
-[konzept]: https://github.com/pahlborn/bis-school-app_src/blob/91b8e8ff797904092445e0ddf1e65ad373bde4ec/docs/konzept/evaluationen-uebernahme.md
-[epics]: https://github.com/pahlborn/bis-school-app_src/blob/91b8e8ff797904092445e0ddf1e65ad373bde4ec/docs/konzept/evaluationen-ziel1-epics.md
-[summary]: https://github.com/pahlborn/bis-school-app_src/blob/91b8e8ff797904092445e0ddf1e65ad373bde4ec/docs/konzept/evaluationen-ziel1-zusammenfassung.md
+[auftrag]: https://github.com/pahlborn/bis-school-app_src/blob/bb10457ade11490b785ab16e6f231c442e3affd2/docs/konzept/auftrag-atlas-evaluationen-ziel1.md#L154
+[konzept]: https://github.com/pahlborn/bis-school-app_src/blob/bb10457ade11490b785ab16e6f231c442e3affd2/docs/konzept/evaluationen-uebernahme.md
+[epics]: https://github.com/pahlborn/bis-school-app_src/blob/bb10457ade11490b785ab16e6f231c442e3affd2/docs/konzept/evaluationen-ziel1-epics.md
+[summary]: https://github.com/pahlborn/bis-school-app_src/blob/bb10457ade11490b785ab16e6f231c442e3affd2/docs/konzept/evaluationen-ziel1-zusammenfassung.md
 [eltern]: https://github.com/pahlborn/bis-school-app_src/blob/91b8e8ff797904092445e0ddf1e65ad373bde4ec/docs/konzept/elternbereich.md#L273
 [a1]: https://github.com/pahlborn/bis-school-app_src/blob/91b8e8ff797904092445e0ddf1e65ad373bde4ec/docs/pruefung/2026-11-03-auftrag1-grundlage.md
 [a2]: https://github.com/pahlborn/bis-school-app_src/blob/91b8e8ff797904092445e0ddf1e65ad373bde4ec/docs/pruefung/2026-11-03-auftrag2-bestaetigt.md
