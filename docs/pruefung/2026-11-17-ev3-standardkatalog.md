@@ -87,3 +87,49 @@ Die feste Tabellenaufteilung und der erlaubte Wortumbruch beseitigen den tatsäc
 Datenmodell, Katalogvertrag und native Quellen sind unverändert. Keine neue EV4-Auswahl oder Formularfunktion, keine neue Lückenregel, keine Veröffentlichung, kein Main-Merge und keine Geräteabnahme. Reale Ausführungskosten sind **unbekannt**; es liegt keine belastbare Kostentelemetrie vor.
 
 Nach diesem vollständigen Lauf wurden nur dieses Prüfprotokoll und die freigegebene Aussage zu Dokumentupdates in bestehenden Code-PRs im EV-1-Prüfbericht korrigiert. Der Arbeitsbaum war während des Laufs sauber, der geprüfte Kopf blieb `91bf85b`. Produkt- und Testgleichheit des anschließenden Berichtskopfs wird durch `git diff --name-only 91bf85b HEAD` (nur die beiden Berichte) und eine leere Differenz aller übrigen Dateien belegt. Kein weiterer Gesamtlauf und keine Produktänderung nach diesem Nachweis; die gemeinsame Draft-PR wird einmalig auf dem abschließenden Berichtskopf eröffnet.
+
+## Zweite begrenzte Integrationskorrektur A2, 17.11.2026
+
+### Problem und primäre Quellen
+
+Basis `d929c1b2b9f835a850dc162771ac7d68f82b6111`, Produktstand `91bf85b`. Die vorstehenden **925/925 lokalen PASS bleiben historische lokale Ergebnisse**, keine erfolgreiche gemeinsame CI-Abnahme. Die tatsächlichen Logs von Run `44126507182` wurden in dieser A2-Runde direkt mit dem GitHub-Werkzeug gelesen:
+
+- [Job 134191652015, verify (4)](https://github.com/pahlborn/bis-school-app_src/actions/runs/44126507182/job/134191652015): alter 60-Aufgaben-EV3-Test weiterhin **336/320 px**, Exit 1.
+- [Job 134191651900, verify (6)](https://github.com/pahlborn/bis-school-app_src/actions/runs/44126507182/job/134191651900): neuer F2-Test ebenfalls **336/320 px**, obwohl sein enger Scan von Rubrik/Links keine Überstände meldete; Exit 1.
+
+Die Logs belegen Ubuntu 24.04.5, Node 22.23.4 und Playwright Headless Shell 141.0.7390.37. Das genaue dort verwendete Fontmapping ist weiterhin **unbekannt**. Warten auf `fonts.ready` allein war keine Korrektur des verbleibenden CSS-Defekts.
+
+Zusätzlich sprengte ein gültiger, über `eventHook` gespeicherter Titel aus `Synthetic-` plus 150 `T` (genau 160 Zeichen) die Aufgabenkarte: Dokument **1378/320 px**, Titelzelle 188 px breit, Inhalt 1312 px, Textrechteck bis 1377,9375 px. Dieser von Sentinel gemeldete Restfehler wurde in A2 selbst reproduziert.
+
+### Eingegrenzte Ursache und Umsetzung
+
+Der vollständige Scan des sichtbaren Eltern-DOMs erfasst Boxen und Elternpfade, Scroll-/Clientbreiten, Textrechtecke sowie Pseudoinhalte. Im unveränderten Produktindex entsteht mit dem vorhandenen Testschriftprofil `:root{--body:'DejaVu Sans';--display:'DejaVu Sans'}` exakt **336/320 px**: `label` und `select[data-psf=sort]` reichen von x54 bis x336, sind 282 px breit, obwohl `.psfilters` nur 212 px bietet. `min-width:auto` des Flexlabels erhält die intrinsische Mindestbreite des Selects. Sein vorhandenes `max-width:100%` bezieht sich dabei auf das zu große Label. Mit lokalen Standardmetriken war dasselbe Label bereits 252 px breit und überragte seinen Container, blieb aber innerhalb des Viewports. Das erklärt, warum eine reine Viewportprüfung lokal grün sein konnte.
+
+Argus meldete unabhängig dieselbe Geometrie und eine wirksame reine In-Memory-Gegenprobe. Das ist ein deterministisch belegter CSS-Zusammenhang; daraus wird **keine Behauptung über die konkrete CI-Schrift** abgeleitet.
+
+Produktänderung ausschließlich in zwei bestehenden Regeln:
+
+- `.psfilters label`: `min-width:0;max-width:100%`. Die vorhandene Begrenzung des Selects wirkt danach relativ zum begrenzten Label.
+- Mobile `.pstab>tbody>tr.psrow>td`: `overflow-wrap:anywhere` für den vollständigen Titel in der Aufgabenkarte.
+
+Keine Kürzung, kein globales Verstecken von Überlauf, keine Änderung von Datenmodell, Rubrik-/Linkkorrektur, F1, Test-11-N-Behandlung oder Formularumfang. Tests prüfen beide Sprachen, native Standardmetriken und das reproduzierbare DejaVu-Profil, die Grenze des **Filtercontainers**, unveränderte vollständige Optionstexte und tatsächliche Auswahlbedienung.
+
+### Eigene Prüfungen vor dem gebündelten Push
+
+Tatsächliche Browser wie A1: Chromium **141.0.7390.37** und **156.0.8078.79**. Nur vorhandene lokale Browser/Schriften und ausdrücklich erfundene Produkt-Testdaten, keine neue Abhängigkeit.
+
+| Prüfung | Ergebnis |
+|---|---|
+| Unveränderter Produktindex `d929c1b`, neue aktuelle Gegenfälle EV3/F2/Titel auf Chromium 141 | **3/3 rot**, Exit 1: zweimal 336/320 im DejaVu-Profil, Titel 1378/320 |
+| Dieselben Gegenfälle auf Chromium 156 | **3/3 rot**, Exit 1, gleiche Geometrie |
+| Finaler Fokus EV3/F1/F2/unmapped/Titel auf Chromium 141 | **5/5 bestanden**, Exit 0, 33155 ms |
+| Derselbe finale Fokus auf Chromium 156 | **5/5 bestanden**, Exit 0, 33667 ms |
+| `git diff --check` | bestanden |
+
+Befehl: `CHROMIUM_PATH=<Browserpfad aus A1> node --test --test-name-pattern='EV3:|integration F|integration A2:' tests/schulische-einstufungen.test.mjs tests/evaluation-eltern-browser.test.mjs`. Stabiler lokaler Produkt-/Testcommit: `1d522390199847de5caa3acc7af15c4d05a77471`; dieser Berichtsnachtrag verändert danach keine Produkt- oder Testdatei.
+
+### Gesamtsuite, Grenzen und Kosten
+
+Für diese zwei CSS-Ergänzungen ist nach ausdrücklicher Aufgabenbegrenzung **kein weiterer doppelter lokaler Volltest** vorgesehen. Die vollständige bestehende GitHub-CI auf dem abschließenden Kopf von PR #212 ist die noch ausstehende Gesamtsuite. Code und abschließende lokale Berichtsdaten werden gemeinsam einmal gepusht; ihr tatsächliches CI-Ergebnis wird anschließend an Atlas und in der PR gemeldet, ohne Berichtspush während des Laufs. Alle vorstehenden lokalen PASS und primären CI-/QA-FAIL bleiben erhalten.
+
+Exaktes CI-Fontmapping und reale Ausführungskosten bleiben unbekannt. Kein Main-Merge, Deployment oder Gerätetest. Bei einem Scheitern dieser gezielten zweiten Korrektur erfolgt ein Checkpoint mit Alternativen statt einer dritten blinden Reparaturrunde.
