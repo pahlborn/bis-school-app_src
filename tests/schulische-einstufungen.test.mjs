@@ -15,6 +15,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { appLesen } from '../werkzeug/module.mjs';
+import { SCHOOL_STANDARD_CATALOG } from '../src/module/standardkatalog.mjs';
 import { browserStarten, appServer, appOeffnen } from './app-hilfen.mjs';
 import { konto, kontenServer, oeffnen, anmelden, passwortSetzen } from './konten-hilfen.mjs';
 
@@ -84,6 +85,32 @@ async function filtern(page, f) {
   if (f.weak !== undefined) await kapitel(page).locator('input[data-psf="weak"]').setChecked(f.weak);
 }
 const fmtDe = (d) => d.split('-').reverse().join('.');
+
+test('EV3: alle Lernbereiche nach Fach, ohne Quest mit Hinweis, DE/EN und per Tastatur bei 320 px', async () => {
+  const { ctx, page, fehler } = await oeffnen(browser, server, { viewport: { width: 320, height: 800 } });
+  await kindAnmelden(page); await erwachsen(page, 'papa');
+  for (const lang of ['de', 'en']) {
+    await page.locator(`.phdr [data-plang="${lang}"]`).click();
+    await kapitelOeffnen(page);
+    const catalog = page.locator('#pStandardCatalog');
+    await catalog.locator('summary').focus();
+    await page.keyboard.press('Enter');
+    assert.equal(await catalog.evaluate(element => element.open), true, 'native Tastaturbedienung');
+    const codes = await catalog.locator('[data-standard-code]').evaluateAll(elements => elements.map(element => element.dataset.standardCode));
+    assert.deepEqual(codes.slice().sort(), Object.keys(SCHOOL_STANDARD_CATALOG).sort());
+    assert.equal(new Set(codes).size, codes.length);
+    for (const [code, entry] of Object.entries(SCHOOL_STANDARD_CATALOG)) {
+      const row = catalog.locator(`[data-standard-code="${code}"]`);
+      assert.ok((await row.innerText()).includes(entry.text[lang]), `${code}: ${lang}`);
+      assert.equal(await row.evaluate(element => element.closest('[data-standard-subject]').dataset.standardSubject), entry.subject);
+    }
+    assert.match(await catalog.locator('[data-standard-code="E-S1"]').innerText(), lang === 'de' ? /wird angezeigt, keine Übung in Big Quest/ : /shown here, no exercise in Big Quest/);
+    const width = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
+    assert.ok(width[0] <= width[1], `320 px ohne Überlauf: ${width}`);
+  }
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
 
 test('T1–T3 table, filters, sorting and fixed outline (German, 60 assignments)', async () => {
   const { ctx, page, fehler } = await oeffnen(browser, server, { viewport: { width: 1000, height: 900 } });

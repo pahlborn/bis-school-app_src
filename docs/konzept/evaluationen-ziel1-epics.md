@@ -151,6 +151,16 @@ Stand 17.11.2026 · Grundlage: `docs/konzept/evaluationen-uebernahme.md` (Befund
   - Jeder Hauptstandard einer Quest steht in der Liste.
 - Kurze Anleitung „Standard ergänzen“ im Konzept.
 
+#### Pflege: Standard ergänzen
+
+Die einzige gepflegte Liste ist `src/module/standardkatalog.mjs` (`SCHOOL_STANDARD_CATALOG`). Einen **bekannten** Code dort einmal ergänzen: `subject` ist der Schlüssel aus `SUBJECTS` in `index.html`, `text` enthält Alltagssprache in `de` und `en`, `questRanks` die vorhandenen Quest-IDs mit Rang. Ohne Quest bleibt `questRanks: {}`. Keine Standards oder Quests auf Vorrat erfinden.
+
+Rang `0` bedeutet Hauptstandard einer Quest, `1`, `2`, … deren Nebenstandards. Die Ränge je Quest müssen eindeutig und lückenlos sein. Nur ein Hauptstandard kann nach der bestehenden Regel eine Lücke auslösen; einen Nebenbezug nicht zur Freigabe einer Übung hochstufen. Beim Ergänzen einer neuen Quest ihren Hauptstandard mit Rang `0` zuordnen. Die bisherige Vorschau-/Freigaberegel für Quests gilt weiter.
+
+`quests` (String-IDs), `STANDARDS` und `STANDARD_TEXT`/`STANDARD_TEXT_EN` werden abgeleitet und **nicht separat gepflegt**. `schoolStandardInfo(code)` liefert einen bekannten Eintrag oder `null`, auch ein Eintrag ohne Quest ist gültig. Die Fachzuordnung erhält die Elternansicht: etwa `M-M1` unter `science`, `E-W2` unter `reading`.
+
+Prüfen: `node --test tests/module/standardkatalog.test.mjs`, danach die betroffenen Browserprüfungen und `npm test`. Die Tests prüfen Sprachen, eindeutige Codes/Ränge, bestehende Fächer/Quests und die erhaltene Haupt-/Nebenwirkung. Die Leseliste im Kapitel „Schulische Einstufungen“ wird daraus automatisch ergänzt. Die Auswahl und Speicherung je Kriterium kommen mit EV-2/EV-4; das alte Einzelformular wird hier nicht vorgezogen.
+
 ### EV-3.3 Beispiele für Grundlage-Aufgaben (D4)
 > Als **Kind** möchte ich bei einer Grundlage-Aufgabe ein passendes, vorgerechnetes Beispiel sehen können, damit ich den Lösungsweg verstehe.
 
