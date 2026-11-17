@@ -2,6 +2,8 @@
 
 Stand 17.11.2026 · Status: **Entwurf, Entscheidungen O1–O5 von Peter am 17.11. getroffen** · Grundlage: Gespräch Peter/Claude vom 16.–17.11., Prototyp-Zweige bis Test 11 (`feature/bq-evaluation-end-to-end-test11`, 0.153.4-beta), KI-Spike (`spike/bq-schulbewertung-ki`), Plan „BQ-KI Elternintegration“ (13.11.), Machbarkeitsstudie Schulbewertungen (08.11.).
 
+
+**Weiterführend:** Zusammenfassung für Dokumentation und App-Vorstellung: `evaluationen-ziel1-zusammenfassung.md` · Epics und User Stories für Ziel 1: `evaluationen-ziel1-epics.md`
 ---
 
 ## 0. Entscheidungen von Peter (16.–17.11.)
