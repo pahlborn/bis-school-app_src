@@ -344,6 +344,51 @@ async function storeIntegrationAssessment(page, payload) {
   assert.deepEqual(event.payload.assessment.criteria, payload.assessment.criteria, 'original criteria persisted unchanged');
   return event;
 }
+
+async function checkSchoolFilterLayout(page) {
+  const sort = page.locator('select[data-psf="sort"]');
+  const options = await sort.locator('option').allTextContents();
+  // DejaVu exposes the select's intrinsic minimum width; default metrics must fit too.
+  for (const profile of ['DejaVu Sans', '']) {
+    await page.evaluate(profile => {
+      for (const key of ['--body', '--display']) profile ? document.documentElement.style.setProperty(key, '"' + profile + '"') : document.documentElement.style.removeProperty(key);
+    }, profile);
+    await page.evaluate(async () => { await document.fonts.ready; await new Promise(requestAnimationFrame); await new Promise(requestAnimationFrame); });
+    const layout = await parentLayout(page);
+    assert.ok(layout.document <= layout.viewport, `320 px (${profile || 'default'}): ${JSON.stringify(layout)}`);
+    const controls = await page.locator('.psfilters label, .psfilters select').evaluateAll(elements => elements.map(e => {
+      const r = e.getBoundingClientRect(), parent = e.closest('.psfilters').getBoundingClientRect();
+      return { tag: e.tagName, field: e.dataset.psf || '', left: r.left, right: r.right, parentLeft: parent.left, parentRight: parent.right };
+    }));
+    assert.ok(controls.every(e => e.left >= e.parentLeft && e.right <= e.parentRight), `filter controls fit their parent: ${JSON.stringify(controls)}`);
+    assert.deepEqual(await sort.locator('option').allTextContents(), options, 'all option texts remain intact');
+    await sort.selectOption('subject');
+    assert.equal(await sort.inputValue(), 'subject');
+    await sort.selectOption('date');
+  }
+}
+
+async function parentLayout(page) {
+  return page.evaluate(() => {
+    const viewport = innerWidth, path = e => e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (typeof e.className === 'string' && e.className ? '.' + e.className.trim().replace(/\s+/g, '.') : '') + (e.dataset?.l ? '[data-l="' + e.dataset.l + '"]' : '') + (e.dataset?.psf ? '[data-psf="' + e.dataset.psf + '"]' : '');
+    const visible = e => e.getClientRects().length && e.checkVisibility({ checkVisibilityCSS: true });
+    const elements = [...document.body.querySelectorAll('*')].filter(visible);
+    const boxes = elements.filter(e => e.getBoundingClientRect().right > viewport || e.scrollWidth > e.clientWidth).map(e => {
+      const r = e.getBoundingClientRect(), css = getComputedStyle(e);
+      return { element: path(e), parent: path(e.parentElement), left: r.left, right: r.right, scroll: e.scrollWidth, client: e.clientWidth, minWidth: css.minWidth, width: css.width, font: css.font, whiteSpace: css.whiteSpace, overflowWrap: css.overflowWrap,
+        before: getComputedStyle(e, '::before').content, after: getComputedStyle(e, '::after').content };
+    }).sort((a, b) => b.right - a.right).slice(0, 25);
+    const texts = [], walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      if (!node.textContent.trim() || !visible(node.parentElement)) continue;
+      const range = document.createRange(); range.selectNodeContents(node);
+      for (const r of range.getClientRects()) if (r.right > viewport) texts.push({ element: path(node.parentElement), text: node.textContent.trim().slice(0, 120), left: r.left, right: r.right });
+    }
+    return { document: document.documentElement.scrollWidth, viewport, rootClient: document.documentElement.clientWidth, bodyClient: document.body.clientWidth, bodyScroll: document.body.scrollWidth, boxes, texts: texts.slice(0, 25) };
+  });
+}
+
 async function settledSchoolLayout(page) {
   // Font metrics and the layout after this render must be settled before measuring.
   await page.evaluate(async () => {
@@ -408,9 +453,10 @@ test('integration F2: stored long criteria, rubric and parent links fit 320 px a
     assert.equal(await button.getAttribute('aria-expanded'), 'true');
     const details = P.page.locator(`[data-psdetrow="${await button.getAttribute('data-psdet')}"]`);
     await settledSchoolLayout(P.page);
+    await checkSchoolFilterLayout(P.page);
     const width = await P.page.evaluate(() => ({ document: document.documentElement.scrollWidth, viewport: window.innerWidth,
       overflowing: [...document.querySelectorAll('.psrub, .psrub th, .psrub td, a.pgo')].filter(e => e.getClientRects().length && e.getBoundingClientRect().right > innerWidth).map(e => ({ tag: e.tagName, class: e.className, right: e.getBoundingClientRect().right })) }));
-    assert.ok(width.document <= width.viewport, `320 px without overflow: ${JSON.stringify(width)}`);
+    assert.ok(width.document <= width.viewport, `320 px without overflow: ${JSON.stringify(await parentLayout(P.page))}`);
     assert.deepEqual(width.overflowing, [], 'rubric and links stay inside the viewport');
     assert.deepEqual(await details.locator('.psrub tbody tr td:first-child').allTextContents(), INTEGRATION_CRITERIA.map(c => c.criterion), 'long stored text remains complete');
     const cells = await details.locator('.psrub td').evaluateAll(elements => elements.map(e => [e.scrollWidth, e.clientWidth]));
@@ -452,6 +498,26 @@ test('integration F1 unmapped: Test-11 history retains criterion grades without 
     assert.match(await rows.nth(0).innerText(), lang === 'de' ? /Darüber hinaus/ : /Going beyond/);
     assert.match(await rows.nth(1).innerText(), lang === 'de' ? /Wird sicherer/ : /Getting there/);
     assert.match(await rows.nth(3).innerText(), lang === 'de' ? /Keine Einstufung/ : /Not rated/);
+  }
+  assert.deepEqual(P.errors, []);
+});
+
+
+test('integration A2: a stored 160-character assessment title wraps completely in the task card DE/EN at 320 px', async t => {
+  const { P } = await evaluationFamily(t, { viewport: { width: 320, height: 800 } });
+  await elternSeite(P.page, 'school');
+  const payload = integrationPayload(); payload.title = 'Synthetic-' + 'T'.repeat(150);
+  assert.equal(payload.title.length, 160);
+  await storeIntegrationAssessment(P.page, payload);
+  for (const lang of ['de', 'en']) {
+    await P.page.locator(`.phdr [data-plang="${lang}"]`).click();
+    await elternSeite(P.page, 'school');
+    await settledSchoolLayout(P.page);
+    const cell = P.page.locator('.psrow td').filter({ hasText: payload.title });
+    assert.equal(await cell.textContent(), payload.title, 'accepted title is preserved completely');
+    const layout = await parentLayout(P.page);
+    assert.ok(layout.document <= layout.viewport, `160-character title: ${JSON.stringify(layout)}`);
+    assert.ok(await cell.evaluate(e => e.scrollWidth <= e.clientWidth), 'title text wraps within its task card');
   }
   assert.deepEqual(P.errors, []);
 });

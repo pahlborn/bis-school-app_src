@@ -86,6 +86,51 @@ async function filtern(page, f) {
 }
 const fmtDe = (d) => d.split('-').reverse().join('.');
 
+
+async function checkSchoolFilterLayout(page) {
+  const sort = page.locator('select[data-psf="sort"]');
+  const options = await sort.locator('option').allTextContents();
+  // DejaVu exposes the select's intrinsic minimum width; default metrics must fit too.
+  for (const profile of ['DejaVu Sans', '']) {
+    await page.evaluate(profile => {
+      for (const key of ['--body', '--display']) profile ? document.documentElement.style.setProperty(key, '"' + profile + '"') : document.documentElement.style.removeProperty(key);
+    }, profile);
+    await page.evaluate(async () => { await document.fonts.ready; await new Promise(requestAnimationFrame); await new Promise(requestAnimationFrame); });
+    const layout = await parentLayout(page);
+    assert.ok(layout.document <= layout.viewport, `320 px (${profile || 'default'}): ${JSON.stringify(layout)}`);
+    const controls = await page.locator('.psfilters label, .psfilters select').evaluateAll(elements => elements.map(e => {
+      const r = e.getBoundingClientRect(), parent = e.closest('.psfilters').getBoundingClientRect();
+      return { tag: e.tagName, field: e.dataset.psf || '', left: r.left, right: r.right, parentLeft: parent.left, parentRight: parent.right };
+    }));
+    assert.ok(controls.every(e => e.left >= e.parentLeft && e.right <= e.parentRight), `filter controls fit their parent: ${JSON.stringify(controls)}`);
+    assert.deepEqual(await sort.locator('option').allTextContents(), options, 'all option texts remain intact');
+    await sort.selectOption('subject');
+    assert.equal(await sort.inputValue(), 'subject');
+    await sort.selectOption('date');
+  }
+}
+
+async function parentLayout(page) {
+  return page.evaluate(() => {
+    const viewport = innerWidth, path = e => e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (typeof e.className === 'string' && e.className ? '.' + e.className.trim().replace(/\s+/g, '.') : '') + (e.dataset?.l ? '[data-l="' + e.dataset.l + '"]' : '') + (e.dataset?.psf ? '[data-psf="' + e.dataset.psf + '"]' : '');
+    const visible = e => e.getClientRects().length && e.checkVisibility({ checkVisibilityCSS: true });
+    const elements = [...document.body.querySelectorAll('*')].filter(visible);
+    const boxes = elements.filter(e => e.getBoundingClientRect().right > viewport || e.scrollWidth > e.clientWidth).map(e => {
+      const r = e.getBoundingClientRect(), css = getComputedStyle(e);
+      return { element: path(e), parent: path(e.parentElement), left: r.left, right: r.right, scroll: e.scrollWidth, client: e.clientWidth, minWidth: css.minWidth, width: css.width, font: css.font, whiteSpace: css.whiteSpace, overflowWrap: css.overflowWrap,
+        before: getComputedStyle(e, '::before').content, after: getComputedStyle(e, '::after').content };
+    }).sort((a, b) => b.right - a.right).slice(0, 25);
+    const texts = [], walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      if (!node.textContent.trim() || !visible(node.parentElement)) continue;
+      const range = document.createRange(); range.selectNodeContents(node);
+      for (const r of range.getClientRects()) if (r.right > viewport) texts.push({ element: path(node.parentElement), text: node.textContent.trim().slice(0, 120), left: r.left, right: r.right });
+    }
+    return { document: document.documentElement.scrollWidth, viewport, rootClient: document.documentElement.clientWidth, bodyClient: document.body.clientWidth, bodyScroll: document.body.scrollWidth, boxes, texts: texts.slice(0, 25) };
+  });
+}
+
 test('EV3: alle Lernbereiche nach Fach, ohne Quest mit Hinweis, DE/EN und per Tastatur bei 320 px', async () => {
   const { ctx, page, fehler } = await oeffnen(browser, server, { viewport: { width: 320, height: 800 } });
   await kindAnmelden(page); await erwachsen(page, 'papa');
@@ -111,8 +156,9 @@ test('EV3: alle Lernbereiche nach Fach, ohne Quest mit Hinweis, DE/EN und per Ta
       await new Promise(resolve => requestAnimationFrame(resolve));
       await new Promise(resolve => requestAnimationFrame(resolve));
     });
+    await checkSchoolFilterLayout(page);
     const width = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
-    assert.ok(width[0] <= width[1], `320 px ohne Überlauf: ${width}`);
+    assert.ok(width[0] <= width[1], `320 px ohne Überlauf: ${JSON.stringify(await parentLayout(page))}`);
   }
   assert.deepEqual(fehler, []);
   await ctx.close();
