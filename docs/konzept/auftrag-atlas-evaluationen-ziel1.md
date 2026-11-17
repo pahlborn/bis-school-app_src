@@ -68,7 +68,7 @@ Mindestens diese Quellen. Wenn dir aus dem Agentarium (Lauf `BQ-EVAL-01`) weiter
    | **überholt** | Begründung; nichts löschen, nur vorschlagen |
 
 3. **Ausdrücklich klären:**
-   - **Test 11:** Peter hat den manuellen iPad-Test 11 **mit positivem Ergebnis** durchgeführt; im Repo ist das nicht dokumentiert. Den Prüfbericht mit Peter nachholen (Datum, Ergebnis je Schritt 1–7, Auffälligkeiten). Gleichzeitig klären, was die in INT-01 genannte „rote Integrationsprüfung“ war und ob sie noch besteht.
+   - **Test 11:** Peter hat den manuellen iPad-Test 11 **mit positivem Ergebnis** durchgeführt; im Repo ist das nicht dokumentiert. Peter erinnert sich nicht mehr an alle Einzelheiten. Deshalb **keine Rekonstruktion**: einen kurzen Prüfbericht anlegen mit „bestanden laut Peter, Einzelheiten nicht dokumentiert“ und dem, was Peter noch weiß. Die belastbare, dokumentierte Geräteabnahme ist EV-7.3; dort wird jeder Schritt sofort beim Test festgehalten. Gleichzeitig klären, was die in INT-01 genannte „rote Integrationsprüfung“ war und ob sie noch besteht.
    - **Integration PR #198 und die offenen Zweige:** Stand, Konflikte mit `main`, was davon die Basis für EV-1 bis EV-7 sein soll.
    - **Stand der Aufträge 1 und 2** aus `dev-auftraege-2026-11-03.md`.
    - **Nummerierung:** EV-1 bis EV-7 unter Epic `2026.0005` oder als neue Nummer. Vorschlag mit Begründung; Peter entscheidet.
@@ -92,7 +92,7 @@ Lege Peter den Abgleich und **alle Abweichungen** als Vorlage vor (Abschnitt 5).
 ### Phase D · Umsetzung und Abnahme
 
 - Jede Story nach der Definition of Done (`evaluationen-ziel1-epics.md`, Abschnitt 2).
-- Gerätetests (📱) nur gemeinsam mit Peter. Kein Erfolg wird aus grüner CI allein abgeleitet.
+- Gerätetests (📱) nur gemeinsam mit Peter. Kein Erfolg wird aus grüner CI allein abgeleitet. **Ergebnisse werden noch während des Tests protokolliert** (Schritt, bestanden/nicht bestanden, Beobachtung), nicht erst Tage später.
 - Abschluss von Ziel 1: Abnahme EV-7.3 auf dem iPad und EV-7.4 im Browser, mit Pass/Fail je Schritt im Prüfbericht.
 
 ## 5. Was eine Konzeptabweichung ist (Genehmigung durch Peter nötig)
@@ -191,5 +191,5 @@ So kommt die Sperre bei einem späteren Wechsel auf privat nicht wieder.
 1. Abgleichsbericht (Phase A) mit allen Einordnungen.
 2. Liste der Abweichungen als Genehmigungsvorlage (Phase B).
 3. Vorschlag zur Nummerierung (`2026.0005` oder neu).
-4. Prüfbericht Test 11 (mit Peter nachgeholt), Stand der „roten Integrationsprüfung“, Empfehlung zu PR #198.
+4. Kurzer Prüfbericht Test 11 („bestanden laut Peter“), Stand der „roten Integrationsprüfung“, Empfehlung zu PR #198.
 5. Plan für den ersten Abschnitt (EV-1, EV-2, EV-3) mit Zuordnung zu Agenten.
