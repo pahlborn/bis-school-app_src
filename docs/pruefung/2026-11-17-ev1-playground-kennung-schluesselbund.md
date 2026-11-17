@@ -23,13 +23,16 @@ Implementierung: tatsächliche native Atlas-Entwicklungsinstanz `/root/dev_ev1_d
 | `node --test tests/module/ipad-playgrounds-paket.test.mjs` | PASS: 1 Test. Führt die echte CLI für N=12 und N+1=13 mit dem aktuellen Paketstand `0.152.2-beta` aus; liest beide Manifeste und ZIPs, vergleicht Mitglieder, alle drei nativen Dateien byteweise, README und Prüfsummen. |
 | Gegenprobe: nur die erzeugte Kennung vorübergehend zu `de.bigquest.ipad.test${testNumber}` geändert, denselben Test ausgeführt, Quelltext in `finally` wiederhergestellt | Erwartet FAIL, Exit 1: Assertion `fixed app identity must survive a new test number`; kein Setupcrash. Danach derselbe Test wieder PASS. Gegen `main` existiert der Export noch nicht; deshalb fachliche Gegenprobe am funktionsfähigen Export statt eines fehlenden-Datei-Fehlers. |
 | `node --check werkzeug/ipad-playgrounds-paket.mjs` | PASS. |
-| `CHROMIUM_PATH=/usr/bin/chromium npm test` | RUNNING; Ergebnis wird vor Abschluss ergänzt. |
-| `git diff --check` | Vorläufig PASS; Abschlussprüfung folgt. |
-| Swift-/Xcode-Ausführung lokal | NOT_TESTED: `swift`, `swiftc` und Xcode fehlen in dieser Linux-Umgebung. Die neue Swift-Regression ist noch kein ausgeführter Beleg. |
-| iOS-CI (Simulator-Build und synthetische Swift-Keychain-Regression) | PENDING: tatsächlichen GitHub-Lauf nach Bereitstellung prüfen. |
+| `CHROMIUM_PATH=/usr/bin/chromium npm test` | PASS: Exit 0, 897 Tests / 897 PASS, 0 FAIL, 0 ausgelassen oder abgebrochen; 462506.690782 ms. Der neue Exporttest ist enthalten. |
+| `git diff --check` | PASS (einschließlich abschließender Prüfung). |
+| Swift-/Xcode-Ausführung lokal | NOT_TESTED: `swift`, `swiftc` und Xcode fehlen in dieser Linux-Umgebung. Lokaler Lauf nicht durchgeführt; die tatsächliche Ausführung in der macOS-CI ist separat belegt. |
+| iOS-CI (Simulator-Build und synthetische Swift-Keychain-Regression) | PASS: [Run 44107708356](https://github.com/pahlborn/bis-school-app_src/actions/runs/44107708356), Job 134124494226; `xcodebuild` und `swiftc` plus ausgeführte Regression erfolgreich. PR-Head `f60a44690171a818baaa178c8d35acbbef097848`, CI-Merge-Checkout `4b741bacd78e15da614740e493b30eb1c998c23c` gegen unveränderte Basis. |
+| Export-CI | PASS: [Run 44107708481](https://github.com/pahlborn/bis-school-app_src/actions/runs/44107708481), Job 134124498260; echter N/N+1-Test, Paketbau und Artefakt-Upload erfolgreich, Checkout des PR-Heads `f60a44690171a818baaa178c8d35acbbef097848`. |
 | Echte API-Aufrufe | Nicht ausgeführt; keine echten Schlüssel verwendet. |
 
-Die Swift-Regression prüft erfolgreiche Updates und Adds, fehlgeschlagene Adds mit altem lesbarem Wert, abweichenden/unlesbaren Rücklesewert, die geforderten Fehlercodes, DE/en-US, Access Group und Marker-Cleanup einschließlich Fehlerpfad. Sie verwendet ausschließlich erfundene Werte und injizierte Operationen; kein System-Keychain-Zugriff und kein Netzaufruf.
+Die in der CI tatsächlich ausgeführte Swift-Regression prüft erfolgreiche Updates und Adds, fehlgeschlagene Adds mit altem lesbarem Wert, abweichenden/unlesbaren Rücklesewert, die geforderten Fehlercodes, DE/en-US, Access Group und Marker-Cleanup einschließlich Fehlerpfad. Sie verwendet ausschließlich erfundene Werte und injizierte Operationen; kein System-Keychain-Zugriff und kein Netzaufruf.
+
+Der abschließende Commit ergänzt nur diesen Prüfbericht; die geprüften Produktquellen bleiben unverändert. Die neue Lokalisierungsabfrage verwendet `Locale.languageCode`, das auf den geprüften SDKs als veraltet markiert ist; beide Sprachfälle sind in der ausgeführten Regression grün.
 
 ## Gefunden / Geräteabnahme
 
