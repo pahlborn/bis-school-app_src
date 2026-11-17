@@ -1,6 +1,6 @@
 # Auftrag an Atlas: Evaluationen übernehmen, Ziel 1, Abgleich, Planung und Steuerung
 
-Auftraggeber: Peter · Erstellt: 17.11.2026 · Repo: `pahlborn/bis-school-app_src`
+Auftraggeber: Peter · Erstellt: 17.11.2026, ergänzt 17.11. (Datenschutz, Kathie, Test 11, Steuerung) · Repo: `pahlborn/bis-school-app_src` (öffentlich)
 
 ---
 
@@ -12,7 +12,7 @@ Deine Aufgabe:
 1. **Abgleichen:** Das neue Konzept mit dem bisherigen vergleichen und die bisher geplanten Schritte gegenprüfen.
 2. **Bewerten:** Bisherige Epics, Aufgaben und Zweige können weiter gültig sein. Prüfe das und handle entsprechend.
 3. **Genehmigen lassen:** Vor jeder Abweichung vom Konzept holst du Peters Genehmigung ein (Abschnitt 5).
-4. **Planen und führen:** Ziel 1 umsetzen und dein Agentennetzwerk sinnvoll einbeziehen und führen (Abschnitt 6).
+4. **Planen und führen:** Ziel 1 umsetzen und dein Agentennetzwerk sinnvoll einbeziehen und führen (Abschnitte 6 und 7), mit festen Abbruchkriterien.
 
 ## 2. Neues Konzept (verbindliche Grundlage, auf `main`)
 
@@ -68,7 +68,7 @@ Mindestens diese Quellen. Wenn dir aus dem Agentarium (Lauf `BQ-EVAL-01`) weiter
    | **überholt** | Begründung; nichts löschen, nur vorschlagen |
 
 3. **Ausdrücklich klären:**
-   - **Test 11 (manuelle Gerätedurchführung):** noch durchführen, in EV-7.3 aufgehen lassen oder zurückstellen? Mit Begründung.
+   - **Test 11:** Peter hat den manuellen iPad-Test 11 **mit positivem Ergebnis** durchgeführt; im Repo ist das nicht dokumentiert. Peter erinnert sich nicht mehr an alle Einzelheiten. Deshalb **keine Rekonstruktion**: einen kurzen Prüfbericht anlegen mit „bestanden laut Peter, Einzelheiten nicht dokumentiert“ und dem, was Peter noch weiß. Die belastbare, dokumentierte Geräteabnahme ist EV-7.3; dort wird jeder Schritt sofort beim Test festgehalten. Gleichzeitig klären, was die in INT-01 genannte „rote Integrationsprüfung“ war und ob sie noch besteht.
    - **Integration PR #198 und die offenen Zweige:** Stand, Konflikte mit `main`, was davon die Basis für EV-1 bis EV-7 sein soll.
    - **Stand der Aufträge 1 und 2** aus `dev-auftraege-2026-11-03.md`.
    - **Nummerierung:** EV-1 bis EV-7 unter Epic `2026.0005` oder als neue Nummer. Vorschlag mit Begründung; Peter entscheidet.
@@ -92,7 +92,7 @@ Lege Peter den Abgleich und **alle Abweichungen** als Vorlage vor (Abschnitt 5).
 ### Phase D · Umsetzung und Abnahme
 
 - Jede Story nach der Definition of Done (`evaluationen-ziel1-epics.md`, Abschnitt 2).
-- Gerätetests (📱) nur gemeinsam mit Peter. Kein Erfolg wird aus grüner CI allein abgeleitet.
+- Gerätetests (📱) nur gemeinsam mit Peter. Kein Erfolg wird aus grüner CI allein abgeleitet. **Ergebnisse werden noch während des Tests protokolliert** (Schritt, bestanden/nicht bestanden, Beobachtung), nicht erst Tage später.
 - Abschluss von Ziel 1: Abnahme EV-7.3 auf dem iPad und EV-7.4 im Browser, mit Pass/Fail je Schritt im Prüfbericht.
 
 ## 5. Was eine Konzeptabweichung ist (Genehmigung durch Peter nötig)
@@ -104,7 +104,7 @@ Lege Peter den Abgleich und **alle Abweichungen** als Vorlage vor (Abschnitt 5).
 - das Streichen oder Abschwächen einer User Story oder eines Abnahmekriteriums
 - eine Verschiebung zwischen Ziel 1 und Ziel 2, eine andere Reihenfolge der Meilensteine
 - das Weiterführen eines bisherigen Epics, das dem neuen Konzept widerspricht
-- alles, was Kathies produktive App, echte Familiendaten oder eine Veröffentlichung betrifft
+- jede Veröffentlichung (nach `docs/veroeffentlichen.md`)
 
 **Nicht genehmigungspflichtig:**
 - technische Umsetzung innerhalb der Abnahmekriterien
@@ -119,7 +119,39 @@ Lege Peter den Abgleich und **alle Abweichungen** als Vorlage vor (Abschnitt 5).
 - Empfehlung
 - klare Frage an Peter (ja/nein oder Auswahl)
 
-## 6. Agentennetzwerk führen
+## 6. Steuerung und Abbruchkriterien
+
+Hintergrund: Zwischen dem 14. und 16.11. wurde tagelang am Prozess statt am Produkt gearbeitet (CI-01 Recovery, INT-01 Archivierung), ohne dass ein Abnahmekriterium neu erfüllt wurde. Das darf sich nicht wiederholen.
+
+**Anhalten und Peter berichten, sobald eines davon eintritt:**
+1. Dasselbe Problem wurde **3-mal** erfolglos angegangen.
+2. **Zwei Arbeitsrunden** hintereinander ohne neu erfülltes Abnahmekriterium.
+3. Eine Story dauert länger als **1 Arbeitstag** ohne Merge.
+4. Die Lösung wächst über die Story hinaus: deutlich mehr Dateien, neue Infrastruktur, neue Dienste.
+5. Die Arbeit betrifft nicht mehr das Produkt, sondern Belege, Archive, Kostenanalysen oder Prozessdokumente, ohne dass Peter das beauftragt hat.
+
+**Beim Anhalten:**
+- 2–3 Alternativen vorlegen, immer auch „zurückstellen“ und „einfacher lösen“, je mit Aufwand und Risiko.
+- Peter entscheidet.
+- Vor dem nächsten Versuch prüft ein Agent ohne Vorgeschichte das Problem (Zweitmeinung).
+
+**Unbekanntes zuerst mit einem begrenzten Versuch klären:** feste Frage, feste Zeit (Richtwert 1 Stunde), Ergebnis ja/nein. Ein Nein ist ein Ergebnis, kein Anlass für weitere Reparaturtage (Beispiel EV-1.4).
+
+**Statusbericht an Peter**, mindestens täglich, in drei Zeilen:
+1. Welche Abnahmekriterien sind seit dem letzten Bericht neu erfüllt?
+2. Was ist blockiert, und was fehlt dafür?
+3. Wie oft wurde ein offenes Problem schon angegangen?
+
+Zweimal „keine“ in Zeile 1 ist ein Haltesignal nach Regel 2.
+
+**Actions-Verbrauch:** Das Repo ist öffentlich; die Standard-Actions sind dort kostenlos. Trotzdem bei jeder Änderung an Workflows umsetzen:
+- ältere Läufe derselben PR abbrechen, sobald ein neuerer startet (`concurrency`)
+- keine Tests bei reinen Dokumentänderungen
+- doppelte Testaufrufe nur einmal ausführen (Vorschläge aus CI-01)
+
+So kommt die Sperre bei einem späteren Wechsel auf privat nicht wieder.
+
+## 7. Agentennetzwerk führen
 
 - **Rollen:** Du planst, verteilst, prüfst und integrierst. Worker setzen um. Nur du führst zusammen.
 - **Aufgaben an Worker** sind in sich geschlossen:
@@ -144,18 +176,20 @@ Lege Peter den Abgleich und **alle Abweichungen** als Vorlage vor (Abschnitt 5).
   - wartet auf Genehmigung
 - **Ehrlichkeit:** Nicht Durchgeführtes heißt „offen“, nicht „bestanden“. Annahmen sind als Annahmen gekennzeichnet.
 
-## 7. Rahmen
+## 8. Rahmen
 
-- **Veröffentlichung** nur nach `docs/veroeffentlichen.md` und mit Peters ausdrücklicher Freigabe. Kathies produktive App bleibt unberührt.
-- **Testdaten:** erfunden; Testkonten wie im Testleitfaden (`max.mustermann`, `kind1.mustermann`).
-- **Geheimnisse:** Keine Passwörter, Zugangscodes, API-Schlüssel oder personenbezogenen Schuldaten in Protokollen, Prüfberichten oder Chat.
+- **Veröffentlichung** nur nach `docs/veroeffentlichen.md` und mit Peters ausdrücklicher Freigabe.
+- **Datenschutz:** Peter hat die Datenschutzregel aufgehoben (17.11.). Das Repo ist bewusst öffentlich; außer Kathies Vornamen liegen dort keine schützenswerten Daten. Bei neuen Inhalten bleibt das so: keine Namen Dritter (Lehrkräfte, andere Kinder).
+- **Kathie** testet die Beta, sobald Ziel 1 abgenommen ist (EV-7.3 und EV-7.4). Ihr Konto ist dann kein Sonderfall mehr, sondern ein normales Beta-Konto.
+- **Automatische Tests** laufen weiter mit erfundenen Daten und Testkonten (`max.mustermann`, `kind1.mustermann`), damit sie reproduzierbar sind.
+- **Geheimnisse:** keine Passwörter, Zugangscodes oder API-Schlüssel in Protokollen, Prüfberichten oder Chat.
 - **Texte:** DE und EN (amerikanisches Englisch), Schreibregeln S1–S8, keine Zeitwörter (R10).
 - **Schlüssel:** Kein API-Schlüssel im Browser-Speicher; keine Logik nur in der Swift-Hülle.
 
-## 8. Erste Rückmeldung an Peter (vor jeder Umsetzung)
+## 9. Erste Rückmeldung an Peter (vor jeder Umsetzung)
 
 1. Abgleichsbericht (Phase A) mit allen Einordnungen.
 2. Liste der Abweichungen als Genehmigungsvorlage (Phase B).
 3. Vorschlag zur Nummerierung (`2026.0005` oder neu).
-4. Empfehlung zu Test 11 und PR #198.
+4. Kurzer Prüfbericht Test 11 („bestanden laut Peter“), Stand der „roten Integrationsprüfung“, Empfehlung zu PR #198.
 5. Plan für den ersten Abschnitt (EV-1, EV-2, EV-3) mit Zuordnung zu Agenten.
