@@ -2,11 +2,11 @@
 
 ## Kurzfassung für Peter
 
-**Was ist erledigt?** Die drei Verbesserungen sind in einer gemeinsamen Fassung zusammengeführt. 926 automatische Softwaretests und die unabhängigen Prüfungen sind bestanden. Dabei gefundene Fehler im Bewertungsverlauf, bei langen Titeln und auf schmalen Bildschirmen sind behoben. Frühere Bewertungen und ihre ursprünglichen Einzelnoten bleiben erhalten. Die geprüfte Fassung liegt bereit, steht aber noch nicht in der Hauptfassung.
+**Was ist erledigt?** Die gemeinsame Fassung ist geprüft und der Quellcode bereits in der Hauptfassung zusammengeführt. 926 automatische Softwaretests und die unabhängigen Prüfungen sind bestanden. Die Fehler im Bewertungsverlauf, bei langen Titeln und auf schmalen Bildschirmen sind behoben. Deine ausdrückliche Freigabe für beide Zusammenführungen liegt vor.
 
-**Was kommt als Nächstes?** Mit deiner Freigabe übernehme ich die geprüfte Fassung und diesen Bericht in die Hauptfassung. Danach folgen die automatische Wiederverbindung, sinnvolle vorgerechnete Beispiele und das gemeinsame Formular. Anschließend prüfen wir den ganzen Ablauf von Toddle bis zur Wirkung auf die Übungen.
+**Was kommt als Nächstes?** Dieser Bericht folgt als zweiter Merge. Danach starten die beiden iPad-Prüfungen einmal auf der Hauptfassung. Die Fristprüfung meldet fehlenden Erfolg nach zwei Stunden. Für Gerätetest12 bekommst du zwei Fassungen zum Vergleich von Neustart und Versionswechsel.
 
-**Was brauche ich von dir?** Eine eindeutige Freigabe für die beiden vorbereiteten Zusammenführungen. Die automatische Freigabeprüfung verlangt diese Zustimmung ausdrücklich. Eine Veröffentlichung der App ist damit nicht verbunden. Später brauche ich dich für die vereinbarten Tests auf deinem iPad.
+**Was brauche ich von dir?** Für den fehlenden manuellen Start der automatischen Build-Prüfung wurde eine eng begrenzte Zustimmung abgefragt. Ohne sie ändere ich daran nichts. Danach brauche ich deine Beobachtungen beim Gerätetest. Die App wird nicht veröffentlicht.
 
 ## Technischer Abgleich und Umsetzungsplan
 
@@ -160,11 +160,11 @@ Für die Durchführung gelten die aktuellen Halteregeln: drei erfolglose Anläuf
 
 ## 7. Tatsächlich verbleibende Arbeiten, priorisiert
 
-1. **Eindeutige Freigabe zur Quellenintegration:** Der geprüfte gemeinsame Stand in [PR212](https://github.com/pahlborn/bis-school-app_src/pull/212) und dieser Bericht in PR206 sind vorbereitet. Die automatische Freigabeprüfung hat den Main-Merge mangels ausdrücklicher Zustimmung zu diesem konkreten Schritt abgelehnt. Atlas empfiehlt die Zusammenführung; App-Veröffentlichung und Kunden-/Geräteannahme sind getrennt.
-2. **Nach dieser Freigabe:** Atlas führt beide PRs zusammen, prüft den tatsächlichen Hauptzweig gegen den geprüften Produktbaum und schreibt den erreichten Stand fort. Keine neue Produktimplementierung oder Infrastrukturarbeit als Voraussetzung.
-3. **Danach EV-1.3 und EV-3.3:** Geräteverbindung merken, echter iPad-Neustart-/N+1-Nachweis; EV-1.4 ausschließlich bei belegtem Schlüsselbundverlust. Sinnvolle Grundlagebeispiele vor/mit M2. Kind-/Revisions-/Entzugs- und bestätigten Offline-Schutz dem tatsächlich verwendeten Pfad zuordnen; vorhandenen ROT-Auftrag respektieren.
-4. **EV-4 → EV-5 → EV-6 → EV-7:** gemeinsames Formular, Zuordnungsvorschläge, Nachzuordnung und durchgehende Übungswirkung samt manueller Browserparität und iPad-Abnahme. Sicherheitsbefunde bleiben offen, soweit noch nicht passend geprüft; keine Erledigung durch Archivierung.
-5. **Ziel 2 bleibt getrennt:** M5 Chrome/Text/Datei bei Bedarf, M6 Parser, M7 KI-Dienst samt vorhandenen Dienst-/US403-/Betriebsbeiträgen, M8 tokenfreie Fremdfamilienanmeldung/TestFlight, M9 Store. Keine neue Infrastruktur oder App-Veröffentlichung aus dieser Rückgabe.
+1. **Freigegebene Quellenintegration:** PR212 ist in main2fd28d0, ohne Diff zum geprüften Produktbaum. BerichtPR206 wird danach gemergt. Die ausdrücklich erteilte Freigabe und die vorherige automatische Ablehnung sind in8.2 unterschieden; keine Veröffentlichung oder Kundenannahme.
+2. **Einmalige Main-Prüfungen und Gerätetest12:** Build und Export jeweils einmal neu aufmain, Frist20:49:11UTC/21:49:11Europe/Berlin; bei fehlendem Erfolg genau drei Zeilen anPeter. Eine einmalige Fristprüfung ist eingerichtet. Keine CI-Reparatur ohne Zustimmung. Der fehlende manuelle Buildtrigger ist konkret gesondert vorgelegt. Danach Test12-Paket und kurze Anleitung aus8.3 liefern; genaue Run-/Main-/Paketreferenzen im PR206-Gespräch.
+3. **Danach EV-1.3 und EV-3.3:** Geräteverbindung merken; EV-1.4 ausschließlich bei belegtem Schlüsselbundverlust. Sinnvolle Grundlagebeispiele vor/mitM2. Kind-/Revisions-/Entzugs- und bestätigten Offline-Schutz erhalten; vorhandenen ROT-Auftrag respektieren.
+4. **EV-4 → EV-5 → EV-6 → EV-7:** gemeinsames Formular, Zuordnungsvorschläge, Nachzuordnung und durchgehende Übungswirkung samt Browserparität und iPad-Abnahme. Sicherheitsbefunde bleiben passend zu prüfen, keine Erledigung durch Archivierung.
+5. **Ziel2 bleibt getrennt:** M5Chrome/Text/Datei beiBedarf, M6Parser, M7KI-Dienst mit vorhandenen Beiträgen, M8Fremdfamilienanmeldung/TestFlight, M9Store. Keine neue Infrastruktur oder Veröffentlichung aus dieser Rückgabe.
 
 ## 8. Prüfung dieses Berichts
 
@@ -192,7 +192,7 @@ Die folgenden Einzelstände liegen vor der gemeinsamen Integrationsfortschreibun
 
 ### 8.2 Gemeinsamer Integrationsstand und gezielte Korrekturen · 17.11.2026
 
-**Status: umgesetzt und geprüft; Main-Merge wartet auf Peters ausdrückliche Freigabe.** Der nächste Schritt wurde tatsächlich ausgeführt: Atlas führte die drei Produktzweige in einem eigenen Worktree zusammen, sicherte den gemeinsamen Stand im Produktrepo und ließ das Zusammenspiel unabhängig prüfen. Gefundene echte Anzeigeprobleme wurden durch die qualifizierte native Entwicklungsinstanz `dev_ev3_direct` im eigenen Produktzweig behoben. Kein neuer Forge-/Relayversuch, keine neue Architektur, kein Deployment.
+**Aktueller Vollzug nach ausdrücklicher Freigabe:** PR212 ist als erster Schritt nach main gemergt (`2fd28d0cbc7366720e496d20bdd4bcfce0c85d11`). Der tatsächliche Hauptzweig ist bytegleich zum geprüften Kopf7a2001a, git diff Exit0. Dieser Bericht ist der ausdrücklich genehmigte zweite Merge. Keine App-Veröffentlichung. Der nächste Schritt wurde tatsächlich ausgeführt: Atlas führte die drei Produktzweige in einem eigenen Worktree zusammen, sicherte den gemeinsamen Stand im Produktrepo und ließ das Zusammenspiel unabhängig prüfen. Gefundene echte Anzeigeprobleme wurden durch die qualifizierte native Entwicklungsinstanz `dev_ev3_direct` im eigenen Produktzweig behoben. Kein neuer Forge-/Relayversuch, keine neue Architektur, kein Deployment.
 
 **Prüfbereiter Kandidat:** [PR212](https://github.com/pahlborn/bis-school-app_src/pull/212), Kopf `7a2001afaa648759d17e3da981e97c4c696f0dcb`; stabiler Produkt-/Testcommit `1d522390199847de5caa3acc7af15c4d05a77471`. Dazwischen wurde ausschließlich der vorhandene EV3-Prüfbericht ergänzt. PR209/210/211 sind mit ihrer ursprünglichen Historie enthalten. Der zusätzliche Produktdiff der letzten Korrektur gegenüber `d929c1b` umfasst genau zwei CSS-Regeln; Datenmodule, Katalog und native Quellen bleiben unverändert.
 
@@ -214,9 +214,22 @@ Die folgenden Einzelstände liegen vor der gemeinsamen Integrationsfortschreibun
 
 **Offene Hinweise:** Im geschlossenen nativen deutschen Sortierfeld ist ein langer Optionswert gekürzt; geöffnet ist derselbe vollständige Text sichtbar und per Tastatur wählbar. Sentinel stuft dies als NOTE ein; gespeicherte Titel/Kriterien werden vollständig angezeigt. ARGUS-N1 zum nicht ausgewerteten Löschcode des leeren Diagnosemarkers bleibt als nicht blockierende nächste EV-1-Prüfung erhalten. Keine neue Ausnahme für Geheimnisse, Speicherrechte oder ursprüngliche Daten.
 
-**Konkrete Entscheidung:** Die [Integrationsentscheidung am PR](https://github.com/pahlborn/bis-school-app_src/pull/212#issuecomment-6955026135) dokumentiert Quellen und Grenzen. Der anschließende Main-Merge wurde von der automatischen Freigabeprüfung ausdrücklich abgelehnt: Peters allgemeine Anweisung zum nächsten Schritt wurde nicht als ausdrückliche Zustimmung zu genau diesem Main-Merge akzeptiert. Main wurde dadurch nicht geändert. Erforderlich ist eine einzige eindeutige Freigabe für **PR212 und diesen aktualisierten Bericht PR206 nach main**. Empfehlung Atlas: beide zusammenführen; danach tatsächlichen Hauptzweig prüfen. Eine App-Veröffentlichung, neue Produktentwicklung oder Kundenannahme ist damit nicht verbunden.
+**Freigabe und Vollzug:** Die vorherige automatische Ablehnung mangels konkreter Zustimmung bleibt historisch dokumentiert. Peter hat danach ausdrücklich „Merge von PR #212 und danach PR #206 nach main. Keine Veröffentlichung“ freigegeben. PR212 wurde erfolgreich gemergt; der Hauptzweig entspricht dem geprüften Produktbaum. Dieser Bericht folgt in der freigegebenen Reihenfolge. Zusätzliche Auflage: beide iPad-Prüfungen nach den Merges einmal auf main starten; bei fehlendem Erfolg innerhalb von zwei Stunden sofort drei Zeilen melden, keine eigenständigen CI-Reparaturen. Die Build-Datei hat bisher keinen manuellen Trigger; ausschließlich dessen Ergänzung ist Peter gesondert vorgelegt. Export unterstützt manuellen Start. Die einmalige Fristprüfung ist für20:49:11UTC/21:49:11Europe/Berlin eingerichtet. Main-Commits, Run-IDs, Paket und Hashes werden im Gespräch dieser PR unter `[BQ-TEST12-MAIN-CI-20261117]` dokumentiert.
 
-**Rollen / Kosten / nächster Owner:** Tatsächliche native Entwicklungs- und Prüfrückgaben sind veröffentlicht; [Entwicklung-A2](https://github.com/pahlborn/agentarium/issues/2#issuecomment-6954928638). Keine Claude-Beteiligung erfunden. Native Modellgesamtkosten nicht verfügbar; keine neuen bezahlten Claude- oder Produkt-API-Aufrufe. Nächster Owner Peter: die konkrete Mergefreigabe; danach Atlas: Quellenintegration verifizieren und gemäß Abschnitt 7 fortfahren. Nur die zuvor ausdrücklich genehmigte einzelne tägliche Taktprüfung läuft automatisch, keine unbeaufsichtigte Produktentwicklung.
+**Rollen / Kosten / nächster Owner:** Tatsächliche native Entwicklungs- und Prüfrückgaben sind veröffentlicht; [Entwicklung-A2](https://github.com/pahlborn/agentarium/issues/2#issuecomment-6954928638). Keine Claude-Beteiligung erfunden. Native Modellgesamtkosten nicht verfügbar; keine neuen bezahlten Claude- oder Produkt-API-Aufrufe. Nächster Owner Atlas: freigegebene Quellenintegration, einmalige Main-Prüfstarts und Gerätetest12-Paket. Der manuelle Buildtrigger bleibt ohne gesonderte Zustimmung unverändert. Nur die zuvor ausdrücklich genehmigte einzelne tägliche Taktprüfung läuft automatisch, keine unbeaufsichtigte Produktentwicklung.
+
+### 8.3 Gerätetest12 · kurze Anleitung für Peter (EV-1.1 / EV-1.2)
+
+Diese eine Abnahme nutzt **Test12 (N)** und **Test13 (N+1)** aus demselben Hauptstand. Beide haben dieselbe App-Kennung `de.bigquest.ipad`; nur Anzeigename und Buildnummer wechseln. Test13 ist hier das Vergleichspaket für Gerätetest12. Download, Quellcommit und SHA256 werden im Rückgabekommentar dieser PR verlinkt.
+
+1. Auf demselben iPad Paket12 in „Dateien“ entpacken, die enthaltene `.swiftpm` in SwiftPlaygrounds öffnen und mit ▶ starten. Die Hülle öffnet die bestehende Testseite.
+2. Wie beim bisherigen Test verbinden und anmelden. Die erste Umstellung von der früheren Test11-App-Kennung kann einmalige Neueingaben brauchen. Erst danach beginnt der Vergleich.
+3. Oben „Claude-Schlüssel“ öffnen, den vorhandenen Schlüssel eingeben, „Im Schlüsselbund speichern“ wählen. Nur Speichern-Code, unmittelbaren Lesen-Code und AccessGroup notieren (normalerweise0/OK). Dieser Speicherschritt ruft keine KI auf; für den Test keinen Toddle-Import starten.
+4. App in Playgrounds stoppen, Playgrounds im App-Umschalter vollständig schließen, Paket12 erneut starten. Lesen-Code/AccessGroup unter „Schlüsselbund beim Start“ und „Geräteverbindung gehalten:ja/nein“ notieren.
+5. Ohne vorheriges Löschen der Appdaten Paket13 öffnen und starten. Vor einer erneuten Schlüssel-/Zugangscodeeingabe dieselben Angaben notieren. Das prüft den WechselN→N+1.
+6. Mir nur diese Codes/AccessGroup und die Verbindungsbeobachtung schicken. Bei einem Fehler die Angaben vor erneuter Eingabe sichern. Keine Schlüssel, Passwörter oder Schuldaten senden.
+
+**Ergebnisbogen:** Paket12 Speichern/Lesen-direkt/AccessGroup; Paket12 Neustart Lesen/AccessGroup/Verbindung; Paket13 Start Lesen/AccessGroup/Verbindung. Physischer Status bleibt NOT_TESTED bis zu Peters tatsächlicher Rückgabe. EV-1.3 und die vollständige Formular-/Übungsabnahme bleiben getrennte offene Arbeiten.
 
 ## Anhang A · Quellenverweise
 
