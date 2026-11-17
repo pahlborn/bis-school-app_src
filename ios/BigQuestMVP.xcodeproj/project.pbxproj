@@ -1,0 +1,101 @@
+// !$*UTF8*$!
+{
+    archiveVersion = 1;
+    classes = {};
+    objectVersion = 56;
+    objects = {
+        A10000000000000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BigQuestApp.swift; sourceTree = "<group>"; };
+        A10000000000000000000002 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToddleField.swift; sourceTree = "<group>"; };
+        A10000000000000000000003 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeClient.swift; sourceTree = "<group>"; };
+        A10000000000000000000004 = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BigQuestMVP.app; sourceTree = BUILT_PRODUCTS_DIR; };
+        A10000000000000000000005 = {isa = PBXBuildFile; fileRef = A10000000000000000000001; };
+        A10000000000000000000006 = {isa = PBXBuildFile; fileRef = A10000000000000000000002; };
+        A10000000000000000000007 = {isa = PBXBuildFile; fileRef = A10000000000000000000003; };
+        A10000000000000000000008 = {isa = PBXGroup; children = (A10000000000000000000009, A1000000000000000000000A, ); sourceTree = "<group>"; };
+        A10000000000000000000009 = {isa = PBXGroup; children = (A10000000000000000000001, A10000000000000000000002, A10000000000000000000003, ); path = BigQuestMVP; sourceTree = "<group>"; };
+        A1000000000000000000000A = {isa = PBXGroup; children = (A10000000000000000000004, ); name = Products; sourceTree = "<group>"; };
+        A1000000000000000000000B = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A10000000000000000000005, A10000000000000000000006, A10000000000000000000007, ); runOnlyForDeploymentPostprocessing = 0; };
+        A1000000000000000000000C = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+        A1000000000000000000000D = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+        A1000000000000000000000E = {
+            isa = PBXNativeTarget;
+            buildConfigurationList = A10000000000000000000011;
+            buildPhases = (A1000000000000000000000B, A1000000000000000000000C, A1000000000000000000000D, );
+            buildRules = ();
+            dependencies = ();
+            name = BigQuestMVP;
+            productName = BigQuestMVP;
+            productReference = A10000000000000000000004;
+            productType = "com.apple.product-type.application";
+        };
+        A1000000000000000000000F = {
+            isa = PBXProject;
+            attributes = { LastUpgradeCheck = 1600; };
+            buildConfigurationList = A10000000000000000000010;
+            compatibilityVersion = "Xcode 14.0";
+            developmentRegion = de;
+            hasScannedForEncodings = 0;
+            knownRegions = (de, en, Base, );
+            mainGroup = A10000000000000000000008;
+            productRefGroup = A1000000000000000000000A;
+            projectDirPath = "";
+            projectRoot = "";
+            targets = (A1000000000000000000000E, );
+        };
+        A10000000000000000000010 = {
+            isa = XCConfigurationList;
+            buildConfigurations = (A10000000000000000000012, A10000000000000000000013, );
+            defaultConfigurationIsVisible = 0;
+            defaultConfigurationName = Release;
+        };
+        A10000000000000000000011 = {
+            isa = XCConfigurationList;
+            buildConfigurations = (A10000000000000000000014, A10000000000000000000015, );
+            defaultConfigurationIsVisible = 0;
+            defaultConfigurationName = Release;
+        };
+        A10000000000000000000012 = {
+            isa = XCBuildConfiguration;
+            buildSettings = { IPHONEOS_DEPLOYMENT_TARGET = 16.0; SDKROOT = iphoneos; SWIFT_VERSION = 5.0; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; };
+            name = Debug;
+        };
+        A10000000000000000000013 = {
+            isa = XCBuildConfiguration;
+            buildSettings = { IPHONEOS_DEPLOYMENT_TARGET = 16.0; SDKROOT = iphoneos; SWIFT_VERSION = 5.0; SWIFT_OPTIMIZATION_LEVEL = "-O"; };
+            name = Release;
+        };
+        A10000000000000000000014 = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                CODE_SIGN_STYLE = Automatic;
+                CURRENT_PROJECT_VERSION = 1;
+                GENERATE_INFOPLIST_FILE = YES;
+                INFOPLIST_KEY_CFBundleDisplayName = "Big Quest MVP";
+                INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+                MARKETING_VERSION = 0.1.0;
+                PRODUCT_BUNDLE_IDENTIFIER = "de.bigquest.ipad";
+                PRODUCT_NAME = "$(TARGET_NAME)";
+                SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+                TARGETED_DEVICE_FAMILY = 2;
+            };
+            name = Debug;
+        };
+        A10000000000000000000015 = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                CODE_SIGN_STYLE = Automatic;
+                CURRENT_PROJECT_VERSION = 1;
+                GENERATE_INFOPLIST_FILE = YES;
+                INFOPLIST_KEY_CFBundleDisplayName = "Big Quest MVP";
+                INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+                MARKETING_VERSION = 0.1.0;
+                PRODUCT_BUNDLE_IDENTIFIER = "de.bigquest.ipad";
+                PRODUCT_NAME = "$(TARGET_NAME)";
+                SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+                TARGETED_DEVICE_FAMILY = 2;
+            };
+            name = Release;
+        };
+    };
+    rootObject = A1000000000000000000000F;
+}

@@ -177,7 +177,7 @@ button{font:inherit;color:inherit}
 .pcard{background:var(--surface);border:2px solid var(--line);border-radius:16px;padding:12px 14px}
 .pcard h2{font-size:1.1rem;margin-bottom:6px}
 .about-sub{margin:8px 0}.about-sub>summary{cursor:pointer;font-weight:700}
-.pguide-h{font-size:1.05rem;margin:4px 0 6px}a.pgo{font-weight:700;white-space:nowrap}
+.pguide-h{font-size:1.05rem;margin:4px 0 6px}a.pgo{font-weight:700;white-space:normal;overflow-wrap:anywhere}
 .pglance{margin:10px 0}.pglance p{margin:4px 0}.pglance .pgmore{text-align:right;margin-top:6px}
 .ph{font-weight:800;margin:10px 0 2px}
 .pdisc{font-size:.8rem;color:var(--muted);border-top:1px solid var(--line);margin-top:10px;padding-top:6px}
@@ -334,25 +334,27 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 /* School assessments (Peter, 05.11.): filters, table; on narrow screens every row becomes a card */
 .psfilters{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:flex-end;margin:10px 0 6px}
-.psfilters label{display:flex;flex-direction:column;gap:2px;font-size:.85rem;font-weight:600}
+.psfilters label{display:flex;flex-direction:column;gap:2px;font-size:.85rem;font-weight:600;min-width:0;max-width:100%}
 .psfilters select{min-height:40px;font:inherit;font-weight:400;border:2px solid var(--line);border-radius:10px;padding:4px 8px;background:var(--surface);color:inherit;max-width:100%}
 .psfilters label.pscheck{flex-direction:row;align-items:center;gap:6px;min-height:40px}
 .pstab{font-size:.95rem}
 .pstab>tbody>tr>td{vertical-align:top}
 .pslv{display:flex;flex-wrap:wrap;gap:4px}
-.pstab>tbody>tr.psdet>td{background:var(--soft)}
+.pstab>tbody>tr.psdet>td{background:var(--soft);overflow-wrap:anywhere}
 .psdet h4{margin:10px 0 2px;font-size:.95rem}
 .psdet h4:first-child{margin-top:2px}
 .psdet ul{margin:0 0 4px 20px;padding:0}
-.psrub{font-size:.9rem;margin:2px 0 4px}
+.psrub{font-size:.9rem;margin:2px 0 4px;table-layout:fixed;overflow-wrap:anywhere}
 .psrub th,.psrub td{padding:4px 6px}
+.psrub th:first-child{width:40%}
+.psrub .pst{max-width:100%}
 .pspend ul{margin:0 0 4px 20px;padding:0}
 @media (max-width:600px){
   .pstab,.pstab>tbody,.pstab>tbody>tr,.pstab>tbody>tr>td{display:block;width:100%;box-sizing:border-box}
   .pstab>thead{display:none}
   .pstab{background:none}
   .pstab>tbody>tr.psrow{border:2px solid var(--line);border-radius:12px;margin-top:10px;padding:6px 10px;background:var(--surface)}
-  .pstab>tbody>tr.psrow>td{border:0;padding:2px 0}
+  .pstab>tbody>tr.psrow>td{border:0;padding:2px 0;overflow-wrap:anywhere}
   .pstab>tbody>tr.psrow>td[data-l]::before{content:attr(data-l) ": ";font-weight:600;color:var(--muted)}
   .pstab>tbody>tr.psdet{border:2px solid var(--line);border-top:0;border-radius:0 0 12px 12px;margin-top:-6px}
   .pstab>tbody>tr.psdet>td{border:0;padding:6px 10px}
@@ -2429,11 +2431,8 @@ anotherWayQ=withLevel(anotherWayQ,3); reasonableQ=withLevel(reasonableQ,3); tabl
 const levelOf = q => q.level||2;
 
 /* School standards each quest practises (from the class learning platform, Grade 3). Used for the parent view; never shown to the child. */
-const STANDARDS={
-  numbers:['M-N1','M-N2'], round:['M-N3','M-N6'], combos:['M-N4','M-N6'], wordprob:['M-N4','M-N5'], detective:['M-N2','M-N3','M-D1'],
-  forces:['S-F1'], units:['M-M1'], graphs:['M-D1'], opinion:['E-W1','E-S2'], sentences:['E-W1'], examples:['E-W1'], words:['E-R1'],
-  anleitung:['D-W1'], library:['E-W2']
-};
+// Die gepflegte Haupt-/Nebenrangfolge liegt ausschließlich im Standardkatalog.
+const STANDARDS=schoolStandardsByQuest();
 
 /* Test accounts (konten.json "test": true) can jump ahead in days to see reviews come back. */
 const isTestAccount = () => { const s=studentSession(); return !!(s && APP_ACCOUNTS.users.some(u=>u.user===s.user && u.test)); };
@@ -6565,41 +6564,10 @@ function renderParentGate(){
     }catch(err){message.textContent=M.fail;button.disabled=false;}
   });
 }
-const STANDARD_TEXT={
-  'M-N1':'Stellenwert, Zahlenschreibweise und Null als Platzhalter bis 9999',
-  'M-N2':'Zahlen vergleichen, sortieren und ordnen bis 9999',
-  'M-N3':'Runden auf Zehner, Hunderter und Tausender',
-  'M-N4':'Additionsstrategien und zweischrittige Sachaufgaben',
-  'M-N5':'Subtraktionsstrategien und zweischrittige Sachaufgaben',
-  'M-N6':'Überschlagen und Ergebnisse kontrollieren',
-  'M-D1':'Daten sammeln, Diagramme mit Skala und Beschriftung',
-  'M-M1':'Längen schätzen, vergleichen und messen in cm und m',
-  'S-F1':'Kräfte und Anwendung naturwissenschaftlichen Verständnisses',
-  'E-W1':'Schreiben: logische Reihenfolge und verständliche Darstellung',
-  'E-W2':'Informationen aus verlässlichen Quellen finden und darstellen',
-  'E-R1':'Wortbildung und Textverständnis (Übungszuordnung)',
-  'D-W1':'Anleitung schreiben (Lernziele aus der Unterrichtsaufgabe)'
-};
+// Kompatible Sprachsichten für die bestehenden Anzeigen; Texte werden nur im Katalog gepflegt.
+const STANDARD_TEXT=Object.fromEntries(Object.entries(SCHOOL_STANDARD_CATALOG).map(([code,entry])=>[code,entry.text.de]));
+const STANDARD_TEXT_EN=Object.fromEntries(Object.entries(SCHOOL_STANDARD_CATALOG).map(([code,entry])=>[code,entry.text.en]));
 const PARENT_STAND={NA:'Noch zu wenige Belege',RS:'Requires support',C:'Consolidating',M:'Meeting expectations',E:'Extending'};
-const STANDARD_TEXT_EN={
-  'M-N1':'Place value and writing numbers to 9,999, zero as a placeholder',
-  'M-N2':'Comparing, sorting and ordering numbers to 9,999 (< and >)',
-  'M-N3':'Rounding to the nearest 10, 100 and 1,000',
-  'M-N4':'Addition strategies and two-step word problems',
-  'M-N5':'Subtraction strategies and two-step word problems',
-  'M-N6':'Estimating and checking answers',
-  'M-D1':'Collecting data; bar and line graphs with scale and labels',
-  'M-M1':'Estimating, comparing and measuring length in cm and m',
-  'S-F1':'Forces and applying scientific understanding',
-  'E-W1':'Writing: ideas in a logical order',
-  'E-W2':'Finding and presenting information from reliable sources',
-  'E-R1':'Word building and reading comprehension (practice mapping)',
-  'D-W1':'Writing instructions (German class)',
-  'E-S1':'Speaking and listening: thinking about the audience',
-  'E-S2':'Speaking and listening: expressing and discussing opinions'
-};
-STANDARD_TEXT['E-S1']='Sprechen und Zuhören: an das Publikum denken';
-STANDARD_TEXT['E-S2']='Sprechen und Zuhören: Meinungen äußern und besprechen';
 /* Ratings the school gave the child (Peter, 01.11.: the tasks should build on them). Read on 01.11.2026
    from the class learning platform (child account, read only): all evaluated assignments and the one
    awaiting evaluation. Since S11 P2 (02.11.) the data live in werkzeug/schuldaten.json; the build puts
@@ -6682,13 +6650,9 @@ function schoolTexts(de){
   return de?{h:'Schulische Einstufungen',std:'Standards – zuletzt',area:'Bereich',now:'Einstufung',before:'vorher',quests:'Übt in der App',atl:'Lernkompetenzen und Learner Profile',atlKey:'ES = mit Unterstützung, Obs. = beobachtet, Ind. = selbstständig',tasks:'Bewertete Aufgaben',good:'Das gelingt',next:'Nächste Schritte',pend:'Wartet auf Bewertung',none:'Für dieses Kind liegen noch keine schulischen Einstufungen vor.',areas:{math:'Mathe',english:'Englisch',deutsch:'Deutsch',science:'Science',learner:'Lernen'}}
                 :{h:'School assessments',std:'Standards – latest',area:'Area',now:'Rating',before:'before',quests:'Practiced in the app',atl:'Learning skills and learner profile',atlKey:'ES = emerging with support, Obs. = observed, Ind. = independent',tasks:'Evaluated assignments',good:'Going well',next:'Next steps',pend:'Awaiting evaluation',none:'There are no school assessments for this child yet.',areas:{math:'Math',english:'English',deutsch:'Deutsch',science:'Science',learner:'Learning'}};
 }
-/* the subject a standard is shown in: where all its quests are practised, otherwise the subject of its code
-   (M- maths, E- English, S- science, otherwise German) - every standard in exactly one subject (R1) */
+/* Bekannte Standards tragen ihr bisheriges Fach im Katalog; unbekannte Altdaten behalten den Code-Fallback. */
 function stdSubject(std){
-  const qs=Object.keys(STANDARDS).filter(q=>STANDARDS[q].includes(std) && WORLDS[q]);
-  const subs=uniq(qs.map(q=>(SUBJECTS.find(s=>questsIn(s).includes(q))||{}).key).filter(Boolean));
-  if(subs.length===1) return subs[0];
-  return std.startsWith('M-')?'maths':std.startsWith('E-')?'english':std.startsWith('S-')?'science':'deutsch';
+  return schoolStandardInfo(std)?.subject || (std.startsWith('M-')?'maths':std.startsWith('E-')?'english':std.startsWith('S-')?'science':'deutsch');
 }
 const AREA_SUBJECT={math:'maths', english:'english', science:'science', learner:'learner', deutsch:'deutsch'};
 /* the teacher's evaluations that count for the focus: the last 8 weeks, if there are none that recent all of them (as classTopics) */
@@ -6701,8 +6665,8 @@ function schoolSubjectHTML(key){
   const d=schoolData(); if(!d) return '';
   const de=PL()==='de', L=de?'de':'en', T=schoolTexts(de), per=schoolRatings(d), sub=SUBJECTS.find(x=>x.key===key), mine=questsIn(sub);
   const stds=Object.keys(per).filter(s=>stdSubject(s)===key).sort();
-  const rows=stds.map(s=>{ const l=per[s], k=SL[l[0].r]||'na', qs=Object.keys(STANDARDS).filter(q=>STANDARDS[q].includes(s)&&WORLDS[q]).map(q=>esc(WORLDS[q].name)).join(', ');
-    return `<tr><td>${esc((de?STANDARD_TEXT:STANDARD_TEXT_EN)[s]||s)}</td><td>${pChip(k)} <span class="small">${fmtDay(l[0].day)}</span>${l[1]?`<br><span class="small">${T.before}: ${PSTAND[L][SL[l[1].r]]} (${fmtDay(l[1].day)})</span>`:''}</td><td class="small">${qs||'–'}</td></tr>`; }).join('');
+  const rows=stds.map(s=>{ const l=per[s], k=SL[l[0].r]||'na', qs=(schoolStandardInfo(s)?.quests||[]).filter(q=>WORLDS[q]).map(q=>esc(WORLDS[q].name)).join(', ');
+    return `<tr><td>${esc((de?STANDARD_TEXT:STANDARD_TEXT_EN)[s]||s)}</td><td>${pChip(k)} <span class="small">${fmtDay(l[0].day)}</span>${l[1]?`<br><span class="small">${T.before}: ${PSTAND[L][SL[l[1].r]]} (${fmtDay(l[1].day)})</span>`:''}</td><td class="small">${qs||esc(schoolStandardNoQuest(de))}</td></tr>`; }).join('');
   const steps=recentEvaluations(d).filter(t=>t.next && t.next[L] && (AREA_SUBJECT[t.area]===key || (t.focusNext||[]).some(q=>mine.includes(q)))).map(t=>{
     const f=(t.focusNext||[]).filter(q=>WORLDS[q] && mine.includes(q));
     return `<li><b>${fmtDay(t.day)} · ${esc(t.title)}:</b> ${esc(t.next[L])}${f.length?`<br><span class="small">${de?'Daraus im automatischen Fokus':'In the automatic focus because of this'}: ${f.map(q=>esc(WORLDS[q].name)).join(', ')}</span>`:''}</li>`; }).join('');
@@ -6781,8 +6745,16 @@ function schoolEvaluationHistory(t, de, synced){
     const current=p.revision===m.revision, proposal=m.conflicts.includes(p.revision);
     const status=p.withdrawn?(de?'Zurückgenommen':'Withdrawn'):current?(de?'Aktive Fassung':'Active revision'):proposal?(de?'Vorschlag':'Proposal'):(de?'Frühere Fassung':'Earlier revision');
     const choose=proposal||current&&m.conflicts.length;
-    return `<li>${esc(p.title)} · ${fmtDay(p.day)} · ${esc(standards[p.standard])} · ${PSTAND[lang][SL[p.rating]]} · <b>${status}</b> · ${schoolEvaluationSyncHTML(p.revision,synced,de)}`
-      +`${choose?' '+button('resolve',de?'Diese Fassung wählen':'Choose this revision',p.revision):''}</li>`;
+    const criteria=p.assessment?.criteria, criterionHistory=criteria&&(p.standard==='unmapped'||criteria.some(c=>Object.hasOwn(c,'standard')));
+    const grade=criterionHistory?'':` · ${esc(standards[p.standard])} · ${PSTAND[lang][SL[p.rating]]}`;
+    const details=criterionHistory?`<ul class="pseval-criteria">${criteria.map(c=>{
+      const area=!Object.hasOwn(c,'standard')?(de?'Kein zugeordneter Bereich':'No assigned area')
+        :c.standard==='none'?(de?'Kein passender Bereich':'No matching area'):(standards[c.standard]||c.standard);
+      const rating=c.rating?PSTAND[lang][SL[c.rating]]:(de?'Keine Einstufung':'Not rated');
+      return `<li>${esc(c.criterion)} → ${esc(area)} · ${esc(rating)}</li>`;
+    }).join('')}</ul>`:'';
+    return `<li data-eval-history="${esc(p.revision)}">${esc(p.title)} · ${fmtDay(p.day)}${grade} · <b>${status}</b> · ${schoolEvaluationSyncHTML(p.revision,synced,de)}`
+      +`${choose?' '+button('resolve',de?'Diese Fassung wählen':'Choose this revision',p.revision):''}${details}</li>`;
   }).join('');
   const actions=m.conflicts.length
     ? `<p role="status">${de?'Konkurrierende Änderungen. Die bisherige Fassung bleibt aktiv, bis Sie eine Fassung wählen und bestätigen.':'Conflicting changes. The previous revision stays active until you choose and confirm a revision.'}</p>`
@@ -6927,11 +6899,28 @@ function bindSchoolEvaluation(body){
     body.querySelector('#pSchoolEvaluation [data-eval-action="open"]')?.focus();
   });
 }
+function schoolStandardNoQuest(de){
+  return de?'wird angezeigt, keine Übung in Big Quest':'shown here, no exercise in Big Quest';
+}
+/* Die bekannte Liste steht auch ohne übernommene Einstufungen zur Einsicht bereit. */
+function schoolStandardCatalogHTML(){
+  const de=PL()==='de', lang=de?'de':'en';
+  const groups=SUBJECTS.map(subject=>{
+    const entries=Object.entries(SCHOOL_STANDARD_CATALOG).filter(([,entry])=>entry.subject===subject.key);
+    if(!entries.length) return '';
+    return `<section data-standard-subject="${esc(subject.key)}"><h4>${esc(subject.name)}</h4><ul>`+entries.map(([code,entry])=>{
+      const quests=entry.quests.filter(quest=>WORLDS[quest]).map(quest=>esc(WORLDS[quest].name));
+      const note=quests.length?`${de?'Übt in der App':'Practiced in the app'}: ${quests.join(', ')}`:esc(schoolStandardNoQuest(de));
+      return `<li data-standard-code="${esc(code)}">${esc(entry.text[lang])}<br><span class="small">${note}</span></li>`;
+    }).join('')+'</ul></section>';
+  }).join('');
+  return `<details id="pStandardCatalog"><summary>${de?'Lernbereiche in Big Quest':'Learning areas in Big Quest'}</summary>${groups}</details>`;
+}
 function schoolHTML(){
   const d=schoolData(), de=PL()==='de', T=schoolTexts(de), U=SCHOOL_UI[de?'de':'en'], f=state.sfilt||SCHOOL_FILTER0;
   const h=de?'Schulische Einstufungen':'School assessments';
-  const form=schoolEvaluationHTML();
-  if(!d) return `<h2>${h}</h2>${form}<p>${T.none}</p>`;
+  const form=schoolEvaluationHTML(), catalog=schoolStandardCatalogHTML();
+  if(!d) return `<h2>${h}</h2>${form}<p>${T.none}</p>${catalog}`;
   const done=d.tasks.filter(t=>!t.pending && (!t.manual?.withdrawn || schoolEvaluationTarget())), pend=d.tasks.filter(t=>t.pending).sort((a,b)=>a.day<b.day?1:-1);
   const latest=done.reduce((m,t)=>t.day>m?t.day:m,''), stand=d.asOf||latest;
   const areas=SCHOOL_AREAS.concat(uniq(done.map(t=>t.area)).filter(a=>!SCHOOL_AREAS.includes(a))).filter(a=>done.some(t=>t.area===a));
@@ -6943,7 +6932,7 @@ function schoolHTML(){
     +`<label>${U.period}<select data-psf="period">${['all','8w','year'].map(p=>opt(p,U.p[p],f.period)).join('')}</select></label>`
     +`<label>${U.sort}<select data-psf="sort">${['date','subject','level'].map(s=>opt(s,U.s[s],f.sort)).join('')}</select></label>`
     +`<label class="pscheck"><input type="checkbox" data-psf="weak"${f.weak?' checked':''}> ${U.weak}</label></div>`
-    +`<div id="psList">${schoolListHTML(d)}</div></div>`;
+    +`<div id="psList">${schoolListHTML(d)}</div></div>${catalog}`;
 }
 /* filters and details change the list in place (no new rendering of the whole area, the page does not jump) */
 function bindSchoolList(body){

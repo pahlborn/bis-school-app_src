@@ -1,6 +1,7 @@
 {
   "hinweis": "Reihenfolge = Reihenfolge in der App. bau: live (immer) oder test (nur Testinstanz, Stufe 2). browserTests: Tests der ganzen App fuer den Bereich (npm run test:bereich; aufgaben-* laufen ohne Browser in der Sandbox).",
   "module": [
+    { "name": "standardkatalog", "bau": "live", "browserTests": ["schulimport", "schulische-einstufungen", "evaluation-eltern-browser", "elternbereich-c1", "elternbereich-d1"] },
     { "name": "rechte", "bau": "live", "browserTests": ["stufe1-p4", "stufe1-p3", "stufe1-ist", "anmeldung", "schule"] },
     { "name": "passwort", "bau": "live", "browserTests": ["stufe1-p3", "anmeldung", "hilfe-rollen"] },
     { "name": "witze", "bau": "live", "browserTests": ["spass", "begruessung"] },
