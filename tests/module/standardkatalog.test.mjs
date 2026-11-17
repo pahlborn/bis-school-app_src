@@ -9,7 +9,7 @@ const plain = value => JSON.parse(JSON.stringify(value));
 
 test('EV3.2: jeder bekannte Code ist eindeutig und hat Text in beiden Sprachen', () => {
   const source = fs.readFileSync(new URL('../../src/module/standardkatalog.mjs', import.meta.url), 'utf8');
-  const codes = [...source.matchAll(/^  '([^']+)':/gm)].map(match => match[1]);
+  const codes = [...source.matchAll(/^\s*(['"])([A-Z]-[A-Z]\d+)\1\s*:/gm)].map(match => match[2]);
   assert.ok(codes.length >= 15, 'alle 15 aus der bisherigen Standardliste übernommenen Codes');
   assert.equal(new Set(codes).size, codes.length, 'kein überschriebener doppelter Objektschlüssel');
   assert.deepEqual(codes, Object.keys(SCHOOL_STANDARD_CATALOG));
