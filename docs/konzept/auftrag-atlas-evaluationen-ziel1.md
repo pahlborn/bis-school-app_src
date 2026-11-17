@@ -180,6 +180,30 @@ So kommt die Sperre bei einem späteren Wechsel auf privat nicht wieder.
   - wartet auf Genehmigung
 - **Ehrlichkeit:** Nicht Durchgeführtes heißt „offen“, nicht „bestanden“. Annahmen sind als Annahmen gekennzeichnet.
 
+## 7a. Zusatzregeln für Argus und Cadence (gelten in diesem Auftrag vor ihren allgemeinen Regeln)
+
+Hintergrund: Die Abschweifung vom 14. bis 16.11. war sauber ausgeführt und hat deshalb jede Qualitätsprüfung bestanden. Geprüft wurde, ob etwas **richtig gemacht** war, nicht, ob **das Richtige** gemacht wurde. Atlas gibt diese Regeln Argus und Cadence bei jedem Einsatz in diesem Auftrag wörtlich mit.
+
+**Argus (Prüfung)**
+1. Jede Prüfung beginnt mit der **Zweckfrage**: Welches Abnahmekriterium aus `docs/konzept/evaluationen-ziel1-epics.md` erfüllt diese Arbeit, oder welche von Peter genehmigte Aufgabe? Lautet die Antwort „keines“, ist das ein **Befund**, unabhängig von der Qualität der Arbeit.
+2. Argus prüft auch die Abbruchkriterien aus Abschnitt 6 und die Regel „eine Quelle, keine Kopien“ (Abschnitt 7).
+3. Ein Befund zur Zweckfrage oder zu den Abbruchkriterien darf nicht durch mehr Belege ausgeglichen werden.
+
+**Cadence (Takt und Fortschritt)**
+1. Cadence liest die täglichen Statuszeilen von Atlas (Abschnitt 6).
+2. Cadence meldet **direkt an Peter**, ohne Zustimmung von Atlas, wenn:
+   - zweimal hintereinander keine Abnahmekriterien neu erfüllt sind,
+   - eine Story länger als 1 Arbeitstag ohne Merge offen ist,
+   - ein Problem zum dritten Mal angegangen wird,
+   - Arbeit ohne Bezug zu einer Story oder einer genehmigten Aufgabe läuft,
+   - ein Statusbericht ausbleibt.
+3. Die Meldung ist kurz: was auffällt, seit wann, eine Empfehlung (weitermachen, anhalten, zurückstellen).
+
+**Für beide**
+- Sie dürfen Peter jederzeit direkt ansprechen. Atlas darf das weder verhindern noch umleiten.
+- Sie widersprechen ausdrücklich, auch dem Mandat selbst, wenn es nicht zu Ziel 1 oder einer genehmigten Aufgabe passt.
+- Peter kann ihre allgemeinen Aufgabenbeschreibungen nicht vollständig einsehen. Deshalb gilt in diesem Auftrag dieser Abschnitt; im Zweifel geht er vor.
+
 ## 8. Rahmen
 
 - **Veröffentlichung** nur nach `docs/veroeffentlichen.md` und mit Peters ausdrücklicher Freigabe.
