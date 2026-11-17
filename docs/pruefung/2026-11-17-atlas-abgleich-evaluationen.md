@@ -2,11 +2,11 @@
 
 ## Kurzfassung für Peter
 
-**Was ist erledigt?** Die bisherigen Arbeiten sind geprüft und zugeordnet; deine Entscheidungen stehen im Konzept. Drei getrennte Änderungsvorschläge liegen vor: feste iPad-App-Kennung mit genauer Schlüsselbund-Diagnose, Speicherung und Auswertung der einzelnen Kriterien sowie eine gemeinsame Liste aller Lernbereiche. Alle drei getrennten vollständigen Testläufe sind bestanden. Zwei unabhängige Prüfer haben den begrenzten Softwareumfang bestätigt. Das sind vorbereitete Änderungen, noch keine fertige Gesamtlösung.
+**Was ist erledigt?** Die bisherigen Arbeiten sind geprüft und geordnet. Programmiert und getestet sind Verbesserungen für neue iPad-Testfassungen, verständlichere Meldungen bei Problemen mit dem gespeicherten KI-Schlüssel, die Speicherung und Auswertung jeder Einzelbewertung sowie eine gemeinsame Liste aller Lernbereiche. Unabhängige Prüfer haben diese Änderungen geprüft. Sie sind noch nicht in der Hauptfassung zusammengeführt. Ob Verbindung und Schlüssel auf deinem iPad einen Neustart überstehen, ist noch offen.
 
-**Was kommt als Nächstes?** Als Nächstes werden die geprüften Änderungen nach Freigabe zusammengeführt und am gemeinsamen Stand geprüft. Auf deinem iPad prüfen wir, ob Verbindung und Schlüssel einen Neustart und eine neue Testfassung überstehen. Danach folgen das gemeinsame Formular, die Zuordnung der Bewertungen und die durchgehende Übungswirkung. Vorgerechnete Beispiele gehören dazu, soweit sie beim Lernen helfen.
+**Was kommt als Nächstes?** Zuerst werden die Änderungen gemeinsam geprüft und nach Freigabe zusammengeführt. Danach folgen die automatische Wiederverbindung, sinnvolle vorgerechnete Beispiele und das gemeinsame Formular. Anschließend prüfen wir den ganzen Ablauf: Bewertungen aus Toddle übernehmen, kontrollieren, speichern und ihre Wirkung auf die Übungen sehen.
 
-**Was brauche ich von dir?** Für die laufenden Prüfungen fehlt keine weitere Freigabe. Du prüfst diesen ergänzten Bericht; über die Zusammenführung und später die Tests auf deinem iPad entscheiden wir am konkreten Ergebnis. Eine Veröffentlichung der App braucht weiterhin deine ausdrückliche Freigabe.
+**Was brauche ich von dir?** Im Moment keine neuen Angaben oder Grundsatzentscheidungen. Die Freigabe zur Zusammenführung bereite ich konkret vor. Später brauche ich dich für die vereinbarten Tests auf deinem iPad. Über die Veröffentlichung der App entscheidest weiterhin du.
 
 ## Technischer Abgleich und Umsetzungsplan
 
