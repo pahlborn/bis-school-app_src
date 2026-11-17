@@ -38,9 +38,9 @@ Stand 17.11.2026 · Grundlage: `docs/konzept/evaluationen-uebernahme.md` (Befund
 | **EV-6** | Nachzuordnung | Neue Standards erzeugen Vorschläge für frühere Kriterien ohne Bereich | M3 | S | EV-5 |
 | **EV-7** | Wirkung und Abnahme | Übernommene Einstufungen erzeugen Lücke, Fokus, Übung; Abnahme der ganzen Kette auf dem iPad | M4 | M | EV-1 bis EV-6 |
 
-**Voraussetzungen außerhalb dieser Epics** (`dev-auftraege-2026-11-03.md`), vor oder mit EV-7:
-- Auftrag 1: Grundlage-Aufgaben.
-- Auftrag 2: ehrlicher Lückenbalken ohne 14-Tage-Regel.
+**Aufträge vom 03.11.:** Auftrag 1 (Grundlage-Aufgaben, #112) und Auftrag 2 (Lückenbalken ohne 14-Tage-Regel, #109) sind **erledigt**. Ihre Wirkung wird in EV-7 geschützt.
+
+**Zusätzlich vor oder mit M2 (D4):** ausgearbeitete Beispiele für die Grundlage-Aufgaben der zehn betroffenen Quests (Story EV-3.3).
 
 **Reihenfolge:**
 1. EV-1, parallel dazu EV-2 und EV-3.
@@ -150,6 +150,15 @@ Stand 17.11.2026 · Grundlage: `docs/konzept/evaluationen-uebernahme.md` (Befund
   - Jede genannte Quest existiert.
   - Jeder Hauptstandard einer Quest steht in der Liste.
 - Kurze Anleitung „Standard ergänzen“ im Konzept.
+
+### EV-3.3 Beispiele für Grundlage-Aufgaben (D4)
+> Als **Kind** möchte ich bei einer Grundlage-Aufgabe ein passendes, vorgerechnetes Beispiel sehen können, damit ich den Lösungsweg verstehe.
+
+- Für die Grundlage-Aufgaben der zehn Quests aus Auftrag 1 (`numbers`, `combos`, `wordprob`, `forces`, `units`, `graphs`, `sentences`, `words`, `anleitung`, `library`) gibt es „Zeig mir ein Beispiel“ mit einer **anderen** passenden Aufgabe samt Lösungsweg. Die eigene Aufgabe bleibt ungelöst.
+- Auf der niedrigsten Stufe darf das Beispiel gleich niedrig sein, neutral beschriftet.
+- Wo ein Beispiel keinen sinnvollen Lernnutzen hat, entfällt es; die Ausnahme ist je Aufgabenart kurz begründet.
+- Lösen nach dem Beispiel zählt als „mit Hilfe“ (wie bisher).
+- Bestehende Tests, die „kein Beispiel auf Grundlage-Stufe“ erwarten, werden gezielt angepasst; die Gegenprobe ist rot.
 
 ---
 
@@ -261,7 +270,7 @@ Stand 17.11.2026 · Grundlage: `docs/konzept/evaluationen-uebernahme.md` (Befund
 - **Gegeben** eine übernommene Evaluation mit M-N1 = C, **dann**:
   - M-N1 erscheint unter „Lücken laut Schule“.
   - „Time & Numbers“ ist im Fokus.
-  - Practise Today enthält höchstens 2 von 8 Aufgaben daraus.
+  - Practise Today enthält daraus höchstens 2 von 8 Aufgaben, wenn es andere aktuelle Themen gibt; ohne andere aktuelle Themen darf die Lücke die ganze Runde füllen (D5). **Beide Fälle werden getestet.**
 - Bestehende Regeln gelten unverändert:
   - nur eine aktive Lücke
   - Reihenfolge RS vor C, älteste zuerst
