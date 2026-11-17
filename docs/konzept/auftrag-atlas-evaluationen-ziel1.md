@@ -68,7 +68,7 @@ Mindestens diese Quellen. Wenn dir aus dem Agentarium (Lauf `BQ-EVAL-01`) weiter
    | **überholt** | Begründung; nichts löschen, nur vorschlagen |
 
 3. **Ausdrücklich klären:**
-   - **Test 11:** Peter hat den manuellen iPad-Test 11 **mit positivem Ergebnis** durchgeführt; im Repo ist das nicht dokumentiert. Peter erinnert sich nicht mehr an alle Einzelheiten. Deshalb **keine Rekonstruktion**: einen kurzen Prüfbericht anlegen mit „bestanden laut Peter, Einzelheiten nicht dokumentiert“ und dem, was Peter noch weiß. Die belastbare, dokumentierte Geräteabnahme ist EV-7.3; dort wird jeder Schritt sofort beim Test festgehalten. Gleichzeitig klären, was die in INT-01 genannte „rote Integrationsprüfung“ war und ob sie noch besteht.
+   - **Test 11:** Peter hat den manuellen iPad-Test 11 **mit positivem Ergebnis** durchgeführt; im Repo ist das nicht dokumentiert. Peter erinnert sich nicht mehr an alle Einzelheiten. Deshalb **keine Rekonstruktion**. Der Nachtrag liegt vor: `docs/pruefung/2026-11-17-test11-geraetetest-nachtrag.md` (mehrere Evaluationen abgerufen, zum Schluss fehlerfrei; Übernahme ins Formular und Einstufungen korrekt; Speichern, Neustart und Übung nicht dokumentiert). Die belastbare, dokumentierte Geräteabnahme ist EV-7.3; dort wird jeder Schritt sofort beim Test festgehalten. Gleichzeitig klären, was die in INT-01 genannte „rote Integrationsprüfung“ war und ob sie noch besteht.
    - **Integration PR #198 und die offenen Zweige:** Stand, Konflikte mit `main`, was davon die Basis für EV-1 bis EV-7 sein soll.
    - **Stand der Aufträge 1 und 2** aus `dev-auftraege-2026-11-03.md`.
    - **Nummerierung:** EV-1 bis EV-7 unter Epic `2026.0005` oder als neue Nummer. Vorschlag mit Begründung; Peter entscheidet.
@@ -191,5 +191,5 @@ So kommt die Sperre bei einem späteren Wechsel auf privat nicht wieder.
 1. Abgleichsbericht (Phase A) mit allen Einordnungen.
 2. Liste der Abweichungen als Genehmigungsvorlage (Phase B).
 3. Vorschlag zur Nummerierung (`2026.0005` oder neu).
-4. Kurzer Prüfbericht Test 11 („bestanden laut Peter“), Stand der „roten Integrationsprüfung“, Empfehlung zu PR #198.
+4. Stand der „roten Integrationsprüfung“ und Empfehlung zu PR #198, unter Berücksichtigung des Test-11-Nachtrags.
 5. Plan für den ersten Abschnitt (EV-1, EV-2, EV-3) mit Zuordnung zu Agenten.
