@@ -2,9 +2,9 @@
 // finite and enumerated; sum generators use a proven sufficient-state quotient.
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {execFileSync} from 'node:child_process';
 import {appSandbox} from '../app-sandbox.mjs';
-import {appLesen,moduleEinsetzen} from '../../werkzeug/module.mjs';
+import {appLesen} from '../../werkzeug/module.mjs';
+import {committedApp} from './ep01-rest-fixtures.mjs';
 import {createRoundingQuestions,estimateWrongs,roundingWrongs,roundingReasonChoices} from '../../src/module/rundungsfragen.mjs';
 import {discoverBanks,lengthQuality,qualityFailures,PENDING_BANKS,discoverMcCallsites,MC_CALLSITE_INVENTORY} from './ep01-qualitaet.mjs';
 const BASE='c2ed934bf867bef58ae1c9338a414c9e23de5372';
@@ -156,7 +156,7 @@ test('future static MC collections cannot be silently unclassified; untouched vi
   assert.ok(discoverMcCallsites(source+'\nfunction futureQuest(){ return mc("New?","A",["B","C","D"],"Why"); }').includes('futureQuest'));
   const probe={holen:name=>name==='FUTURE_MC'?[['New?','A',['B','C','D'],'Why']]:S.holen(name)};
   assert.ok(discoverBanks(probe,source+'\nconst FUTURE_MC=[];').FUTURE_MC);
-  t.diagnostic(`OPEN banks=${PENDING_BANKS.length}; measured violations=${qualityFailures(banks).length}. Run node tests/module/ep01-audit.mjs (expected exit1).`);
+  t.diagnostic(`Known static banks=${PENDING_BANKS.length+1}; measured violations=${qualityFailures(banks).length}. Remaining generator acceptance is reported by ep01-audit.mjs.`);
 });
 // Real reviewer counterexamples. These sandbox-only banks are deliberately bad
 // (100% longest correct), and really feed the existing builder or a live world.
@@ -230,9 +230,9 @@ for(const [label,replacement]of [
   assert.deepEqual(Object.keys(discoverBanks(app,source)).sort(),[...PENDING_BANKS,'ROUND_MC'].sort());
 });
 test('foundation and extraction-only generators match pinned original byte for byte, including qId and level wrappers',()=>{
-  const oldSource=execFileSync('git',['show',`${BASE}:index.html`],{encoding:'utf8',maxBuffer:5e6});
+  const oldSource=committedApp(BASE);
   // New module exports are unused by the old source; its original local generators remain intact.
-  const before=appSandbox({seed:18112026,anpassen:()=>moduleEinsetzen(oldSource)});
+  const before=appSandbox({seed:18112026,anpassen:()=>oldSource});
   const after=appSandbox({seed:18112026});
   const pack=(app,q)=>JSON.parse(JSON.stringify({q,id:app.holen('qId')(q)}));
   for(const step of [10,100,1000])for(let n=0;n<=10000;n+=step/10)for(const family of ['round','benchmark','round-explain'])for(const less of [true,false]){
