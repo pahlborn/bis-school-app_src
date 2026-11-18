@@ -161,11 +161,17 @@ So kommt die Sperre bei einem späteren Wechsel auf privat nicht wieder.
   - Testbefehle
   - was ausdrücklich **nicht** zu tun ist
 - **Ein Worktree und Zweig je Worker.** Worker mergen nicht selbst.
-- **Eine Quelle für Code und Dokumente: `pahlborn/bis-school-app_src`.** Worker lesen direkt dort (das Repo ist öffentlich). Aufgaben verweisen auf Zweig, Commit, Pfad und Zeile, statt Inhalte zu kopieren.
-  - Keine Kopien von Quelltext oder Dokumenten in andere Repos (z. B. Agentarium) oder Ablagen.
-  - Verlangt ein Werkzeug technisch eine Kopie (z. B. ein Relay, das seine Eingaben anderswo liest), ist das eine **Abweichung**: einmal Peter vorlegen, mit Grund und Alternative. Wird sie genehmigt, muss jede Kopie ihren Quell-Commit nennen, und sie darf nur vorübergehend existieren. Nach der Aufgabe wird sie entfernt; sie ist nie Grundlage für Änderungen.
-  - Hintergrund: Am 17.11. hatte Atlas Swift-Quelltextkopien im Agentarium vorgesehen, weil der Forge-Relay dort liest. Die automatische Freigabeprüfung lehnte das ab, und Atlas hat den Weg verworfen.
-  - **Geltungsbereich:** Diese Regel betrifft nur Kopien von Quelltext, Dokumenten, Paketen und Archiven. Agentarium bleibt der Auftrags- und Statuskanal, und die Claude-Agenten (Forge, Argus, Sentinel, Cadence, Archibald) bleiben die Standard-Worker: Aufträge dort enthalten Ziel, Abnahmekriterien und Verweise (Zweig, Commit, Pfad, Zeile); der Code wird direkt aus dem öffentlichen Produkt-Repo gelesen und als PR dort geliefert.
+- **Maßgeblich ist `pahlborn/bis-school-app_src`.** Code und Dokumente werden dort geändert; Ergebnisse kommen nur als PR dorthin. Aufgaben verweisen auf Zweig, Commit, Pfad und Zeile.
+  - **Forge und die anderen Claude-Agenten sind die Standard-Worker.** Agentarium bleibt der Auftrags- und Statuskanal.
+  - **Arbeitskopien für Agenten sind erlaubt**, wenn ein Werkzeug sie braucht (z. B. der Forge-Relay, der seine Eingaben aus Agentarium liest). Keine Einzelgenehmigung nötig, aber diese Bedingungen gelten:
+    - nur die Dateien oder Ausschnitte, die der Auftrag braucht;
+    - jede Kopie nennt ihren Quell-Commit;
+    - eine Kopie ist nie Grundlage für Änderungen: Das Ergebnis wird gegen den aktuellen Stand im Produkt-Repo geprüft und als PR integriert;
+    - nach Abschluss des Auftrags wird die Kopie gelöscht;
+    - keine Passwörter, Schlüssel oder Namen Dritter;
+    - der Status vermerkt, welche Kopien angelegt und gelöscht wurden.
+  - **Grenzen des Relays** (Dateiliste, Dateigröße, z. B. bei `index.html`) dürfen Forge nicht dauerhaft ausschließen. Atlas legt Peter einen kurzen Vorschlag zur Anpassung vor (z. B. Ausschnitte oder Diff statt ganzer Dateien) und setzt ihn nach Peters Ja um.
+  - Hintergrund: Am 17.11. wurde eine Ablage von Swift-Kopien im Agentarium abgelehnt; danach wich Atlas auf Codex aus. Seit 18.11. sind Arbeitskopien unter den obigen Bedingungen erlaubt, damit Forge wieder entwickeln kann.
   - **Werkzeugwechsel:** Ein anderes Werkzeug oder Modell (z. B. Codex) nur nach Peters Freigabe, mit Begründung: technisch nicht anders möglich oder nachweislich bessere Leistung. Jede Statusmeldung nennt, wer gearbeitet hat.
 - **`index.html` ist ein Engpass.** Plane Aufgaben so, dass nicht zwei Worker gleichzeitig dieselben Bereiche ändern. Logik möglichst in Module (`src/module/`) verlagern, wie in den Leitplanken vorgesehen.
 - **Stärken nutzen:**
@@ -188,7 +194,7 @@ Hintergrund: Die Abschweifung vom 14. bis 16.11. war sauber ausgeführt und hat 
 
 **Argus (Prüfung)**
 1. Jede Prüfung beginnt mit der **Zweckfrage**: Welches Abnahmekriterium aus `docs/konzept/evaluationen-ziel1-epics.md` erfüllt diese Arbeit, oder welche von Peter genehmigte Aufgabe? Lautet die Antwort „keines“, ist das ein **Befund**, unabhängig von der Qualität der Arbeit.
-2. Argus prüft auch die Abbruchkriterien aus Abschnitt 6 und die Regel „eine Quelle, keine Kopien“ (Abschnitt 7).
+2. Argus prüft auch die Abbruchkriterien aus Abschnitt 6 und die Regel zu Produkt-Repo und Arbeitskopien (Abschnitt 7).
 3. Ein Befund zur Zweckfrage oder zu den Abbruchkriterien darf nicht durch mehr Belege ausgeglichen werden.
 
 **Cadence (Takt und Fortschritt)**
