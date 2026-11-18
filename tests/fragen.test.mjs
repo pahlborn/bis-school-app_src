@@ -104,3 +104,30 @@ test('Strategiefragen: keine Scherz-Ablenker, Runden nach dem Schulmodell', () =
   assert.match(quelltext, /Round 347 to the nearest hundred\. How do you decide\?","Find the halfway point 350/);
   assert.match(quelltext, /You made 905 as 500 \+ 400 \+ 5\. Which is ANOTHER correct way\?","600 \+ 300 \+ 5"/);
 });
+
+// EP01: exercise the actual card/pool/render/score path across the revised
+// collections. The finite Node oracles independently establish their answers.
+test('EP01 remaining content: real subject cards, help and complete 8/8 rounds',async()=>{
+  const {ctx,page,fehler}=await app();
+  try{
+    const cards=await alleKarten(page);
+    for(const world of['numbers','examples','units','combos','anleitung','wordprob']){
+      const card=cards.find(k=>k.item===world);assert.ok(card,world+': actual visible quest card');
+      await karteOeffnen(page,card);
+      for(let i=0;i<8;i++){
+        const s=await zustand(page),q=s.round[s.idx];assert.equal(s.idx,i);
+        if(i===0){
+          await klick(page,'#helpBtn');
+          assert.ok(await sichtbar(page,'#feedback'),world+': real help appears');
+          if(await sichtbar(page,'#helpBtn')&&/example|Beispiel/.test(await page.textContent('#helpBtn')))await klick(page,'#helpBtn');
+        }
+        await frageBeantworten(page,q);
+        assert.ok(await page.evaluate(()=>document.querySelector('#feedback').classList.contains('good')),world+': correct selected answer is scored');
+        await klick(page,'#nextBtn');
+      }
+      assert.ok(await sichtbar(page,'#results'));assert.equal(await page.textContent('#resScore'),'8');
+      await klick(page,'#homeBtn');
+    }
+    assert.deepEqual(fehler,[]);
+  }finally{await ctx.close();}
+});

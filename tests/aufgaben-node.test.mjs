@@ -65,11 +65,17 @@ function pruefeFrage(q) {
     if (!satz) p.push('Satz nicht gefunden: ' + zitat);
     else {
       const woerter = satz[0].split(' ').map(ohneZeichen);
+      if(q.prompt.startsWith('Which sentence correctly shows')){
+        const canonical=satz[0];
+        if(q.options[q.answer]!==canonical)p.push('proper-name sentence: wrong canonical capitalization');
+        if(q.options.filter(o=>o===canonical).length!==1)p.push('proper-name sentence: duplicate/missing correct answer');
+      }else{
       const gross = (o) => woerter.some((w, i) => i > 0 && w.toLowerCase() === o && /^[A-ZÄÖÜ]/.test(w));
       q.options.forEach((o, i) => {
         if (i === q.answer && !gross(o)) p.push(`Eigenname: Loesung "${o}" steht im Satz nicht gross`);
         if (i !== q.answer && gross(o)) p.push(`Eigenname: "${o}" als falsch angeboten, steht im Satz aber gross`);
       });
+      }
     }
   }
   return p;
