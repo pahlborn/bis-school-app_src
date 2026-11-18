@@ -1,3 +1,4 @@
+import { NEULAND_BEISPIELE } from './neuland-grundlage.mjs';
 // EV-3.3: another worked case for each foundation family. No screen or storage.
 // Text entries follow the eight families in GRUNDLAGE; maths reuses the SAME family generator
 // and its classroom model. Explicit null entries are the approved EV33-CC-M1 exceptions:
@@ -78,7 +79,7 @@ export function foundationExample(q, build) {
   // units/3, longer: all available cm lengths are below 1 m, so every matching example
   // would directly supply the same fixed answer. Shorter/cm cases retain other results.
   if (q.world === 'units' && q.foundationFamily === 3 && foundationAnswer(q) === '1 m') return null;
-  const row = GRUNDLAGE_BEISPIELE[q.world]?.[q.foundationFamily];
+  const row = GRUNDLAGE_BEISPIELE[q.world]?.[q.foundationFamily] || NEULAND_BEISPIELE[q.world]?.[q.foundationFamily];
   if (row) return { kind: 'type', level: 1, world: q.world, foundationFamily: q.foundationFamily, prompt: row[0], answer: row[1], explain: row[2] };
   if (!build) return null;
   let fallback = null;
