@@ -143,6 +143,74 @@ enum ClaudeKey {
     }
 }
 
+// Device access has its own service/account. The provider key is never returned
+// through the web bridge. This keeps the existing three-file Playground export.
+enum BigQuestBridgePolicy {
+    private static func pageScope(_ address: URL?) -> String? {
+        guard let address, address.scheme == "https", address.host == "big-quest-test.github.io",
+              address.port == nil || address.port == 443 else { return nil }
+        for scope in ["probe-evaluation-form", "probe-evaluation-local"] {
+            if ["/" + scope, "/" + scope + "/", "/" + scope + "/index.html"].contains(address.path) { return scope }
+        }
+        return nil
+    }
+
+    static func scope(active: URL?) -> String? { pageScope(active) }
+
+    static func scope(active: URL?, frame: URL?, mainFrame: Bool, originProtocol: String, originHost: String, originPort: Int) -> String? {
+        guard mainFrame, originProtocol == "https", originHost == "big-quest-test.github.io",
+              originPort == 0 || originPort == 443,
+              let scope = pageScope(frame), scope == pageScope(active) else { return nil }
+        return scope
+    }
+}
+
+enum DeviceAccessKey {
+    private static func lookup(scope: String) -> [String: Any] {
+        [kSecClass as String: kSecClassGenericPassword,
+         kSecAttrService as String: "de.bigquest.ipad.device-access",
+         kSecAttrAccount as String: scope]
+    }
+
+    static func valid(_ value: String) -> Bool {
+        (8...255).contains(value.utf8.count) && !value.lowercased().hasPrefix("sk-ant-")
+            && value.utf8.allSatisfy { (33...126).contains($0) }
+    }
+
+    static func read(scope: String, store: ClaudeKey.Store = .system) -> (OSStatus, String?) {
+        var query = lookup(scope: scope)
+        query[kSecReturnData as String] = true
+        query[kSecReturnAttributes as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        let (status, attributes) = store.copy(query)
+        let value = (attributes?[kSecValueData as String] as? Data).flatMap { String(data: $0, encoding: .utf8) }
+        return (status, status == errSecSuccess && value.map(valid) == true ? value : nil)
+    }
+
+    static func save(_ value: String, scope: String, store: ClaudeKey.Store = .system) -> Bool {
+        guard valid(value) else { return false }
+        let data = Data(value.utf8)
+        var status = store.update(lookup(scope: scope), [kSecValueData as String: data])
+        if status == errSecItemNotFound {
+            var item = lookup(scope: scope)
+            item[kSecValueData as String] = data
+            item[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+            status = store.add(item).0
+        }
+        let (readStatus, readBack) = read(scope: scope, store: store)
+        return status == errSecSuccess && readStatus == errSecSuccess && readBack == value
+    }
+
+    static func forget(_ expected: String, scope: String, store: ClaudeKey.Store = .system) -> Bool {
+        let (status, current) = read(scope: scope, store: store)
+        if status == errSecItemNotFound { return true }
+        guard status == errSecSuccess else { return false }
+        if current != expected { return true }
+        let deleted = store.delete(lookup(scope: scope))
+        return deleted == errSecSuccess || deleted == errSecItemNotFound
+    }
+}
+
 private final class ClaudeNoRedirect: NSObject, URLSessionTaskDelegate {
     func urlSession(
         _ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,

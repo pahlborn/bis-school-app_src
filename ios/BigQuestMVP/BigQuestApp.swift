@@ -24,23 +24,46 @@ private final class BrowserPage: NSObject, ObservableObject, WKScriptMessageHand
     lazy var view: WKWebView = {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = persistent ? .default() : .nonPersistent()
-        if url.host == "big-quest-test.github.io" { configuration.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "bigQuestEvaluation") }
+        if url.host == "big-quest-test.github.io" {
+            configuration.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "bigQuestEvaluation")
+            configuration.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "bigQuestDeviceConnection")
+        }
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.load(URLRequest(url: url))
         return webView
     }()
-    var isEvaluationPage: Bool {
-        guard let activeURL = view.url, activeURL.scheme == "https",
-              activeURL.host == "big-quest-test.github.io",
-              activeURL.port == nil || activeURL.port == 443 else { return false }
-        return ["/probe-evaluation-form", "/probe-evaluation-form/", "/probe-evaluation-form/index.html", "/probe-evaluation-local", "/probe-evaluation-local/", "/probe-evaluation-local/index.html"].contains(activeURL.path)
-    }
+    var isEvaluationPage: Bool { BigQuestBridgePolicy.scope(active: view.url) != nil }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage,
                                replyHandler: @escaping (Any?, String?) -> Void) {
-        guard message.webView === view, message.frameInfo.isMainFrame,
-              message.frameInfo.securityOrigin.protocol == "https", message.frameInfo.securityOrigin.host == "big-quest-test.github.io",
-              isEvaluationPage, !busy,
+        guard message.webView === view,
+              let scope = BigQuestBridgePolicy.scope(active: view.url, frame: message.frameInfo.request.url,
+                mainFrame: message.frameInfo.isMainFrame, originProtocol: message.frameInfo.securityOrigin.protocol,
+                originHost: message.frameInfo.securityOrigin.host, originPort: message.frameInfo.securityOrigin.port) else {
+            replyHandler(nil, KeychainText.text("Ungültiger App-Aufruf.", "Invalid app request.")); return
+        }
+        if message.name == "bigQuestDeviceConnection" {
+            guard let body = message.body as? [String: Any], let action = body["action"] as? String else {
+                replyHandler(nil, KeychainText.text("Ungültiger Geräteaufruf.", "Invalid device request.")); return
+            }
+            switch action {
+            case "read":
+                let (status, code) = DeviceAccessKey.read(scope: scope)
+                if status == errSecItemNotFound { replyHandler(["status": "missing"], nil) }
+                else if status == errSecSuccess, let code { replyHandler(["status": "ok", "code": code], nil) }
+                else { replyHandler(["status": "error"], nil) }
+            case "remember", "forget":
+                guard let code = body["code"] as? String, DeviceAccessKey.valid(code) else {
+                    replyHandler(nil, KeychainText.text("Ungültiger Geräteaufruf.", "Invalid device request.")); return
+                }
+                let ok = action == "remember" ? DeviceAccessKey.save(code, scope: scope) : DeviceAccessKey.forget(code, scope: scope)
+                replyHandler(["status": ok ? "ok" : "error"], nil)
+            default:
+                replyHandler(nil, KeychainText.text("Ungültiger Geräteaufruf.", "Invalid device request."))
+            }
+            return
+        }
+        guard message.name == "bigQuestEvaluation", !busy,
               let body = message.body as? [String: Any], let source = body["source"] as? String,
               !source.isEmpty, source.utf8.count <= 48000 else { replyHandler(nil, "Ungültiger Formularaufruf."); return }
         busy = true
