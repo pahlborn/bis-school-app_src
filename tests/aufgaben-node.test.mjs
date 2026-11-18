@@ -2,7 +2,7 @@
 // (fragen, lernlogik, beispiele) rechnen hier in Node: das unveraenderte App-Skript laeuft in einer Sandbox
 // (tests/app-sandbox.mjs), Karten und Antwortknoepfe werden wie im Browser angeklickt, nur ohne Darstellung.
 // Dazu, was seit #112 (Modul grundlage) und #115 (Modul runde) in jeder Runde stecken muss: 8 Aufgaben, keine
-// doppelt, in den 10 Quests aus Auftrag 1 immer eine Grundlage-Aufgabe, nie ein leichteres Beispiel fuer sie.
+// doppelt, in den 10 Quests aus Auftrag 1 immer eine Grundlage-Aufgabe, andere Beispiele auf derselben Grundlage-Stufe (EV-3.3).
 // Zufall mit Startwert: steht bei jedem Test als BQ_SEED=… in der Ausgabe; damit laesst sich ein Rot wiederholen.
 //   node --test tests/aufgaben-node.test.mjs
 // Im Browser bleibt je Fach ein kurzer Bedienweg (fragen.test.mjs, beispiele.test.mjs).
@@ -159,10 +159,15 @@ function beispieleDurchgehen(S, items, runden, { zaehlt, beschriftung, kennung, 
         if (angeboten) {
           S.klick('#helpBtn');                                                 // leichteres Beispiel
           const fb = S.$('#feedback').textContent;
+          if (q.foundationFamily !== undefined && level(q) === 1) {
+            const ex = s.example;
+            if (!/An example|Ein Beispiel/.test(fb) || !ex || ex.foundationFamily !== q.foundationFamily || S.holen('qId')(ex) === S.holen('qId')(q)) fehl.push('bad foundation example: ' + prompt);
+          } else {
           if (!beispielText.test(fb)) fehl.push('kein Beispiel-Text: ' + prompt);
           const ex = ((fb.match(loesung) || [])[1] || '').trim();
           if (ex.toLowerCase() === antwort(q).trim().toLowerCase()) fehl.push('gives away the answer: ' + prompt);
-          if (level(q) <= 1) fehl.push('example for a support-level task: ' + prompt);
+          if (level(q) <= 1) fehl.push('example for an unrelated support-level task: ' + prompt);
+          }
         }
         S.klick('#answerBtn'); S.klick('#nextBtn');
         if (S.sichtbar('#results')) break;

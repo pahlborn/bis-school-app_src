@@ -2060,11 +2060,11 @@ function buildSchool(){ return fromBank(SCH_MC,SCH,8); }
    10 of 19 quests with a main standard had no task at level 1 (foundation): a gap then started at year level, and
    "requires support" could not get its two supported tasks. Foundation = ONE step with a picture or a model, in the
    model the class uses (SCHOOL_WAY: whole and parts, number line; place value table) - no new methods. Every task has
-   its own tip ("Show me how"); there is no easier example below this level. One foundation task per round.
+   its own tip ("Show me how"); EV-3.3 adds another worked case at the same level. One foundation task per round.
    Text quests: module grundlage (GRUNDLAGE), turned into questions by baseQ. */
 function baseQ(k, tag){
-  const r=pick(GRUNDLAGE[k]);
-  return mc(r[0], r[1], r[2], r[3], Object.assign({}, tag, {level:1, tip:r[5]}, r[6]?{visual:quote(r[6])}:{}));
+  const i=rnd(GRUNDLAGE[k].length), r=GRUNDLAGE[k][i];
+  return mc(r[0], r[1], r[2], r[3], Object.assign({}, tag, {level:1, tip:r[5], foundationFamily:i}, r[6]?{visual:quote(r[6])}:{}));
 }
 /* whole and parts as a bar model: the whole on top, the parts below (labels may be '?') */
 function partWholeSVG(whole, parts, wholeLabel, partLabels){
@@ -2079,92 +2079,96 @@ function partWholeSVG(whole, parts, wholeLabel, partLabels){
 }
 const PV3=['Hundreds','Tens','Ones'];
 const digits3 = n => String(n).split('');
-function numbersBaseQ(){
-  const k=rnd(6), tag=Object.assign({level:1, grid:true}, NUM);
+function numbersBaseQ(k=rnd(6), example){
+  const draw=example?.draw||rnd, choose=a=>a[draw(a.length)], variant=example?.variant||{};
+  const tag=Object.assign({level:1, grid:true, foundationFamily:k}, NUM);
   if(k===0){ // read a number from the place value table
-    const h=1+rnd(9), t=rnd(10), o=1+rnd(9), n=h*100+t*10+o;
+    const h=1+draw(9), t=draw(10), o=1+draw(9), n=h*100+t*10+o;
     return mc("The table shows a number. What number is it?", String(n), uniq([o*100+t*10+h, h*100+o*10+t, h*10+o, n+100].map(String)).filter(x=>x!==String(n)).slice(0,2),
       h+" hundreds, "+t+" tens and "+o+" ones make "+n+".", Object.assign({visual:tableHTML(PV3,[digits3(n)]), tip:"Read the digits from left to right: hundreds, tens, ones. Say the number out loud."}, tag)); }
   if(k===1){ // o'clock or half past
-    const h=1+rnd(12), m=pick([0,30]), right=timeWords(h,m);
+    const h=1+draw(12), m=variant.minute??choose([0,30]), right=timeWords(h,m);
     const wrongs=uniq([timeWords(h,(m+30)%60), timeWords(h%12+1,m), timeWords((h+5)%12+1,m)]).filter(x=>x!==right).slice(0,2);
     return mc("What time does the clock show?", right, wrongs, "The long hand points to the "+(m?6:12)+": "+(m?"half past":"o’clock")+". The short hand shows the hour: "+right+".",
-      Object.assign({visual:clockSVG(h,m,190), tip:"First look at the long hand: at the 12 it is o’clock, at the 6 it is half past. Then read the short hand."}, tag)); }
+      Object.assign({visual:clockSVG(h,m,190), foundationVariant:{minute:m}, tip:"First look at the long hand: at the 12 it is o’clock, at the 6 it is half past. Then read the short hand."}, tag)); }
   if(k===2){ // one jump on the number line
-    const j=pick([10,10,5,-10]), start=(j<0?30:10)+rnd(50), end=start+j;
+    const j=variant.jump??choose([10,10,5,-10]), start=(j<0?30:10)+draw(50), end=start+j;
     return mc("Start at <b>"+start+"</b> and jump <b>"+(j<0?"− ":"+ ")+Math.abs(j)+"</b>. Where do you land?", String(end), fill3(end,[end+1,end-1,start-j,end+10,end-10]).slice(0,2).map(String),
-      start+" "+(j<0?"− ":"+ ")+Math.abs(j)+" = "+end+".", Object.assign({visual:numberLineSVG(start,[j]), tip:j%10===0?"A jump of 10 changes only the tens digit. The ones stay the same.":"Count on in ones from "+start+", five times."}, tag)); }
+      "Start at "+start+". A jump of "+Math.abs(j)+" goes "+(j<0?"back":"forward")+" on the number line: "+start+" "+(j<0?"− ":"+ ")+Math.abs(j)+" = "+end+".", Object.assign({visual:numberLineSVG(start,[j]), foundationVariant:{jump:j}, tip:j%10===0?"A jump of 10 changes only the tens digit. The ones stay the same.":"Count on in ones from "+start+", five times."}, tag)); }
   if(k===3){ // 10 more or 100 more, with the place value table
-    const n=110+rnd(780), p=pick([10,100]), more=rnd(2)===0, right=more?n+p:n-p;
+    const n=110+draw(780), p=variant.step??choose([10,100]), more=variant.more??(draw(2)===0), right=more?n+p:n-p;
     return mc("What is <b>"+p+" "+(more?"more":"less")+"</b> than <b>"+n+"</b>?", String(right), fill3(right,[n+(more?1:-1), n+(more?-p:p), more?n+p*10:n-p*10, right+1].filter(x=>x>0)).slice(0,2).map(String),
-      n+" "+(more?"+":"−")+" "+p+" = "+right+". Only the "+(p===10?"tens":"hundreds")+" digit changes.",
-      Object.assign({visual:tableHTML(PV3,[digits3(n)]), tip:"Find the "+(p===10?"tens":"hundreds")+" digit in the table. Make it one "+(more?"bigger":"smaller")+"; the other digits stay the same."}, tag)); }
+      n+" "+(more?"+":"−")+" "+p+" = "+right+". "+(more?"Add":"Take away")+" one "+(p===10?"ten":"hundred")+" ("+p+").",
+      Object.assign({visual:tableHTML(PV3,[digits3(n)]), foundationVariant:{step:p,more}, tip:"Use the place value table. "+(more?"Add":"Take away")+" one "+(p===10?"ten":"hundred")+" ("+p+"). Count across a hundred if you need to."}, tag)); }
   if(k===4){ // odd or even with pairs of dots
-    const n=3+rnd(14), dots=Array.from({length:Math.ceil(n/2)},(_,i)=>2*i+2<=n?'●●':'●').join('  ');
+    const n=3+draw(14), dots=Array.from({length:Math.ceil(n/2)},(_,i)=>2*i+2<=n?'●●':'●').join('  ');
     return two("Make pairs. Is <b>"+n+"</b> odd or even?", ['Odd','Even'], n%2?0:1, n%2?"One dot has no partner, so "+n+" is odd.":"Every dot has a partner, so "+n+" is even.",
       Object.assign({visual:itemCard(dots), tip:"Look at the dots in pairs. Does every dot have a partner, or is one left over?"}, tag, {grid:false})); }
   // compare two numbers that differ in the hundreds
-  const a=100*(1+rnd(8))+rnd(100); let b; do { b=100*(1+rnd(8))+rnd(100); } while(Math.floor(a/100)===Math.floor(b/100));
+  const a=100*(1+draw(8))+draw(100); let b; do { b=100*(1+draw(8))+draw(100); } while(Math.floor(a/100)===Math.floor(b/100));
   return two("Which number is <b>bigger</b>?", [String(a), String(b)], a>b?0:1, "Compare the hundreds first: "+Math.floor(Math.max(a,b)/100)+" hundreds are more than "+Math.floor(Math.min(a,b)/100)+".",
     Object.assign({visual:tableHTML(PV3,[digits3(a),digits3(b)]), tip:"Look at the hundreds column first. More hundreds = the bigger number."}, tag));
 }
-function combosBaseQ(){
-  const k=rnd(5), tag=Object.assign({level:1, grid:true}, COM);
+function combosBaseQ(k=rnd(5), example){
+  const draw=example?.draw||rnd;
+  const tag=Object.assign({level:1, grid:true, foundationFamily:k}, COM);
   if(k===0){ // two parts that make the whole (hundreds)
-    const whole=100*(3+rnd(7)), a=100*(1+rnd(whole/100-1)), b=whole-a;
+    const whole=100*(3+draw(7)), a=100*(1+draw(whole/100-1)), b=whole-a;
     return mc("Which two numbers make <b>"+whole+"</b>?", a+" + "+b, [a+" + "+(b+100), (a+100)+" + "+(b+100)],
       a+" + "+b+" = "+whole+". Both parts together make the whole.", Object.assign({visual:partWholeSVG(whole,[a,b],whole,['?','?']), tip:"Add the hundreds of each choice. Which pair makes exactly "+whole+"?"}, tag)); }
   if(k===1){ // missing part in hundreds
-    const whole=100*(4+rnd(6)), a=100*(1+rnd(whole/100-1)), ans=whole-a;
+    const whole=100*(4+draw(6)), a=100*(1+draw(whole/100-1)), ans=whole-a;
     return typed("<b>"+a+" + ? = "+whole+"</b>. Type the missing part.", ans, "From "+a+" to "+whole+" is "+(ans/100)+" hundred"+(ans>100?"s":"")+": "+ans+". Check: "+a+" + "+ans+" = "+whole+".",
       Object.assign({visual:partWholeSVG(whole,[a,ans],whole,[a,'?']), tip:"Count on in hundreds from "+a+" to "+whole+". How many hundreds did you count?"}, tag)); }
   if(k===2){ // add hundreds
-    const a=100*(1+rnd(5)), b=100*(1+rnd(4)), s=a+b;
+    const a=100*(1+draw(5)), b=100*(1+draw(4)), s=a+b;
     const hu=x=>x/100+(x===100?" hundred":" hundreds");
     return mc("<b>"+a+" + "+b+"</b> = ?", String(s), fill3(s,[s+100,s-100,s+10]).slice(0,2).map(String), hu(a)+" + "+hu(b)+" = "+hu(s)+" = "+s+".",
       Object.assign({visual:partWholeSVG(s,[a,b],'?',[a,b]), tip:"Think in hundreds: "+a/100+" + "+b/100+". Then write the hundreds as a number."}, tag)); }
   if(k===3){ // tens to 100
-    const a=10*(1+rnd(9)), ans=100-a;
-    return mc("Which number goes with <b>"+a+"</b> to make <b>100</b>?", String(ans), fill3(ans,[ans+10,ans-10,a]).filter(x=>x>0&&x!==ans).slice(0,2).map(String), a+" + "+ans+" = 100.",
+    const a=10*(1+draw(9)), ans=100-a;
+    return mc("Which number goes with <b>"+a+"</b> to make <b>100</b>?", String(ans), fill3(ans,[ans+10,ans-10,a]).filter(x=>x>0&&x!==ans).slice(0,2).map(String), "Count on in tens: "+Array.from({length:ans/10},(_,i)=>a+10*(i+1)).join(", ")+". That is "+(ans/10)+(ans===10?" ten":" tens")+", or "+ans+". Check: "+a+" + "+ans+" = 100.",
       Object.assign({visual:partWholeSVG(100,[a,ans],100,[a,'?']), tip:"Count on in tens from "+a+" to 100."}, tag)); }
   // take away hundreds
-  const whole=100*(4+rnd(6)), a=100*(1+rnd(whole/100-2)), ans=whole-a;
+  const whole=100*(4+draw(6)), a=100*(1+draw(whole/100-2)), ans=whole-a;
   return typed("<b>"+whole+" − "+a+"</b> = ? Type your answer.", ans, whole+" − "+a+" = "+ans+". Check: "+a+" + "+ans+" = "+whole+".",
     Object.assign({visual:partWholeSVG(whole,[a,ans],whole,[a,'?']), tip:"The whole is "+whole+", one part is "+a+". Count on in hundreds from "+a+" to "+whole+"."}, tag));
 }
-function wordprobBaseQ(){
-  const k=rnd(4), n=pick(NAMES), t=pick(THINGS)[0], tag=Object.assign({level:1}, WPR);
+function wordprobBaseQ(k=rnd(4), example){
+  const draw=example?.draw||rnd, choose=a=>a[draw(a.length)];
+  const n=choose(NAMES), t=choose(THINGS)[0], tag=Object.assign({level:1, foundationFamily:k}, WPR);
   if(k===0){ // join: how many now?
-    const a=10*(2+rnd(5)), b=10*(1+rnd(3));
+    const a=10*(2+draw(5)), b=10*(1+draw(3));
     return typed(n+" has <b>"+a+"</b> "+t+". "+n+" gets <b>"+b+"</b> more. How many "+t+" does "+n+" have now? Type your answer.", a+b, a+" + "+b+" = "+(a+b)+" "+t+".",
       Object.assign({visual:partWholeSVG(a+b,[a,b],'?',[a,b]), tip:"Gets more means: put the parts together. The whole is missing."}, tag)); }
   if(k===1){ // a part is missing
-    const whole=10*(4+rnd(6)), a=10*(1+rnd(whole/10-2)), ans=whole-a;
+    const whole=10*(4+draw(6)), a=10*(1+draw(whole/10-2)), ans=whole-a;
     return typed("There are <b>"+whole+"</b> "+t+". <b>"+a+"</b> are on the table. The rest are in a box. How many are in the box? Type your answer.", ans, a+" + "+ans+" = "+whole+". So "+ans+" "+t+" are in the box.",
       Object.assign({visual:partWholeSVG(whole,[a,ans],whole,[a,'?']), tip:"The whole is "+whole+". One part is "+a+". What is the other part?"}, tag)); }
   if(k===2){ // which number is the whole?
-    const a=10*(1+rnd(4)), b=10*(1+rnd(4)), whole=a+b+10*(1+rnd(3));
+    const a=10*(1+draw(4)), b=10*(1+draw(4)), whole=a+b+10*(1+draw(3));
     return mc(n+" has <b>"+whole+"</b> "+t+": <b>"+a+"</b> are big and the rest are small. Which number is <b>all</b> the "+t+"?", String(whole), uniq([String(a), String(whole-a)]).filter(x=>x!==String(whole)),
       whole+" is all the "+t+" together – the whole. "+a+" is only a part.", Object.assign({grid:true, tip:"The whole is the number of ALL of them. It is the biggest number in the story."}, tag)); }
   // which calculation?
-  const a=10*(4+rnd(5)), b=10*(1+rnd(3));
+  const a=10*(4+draw(5)), b=10*(1+draw(3));
   return two(n+" has <b>"+a+"</b> "+t+" and gives <b>"+b+"</b> away. Which calculation finds how many are left?", [a+" − "+b, a+" + "+b], 0, "Gives away means take away: "+a+" − "+b+" = "+(a-b)+".",
     Object.assign({visual:partWholeSVG(a,[b,a-b],a,[b,'?']), tip:"Does "+n+" get more or fewer? Fewer means take away."}, tag));
 }
 const UNIT_BASE={len:[["A pencil is about 15","cm"],["A door is about 2","m"],["A book is about 25","cm"],["A bus is about 12","m"],["A spoon is about 15","cm"],["A swimming pool is about 25","m"]],
   mass:[["An apple weighs about 150","g"],["A bag of potatoes weighs about 5","kg"],["A pencil weighs about 5","g"],["A big dog weighs about 30","kg"],["A letter weighs about 20","g"],["A bike weighs about 12","kg"]]};
-function unitsBaseQ(){
-  const k=rnd(4), tag=Object.assign({level:1}, UNT);
+function unitsBaseQ(k=rnd(4), example){
+  const draw=example?.draw||rnd, choose=a=>a[draw(a.length)], variant=example?.variant||{};
+  const tag=Object.assign({level:1, foundationFamily:k}, UNT);
   if(k===0){ // read the metre stick at a big number
-    const mark=10*(1+rnd(9));
+    const mark=10*(1+draw(9));
     return mc("The arrow points at a big number. How far did the car roll?", mark+" cm", fill3(mark,[mark+10,mark-10,mark+5]).slice(0,2).map(x=>x+" cm"), "The arrow points at "+mark+". The stick shows centimetres: "+mark+" cm.",
       Object.assign({visual:rulerSVG(mark), grid:true, tip:"Read the big number right under the arrow. Then write the unit: cm."}, tag)); }
-  if(k<3){ const len=k===1, r=pick(UNIT_BASE[len?'len':'mass']), opts=len?['cm','m']:['g','kg'];
+  if(k<3){ const len=k===1, r=choose(UNIT_BASE[len?'len':'mass']), opts=len?['cm','m']:['g','kg'];
     return two(r[0]+" <b>___</b>. Which unit fits?", opts, opts.indexOf(r[1]), len?(r[1]==='cm'?"It is short – centimetres (cm) fit.":"It is long – metres (m) fit."):(r[1]==='g'?"It is light – grams (g) fit.":"It is heavy – kilograms (kg) fit."),
       Object.assign({tip:len?"Short things you can hold: cm. Long or tall things: m.":"Light things you can hold in one hand: g. Heavy things: kg."}, tag)); }
-  const n=pick([1,5,10,20,50]), short=rnd(2)===0;
+  const n=choose([1,5,10,20,50]), short=variant.short??(draw(2)===0);
   return two("Which is <b>"+(short?"shorter":"longer")+"</b>: <b>1 m</b> or <b>"+n+" cm</b>?", ['1 m', n+' cm'], short?1:0, "1 m = 100 cm. "+n+" cm is much less than 100 cm.",
-    Object.assign({visual:lengthBarsSVG([['1 m',100],[n+' cm',n]]), tip:"1 m is as long as 100 cm. Compare "+n+" with 100."}, tag));
+    Object.assign({visual:lengthBarsSVG([['1 m',100],[n+' cm',n]]), foundationVariant:{short}, tip:"1 m is as long as 100 cm. Compare "+n+" with 100."}, tag));
 }
 /* two strips drawn to scale (in cm) - which one is longer? */
 function lengthBarsSVG(list){
@@ -2182,15 +2186,17 @@ function tallySVG(n){
     x+=96; }
   return `<svg viewBox="0 0 ${Math.max(120,x)} 96" width="${Math.round(Math.min(100,Math.max(25,x/6)))}%" role="img" aria-label="Tally marks">${s}</svg>`;
 }
-function graphsBaseQ(){
-  const k=rnd(3), tag=Object.assign({level:1}, GRA);
+function graphsBaseQ(k=rnd(3), example){
+  const mix=example?(a=>foundationShuffle(a,example.draw)):shuffle;
+  const draw=example?.draw||rnd, choose=a=>a[draw(a.length)];
+  const tag=Object.assign({level:1, foundationFamily:k}, GRA);
   if(k===2){ // count tally marks
-    const n=3+rnd(12);
+    const n=3+draw(12);
     return typed("Count the tally marks. How many are there? Type the number.", n, "Each bundle with a line across is 5. "+(n>=5?Math.floor(n/5)+" × 5 = "+5*Math.floor(n/5)+(n%5?", plus "+n%5+" = "+n:"")+".":n+" single marks."),
       Object.assign({visual:tallySVG(n), tip:"Count each bundle of 5 first (5, 10, …), then count the single marks."}, tag)); }
   // three bars, one of them 40: the scale goes to 40 in steps of 10, so every bar ends on a numbered line
-  const vals=shuffle([40].concat(shuffle([10,20,30]).slice(0,2))), d=takeFrom(SURF,3).map((l,i)=>({label:l,v:vals[i]}));
-  if(k===0){ const t=pick(d);
+  const vals=mix([40].concat(mix([10,20,30]).slice(0,2))), d=(example?mix(SURF).slice(0,3):takeFrom(SURF,3)).map((l,i)=>({label:l,v:vals[i]}));
+  if(k===0){ const t=choose(d);
     return mc("Read the graph. How far did the car roll on <b>"+t.label+"</b>?", t.v+" cm", fill3(t.v,[t.v+10,t.v-10,t.v+5].filter(x=>x>0)).slice(0,2).map(x=>x+" cm"), "The top of the "+t.label+" bar is on the line with "+t.v+": "+t.v+" cm.",
       Object.assign({visual:barChartSVG(d), grid:true, tip:"Find the "+t.label+" bar. Go from its top straight across to the number on the side."}, tag)); }
   const max=d.reduce((p,c)=>c.v>p.v?c:p);
@@ -3240,7 +3246,8 @@ function hintFeedback(q, response){
 const helpLabels = q => q.world==='anleitung' ? ['Zeig mir, wie','Zeig mir die Lösung','Zeig mir ein Beispiel'] : ['Show me how','Show me the answer','Show me an example'];
 /* "Show me an example" (Peter, 01.11.): after the tip, an example that is clearly EASIER than the task
    (support level, other numbers), fully worked - then the child solves its own task. Only where the app
-   can build a truly similar easier task (rounding, missing parts, place value); elsewhere the button
+   can build a truly similar easier task (rounding, missing parts, place value). EV-3.3 adds same-level
+   worked cases for the ten foundation quests; their heading is neutral. Elsewhere the button
    does not appear. A success afterwards counts as with help, like after the tip. */
 /* Easier worked examples for maths tasks without a "coach" family (Peter, 01.11.: "Show me an example"
    must always be EASIER than the task). Each entry recognises a task type by its prompt and builds
@@ -3381,6 +3388,7 @@ const LANG_EXAMPLES={
   ]
 };
 function exampleFor(q){
+  if(levelOf(q)===1) return foundationExample(q, ({numbers:numbersBaseQ,combos:combosBaseQ,wordprob:wordprobBaseQ,units:unitsBaseQ,graphs:graphsBaseQ})[q.world]);
   const ans=x=>x.kind==='mc'?strip(x.options[x.answer]):String(x.answer);
   const c=bridgeFor(q).slice(0,2).filter(e=>levelOf(e)<levelOf(q) && JSON.stringify(e.coach)!==JSON.stringify(q.coach));
   c.sort((a,b)=>(ans(a)===ans(q))-(ans(b)===ans(q)));   // prefer an example with a different answer
@@ -3407,7 +3415,7 @@ function showExample(){
   if(!state.sheet) logAttempt({day:dayKey(),skill:q.world,level:levelOf(q),attempt:state.attempts,ok:false,help:true,exampleShown:true,qid:q.dueId||qId(q)});
   const answer=ex.kind==='mc'?esc(strip(ex.options[ex.answer])):esc(ex.answer);
   fb.className='feedback hint'; fb.hidden=false;
-  fb.innerHTML=`<span class="mark">${de?'Ein leichteres Beispiel':'An easier example'}</span><div class="worked"><p>${ex.prompt}</p>${h.visual?`<div class="visual">${h.visual}</div>`:''}<p>${esc(h.text)}</p><p><b>${de?'Lösung':'Answer'}: ${answer}</b></p></div><p><b>${de?'Jetzt du – deine Aufgabe oben.':'Now you – your question above.'}</b></p>`;
+  fb.innerHTML=`<span class="mark">${levelOf(q)===1?(de?'Ein Beispiel':'An example'):(de?'Ein leichteres Beispiel':'An easier example')}</span><div class="worked"><p>${ex.prompt}</p>${h.visual?`<div class="visual">${h.visual}</div>`:''}<p>${esc(h.text)}</p><p><b>${de?'Lösung':'Answer'}: ${answer}</b></p></div><p><b>${de?'Jetzt du – deine Aufgabe oben.':'Now you – your question above.'}</b></p>`;
   $('#helpBtn').hidden=true; $('#answerBtn').hidden=false;
   fb.scrollIntoView({block:'nearest',behavior:'auto'});
   snapshot();

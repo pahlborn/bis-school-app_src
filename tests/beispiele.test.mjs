@@ -30,7 +30,7 @@ test('Bedienweg je Fach: Tipp, dann "Show me an example" / "Zeig mir ein Beispie
         const text = String(q.prompt).replace(/<[^>]+>/g, '');
         await page.locator('#helpBtn').click();                                // the tip
         const label = await page.textContent('#helpBtn');
-        if ((await page.isVisible('#helpBtn')) && /Show me an example|Zeig mir ein Beispiel/.test(label)) {
+        if ((q.level || 2) > 1 && (await page.isVisible('#helpBtn')) && /Show me an example|Zeig mir ein Beispiel/.test(label)) {
           assert.ok((q.level || 2) > 1, 'example for a support-level task: ' + text);
           await page.locator('#helpBtn').click();                              // the easier example
           const fb = await page.textContent('#feedback');
