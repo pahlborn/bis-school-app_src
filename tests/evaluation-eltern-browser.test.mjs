@@ -896,3 +896,124 @@ test('EV4 legacy document: truthful preview and editable original assignment sur
   assert.deepEqual((await derived()).focusNext,['numbers']);
   assert.deepEqual(P.errors,[]);
 });
+
+/* ---- EV5/EV6 form (appended; invented data only) ---- */
+const ev5Today = () => new Date().toISOString().slice(0, 10);
+function ev5RemapPayload(criteria) {
+  const p = integrationPayload();
+  delete p.standardOverrides;
+  p.title = 'Invented EV6 growth';
+  p.assessment = { area: 'maths', goal: 'Invented goal', instructions: 'Invented instructions', feedback: 'Invented feedback', criteria };
+  return p;
+}
+const EV5_NONE_ROWS = [
+  { criterion: 'Rounds to the nearest 10, 100 and 1,000', rating: 'C', evidence: 'Invented evidence one', standard: 'none' },
+  { criterion: 'Invented: unrelated own drawing', rating: 'M', evidence: 'Invented evidence two', standard: 'none' },
+];
+
+test('EV5 form: proposal for new criteria, parent correction incl. none survives and is saved on one event', { timeout: 120000 }, async t => {
+  const { P } = await evaluationFamily(t);
+  await elternSeite(P.page, 'school');
+  const form = P.page.locator('#pSchoolEvaluation');
+  await form.locator('[data-eval-action="open"]').click();
+  await form.locator('[name="title"]').fill('Invented EV5 proposal form');
+  await form.locator('[name="day"]').fill(ev5Today());
+  await form.locator('[name="doc-area"]').selectOption('maths');
+  await form.locator('[data-doc-criterion="0"]').fill('Rounds to the nearest 10, 100 and 1,000');
+  assert.equal(await form.locator('[data-doc-standard="0"]').inputValue(), 'M-N3', 'automatic proposal');
+  await form.locator('[data-eval-action="add-criterion"]').click();
+  await form.locator('[data-doc-criterion="1"]').fill('Invented: unrelated own drawing');
+  assert.equal(await form.locator('[data-doc-standard="1"]').inputValue(), 'none');
+  await form.locator('[data-doc-standard="0"]').selectOption('none');
+  await form.locator('[data-doc-criterion="0"]').fill('Rounds to the nearest 10, 100 and 1,000 ');
+  assert.equal(await form.locator('[data-doc-standard="0"]').inputValue(), 'none', 'explicit none is never recalculated');
+  await form.locator('[data-eval-action="add-criterion"]').click();
+  await form.locator('[data-doc-criterion="2"]').fill('Runden auf Zehner, Hunderter und Tausender');
+  await form.locator('[data-doc-rating="2"]').selectOption('C');
+  assert.deepEqual(await form.locator('[data-doc-standard]').evaluateAll(s => s.map(x => x.value)), ['none', 'none', 'M-N3'], 'values survive redraw');
+  assert.doesNotMatch(await form.innerText(), /Toddle|similarity|aiProposal/i);
+  await form.locator('button[type="submit"]').click();
+  assert.deepEqual(await evaluationEvents(P.page), [], 'preview writes nothing');
+  assert.match(await form.innerText(), /M-N3: C/);
+  await form.locator('button[type="submit"]').evaluate(b => { b.click(); b.click(); });
+  const events = await evaluationEvents(P.page);
+  assert.equal(events.length, 1, 'one confirmed event');
+  assert.deepEqual(events[0].payload.assessment.criteria.map(c => c.standard), ['none', 'none', 'M-N3']);
+  assert.deepEqual(P.errors, []);
+});
+
+test('EV5 known: an exact confirmed parent correction is proposed again for the same child (case/space only)', { timeout: 120000 }, async t => {
+  const { P } = await evaluationFamily(t);
+  await elternSeite(P.page, 'school');
+  const form = P.page.locator('#pSchoolEvaluation');
+  await form.locator('[data-eval-action="open"]').click();
+  await form.locator('[name="title"]').fill('Invented EV5 known first');
+  await form.locator('[name="day"]').fill(ev5Today());
+  await form.locator('[name="doc-area"]').selectOption('english');
+  await form.locator('[data-doc-criterion="0"]').fill('Invented: owns exact phrase zzz');
+  assert.equal(await form.locator('[data-doc-standard="0"]').inputValue(), 'none', 'no similarity before it is known');
+  await form.locator('[data-doc-rating="0"]').selectOption('M');
+  await form.locator('[data-doc-standard="0"]').selectOption('E-S2');
+  await form.locator('button[type="submit"]').click();
+  assert.equal((await evaluationEvents(P.page)).length, 0, 'unconfirmed data is not learned');
+  await form.locator('button[type="submit"]').click();
+  assert.equal((await evaluationEvents(P.page)).length, 1);
+  await form.locator('[data-eval-action="open"]').click();
+  await form.locator('[data-doc-criterion="0"]').fill('  invented:  OWNS exact phrase   zzz');
+  assert.equal(await form.locator('[data-doc-standard="0"]').inputValue(), 'E-S2');
+  await form.locator('[data-doc-criterion="0"]').fill('Invented: owns another phrase qqq');
+  assert.equal(await form.locator('[data-doc-standard="0"]').inputValue(), 'none', 'only exact known text is reused');
+  assert.deepEqual(P.errors, []);
+});
+
+test('EV6 growth: stored none criterion with a catalog match -> notice, preview writes 0, ONE revision of the same evaluation', { timeout: 120000 }, async t => {
+  const { P } = await evaluationFamily(t);
+  await elternSeite(P.page, 'school');
+  const payload = ev5RemapPayload(EV5_NONE_ROWS);
+  await storeIntegrationAssessment(P.page, payload);
+  await elternSeite(P.page, 'school');
+  const form = P.page.locator('#pSchoolEvaluation');
+  const notice = form.locator('[data-eval-remap]');
+  assert.match(await notice.innerText(), /Neue Zuordnungen möglich/);
+  assert.equal((await evaluationEvents(P.page)).length, 1);
+  await notice.locator('[data-eval-action="remap"]').click();
+  assert.equal((await evaluationEvents(P.page)).length, 1, 'opening the preview writes nothing');
+  assert.match(await form.innerText(), /M-N3: C/);
+  await form.getByRole('button', { name: 'Korrektur bestätigen', exact: true }).evaluate(b => { b.click(); b.click(); });
+  const events = await evaluationEvents(P.page);
+  assert.equal(events.length, 2, 'exactly one revision, no duplicate on repeated confirmation');
+  const revised = events.find(e => e.payload.base === payload.revision).payload;
+  assert.equal(revised.evaluation, payload.evaluation);
+  assert.equal(revised.title, payload.title);
+  assert.deepEqual(revised.assessment.criteria.map(({ standard, ...c }) => c), EV5_NONE_ROWS.map(({ standard, ...c }) => c), 'ratings and evidence unchanged');
+  assert.deepEqual(revised.assessment.criteria.map(c => c.standard), ['M-N3', 'none']);
+  assert.ok(!['standard', 'rating', 'focus'].some(k => Object.hasOwn(revised, k)));
+  assert.equal(await form.locator('[data-eval-remap]').count(), 0, 'no notice once nothing is left');
+  assert.deepEqual(P.errors, []);
+});
+
+test('EV6 no candidates: no notice', { timeout: 120000 }, async t => {
+  const { P } = await evaluationFamily(t);
+  await elternSeite(P.page, 'school');
+  await storeIntegrationAssessment(P.page, ev5RemapPayload([
+    { criterion: 'Invented: unrelated own drawing', rating: 'M', evidence: 'Invented evidence', standard: 'none' },
+  ]));
+  await elternSeite(P.page, 'school');
+  assert.equal(await P.page.locator('#pSchoolEvaluation [data-eval-remap]').count(), 0);
+  assert.deepEqual(P.errors, []);
+});
+
+test('EV6 stale base: a remap draft is rejected after a concurrent revision and writes nothing', { timeout: 120000 }, async t => {
+  const { P } = await evaluationFamily(t);
+  await elternSeite(P.page, 'school');
+  const payload = ev5RemapPayload(EV5_NONE_ROWS);
+  await storeIntegrationAssessment(P.page, payload);
+  await elternSeite(P.page, 'school');
+  const form = P.page.locator('#pSchoolEvaluation');
+  await form.locator('[data-eval-action="remap"]').click();
+  await storeIntegrationAssessment(P.page, { ...payload, base: payload.revision, revision: '5b0f6f55-8f0a-4f3c-9d3e-2d1f4a5b6c7d', title: 'Invented concurrent' });
+  await form.locator('button[type="submit"]').click();
+  assert.match(await form.getByRole('alert').innerText(), /beim Abgleich geändert/);
+  assert.equal((await evaluationEvents(P.page)).length, 2, 'stale remap writes no event');
+  assert.deepEqual(P.errors, []);
+});
