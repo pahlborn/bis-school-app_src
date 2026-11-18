@@ -7,12 +7,12 @@ const source=appLesen('utf8'), banks=discoverBanks(appSandbox({seed:18112026}),s
 const known=new Set([...PENDING_BANKS,'ROUND_MC']);
 const unknown=Object.keys(banks).filter(n=>!known.has(n));
 for(const [name,questions] of Object.entries(banks)){
-  const q=lengthQuality(questions), fail=qualityFailures({[name]:questions}).length>0;
+  const q=lengthQuality(questions), fail=!known.has(name)||qualityFailures({[name]:questions}).length>0;
   console.log(`${fail?'FAIL':'PASS'} ${name}: ${q.strict}/${q.count} strict; ${q.tied} shared-longest; weighted ${(100*q.longestShare).toFixed(2)}%; ${name==='ROUND_MC'?'revised slice':'OPEN: content/misconceptions not reviewed in this slice'}`);
 }
 console.log('Unclassified new banks:',unknown);
 const newCallsites=discoverMcCallsites(source).filter(n=>!MC_CALLSITE_INVENTORY.includes(n));
 console.log('Unclassified new MC callsites:',newCallsites);
-console.log('OPEN generator/callsite inventory (apart from revised helpers and unchanged foundation):',MC_CALLSITE_INVENTORY.filter(n=>!['roundWordQ','roundThousandQ','roundTenQ','distanceExplainQ','estimateQ','threeAddendsQ','nearestHundredQ','benchmarkQ','baseQ','numbersBaseQ','combosBaseQ','wordprobBaseQ','unitsBaseQ','graphsBaseQ','mc','two'].includes(n)).join(', '));
+console.log('OPEN generator/callsite inventory (apart from revised helpers and unchanged foundation):',MC_CALLSITE_INVENTORY.filter(n=>!['roundWordQ','roundThousandQ','roundTenQ','distanceExplainQ','estimateQ','threeAddendsQ','tenVsHundredQ','nearestHundredQ','benchmarkQ','baseQ','numbersBaseQ','combosBaseQ','wordprobBaseQ','unitsBaseQ','graphsBaseQ','mc','two'].includes(n)&&!n.startsWith('direct-MC-sites=')).join(', '));
 console.log('Generated families outside revised Rounding helpers remain OPEN; this static-bank audit is not full EP01 acceptance.');
 process.exitCode=unknown.length||newCallsites.length||qualityFailures(banks).length?1:0;

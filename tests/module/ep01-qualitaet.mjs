@@ -1,7 +1,7 @@
 // Shared EP01 audit: all longest ties are visible, and a k-way tie gives the
 // right answer 1/k of a longest-answer guess. Counting every equal-length number
 // as a full win would call four indistinguishable numbers 100% guessable.
-import {text} from '../app-sandbox.mjs';
+import {text,appSandbox} from '../app-sandbox.mjs';
 export const EP01_MAX_LONGEST=1/3; // 25% chance with four options + 8 1/3pp tolerance, no rounding up.
 export function lengthQuality(questions){
   let strict=0,tied=0,share=0;
@@ -14,21 +14,46 @@ export function lengthQuality(questions){
 export function qualityFailures(collections){
   return Object.entries(collections).flatMap(([name,questions])=>{
     const q=lengthQuality(questions);
-    return q.strictRate>EP01_MAX_LONGEST+1e-12 || q.longestShare>EP01_MAX_LONGEST+1e-12 ? [{name,...q}]:[];
+    return !q.count || q.strictRate>EP01_MAX_LONGEST+1e-12 || q.longestShare>EP01_MAX_LONGEST+1e-12 ? [{name,...q,...(!q.count?{reason:'unreachable or unparsable collection'}:{})}]:[];
   });
 }
-// Auto-discover actual static MC banks, including read-then-answer tuples.
-// No list of bank names can silently miss a future uppercase bank.
+// Only this small, existing consumer grammar is accepted. Anything else remains
+// an explicit unknown collection, even when the branch was not reached at runtime.
+const consumerCalls=source=>[...source.matchAll(/\b(?:bankMC|fromBank)\s*\(\s*([^,\n]+)/g)].map(m=>m[1].trim());
+function bankRows(value){
+  if(!Array.isArray(value)||!value.length)return [];
+  let rows=value.filter(r=>Array.isArray(r)&&typeof r[0]==='string'&&typeof r[1]==='string'&&Array.isArray(r[2])&&r[2].every(w=>typeof w==='string')&&typeof r[3]==='string').map(r=>({kind:'mc',prompt:r[0],options:[r[1],...r[2]],answer:0,level:typeof r[4]==='number'?r[4]:2}));
+  if(!rows.length)rows=value.filter(r=>Array.isArray(r)&&typeof r[1]==='string'&&typeof r[2]==='string'&&Array.isArray(r[3])&&r[3].every(w=>typeof w==='string')&&typeof r[4]==='string').map(r=>({kind:'mc',prompt:r[1],options:[r[2],...r[3]],answer:0,level:2}));
+  return rows;
+}
 export function discoverBanks(S,source){
-  const result={};
-  for(const name of new Set([...source.matchAll(/\b(?:const|let)\s+([A-Z][A-Z_0-9]*)\s*=/g)].map(m=>m[1]).concat('ROUND_MC'))){
-    let value; try{value=S.holen(name);}catch{continue;}
-    if(!Array.isArray(value)||!value.length) continue;
-    let rows=value.filter(r=>Array.isArray(r)&&typeof r[0]==='string'&&typeof r[1]==='string'&&Array.isArray(r[2])&&r[2].every(w=>typeof w==='string')&&typeof r[3]==='string').map(r=>({kind:'mc',prompt:r[0],options:[r[1],...r[2]],answer:0,level:typeof r[4]==='number'?r[4]:2}));
-    if(!rows.length) rows=value.filter(r=>Array.isArray(r)&&typeof r[1]==='string'&&typeof r[2]==='string'&&Array.isArray(r[3])&&r[3].every(w=>typeof w==='string')&&typeof r[4]==='string').map(r=>({kind:'mc',prompt:r[1],options:[r[2],...r[3]],answer:0,level:2}));
-    if(rows.length) result[name]=rows.filter(r=>r.level!==1);
+  const result={},known=new Set([...PENDING_BANKS,'ROUND_MC']);
+  // Case is irrelevant. This also sees unconsumed global banks; local/multiple
+  // declarations are covered by the consumers below, not guessed via eval.
+  for(const name of new Set([...source.matchAll(/\b(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=/g)].map(m=>m[1]).concat('ROUND_MC'))){
+    let value;try{value=S.holen(name);}catch{continue;}
+    const rows=bankRows(value);if(rows.length)result[name]=rows.filter(r=>r.level!==1);
   }
-  // OPFACT and SPECIFIC use their own tuple/object shape, not a standard MC bank.
+  const seen=new Map();
+  const instrumented=source.replace(/\b(bankMC|fromBank)\s*\(\s*([^,\n]+)/g,(whole,fn,expr)=>{
+    // Known simple identifiers and .concat(otherBank) are the existing grammar.
+    if(!/^\w+(?:\.concat\(\w+\))?$/.test(expr.trim()))return whole;
+    return `${fn}(__ep01BankConsumer(${JSON.stringify(expr.trim())},${expr})`;
+  });
+  const observed=appSandbox({seed:18112026,anpassen:()=>instrumented,globale:{__ep01BankConsumer:(name,bank)=>{seen.set(name,bank);return bank;}}});
+  for(const [name,world]of Object.entries(observed.holen('WORLDS'))){
+    if(name==='today'||name.startsWith('mix_')||typeof world.build!=='function')continue;
+    observed.lauf(()=>world.build());
+  }
+  for(const expr of consumerCalls(source)){
+    const grammar=/^(\w+)(?:\.concat\((\w+)\))?$/.exec(expr);
+    const refs=grammar?[grammar[1],grammar[2]].filter(Boolean):[];
+    if(!grammar || refs.some(name=>name!=='bank'&&!known.has(name))){
+      // Active local banks get measured; unreachable/unparsable consumers get
+      // an empty explicit failure. Neither can disappear from the inventory.
+      result[expr]=bankRows(seen.get(expr)).filter(r=>r.level!==1);
+    }
+  }
   result.OPFACT=S.holen('OPFACT').filter(s=>s.level!==1).flatMap(s=>[[s.op,s.fact],[s.fact,s.op]].flatMap(([right,wrong])=>right.map(r=>({options:[r,...wrong],answer:0}))));
   result.SPECIFIC=S.holen('SPECIFIC').filter(r=>r[3]!==1).map(r=>({options:[r[1],r[2]],answer:0}));
   return result;
@@ -40,8 +65,11 @@ export const PENDING_BANKS=['ANL_MC','CHAMP_MC','COMPLETE_MC','COOP_MC','HYPO','
 // Conservative direct-MC callsite inventory; arrows after a function can be
 // attributed to that preceding function. Extra entries are safe; a new callsite
 // never silently passes. This inventory proves discovery, not generator quality.
-export const MC_CALLSITE_INVENTORY=["nearestHundredQ","benchmarkQ","roundWordQ","roundThousandQ","addendsQ","estimateQ","threeAddendsQ","distanceExplainQ","halfwayQ","tenVsHundredQ","roundTenQ","mc","two","takeFrom","varCtrlQ","clockRead","clockPick","ampm","numberLine","placeValue","expandedZeroQ","oddEven","mental","buildRounding","oreoMC","opinionFact","affixQ","inferenceQ","buildWords","buildLibrary","packQ","buildTrip","buildMusic","unitPickQ","convertQ","rulerQ","barReadQ","barMissingQ","tableConclusionQ","scaleStepQ","lineGraphQ","massRecordQ","buildGraphs","buildFinish","capitalFixQ","properNounQ","specificExampleQ","buildExamples","combosQ","anotherWayQ","reasonableQ","frictionTableQ","buildChampion","travelTableQ","estimateTotalQ","betweenHundredsQ","splitQ","buildOpinion","buildTeam","stickerComboQ","roundTenAddQ","buildStickers","findTotalQ","operationQ","calcCheckQ","buildWordProb","trennbarQ","zusammenQ","buildAnleitung","buildPoetry","buildSchool","baseQ","numbersBaseQ","combosBaseQ","wordprobBaseQ","unitsBaseQ","graphsBaseQ","arrayQ","shadedQ","unitCompareQ","areaWhichQ","laterQ","massUnitQ","kitchenScaleQ","roundedQuestion","bridgeFor"];
+export const MC_CALLSITE_INVENTORY=["nearestHundredQ","benchmarkQ","roundWordQ","roundThousandQ","addendsQ","estimateQ","threeAddendsQ","distanceExplainQ","halfwayQ","tenVsHundredQ","roundTenQ","mc","two","takeFrom","varCtrlQ","clockRead","clockPick","ampm","numberLine","placeValue","expandedZeroQ","oddEven","mental","buildRounding","oreoMC","opinionFact","affixQ","inferenceQ","buildWords","buildLibrary","packQ","buildTrip","buildMusic","unitPickQ","convertQ","rulerQ","barReadQ","barMissingQ","tableConclusionQ","scaleStepQ","lineGraphQ","massRecordQ","buildGraphs","buildFinish","capitalFixQ","properNounQ","specificExampleQ","buildExamples","combosQ","anotherWayQ","reasonableQ","frictionTableQ","buildChampion","travelTableQ","estimateTotalQ","betweenHundredsQ","splitQ","buildOpinion","buildTeam","stickerComboQ","roundTenAddQ","buildStickers","findTotalQ","operationQ","calcCheckQ","buildWordProb","trennbarQ","zusammenQ","buildAnleitung","buildPoetry","buildSchool","baseQ","numbersBaseQ","combosBaseQ","wordprobBaseQ","unitsBaseQ","graphsBaseQ","arrayQ","shadedQ","unitCompareQ","areaWhichQ","laterQ","massUnitQ","kitchenScaleQ","roundedQuestion","bridgeFor","direct-MC-sites=116"];
 export function discoverMcCallsites(source){
   const f=[...source.matchAll(/^function (\w+)\(/gm)];
-  return f.filter((m,i)=>/\b(?:mc|two|bankMC|fromBank)\(/.test(source.slice(m.index,f[i+1]?.index))).map(m=>m[1]);
+  const names=f.filter((m,i)=>/\b(?:mc|two|bankMC|fromBank)\(/.test(source.slice(m.index,f[i+1]?.index))).map(m=>m[1]);
+  // New arrows, methods, or a second call inside an old function must not hide
+  // behind the same conservative function name. Count all direct consumer sites.
+  return names.concat('direct-MC-sites='+[...source.matchAll(/\b(?:mc|two|bankMC|fromBank)\s*\(/g)].length);
 }

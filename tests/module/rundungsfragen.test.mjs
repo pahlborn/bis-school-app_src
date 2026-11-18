@@ -158,6 +158,39 @@ test('future static MC collections cannot be silently unclassified; untouched vi
   assert.ok(discoverBanks(probe,source+'\nconst FUTURE_MC=[];').FUTURE_MC);
   t.diagnostic(`OPEN banks=${PENDING_BANKS.length}; measured violations=${qualityFailures(banks).length}. Run node tests/module/ep01-audit.mjs (expected exit1).`);
 });
+// Real reviewer counterexamples. These sandbox-only banks are deliberately bad
+// (100% longest correct), and really feed the existing builder or a live world.
+const badFutureBank=JSON.stringify([['New question?','A long correct answer',['x','y','z'],'Why']]);
+for(const [label,declaration,bank]of [
+  ['local lowercase',`const futureRoundBank=${badFutureBank};`,'futureRoundBank'],
+  ['local uppercase after another declaration',`const notABank=null,FUTURE_MC=${badFutureBank};`,'FUTURE_MC']
+])test(`guard rejects actual ${label} bank consumed in the existing buildRounding`,()=>{
+  const source=appLesen('utf8').replace('function buildRounding(){ return shuffle([',`function buildRounding(){ ${declaration} return shuffle([bankMC(${bank},RND)(${bank}[0]),`);
+  const app=appSandbox({seed:184127,anpassen:()=>source});
+  const actual=app.holen('buildRounding')().find(q=>q.prompt==='New question?');
+  assert.equal(actual.kind,'mc');assert.equal(lengthQuality([actual]).strictRate,1);
+  const banks=discoverBanks(app,source);
+  assert.ok(Object.hasOwn(banks,bank),'actual local consumer must be discovered');
+  assert.equal(lengthQuality(banks[bank]).strictRate,1);
+  assert.ok(![...PENDING_BANKS,'ROUND_MC'].includes(bank),'unclassified bank blocks acceptance');
+});
+test('guard rejects the real lowercase bank + arrow futureQuest + WORLDS.future counterexample',()=>{
+  const source=appLesen('utf8')
+    .replace('function two(',`const futureBank=${badFutureBank};\nconst futureQuest=()=>mc(futureBank[0][0],futureBank[0][1],futureBank[0][2],futureBank[0][3],{world:'future',label:'Future'});\nfunction two(`)
+    .replace(/\}\)\(\);\s*<\/script>/,"WORLDS.future={name:'Future',build:futureQuest};})();</script>");
+  const app=appSandbox({seed:184127,anpassen:()=>source}),actual=app.holen('WORLDS').future.build();
+  assert.equal(actual.kind,'mc');assert.equal(lengthQuality([actual]).strictRate,1);
+  const banks=discoverBanks(app,source);
+  assert.equal(lengthQuality(banks.futureBank).strictRate,1);
+  assert.notDeepEqual(discoverMcCallsites(source),MC_CALLSITE_INVENTORY,'arrow has a new direct MC consumer even inside an old function section');
+});
+test('unknown unreachable and unparsable bank consumers fail closed',()=>{
+  const source=appLesen('utf8').replace('function buildRounding(){ return shuffle([',`function buildRounding(){ if(false){const hiddenBank=${badFutureBank};bankMC(hiddenBank,RND)(hiddenBank[0]);} const localBank=${badFutureBank};bankMC(localBank.slice(),RND)(localBank[0]); return shuffle([`);
+  const app=appSandbox({seed:184127,anpassen:()=>source}),banks=discoverBanks(app,source);
+  assert.ok(Object.hasOwn(banks,'hiddenBank'));assert.ok(Object.hasOwn(banks,'localBank.slice()'));
+  assert.equal(qualityFailures({hiddenBank:banks.hiddenBank})[0].reason,'unreachable or unparsable collection');
+  assert.equal(qualityFailures({'localBank.slice()':banks['localBank.slice()']})[0].reason,'unreachable or unparsable collection');
+});
 test('foundation and extraction-only generators match pinned original byte for byte, including qId and level wrappers',()=>{
   const oldSource=execFileSync('git',['show',`${BASE}:index.html`],{encoding:'utf8',maxBuffer:5e6});
   // New module exports are unused by the old source; its original local generators remain intact.
