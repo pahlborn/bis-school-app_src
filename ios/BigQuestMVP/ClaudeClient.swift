@@ -264,11 +264,17 @@ enum ClaudeClient {
             ]
         ]
         let raw = try await respond(source, key: key, schema: schema)
+        return try validateEvaluation(raw: raw, source: source)
+    }
+
+    // Deterministic validation, also exercised by the existing Swift CI without a provider.
+    static func validateEvaluation(raw: String, source: String) throws -> Evaluation {
         guard var result = try? JSONDecoder().decode(Evaluation.self, from: Data(raw.utf8)),
               result.criteria.count <= 60, result.missing.count <= 20 else {
             throw MVPError.message("Claude lieferte kein gültiges Evaluationsformular.")
         }
-        if let rubric = ToddleRubric.extract(source) {
+        let rubric = ToddleRubric.extract(source)
+        if let rubric = rubric {
             // Replace ambiguous model ratings with evidence-backed original grading.
             result.criteria = rubric.rows.map {
                 Evaluation.Criterion(criterion: $0.criterion, rating: $0.rating, evidence: $0.evidence)
@@ -283,14 +289,19 @@ enum ClaudeClient {
             }
         }
         let normalized = source.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.joined(separator: " ")
-        for row in result.criteria {
+        for index in result.criteria.indices {
+            let row = result.criteria[index]
             let evidence = row.evidence.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.joined(separator: " ")
             let criterion = row.criterion.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.joined(separator: " ")
             guard !criterion.isEmpty, !evidence.isEmpty, normalized.contains(evidence), evidence.contains(criterion),
                   ["", "RS", "C", "M", "E"].contains(row.rating) else {
                 throw MVPError.message("Eine Kriterienzuordnung ist durch den Quelltext nicht belegt. Bitte die Quelle prüfen.")
             }
-            if !row.rating.isEmpty {
+            if rubric == nil {
+                // A model's rating is never authoritative. Only an original terminal
+                // code after the quoted criterion is a grade in this fallback.
+                result.criteria[index].rating = ToddleRubric.terminalRating(criterion: criterion, evidence: evidence)
+            } else if !row.rating.isEmpty {
                 let words = evidence.components(separatedBy: CharacterSet.alphanumerics.inverted)
                 guard words.contains(row.rating) else {
                     throw MVPError.message("Eine Einstufung ist im Quellenbeleg nicht enthalten.")
@@ -361,6 +372,12 @@ enum ClaudeClient {
 // Source-bound pairing of Toddle's original Assessment Criteria. Never infer a grade
 // from learner profile attributes, OREO instructional words, or model output.
 enum ToddleRubric {
+    static func terminalRating(criterion: String, evidence: String) -> String {
+        guard let criterionRange = evidence.range(of: criterion, options: .backwards),
+              !evidence[criterionRange.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              let match = evidence.range(of: #"(?:^|[^\p{L}\p{N}])(RS|C|M|E)$"#, options: .regularExpression) else { return "" }
+        return String(evidence[match]).components(separatedBy: CharacterSet.alphanumerics.inverted).filter { !$0.isEmpty }.last ?? ""
+    }
     struct Criterion {
         var criterion: String
         var rating: String
