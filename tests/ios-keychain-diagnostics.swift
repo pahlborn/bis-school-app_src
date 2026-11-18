@@ -116,7 +116,35 @@ import Security
         }
     }
 
+    private static func evaluationFallbackChecks() throws {
+        // Invented source and model outputs; no API and no school data.
+        let criterion = "Invented: explain the solution in Part C with a diagram"
+        func checked(_ evidence: String, proposed: String, source: String? = nil) throws -> ClaudeClient.Evaluation {
+            let document = ClaudeClient.Evaluation(title: "Invented evaluation", date: "2026-11-18", goal: "", instructions: "", feedback: "",
+                criteria: [.init(criterion: criterion, rating: proposed, evidence: evidence)], missing: [])
+            let raw = String(data: try JSONEncoder().encode(document), encoding: .utf8)!
+            return try ClaudeClient.validateEvaluation(raw: raw, source: source ?? evidence)
+        }
+        let original = criterion + " M"
+        let terminal = try checked(original, proposed: "C"); precondition(terminal.criteria[0].rating == "M", "Part C must not override terminal M")
+        let empty = try checked(criterion, proposed: "C"); precondition(empty.criteria[0].rating == "", "No terminal teacher rating stays empty")
+        let internalCode = try checked(criterion + " M additional text", proposed: "M"); precondition(internalCode.criteria[0].rating == "", "A rating inside evidence is not terminal")
+        for grade in ["RS", "C", "M", "E"] {
+            let each = try checked(criterion + " " + grade, proposed: ""); precondition(each.criteria[0].rating == grade)
+        }
+        precondition(ToddleRubric.terminalRating(criterion: "Invented Part C", evidence: "Invented Part C") == "", "A criterion ending in C is not a grade")
+        precondition(ToddleRubric.terminalRating(criterion: "Invented Part C", evidence: "Invented Part C / Invented Part C") == "", "Repeated criterion text does not supply a grade")
+        precondition(ToddleRubric.terminalRating(criterion: "Invented Part C", evidence: "Invented Part C / Invented Part C M") == "M", "The terminal grade follows the last complete criterion")
+        do {
+            _ = try checked(original, proposed: "C", source: "A different invented source")
+            preconditionFailure("Unquoted model evidence must be rejected")
+        } catch { /* expected */ }
+        let source = "Assessment Criteria\n" + criterion + "\nM\nLearning goals\nInvented goal"
+        let rubric = try checked(original, proposed: "C", source: source); precondition(rubric.criteria[0].rating == "M", "Original rubric remains authoritative")
+    }
+
     static func main() throws {
+        try evaluationFallbackChecks()
         deviceAccessChecks()
         let updated = Mock()
         let success = try ClaudeKey.save(fakeKey, store: updated.store)
