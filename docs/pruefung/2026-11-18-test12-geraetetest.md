@@ -17,17 +17,17 @@ Datum: 18.11.2026 · Epic 2026.0005 · Ausführung: Peter auf dem iPad · Protok
 |---|---|---|
 | Start von Fassung 12 vor dem hier gemeldeten Speichern | BEOBACHTET | „Keychain at startup“, „Read Not found (iOS −25300)“. Access Group angezeigt, im Chat nur gekürzt übermittelt. Daraus folgt kein belegter Verlust eines zuvor erfolgreich gespeicherten Schlüssels. |
 | Testfall 1: Claude-Schlüssel in Fassung 12 speichern und unmittelbar zurücklesen | PASS laut Peter | „Save: success (iOS 0)“ und „saved and verified by reading back“. Der numerische Code des unmittelbaren Lesens wurde nicht gesondert übermittelt; der gemeldete Anzeigetext bestätigt erfolgreiches Zurücklesen. Access Group dieses Schritts noch nicht vollständig gemeldet. |
-| Testfall 2: Playgrounds vollständig schließen und Fassung 12 erneut starten | NOT_TESTED | Rückmeldung zu Start-Lesecode, Access Group und Geräteverbindung fehlt. Vor erneuter Eingabe ablesen. |
+| Testfall 2: Playgrounds vollständig schließen und Fassung 12 erneut starten | Teilnachweis: Schlüssel gelesen, PASS laut Peter | Rückmeldung auf die Neustart-Anweisung: „Keychain at startup“, „success (IOS-0)“; als iOS-Erfolgscode 0 protokolliert. Der zuvor gespeicherte Schlüssel wurde nach diesem Neustart wiedergefunden. Access Group und Zustand der Geräteverbindung noch nicht gemeldet. |
 | Testfall 3: Fassung 13 ohne Löschen der Appdaten öffnen | NOT_TESTED | Rückmeldung zu Start-Lesecode, Access Group und Geräteverbindung fehlt. Vor erneuter Eingabe ablesen. |
 
 Die Statusangaben beruhen auf Peters Rückmeldungen, nicht auf einer eigenen Geräteausführung durch Atlas. Nicht gemeldete Codes und Beobachtungen werden nicht ergänzt. Keine Geheimniswerte wurden angefordert oder protokolliert.
 
 ## Zwischenstand und nächster Schritt
 
-- Neu belegt: Testfall 1, erfolgreiches Speichern und unmittelbares Zurücklesen auf dem echten iPad.
+- Neu belegt: Testfall 1, erfolgreiches Speichern und unmittelbares Zurücklesen; anschließend in Testfall 2 erfolgreiches Lesen beim Start derselben Fassung 12 mit iOS 0. Der Schlüssel hat diesen Neustart überstanden.
 - EV-1.1: Geräteabnahme weiterhin NOT_TESTED, Wechsel 12 → 13 steht aus.
-- EV-1.2: Teilnachweis vorhanden; Neustart und vollständige Diagnoseangaben stehen aus. Keine Gesamtannahme.
-- EV-1.3 bleibt eine offene Umsetzung. EV-1.4 wird durch den Startbefund vor dem Speichern nicht ausgelöst.
-- Nächster Schritt: Peter schließt Playgrounds vollständig, startet dieselbe Fassung 12 erneut und meldet die Diagnose sowie den Verbindungszustand vor einer erneuten Eingabe. Atlas ergänzt dieses Protokoll nach der Rückmeldung.
+- EV-1.2: Speichern, unmittelbares Zurücklesen und Lesen nach Neustart positiv gemeldet. Vollständige Diagnoseangaben, insbesondere die Access Group, stehen aus. Keine Gesamtannahme des Gerätetests.
+- EV-1.3 bleibt eine offene Umsetzung. Bisher kein Schlüsselverlust belegt; der Startbefund vor dem Speichern und der erfolgreiche Neustart lösen EV-1.4 nicht aus. Der Paketwechsel steht noch aus.
+- Nächster Schritt: Peter meldet zur neu gestarteten Fassung 12 noch die Access Group und ob die Geräteverbindung ohne erneutes Verbinden erhalten ist. Danach öffnet er Fassung 13 ohne Löschen der Appdaten und meldet Start-Lesecode, Access Group und Verbindung vor einer erneuten Eingabe. Atlas ergänzt dieses Protokoll nach der Rückmeldung.
 
 Ausschließlich ein Geräteprotokoll auf eigenem Dokumentationszweig. Keine Produktänderung, kein Merge nach main und keine Veröffentlichung.
