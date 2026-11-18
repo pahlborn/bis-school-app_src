@@ -1866,12 +1866,14 @@ function nowDate(){ const off=isTestAccount()?(+store.get('dayOffset',0)||0):0; 
 const dayKey = (d=nowDate()) => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 const addDays = (k, n) => { const d=new Date(k+'T12:00:00'); d.setDate(d.getDate()+n); return dayKey(d); };
 
-/* Evidence: per skill the last answers as [day, level, ok]. */
+/* Evidence: [day, level, ok, independent?]. Legacy rows keep their original three fields. */
 const EVIDENCE_MAX=60;
 function recordAnswer(q, ok){
   if(!q.world) return;
   const ev=store.get('ev',{}); const list=ev[q.world]||[];
-  list.push([dayKey(), q.assisted?1:levelOf(q), ok?1:0]);
+  const observation=[dayKey(), q.assisted?1:levelOf(q), ok?1:0];
+  observation.push(ok&&!q.assisted);
+  list.push(observation);
   ev[q.world]=list.slice(-EVIDENCE_MAX); store.set('ev',ev);
 }
 /* Thresholds are starting values (not from the school) and can be tuned. */
@@ -1927,7 +1929,7 @@ const DUE_MAX=40, GAPS=[1,3,7];
 const qId = q => (q.prompt||'')+'|'+(q.visual||'')+'|'+(q.options?q.options.slice().sort().join('/'):'')+'|'+(q.items?q.items.slice().sort().join('/'):'')+'|'+(q.kind==='mc'?q.options[q.answer]:q.kind==='order'?q.correct.map(i=>q.items[i]).join('/'):q.answer);
 function rememberWrong(q){
   const due=store.get('due',[]), id=q.dueId||qId(q);
-  const copy=JSON.parse(JSON.stringify(q)); ['retry','warmup','assisted','bridge','bridgePart','bridgeSource','challenge','accepted'].forEach(k=>delete copy[k]); copy.dueId=id;
+  const copy=JSON.parse(JSON.stringify(q)); ['retry','warmup','assisted','bridge','bridgePart','bridgeSource','challenge','accepted','neuland'].forEach(k=>delete copy[k]); copy.dueId=id;
   const old=due.findIndex(d=>d.id===id); if(old>=0) due.splice(old,1);
   const at=addDays(dayKey(),GAPS[0]);
   due.push({id:id, box:0, at:at, q:copy});
@@ -2052,33 +2054,7 @@ function reshuffled(q){
 }
 
 /* Practise Today: warm-up, due repeats, focus topics at their level, and a challenge when a focus topic is ready for it. */
-function buildToday(){
-  const focus=focusTopics();
-  const all=focus.length ? focus : SUBJECTS.flatMap(questsIn);
-  // concept 6.5 (D2): two lanes - the current topics stay in front, the active gap gets at most 2 of 8 tasks;
-  // without current topics the gap fills the round
-  let gq=gapLaneQuests(focus), topics=all.filter(k=>!gq.includes(k));
-  if(!topics.length){ topics=all; gq=[]; }
-  const out=[];
-  const solid=SUBJECTS.flatMap(questsIn).filter(k=>['M','E'].includes(standOf(k)) && topics.indexOf(k)<0 && gq.indexOf(k)<0);
-  const warmFrom=solid.length?pick(solid):pick(topics);
-  const warm=WORLDS[warmFrom].build().find(q=>levelOf(q)<3);
-  if(warm){ warm.warmup=true; out.push(warm); }
-  dueToday().slice(0,2).forEach(q=>out.push(reshuffled(q)));
-  const ready=topics.filter(k=>['M','E'].includes(standOf(k)));
-  let challenge=null;
-  if(ready.length){ const k=pick(ready); challenge=WORLDS[k].build().concat(WORLDS[k].build()).find(q=>levelOf(q)===3) || null; if(challenge) challenge.challenge=true; }
-  const schoolTasks=schoolEvaluationQuestions(out);
-  const lane=gapTasks(gq, Math.min(2, 8-out.length-schoolTasks.length-(challenge?1:0)));
-  lane.unshift(...schoolTasks);
-  const pools=shuffle(topics).map(k=>adaptRound(k, WORLDS[k].build()).filter(q=>levelOf(q)<3 || standOf(k)!=='NA'));
-  const middle=[]; let i=0;
-  while(out.length+lane.length+middle.length+(challenge?1:0)<8 && pools.some(p=>p.length)){ const p=pools[i%pools.length]; if(p.length) middle.push(p.shift()); i++; }
-  const round=out.concat(insertInOrder(shuffle(middle), lane), challenge?[challenge]:[]).slice(0,8);
-  // no task twice (module runde): warm-up, due repeats, gap tasks and the challenge stay; a repeated topic task is
-  // replaced by another one of the same level from the current topics
-  return ohneDoppelte(round, ()=>{ const k=pick(topics); return adaptRound(k, WORLDS[k].build()); }, {id:qId, level:levelOf, keep:q=>!!(q.warmup||q.dueId||q.gap||q.challenge||q.schoolRevision)});
-}
+function buildToday(){ return todayMixer().round; }
 /* ======================= WORLDS, SUBJECTS & STUDIOS ======================= */
 const ICONS={
   forces:'<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 26h26"/><path d="M4 22L26 8"/><path d="M12 12.5l6.5-3.8 2 3.4-6.5 3.8z" fill="currentColor" stroke="none"/><circle cx="12.5" cy="17.5" r="1.8" fill="currentColor" stroke="none"/><circle cx="19" cy="13.6" r="1.8" fill="currentColor" stroke="none"/></svg>',
@@ -2148,6 +2124,9 @@ const SUBJECTS=[
   {key:'learner', name:'Me as a Learner', sub:'Habits, teamwork, goals', color:'var(--w-grow)', icon:'grow', items:['finish','team','school','studio:grow']},
   {key:'events', name:'Events', sub:'Pantastic, trips', color:'var(--w-stage)', icon:'stage', items:['music','studio:stage','trip']}
 ];
+const neulandEntry=createNeulandFoundation({mc,label:k=>WORLDS[k].name,visuals:{groups:arraySVG,fraction:fracSVG,area:(w,h)=>rectSVG(w,h,true),time:clockSVG}});
+const todayMixer=createTodayRound({focusTopics,SUBJECTS,questsIn,gapLaneQuests,standOf,pick,WORLDS,levelOf,dueToday,reshuffled,schoolEvaluationQuestions,gapTasks,shuffle,adaptRound,insertInOrder,ohneDoppelte,qId,neutralQ,foundation:neulandEntry,
+  history:()=>({ev:store.get('ev',{}),attempts:store.get('attempts',[]),tried:store.get('tried',[]),due:store.get('due',[]),best:Object.fromEntries(SUBJECTS.flatMap(questsIn).map(k=>[k,store.get('best_'+k,null)]))})});
 /* FOCUS: the topics taught in class right now (from the school's learning platform). "Practise Today"
    and the practice sheet draw their questions from the focus. */
 const FOCUS=['wordprob','round','combos','units','graphs','sentences','examples','finish'];
@@ -2493,10 +2472,12 @@ function goBack(){
 
 function startRound(k){
   state.sheet=null;
-  state.world=k; state.round=(k==='today'||k.indexOf('mix_')===0)?WORLDS[k].build():adaptRound(k, WORLDS[k].build()); state.idx=0; state.stars=0; state.streak=0;
-  state.results=state.round.map(()=>null);
   const pending=store.get('bridgeNext',[]).filter(q=>q && WORLDS[q.world]);
-  if(pending.length){
+  const today=k==='today'?todayMixer(pending):null;
+  state.world=k; state.round=today?today.round:k.indexOf('mix_')===0?WORLDS[k].build():adaptRound(k, WORLDS[k].build()); state.idx=0; state.stars=0; state.streak=0;
+  state.results=state.round.map(()=>null);
+  if(today&&today.bridgesUsed)store.set('bridgeNext',pending.slice(today.bridgesUsed));
+  if(!today&&pending.length){
     const slots=state.round.map((q,i)=>q.schoolRevision?-1:i).filter(i=>i>=0);
     const use=pending.slice(0,Math.min(3,slots.length));
     use.map(neutralQ).filter(Boolean).forEach((q,i)=>state.round[slots[i]]=q);
@@ -2551,7 +2532,7 @@ function renderQuestion(){
   play.style.setProperty('--world', (WORLDS[q.world]||WORLDS[state.world]).color); // repeats saved by an older version may name a quest that no longer exists
   $('#qLabel').textContent=state.sheet
     ? 'Task '+(state.idx+1)+' of '+state.round.length+' – on your sheet: number '+(q.sheetIndex+1)
-    : q.label+' · Question '+(state.idx+1)+' of '+state.round.length;
+    : (q.neuland?'🧭 Neu entdeckt · ':'')+q.label+' · Question '+(state.idx+1)+' of '+state.round.length;
   $('#qPrompt').innerHTML=q.prompt;
   const vis=$('#qVisual'); vis.innerHTML=q.visual||''; vis.hidden=!q.visual;
   const A=$('#qAnswers'); A.innerHTML=''; A.className='answers'+(q.grid?' grid':'')+(q.grid3?' grid3':'');
@@ -2825,6 +2806,7 @@ function exampleFor(q){
 }
 /* after the tip: the tip button becomes "Show me an example" if there is one, otherwise it goes */
 function afterTip(q){
+  if(q.neuland) q.assisted=true;   // a resumed discovery keeps help already received; a fresh round builds a fresh task
   $('#answerBtn').hidden=false;
   if(!state.example) state.example=exampleFor(q);
   const b=$('#helpBtn');
@@ -3662,7 +3644,7 @@ function sheetResult(sheetId, idx, res){
   const all=store.get('sheets',[]), sh=all.find(s=>s.id===sheetId), it=sh && sh.items[idx]; if(!it || !it.q || it.res) return;
   const q=it.q, key=sheetId+':'+idx;
   if(res==='ok') recordAnswer(q,true);
-  else if(res==='help') recordAnswer(Object.assign({},q,{level:1}),true);
+  else if(res==='help') recordAnswer(Object.assign({},q,{level:1,assisted:true}),true);
   else { recordAnswer(q,false); rememberWrong(q); }
   const list=(store.get('ev',{})[q.world])||[];
   it.rec={ev:list[list.length-1]||null, key, due:res==='no'?(q.dueId||qId(q)):null};

@@ -8,7 +8,7 @@ import{discoverMcCallsites}from'./ep01-qualitaet.mjs';
 import{createNumberQuestions}from'../../src/module/zahlenfragen.mjs';
 import{createLanguageQuestions}from'../../src/module/sprachfragen.mjs';
 export const protectedRounding=['roundWordQ','roundThousandQ','roundTenQ','distanceExplainQ','estimateQ','threeAddendsQ','tenVsHundredQ'];
-export const foundationConsumers=['nearestHundredQ','benchmarkQ','baseQ','numbersBaseQ','combosBaseQ','wordprobBaseQ','unitsBaseQ','graphsBaseQ'];
+export const foundationConsumers=['nearestHundredQ','benchmarkQ','baseQ','numbersBaseQ','combosBaseQ','wordprobBaseQ','unitsBaseQ','graphsBaseQ','neulandFoundation'];
 export const sharedConstructors=['mc','two','takeFrom'];
 export const poolConsumers=['buildRounding','buildWords','buildLibrary','buildTrip','buildMusic','buildGraphs','buildFinish','buildExamples','buildChampion','buildOpinion','buildTeam','buildStickers','buildWordProb','buildAnleitung','buildPoetry','buildSchool'];
 export function uncoveredConsumers(source,result){
