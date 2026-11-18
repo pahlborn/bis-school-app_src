@@ -46,7 +46,11 @@ test('linked: only unambiguous per-criterion entries; never position, first code
     'M-N2',
   ].join('\n'));
   assert.deepEqual(evUebLinkedFor(p, ' ROUNDS to the   nearest 10'), ['M-N3']);
-  for (const c of ['Two codes', 'Unknown code', 'Half known', 'Same', 'M-N2', 'Not in source']) assert.deepEqual(evUebLinkedFor(p, c), [], c);
+  for (const c of ['M-N2', 'Not in source']) assert.deepEqual(evUebLinkedFor(p, c), [], c + ': no binding (global list is not a binding)');
+  for (const c of ['Two codes', 'Unknown code', 'Half known', 'Same']) {
+    assert.ok(evUebLinkedFor(p, c).length > 0, c + ': binding present');
+    assert.equal(evUebProposalCode(c, { linkedStandards: evUebLinkedFor(p, c), knownMappings: [{ criterion: c, code: 'E-S1' }] }), 'none', c + ': unsafe binding is hard none');
+  }
   assert.deepEqual(evUebLinkedFor(p, 'German text'), ['Runden auf Zehner, Hunderter und Tausender']);
   assert.equal(evUebProposalCode('Invented: no words', { linkedStandards: evUebLinkedFor(p, 'German text') }), 'M-N3');
   assert.equal(evUebProposalCode('Two codes'), 'none', 'unresolvable link falls to lower source, no false code');
@@ -100,13 +104,27 @@ test('native result: touched parent choice incl. none is kept, others get propos
   assert.equal(linked.criteria[0].standard, 'E-W1');
 });
 
+test('native result: a present but unsafe source binding is hard none, never known, native or similarity', () => {
+  const crit = 'Rounds whole numbers to 9999 to the nearest 10, 100 and 1000';
+  const known = [{ criterion: crit, code: 'E-S1' }];
+  const native = [{ criterion: crit, rating: 'C', evidence: 'e', standard: 'M-N6' }];
+  const apply = (source, knownMappings = known) => evUebApplyNative([], undefined, native, { parsed: evUebParseStandards(source), knownMappings }).criteria[0].standard;
+  for (const entries of ['M-N1; M-N3', 'Z-INVALID', 'M-N3; Z-INVALID']) assert.equal(apply('Standards\n' + crit + ' -> ' + entries), 'none', entries);
+  for (const source of ['Standards\nOther row -> M-N1', 'Standards\nM-N3', 'Standards\n' + crit + ' -> ;', 'No standards section']) assert.equal(apply(source), 'E-S1', 'no binding, known still applies: ' + source);
+  assert.equal(apply('Standards\n' + crit + ' -> M-N3'), 'M-N3', 'a safe binding still outranks known');
+  assert.equal(apply('Standards\nOther row -> M-N1', []), 'M-N6', 'no binding and no known: native hint');
+  assert.equal(apply('Standards\n' + crit + ' -> Z-INVALID', []), 'none', 'unsafe binding beats the native hint too');
+});
+
 test('remap: injected grown catalog gives a notice candidate, old catalog and unrelated rows give none', () => {
-  const t = task('grow', [row('Fractions of whole shapes', 'none'), row('Fractions of whole shapes', 'M-N1'), row('Invented: unrelated', 'none')]);
+  const t = task('grow', [row('Fractions of whole shapes', 'none'), row('Invented: already assigned zzz', 'M-N1'), row('Invented: unrelated', 'none')]);
   assert.deepEqual(evUebRemapCandidates([t]), [], 'no result, no notice');
   const out = evUebRemapCandidates([t], { catalog: GROWN });
   assert.equal(out.length, 1);
   assert.equal(out[0].evaluation, 'grow');
   assert.deepEqual(out[0].rows, [{ index: 0, criterion: 'Fractions of whole shapes', code: 'M-F1' }]);
+  const same = task('same', [row('Fractions of whole shapes', 'none'), row('Fractions of whole shapes', 'M-N1')]);
+  assert.deepEqual(evUebRemapCandidates([same], { catalog: GROWN })[0].rows, [{ index: 0, criterion: 'Fractions of whole shapes', code: 'M-N1' }], 'the same confirmed text is a known pair and rightly wins over growth');
 });
 
 test('remap: known private pair and skip rules (withdrawn, conflict, pending, legacy)', () => {

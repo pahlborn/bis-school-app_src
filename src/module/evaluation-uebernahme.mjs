@@ -39,20 +39,14 @@ export function evUebParseStandards(text) {
   return out;
 }
 
-/** Eintraege fuer genau dieses Kriterium (Wortgleich nach Leerraum/Case) oder [] wenn nicht eindeutig aufloesbar. */
-export function evUebLinkedFor(parsed, criterion, catalog = SCHOOL_STANDARD_CATALOG) {
+/** Alle Eintraege, die dieses Kriterium (Wortgleich nach Leerraum/Case) ausdruecklich binden, auch unsichere
+ *  (unbekannt, gemischt, widerspruechlich, mehrere Zeilen). [] bedeutet AUSSCHLIESSLICH "keine Bindung": dann gilt die
+ *  naechst niedrigere Quelle. Eine vorhandene Bindung geht als linkedStandards an evaluationZuordnungVorschlag und
+ *  ergibt dort den einen Code oder hartes none; nie Rueckfall auf bekannt, KI oder Aehnlichkeit. */
+export function evUebLinkedFor(parsed, criterion) {
   const wanted = evaluationZuordnungNormalize(criterion);
   if (!wanted || !parsed || !Array.isArray(parsed.rows)) return [];
-  const rows = parsed.rows.filter((r) => evaluationZuordnungNormalize(r.criterion) === wanted);
-  if (!rows.length) return [];
-  const entries = rows.flatMap((r) => r.entries);
-  const codes = new Set();
-  for (const entry of entries) {
-    const r = evaluationZuordnungVorschlag({ linkedStandards: [entry], catalog });
-    if (r.source !== 'toddle' || r.code === EVALUATION_ZUORDNUNG_NONE) return [];
-    codes.add(r.code);
-  }
-  return codes.size === 1 ? entries : [];
+  return parsed.rows.filter((r) => evaluationZuordnungNormalize(r.criterion) === wanted).flatMap((r) => r.entries);
 }
 
 /** true = Eltern haben diese Zeile angefasst (oder Zeile stammt aus bestehender Fassung): nie neu berechnen. */
