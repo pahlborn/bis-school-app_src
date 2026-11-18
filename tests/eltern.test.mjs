@@ -94,6 +94,12 @@ async function fokusSchalter(page,k){
 }
 test('parent-selected focus persists and controls Today, badges and paper worksheets',async()=>{
   const {ctx,page}=await open();
+  const assertTodayFocus=async()=>{
+    const round=(await zustand(page)).round;
+    assert.equal(round.length,8);
+    assert.equal(round.filter(q=>q.neuland).length,1,'one discovery slot beside the selected focus');
+    assert.ok(round.filter(q=>!q.neuland).every(q=>q.world==='units'),'all seven normal cards retain the selected focus');
+  };
   await page.evaluate(()=>{localStorage.setItem('bq2_focusMode','"manual"');localStorage.setItem('bq2_focusManual','[]');});   // manual, nothing chosen
   await elternOeffnen(page);
   assert.equal(await page.locator('#focusForm').count(),0,'no second focus list');
@@ -103,10 +109,10 @@ test('parent-selected focus persists and controls Today, badges and paper worksh
   await zurStart(page);
   const signs=await page.$$eval('#subjects .focus',e=>e.map(x=>x.textContent));
   assert.deepEqual(signs,['1 focus']);
-  await klick(page,'#todayBtn');assert.ok((await zustand(page)).round.every(q=>q.world==='units'));
+  await klick(page,'#todayBtn');await assertTodayFocus();
   await zurStart(page);await page.evaluate(()=>window.print=()=>{});await klick(page,'#sheetBtn');await page.locator('#sheetClose').click();
   assert.ok((await data(page,'sheets'))[0].items.every(i=>i.q.world==='units'));
-  await page.reload();await klick(page,'#todayBtn');assert.ok((await zustand(page)).round.every(q=>q.world==='units'));
+  await page.reload();await klick(page,'#todayBtn');await assertTodayFocus();
   await ctx.close();
 });
 
