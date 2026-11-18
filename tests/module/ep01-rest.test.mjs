@@ -36,9 +36,32 @@ test('AM/PM actual example paths survive any non-foundation answer-format revisi
     assert.ok(oldExample,'real base help example');assert.deepEqual(plain(newExample),plain(oldExample));
   }
 });
-test('accepted Rounding module and app builder are byte-identical to the protected base',()=>{
+test('all Rounding source except the named open halfwayQ function, and its builder, remain byte-identical',()=>{
   const path='src/module/rundungsfragen.mjs';
-  assert.equal(fs.readFileSync(path,'utf8'),execFileSync('git',['show',`${REST_BASE}:${path}`],{encoding:'utf8'}));
+  const protect=s=>s.replace(/function halfwayQ\([\s\S]*?\n}/,'/* separately reviewed open halfwayQ family */');
+  assert.equal(protect(fs.readFileSync(path,'utf8')),protect(execFileSync('git',['show',`${REST_BASE}:${path}`],{encoding:'utf8'})));
   const slice=s=>s.slice(s.indexOf('const RND='),s.indexOf('/* ======================= PAST · WORD WORKSHOP'));
   assert.equal(slice(fs.readFileSync('index.html','utf8')),slice(execFileSync('git',['show',`${REST_BASE}:index.html`],{encoding:'utf8'})));
+});
+
+test('confirmed Dahl counterexample: NOW/POE author choices contain exactly one Dahl book',()=>{
+  const dahl=new Set(['Charlie and the Chocolate Factory','The BFG','Matilda','The Witches','The Twits','George’s Marvellous Medicine']);
+  const app=appSandbox({seed:1});
+  for(const name of['NOW_MC','POE_MC'])for(const index of[2,3]){
+    const row=app.holen(name)[index],titles=[row[1],...row[2]];
+    assert.equal(titles.filter(t=>dahl.has(t)).length,1,name+': exactly one Roald Dahl title');
+  }
+  const prior=appSandbox({seed:1,anpassen:()=>committedApp('68edad04b1fc70e407ff42694f6ddc947b7ad6fb')});
+  const wrong=prior.holen('NOW_MC')[3];
+  assert.equal([wrong[1],...wrong[2]].filter(t=>dahl.has(t)).length,2,'real rejected checkpoint had both BFG and Matilda');
+});
+
+test('revised numeric halfwayQ preserves every original worked-example availability and body',()=>{
+  const before=appSandbox({seed:8,anpassen:()=>oldHtml}),after=appSandbox({seed:8});
+  for(let interval=0;interval<8;interval++)for(let position=0;position<8;position++){
+    const values=[(interval+.001)/8,.75,(position+.001)/8];
+    for(const app of[before,after]){let i=0;app.holen('Math').random=()=>values[i++]??0;}
+    const oldQ=before.holen('halfwayQ')(),newQ=after.holen('halfwayQ')();
+    assert.deepEqual(plain(after.holen('exampleFor')(newQ)),plain(before.holen('exampleFor')(oldQ)));
+  }
 });
