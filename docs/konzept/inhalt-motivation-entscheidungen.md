@@ -108,8 +108,13 @@ Ausgangslage, am Stand von main gemessen: In 107 von 161 Multiple-Choice-Aufgabe
 - Die Inhalte sind entschieden; die Zahlen in Abschnitt 5 und 6 sind die festgelegten Startwerte. Atlas legt je Epic einen Plan in höchstens 10 Zeilen vor (Stories, Reihenfolge, wer umsetzt); Start nach Peters Ja.
 - Es gilt der Auftrag an Atlas (`auftrag-atlas-evaluationen-ziel1.md`, insbesondere Abschnitte 6 und 7) sinngemäß auch für diesen Arbeitsstrom.
 
+## 8a. `index.html` verkleinern (entschieden 18.11.2026)
+
+- Aufgaben-, Text- und Datensammlungen werden **bei Gelegenheit** in Module unter `src/module/` ausgelagert: immer dann, wenn eine Sammlung ohnehin überarbeitet wird (erste Gelegenheit: EP01).
+- Kein Umbau auf einen Schlag; Verhalten und Aufgaben-IDs bleiben gleich, die bestehenden Tests müssen grün bleiben.
+- Ziel: `index.html` wird mit jedem Schritt kleiner, weniger zum Engpass und für Forge und den Relay wieder lesbar.
+
 ## 9. Noch offen (folgt)
 
 - **Quests erweitern** je Quartal (Peters Punkt 5): Themen der Schule für das laufende Quartal fehlen noch.
-- **`index.html` verkleinern:** Empfehlung, Aufgabensammlungen bei ihrer Überarbeitung in Module (`src/module/`) auszulagern – noch nicht entschieden.
 - Trivia/Explain: Dateien und Stichprobe.
