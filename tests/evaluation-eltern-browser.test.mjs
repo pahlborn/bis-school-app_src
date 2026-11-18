@@ -193,7 +193,7 @@ async function evaluationFamily(t, options = {}) {
     return app.schoolSectionOpen() && app.schoolEvaluationTarget()?.name === name;
   }, CHILD);
 
-  return { P, K, browser, allowed };
+  return { P, K, browser, allowed, access, admin };
 }
 
 test('legacy correction drafts preserve the current focus, a synced confirmation replaces it, and withdrawal stops future cards', { timeout: 300000 }, async (t) => {
@@ -1016,4 +1016,150 @@ test('EV6 stale base: a remap draft is rejected after a concurrent revision and 
   assert.match(await form.getByRole('alert').innerText(), /beim Abgleich geändert/);
   assert.equal((await evaluationEvents(P.page)).length, 2, 'stale remap writes no event');
   assert.deepEqual(P.errors, []);
+});
+
+/* ---- A2 corrections (invented data only) ---- */
+async function addChild(parent, browser, allowed, name, login) {
+  const family = parent.page.locator('details.psec[data-psec="family"]');
+  await elternSeite(parent.page, 'school');
+  await parent.page.locator('#pSettings').click();
+  if (!await family.evaluate(details => details.open)) await family.locator(':scope > summary').click();
+  await parent.page.locator('#kKindAnlegen').click();
+  await parent.page.locator('#kKindName').fill(name);
+  await parent.page.locator('#kKindWeiter').click();
+  await parent.page.locator('#kKindLogin').fill(login);
+  await parent.page.locator('#kKindGo').click();
+  await parent.page.locator('#kQr svg').waitFor();
+  const code = (await parent.page.locator('#kCode').textContent()).trim();
+  const pub = await parent.page.evaluate(() => new Promise((resolve, reject) => {
+    const db = indexedDB.open('bq2_konto', 1); db.onerror = () => reject(db.error); db.onsuccess = () => {
+      const req = db.result.transaction('schluessel').objectStore('schluessel').getAll(); req.onerror = () => reject(req.error);
+      req.onsuccess = () => { db.result.close(); resolve(req.result[0].pub); };
+    };
+  }));
+  const child = await device(browser, allowed);
+  const url = new URL(parent.page.url()); url.hash = '';
+  await child.page.goto(anmEinladungslink(url.href, { zugang: TOKEN, anmeldename: login, code, fingerabdruck: await keyFingerprint(pub) }));
+  await register(child.page);
+  await child.page.waitForSelector('#home:not([hidden])', { timeout: 60000 });
+  await parent.page.waitForFunction(() => /ist angemeldet/.test(document.querySelector('#kQrStatus')?.textContent || ''), null, { timeout: 30000 });
+  await parent.page.locator('#kQrFertig').click();
+  await elternSeite(parent.page, 'school');
+  return child;
+}
+
+async function secondParent(family) {
+  const { P, browser, allowed, access, admin } = family;
+  const login = 'nora.waldweg';
+  const start = await startcodeAusstellen({ zugang: access, aussteller: admin, anmeldename: login, art: 'parent', now: Date.now() });
+  const Q = await device(browser, allowed);
+  const url = new URL(P.page.url()); url.hash = '';
+  await Q.page.goto(anmEinladungslink(url.href, { zugang: TOKEN, anmeldename: login, code: start.code, fingerabdruck: start.fingerabdruck }));
+  await register(Q.page);
+  await Q.page.locator('#recGo').click();
+  await Q.page.locator('#welcomeGo').click();
+  await Q.page.locator('#parentClose').waitFor();
+  return Q;
+}
+
+const A2_CRIT = 'Rounds whole numbers to 9999 to the nearest 10, 100 and 1000';
+test('EV5 source: a present unsafe per-criterion binding is none, not known or native; unbound rows keep known', { timeout: 120000 }, async t => {
+  const { P } = await evaluationFamily(t);
+  await elternSeite(P.page, 'school');
+  const names = [A2_CRIT, 'Invented: unbound known phrase', 'Invented: unknown binding row', 'Invented: mixed binding row'];
+  const stored = ev5RemapPayload(names.map(criterion => ({ criterion, rating: 'M', evidence: 'Invented evidence', standard: 'E-S1' })));
+  stored.assessment.area = 'english';
+  await storeIntegrationAssessment(P.page, stored);
+  await elternSeite(P.page, 'school');
+  const source = ['Standards', A2_CRIT + ' -> M-N1; M-N3', 'M-N4', names[2] + ' -> Z-INVALID', names[3] + ' -> M-N3; Z-INVALID'].join('\n');
+  const native = { title: 'Invented native source', date: ev5Today(), goal: 'Invented goal', instructions: 'Invented instructions', feedback: 'Invented feedback',
+    criteria: names.map(criterion => ({ criterion, rating: 'C', evidence: 'Invented evidence', standard: 'M-N6' })), missing: [] };
+  await P.page.evaluate(result => { window.webkit = { messageHandlers: { bigQuestEvaluation: { postMessage: async () => result } } }; }, native);
+  const opened = await P.page.evaluate(text => {
+    const form = window.bigQuestEvaluationForm, context = form.context();
+    if (!context) throw Error('Expected the actual native capture context');
+    return form.source(context, 'invented-transfer', text);
+  }, source);
+  assert.equal(opened, 'opened');
+  await P.page.locator('[data-eval-action="ai"]').click();
+  await P.page.waitForFunction(() => window.__evaluationIntegration.draft()?.extracted === true);
+  const expected = ['none', 'E-S1', 'none', 'none'];
+  assert.deepEqual(await P.page.evaluate(() => window.__evaluationIntegration.draft().assessment.criteria.map(c => c.standard)), expected, 'unsafe binding is none, not E-S1 or M-N6; unbound row keeps known');
+  assert.deepEqual(await P.page.locator('#pSchoolEvaluation [data-doc-standard]').evaluateAll(s => s.map(x => x.value)), expected, 'selects show the same values');
+  assert.equal((await evaluationEvents(P.page)).length, 1, 'only the seeded evaluation, nothing written by the transfer');
+  assert.deepEqual(P.errors, []);
+});
+
+test('EV5 known: a foreign parent and own child cannot read or reuse the first family known phrase', { timeout: 180000 }, async t => {
+  const family = await evaluationFamily(t);
+  const { P } = family;
+  const PHRASE = 'Invented: foreign family phrase zzz';
+  await elternSeite(P.page, 'school');
+  const first = await P.page.evaluate(() => window.__evaluationIntegration.schoolEvaluationTarget());
+  await storeIntegrationAssessment(P.page, ev5RemapPayload([{ criterion: PHRASE, rating: 'M', evidence: 'Invented evidence', standard: 'E-S2' }]));
+  await elternSeite(P.page, 'school');
+  const formP = P.page.locator('#pSchoolEvaluation');
+  await formP.locator('[data-eval-action="open"]').click();
+  await formP.locator('[data-doc-criterion="0"]').fill(PHRASE);
+  assert.equal(await formP.locator('[data-doc-standard="0"]').inputValue(), 'E-S2', 'positive control: the first family knows the phrase');
+  await formP.locator('[data-eval-action="cancel"]').click();
+  const firstContext = await P.page.evaluate(() => window.bigQuestEvaluationForm.context());
+  assert.ok(firstContext, 'a first-family capture context exists');
+  const Q = await secondParent(family);
+  await addChild(Q, family.browser, family.allowed, 'Ida Waldweg', 'ida.waldweg');
+  await Q.page.waitForFunction(name => {
+    const app = window.__evaluationIntegration;
+    return app.schoolSectionOpen() && app.schoolEvaluationTarget()?.name === name;
+  }, 'Ida Waldweg');
+  const own = await Q.page.evaluate(() => window.__evaluationIntegration.schoolEvaluationTarget());
+  assert.notEqual(own.id, first.id, 'second family has its own child namespace');
+  assert.notEqual(own.author, first.author, 'second family has its own parent');
+  assert.deepEqual(await Q.page.evaluate(id => Object.keys(localStorage).filter(k => k.includes(id)), first.id), [], 'no first-family data on the second device');
+  assert.equal(await Q.page.evaluate(ctx => window.bigQuestEvaluationForm.source(ctx, 'invented-foreign', 'Invented foreign source'), firstContext), 'invalid', 'foreign capture context is rejected');
+  assert.equal(await Q.page.evaluate(() => window.__evaluationIntegration.draft()), null);
+  assert.deepEqual(await evaluationEvents(Q.page), [], 'foreign submit writes nothing');
+  assert.equal(await P.page.evaluate(ctx => window.bigQuestEvaluationForm.source(ctx, 'invented-transfer', 'Invented source'), firstContext), 'opened', 'control: the same token is valid in the first family');
+  await P.page.locator('#pSchoolEvaluation [data-eval-action="cancel"]').click();
+  const formQ = Q.page.locator('#pSchoolEvaluation');
+  await formQ.locator('[data-eval-action="open"]').click();
+  await formQ.locator('[data-doc-criterion="0"]').fill(PHRASE);
+  assert.equal(await formQ.locator('[data-doc-standard="0"]').inputValue(), 'none', 'second family does not reuse the first family known pair');
+  await fillDocument(formQ, 'Invented second family', 'english', [{ criterion: PHRASE, rating: 'M', standard: 'none' }]);
+  await formQ.locator('button[type="submit"]').click();
+  await formQ.locator('button[type="submit"]').click();
+  const eventsQ = await evaluationEvents(Q.page);
+  assert.equal(eventsQ.length, 1);
+  assert.equal(eventsQ[0].payload.child, own.id);
+  assert.notEqual(eventsQ[0].payload.child, first.id);
+  const eventsP = await evaluationEvents(P.page);
+  assert.equal(eventsP.length, 1, 'first family unchanged');
+  assert.equal(eventsP[0].payload.child, first.id);
+  assert.deepEqual(P.errors, []);
+  assert.deepEqual(Q.errors, []);
+});
+
+test('EV6 child switch: notice and remap preview of the first child do not carry over to the second child', { timeout: 180000 }, async t => {
+  const { P, browser, allowed } = await evaluationFamily(t);
+  const other = await addChild(P, browser, allowed, 'Lina Sonnenweg', 'lina.sonnenweg');
+  await P.page.locator('#pKidSel').selectOption(LOGIN);
+  await elternSeite(P.page, 'school');
+  const payload = ev5RemapPayload(EV5_NONE_ROWS);
+  await storeIntegrationAssessment(P.page, payload);
+  await elternSeite(P.page, 'school');
+  const form = P.page.locator('#pSchoolEvaluation');
+  assert.equal(await form.locator('[data-eval-remap]').count(), 1, 'positive control: notice for the first child');
+  await form.locator('[data-eval-action="remap"]').click();
+  assert.notEqual(await P.page.evaluate(() => window.__evaluationIntegration.draft()), null, 'remap preview is open');
+  await P.page.locator('#pKidSel').selectOption('lina.sonnenweg');
+  assert.equal(await P.page.evaluate(() => window.__evaluationIntegration.draft()), null, 'child switch discards the preview');
+  await elternSeite(P.page, 'school');
+  assert.equal(await P.page.locator('#pSchoolEvaluation [data-eval-remap]').count(), 0, 'no notice for the other child');
+  assert.equal((await evaluationEvents(P.page)).length, 1, 'nothing written');
+  await P.page.locator('#pKidSel').selectOption(LOGIN);
+  await elternSeite(P.page, 'school');
+  assert.equal(await P.page.locator('#pSchoolEvaluation [data-eval-remap]').count(), 1, 'notice is computed again on read for the first child');
+  assert.equal(await P.page.evaluate(() => window.__evaluationIntegration.draft()), null);
+  assert.equal((await evaluationEvents(P.page)).length, 1);
+  assert.deepEqual(P.errors, []);
+  assert.deepEqual(other.errors, []);
 });
