@@ -1,7 +1,7 @@
 // Both learning targets, correction and withdrawal through the normal parent and child views.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { appServer, browserStarten, elternSeite } from './app-hilfen.mjs';
+import { appServer, browserStarten, elternSeite, elternAnsichtOeffnen } from './app-hilfen.mjs';
 import { githubNachbau } from './module/github-nachbau.mjs';
 import { githubSpeicher } from '../src/module/github.mjs';
 import { startcodeAusstellen, ersteAnmeldung } from '../src/module/konto.mjs';
@@ -16,7 +16,9 @@ const LOGIN = 'tessa.sonnenweg';
 
 async function register(page) {
   await page.locator('#kontoNeuUse').click();
+  const password = await page.locator('#kontoNeuPw').inputValue();
   await page.locator('#kontoNeuGo').click();
+  return password;
 }
 
 async function device(browser, allowed, options = {}) {
@@ -143,7 +145,7 @@ async function evaluationFamily(t, options = {}) {
   const admin = await ersteAnmeldung({ zugang: access, code: adminCode.code, passwort: 'Werkzeug-Admin-Passwort-1', now: Date.now() });
   const parentCode = await startcodeAusstellen({ zugang: access, aussteller: admin, anmeldename: 'mira.sonnenweg', art: 'parent', now: Date.now() });
   const config = JSON.stringify({ art: 'github', repo: REPO, wurzel: '', basis: storage.basis });
-  const server = await appServer({ bauart: 'test', anpassen: (h) => h.replace('/*BQ_SPEICHER*/null', () => config).replace(/\}\)\(\);\s*<\/script>/, 'window.__evaluationIntegration={eventHook,schoolEvaluationTarget,schoolFromAccount,renderSheets,schoolSectionOpen:()=>state.popen?.includes("school"),openLegacy(){const t=schoolEvaluationTarget();schoolEvaluationDraft={child:t.id,author:t.author,title:"",day:"",standard:"",rating:"",evaluation:crypto.randomUUID(),revision:crypto.randomUUID(),preview:false,focus:false};renderSheets();},draft:()=>schoolEvaluationDraft};})();</script>') });
+  const server = await appServer({ bauart: 'test', anpassen: (h) => h.replace('/*BQ_SPEICHER*/null', () => config).replace(/\}\)\(\);\s*<\/script>/, 'window.__evaluationIntegration={eventHook,schoolEvaluationTarget,schoolFromAccount,renderSheets,schoolSectionOpen:()=>state.popen?.includes("school"),openLegacy(){const t=schoolEvaluationTarget();schoolEvaluationDraft={child:t.id,author:t.author,title:"",day:"",standard:"",rating:"",evaluation:crypto.randomUUID(),revision:crypto.randomUUID(),preview:false,focus:false};renderSheets();},draft:()=>schoolEvaluationDraft,adult:()=>adultUser&&{user:adultUser.user,role:adultUser.role},viewedKid,viewerGrant:()=>{const g=viewerGrant();return g&&{scope:[...g.scope]};},async loginAs(name,password){show("login");renderLogin("adult",{name});await kontoLoginAbsenden("adult",name,password);return adultUser&&adultUser.user;}};})();</script>') });
   t.after(() => server.close());
   const browser = await browserStarten();
   t.after(() => browser.close());
@@ -152,7 +154,7 @@ async function evaluationFamily(t, options = {}) {
   const K = await device(browser, allowed);
 
   await P.page.goto(anmEinladungslink(server.url, { zugang: TOKEN, anmeldename: 'mira.sonnenweg', code: parentCode.code, fingerabdruck: parentCode.fingerabdruck }));
-  await register(P.page);
+  const parentPassword = await register(P.page);
   await P.page.locator('#recGo').click();
   await P.page.locator('#welcomeGo').click();
   await P.page.locator('#parentClose').waitFor();
@@ -193,7 +195,7 @@ async function evaluationFamily(t, options = {}) {
     return app.schoolSectionOpen() && app.schoolEvaluationTarget()?.name === name;
   }, CHILD);
 
-  return { P, K, browser, allowed, access, admin };
+  return { P, K, browser, allowed, access, admin, parentPassword };
 }
 
 test('legacy correction drafts preserve the current focus, a synced confirmation replaces it, and withdrawal stops future cards', { timeout: 300000 }, async (t) => {
@@ -1021,8 +1023,7 @@ test('EV6 stale base: a remap draft is rejected after a concurrent revision and 
 /* ---- A2 corrections (invented data only) ---- */
 async function addChild(parent, browser, allowed, name, login) {
   const family = parent.page.locator('details.psec[data-psec="family"]');
-  await elternSeite(parent.page, 'school');
-  await parent.page.locator('#pSettings').click();
+  await elternAnsichtOeffnen(parent.page, 'settings');
   if (!await family.evaluate(details => details.open)) await family.locator(':scope > summary').click();
   await parent.page.locator('#kKindAnlegen').click();
   await parent.page.locator('#kKindName').fill(name);
@@ -1162,4 +1163,76 @@ test('EV6 child switch: notice and remap preview of the first child do not carry
   assert.equal((await evaluationEvents(P.page)).length, 1);
   assert.deepEqual(P.errors, []);
   assert.deepEqual(other.errors, []);
+});
+
+/* ---- EV6.2 teacher read-only acceptance (invented data only; credentials generated in memory) ---- */
+const grantEvents = (page) => page.evaluate(() => Object.keys(localStorage).filter((key) => /^bq2_p_[A-Za-z0-9]+__events$/.test(key))
+  .flatMap((key) => JSON.parse(localStorage.getItem(key))).filter((event) => event.type === 'grant_set'));
+
+test('EV6.2 teacher: a granted teacher on the same browser sees the evaluation read-only without remap or form', { timeout: 300000 }, async t => {
+  const family = await evaluationFamily(t);
+  const { P, access, admin, parentPassword } = family;
+  const PARENT = 'mira.sonnenweg', TEACHER = 'tina.lehrkraft';
+  const payload = ev5RemapPayload(EV5_NONE_ROWS);
+  // Actual admin start code -> actual first teacher registration in the same browser (the parent key stays in the account folder).
+  const start = await startcodeAusstellen({ zugang: access, aussteller: admin, anmeldename: TEACHER, art: 'teacher', now: Date.now() });
+  const url = new URL(P.page.url()); url.hash = '';
+  await P.page.goto('about:blank');
+  await P.page.goto(anmEinladungslink(url.href, { zugang: TOKEN, anmeldename: TEACHER, code: start.code, fingerabdruck: start.fingerabdruck }));
+  const teacherPassword = await register(P.page);
+  await P.page.locator('#recGo').click();
+  await P.page.locator('#welcomeGo').click();
+  await P.page.waitForFunction(name => window.__evaluationIntegration?.adult()?.user === name, TEACHER, { timeout: 60000 });
+  // Actual parent authenticates again (no parentAbmelden: the parent key must stay open in this account folder).
+  assert.equal(await P.page.evaluate(([name, password]) => window.__evaluationIntegration.loginAs(name, password), [PARENT, parentPassword]), PARENT);
+  await P.page.waitForSelector('#aboutBody details.psec[data-psec="school"]', { timeout: 60000 });
+  await elternSeite(P.page, 'school');
+  await P.page.waitForFunction(name => {
+    const app = window.__evaluationIntegration;
+    return app.schoolSectionOpen() && app.schoolEvaluationTarget()?.name === name;
+  }, CHILD, { timeout: 60000 });
+  await storeIntegrationAssessment(P.page, payload);
+  await elternSeite(P.page, 'grants');
+  const grant = P.page.locator('#pGrantForm');
+  await grant.locator('#pGrantWho').fill(TEACHER);
+  await grant.locator('#pGrantSchool').check();
+  await grant.locator('button[type="submit"]').click();
+  await P.page.locator('ul.pgrants li').filter({ hasText: TEACHER }).waitFor();
+  const grants = await grantEvents(P.page);
+  assert.equal(grants.length, 1, 'one real grant_set event');
+  assert.ok(grants[0].payload.scope.includes('school'), 'the real grant includes school ratings');
+  // Decisive positive control (parent): calm remap notice; hold a stale remap preview and a native capture token.
+  await elternSeite(P.page, 'school');
+  const formP = P.page.locator('#pSchoolEvaluation');
+  assert.match(await formP.locator('[data-eval-remap]').innerText(), /Neue Zuordnungen möglich/);
+  const parentContext = await P.page.evaluate(() => window.bigQuestEvaluationForm.context());
+  assert.ok(parentContext, 'parent has a native capture context');
+  await formP.locator('[data-eval-action="remap"]').click();
+  assert.notEqual(await P.page.evaluate(() => window.__evaluationIntegration.draft()), null, 'parent holds a remap preview');
+  const held = await P.page.locator('#pSchoolEvaluation').elementHandle();
+  assert.equal((await evaluationEvents(P.page)).length, 1, 'only the seeded evaluation before the teacher');
+  // Actual teacher authenticates again; the parent key stays open in the same account folder.
+  assert.equal(await P.page.evaluate(([name, password]) => window.__evaluationIntegration.loginAs(name, password), [TEACHER, teacherPassword]), TEACHER);
+  assert.deepEqual(await P.page.evaluate(() => window.__evaluationIntegration.adult()), { user: TEACHER, role: 'teacher' });
+  await P.page.waitForSelector('#aboutBody details.psec[data-psec="school"]', { timeout: 60000 });
+  await elternSeite(P.page, 'school');
+  await P.page.waitForFunction(login => {
+    const app = window.__evaluationIntegration;
+    return app.schoolSectionOpen() && app.viewedKid() === login && app.viewerGrant()?.scope.includes('school');
+  }, LOGIN, { timeout: 60000 });
+  // Positive control (teacher): the same evaluation title and criteria are visible.
+  const details = await showDetails(P.page, payload.title);
+  const visible = await details.innerText();
+  for (const row of EV5_NONE_ROWS) assert.ok(visible.includes(row.criterion), 'teacher sees the evaluation criterion');
+  // Read-only: no remap notice, no remap/confirm/open controls, no form.
+  assert.equal(await P.page.locator('[data-eval-remap], [data-eval-action], #pSchoolEvaluation').count(), 0);
+  assert.equal(await P.page.getByRole('button', { name: /Korrektur bestätigen|Zuordnungen prüfen|Evaluation hinzufügen/ }).count(), 0);
+  // Native account switch keeps the target guards.
+  assert.equal(await P.page.evaluate(() => window.bigQuestEvaluationForm.context()), null);
+  assert.equal(await P.page.evaluate(ctx => window.bigQuestEvaluationForm.source(ctx, 'invented-teacher', 'Invented source'), parentContext), 'invalid');
+  // Stale parent form (detached node, listeners still bound) is submitted as the teacher.
+  await held.evaluate(box => box.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  await held.dispose();
+  assert.equal((await evaluationEvents(P.page)).length, 1, 'stale submit writes no additional school_evaluation event');
+  assert.deepEqual(P.errors, []);
 });
