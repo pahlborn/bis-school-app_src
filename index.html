@@ -6291,9 +6291,15 @@ function schoolCatalogPayload(){
 function schoolDraftAcceptsSource(d,target){
   return !!d && d.child===target.id && d.author===target.author && !!d.assessment && !d.preview && !d.busy && !d.extracted && !d.withdrawn && !d.base && !d.resolves;
 }
-function schoolToddleControl(d,de){
-  if(!schoolNativeBridge() || !d.assessment || d.preview || d.busy || d.extracted || d.withdrawn || d.base || d.resolves) return '';
-  return `<p><button type="button" class="btn small" data-eval-action="toddle">${de?'Aus Toddle':'From Toddle'}</button></p>`;
+/* The native shell alone supplies the wording of its import button (window.bigQuestNativeImport.label = {de,en}); a plain browser has none. */
+function schoolNativeImportLabel(de){
+  const label=window.bigQuestNativeImport?.label, text=label && typeof label==='object' ? label[de?'de':'en'] : '';
+  return typeof text==='string' && text.length>0 && text.length<=40 ? text : '';
+}
+function schoolNativeImportControl(d,de){
+  const label=schoolNativeImportLabel(de);
+  if(!label || !schoolNativeBridge() || !d.assessment || d.preview || d.busy || d.extracted || d.withdrawn || d.base || d.resolves) return '';
+  return `<p><button type="button" class="btn small" data-eval-action="import">${esc(label)}</button></p>`;
 }
 function schoolDocumentHTML(d,target){
   const de=PL()==='de', lang=de?'de':'en', doc=d.assessment, area=schoolArea(doc.area,schoolTexts(de));
@@ -6349,7 +6355,7 @@ function schoolDocumentHTML(d,target){
     <button class="btn small" type="button" data-eval-action="edit">${de?'Bearbeiten':'Edit'}</button>`;
   return `<div id="pSchoolEvaluation"><form class="login-form pseval-document"><h3>${de?'Evaluation übernehmen':'Bring in an evaluation'}</h3><p class="pseval-child"><b>${de?'Kind':'Child'}: ${esc(target.name)}</b></p>
     ${d.preview?preview:`${d.source?`<details${d.extracted?'':' open'}><summary>${de?'Erfasster Evaluationstext':'Captured evaluation text'}</summary><p>${de?'Prüfen Sie den Text vor dem Senden an Claude. Entfernen Sie Namen und andere persönliche Angaben.':'Check the text before sending it to Claude. Remove names and other personal details.'}</p><label>${de?'Quelltext':'Source text'}<textarea name="source"${d.busy||d.extracted?' readonly':''}>${esc(d.source)}</textarea></label></details><button class="btn" type="button" data-eval-action="ai"${d.busy||d.extracted?' disabled':''}>${d.busy?(de?'Claude verarbeitet …':'Claude is processing …'):(de?'Mit Claude ins Formular übertragen':'Fill the form with Claude')}</button>`:''}
-    ${schoolToddleControl(d,de)}
+    ${schoolNativeImportControl(d,de)}
     <fieldset class="pseval-fields"${d.busy?' disabled':''}><legend class="sr-only">${de?'Angaben der Evaluation':'Evaluation details'}</legend>
     ${field('title',de?'Titel der Evaluation':'Evaluation title',d.title)}${field('day',de?'Bewertungsdatum':'Assessment date',d.day,'date')}
     <label>${de?'Fach':'Subject'}<select name="doc-area" aria-label="${de?'Fach':'Subject'}" required><option value="">${de?'Bitte auswählen':'Please select'}</option>${SUBJECTS.map(s=>`<option value="${s.key}"${doc.area===s.key||doc.area==='math'&&s.key==='maths'?' selected':''}>${esc(schoolArea(s.key,schoolTexts(de)))}</option>`).join('')}</select></label>
@@ -6358,7 +6364,7 @@ function schoolDocumentHTML(d,target){
     <button class="btn" type="submit">${de?'Vorschau anzeigen':'Show preview'}</button></fieldset>`}
     <button class="btn small" type="button" data-eval-action="cancel">${de?'Abbrechen':'Cancel'}</button>${d.error?`<p role="alert">${esc(d.error)}</p>`:''}</form></div>`;
 }
-/* The native shell calls context()/source() (the web form starts the native Toddle reader). Only the shared draft is filled;
+/* The native shell calls context()/source() (the web form starts the native source reader). Only the shared draft is filled;
    no storage and no native URL, frame, origin or credential policy changes. */
 Object.defineProperty(window,'bigQuestEvaluationForm',{value:Object.freeze({
   context(){
@@ -6477,10 +6483,10 @@ function bindSchoolEvaluation(body){
         ...(p.standardOverrides?{standardOverrides:{...p.standardOverrides}}:{})};
       redraw(); body.querySelector('#pSchoolEvaluation button[type="submit"]')?.focus(); return;
     }
-    if(action==='toddle'){
+    if(action==='import'){
       const d=current(), bridge=schoolNativeBridge();
-      if(!d || !bridge || !schoolDraftAcceptsSource(d,t)) return;
-      try { await bridge.postMessage({action:'toddle'}); }
+      if(!d || !bridge || !schoolNativeImportLabel(PL()==='de') || !schoolDraftAcceptsSource(d,t)) return;
+      try { await bridge.postMessage({action:'import'}); }
       catch(error){ if(current()===d){ d.error=error?.message||String(error); redraw(); } }
       return;
     }

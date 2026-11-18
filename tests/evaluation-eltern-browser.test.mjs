@@ -1239,13 +1239,14 @@ test('EV6.2 teacher: a granted teacher on the same browser sees the evaluation r
 
 /* EV5.4 native full-app journey. Native handler is an explicitly synthetic mock; no provider, no credential. */
 const NATIVE_SOURCE = NATIVE_DOCUMENT.criteria.map(c => c.evidence).join('\n');
-async function installNativeMock(page, response) {
-  await page.evaluate(({ response, source }) => {
+async function installNativeMock(page, response, { label = true } = {}) {
+  await page.evaluate(({ response, source, label }) => {
     window.__nativeRequests = [];
+    if (label) Object.defineProperty(window, 'bigQuestNativeImport', { configurable: true, value: Object.freeze({ label: Object.freeze({ de: 'Aus Toddle', en: 'From Toddle' }) }) });
     window.webkit = { messageHandlers: { bigQuestEvaluation: { postMessage: async request => {
       window.__nativeRequests.push(JSON.parse(JSON.stringify(request)));
       if (request.action === 'catalog') return 'ok';
-      if (request.action === 'toddle') {
+      if (request.action === 'import') {
         const form = window.bigQuestEvaluationForm, context = form.context();
         if (!context) throw new Error('No open new form');
         const result = form.source(context, 'invented-transfer-toddle', source);
@@ -1254,7 +1255,7 @@ async function installNativeMock(page, response) {
       }
       return response;
     } } } };
-  }, { response, source: NATIVE_SOURCE });
+  }, { response, source: NATIVE_SOURCE, label });
 }
 
 test('EV5.4 plain browser: same manual form and no Toddle control', { timeout: 120000 }, async t => {
@@ -1263,9 +1264,10 @@ test('EV5.4 plain browser: same manual form and no Toddle control', { timeout: 1
   const form = P.page.locator('#pSchoolEvaluation');
   await form.locator('[data-eval-action="open"]').click();
   await form.locator('[name="title"]').waitFor({ state: 'visible' });
-  assert.equal(await form.locator('[data-eval-action="toddle"]').count(), 0);
+  assert.equal(await form.locator('[data-eval-action="import"]').count(), 0);
   assert.equal(await form.locator('[data-eval-action="ai"]').count(), 0);
   assert.equal(await P.page.evaluate(() => typeof window.webkit), 'undefined');
+  assert.equal(await P.page.evaluate(() => typeof window.bigQuestNativeImport), 'undefined', 'the generic browser has no native import capability');
   assert.deepEqual(await evaluationEvents(P.page), []);
   assert.deepEqual(P.errors, []);
 });
@@ -1277,7 +1279,8 @@ test('EV5.4 native journey: from the open new form, one full catalog, same draft
   const form = P.page.locator('#pSchoolEvaluation');
   await form.locator('[data-eval-action="open"]').click();
   await form.locator('[name="title"]').fill('Invented manual start');
-  await form.locator('[data-eval-action="toddle"]').click();
+  assert.match(await form.locator('[data-eval-action="import"]').innerText(), /^(Aus Toddle|From Toddle)$/, 'label supplied by the native capability');
+  await form.locator('[data-eval-action="import"]').click();
   await form.locator('[name="source"]').waitFor({ state: 'visible' });
   assert.equal(await form.locator('[name="source"]').inputValue(), NATIVE_SOURCE);
   assert.equal(await form.locator('[name="title"]').inputValue(), 'Invented manual start', 'the captured source enters the same draft');
@@ -1285,7 +1288,7 @@ test('EV5.4 native journey: from the open new form, one full catalog, same draft
   await form.locator('[data-eval-action="ai"]').click();
   await P.page.waitForFunction(() => document.querySelector('[name="title"]')?.value === 'Invented native evaluation');
   const requests = await P.page.evaluate(() => window.__nativeRequests);
-  assert.deepEqual(requests.map(r => r.action || 'source'), ['toddle', 'catalog', 'source']);
+  assert.deepEqual(requests.map(r => r.action || 'source'), ['import', 'catalog', 'source']);
   assert.deepEqual(Object.keys(requests[0]), ['action']);
   assert.deepEqual(Object.keys(requests[1]).sort(), ['action', 'catalog']);
   assert.deepEqual(Object.keys(requests[2]), ['source']);
@@ -1319,7 +1322,7 @@ test('EV5.4 native: an invalid returned standard is rejected, never silently dro
   const form = P.page.locator('#pSchoolEvaluation');
   await installNativeMock(P.page, NATIVE_DOCUMENT);
   await form.locator('[data-eval-action="open"]').click();
-  await form.locator('[data-eval-action="toddle"]').click();
+  await form.locator('[data-eval-action="import"]').click();
   await form.locator('[name="source"]').waitFor({ state: 'visible' });
   for (const bad of ['Z-NOT-IN-CATALOG', '', 7, null]) {
     await installNativeMock(P.page, { ...NATIVE_DOCUMENT, criteria: NATIVE_DOCUMENT.criteria.map((c, i) => i ? c : { ...c, standard: bad }) });
@@ -1363,6 +1366,37 @@ test('EV5.4 native guards: old, canceled, busy and logged-out contexts cannot fi
   await P.page.locator('#parentClose').click();
   assert.equal(await P.page.evaluate(() => window.bigQuestEvaluationForm.context()), null, 'logged out / child context gone');
   assert.equal(await P.page.evaluate(({ c, s }) => window.bigQuestEvaluationForm.source(c, 'invented-transfer', s), { c: busyContext, s: NATIVE_SOURCE }), 'invalid');
+  assert.deepEqual(await evaluationEvents(P.page), []);
+  assert.deepEqual(P.errors, []);
+});
+
+test('EV5.4 native label: the import button text comes from the runtime native capability, in both languages', { timeout: 120000 }, async t => {
+  const { P } = await evaluationFamily(t);
+  await elternSeite(P.page, 'school');
+  const form = P.page.locator('#pSchoolEvaluation');
+  await installNativeMock(P.page, NATIVE_DOCUMENT, { label: false });
+  await form.locator('[data-eval-action="open"]').click();
+  await form.locator('[name="title"]').waitFor({ state: 'visible' });
+  assert.equal(await form.locator('[data-eval-action="import"]').count(), 0, 'a bridge without the label capability shows no import control');
+  for (const bad of [null, 7, {}, { de: '', en: '' }, { de: 'x'.repeat(41), en: 'x'.repeat(41) }, { de: 7, en: 7 }]) {
+    await P.page.evaluate(label => Object.defineProperty(window, 'bigQuestNativeImport', { configurable: true, value: { label } }), bad);
+    await P.page.locator('.phdr [data-plang="de"]').click();
+    assert.equal(await form.locator('[data-eval-action="import"]').count(), 0, 'an invalid label shows no control: ' + JSON.stringify(bad));
+  }
+  await P.page.evaluate(() => Object.defineProperty(window, 'bigQuestNativeImport', { configurable: true, value: { label: { de: 'Invented <b>runtime</b> label', en: 'Invented runtime label' } } }));
+  await P.page.locator('.phdr [data-plang="en"]').click();
+  assert.equal(await form.locator('[data-eval-action="import"]').innerText(), 'Invented runtime label', 'the wording is exactly the runtime value');
+  await P.page.locator('.phdr [data-plang="de"]').click();
+  assert.equal(await form.locator('[data-eval-action="import"] b').count(), 0, 'the label is text, not markup');
+  await installNativeMock(P.page, NATIVE_DOCUMENT);
+  for (const [lang, text] of [['de', 'Aus Toddle'], ['en', 'From Toddle']]) {
+    await P.page.locator(`.phdr [data-plang="${lang}"]`).click();
+    assert.equal(await form.locator('[data-eval-action="import"]').innerText(), text);
+  }
+  await form.locator('[data-eval-action="import"]').click();
+  await form.locator('[name="source"]').waitFor({ state: 'visible' });
+  assert.equal(await form.locator('[name="source"]').inputValue(), NATIVE_SOURCE, 'same actual capture and source into the existing form');
+  assert.deepEqual((await P.page.evaluate(() => window.__nativeRequests)).map(r => r.action), ['import']);
   assert.deepEqual(await evaluationEvents(P.page), []);
   assert.deepEqual(P.errors, []);
 });

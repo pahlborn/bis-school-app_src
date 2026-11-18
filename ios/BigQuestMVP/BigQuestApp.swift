@@ -29,6 +29,9 @@ private final class BrowserPage: NSObject, ObservableObject, WKScriptMessageHand
         if url.host == "big-quest-test.github.io" {
             configuration.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "bigQuestEvaluation")
             configuration.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "bigQuestDeviceConnection")
+            // Native-only view wording for the import button (main frame, this origin only). Display text, never key material.
+            let nativeImport = "Object.defineProperty(window,'bigQuestNativeImport',{value:Object.freeze({label:Object.freeze({de:'Aus Toddle',en:'From Toddle'})})});"
+            configuration.userContentController.addUserScript(WKUserScript(source: nativeImport, injectionTime: .atDocumentStart, forMainFrameOnly: true, in: .page))
         }
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.load(URLRequest(url: url))
@@ -78,7 +81,7 @@ private final class BrowserPage: NSObject, ObservableObject, WKScriptMessageHand
                 }
                 catalog = parsed
                 replyHandler("ok", nil)
-            case "toddle":
+            case "import":
                 guard body.count == 1, !busy, let opener = toddleOpener else {
                     replyHandler(nil, KeychainText.text("Ungültiger Formularaufruf.", "Invalid form request.")); return
                 }
