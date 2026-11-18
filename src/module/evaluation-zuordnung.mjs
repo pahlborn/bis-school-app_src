@@ -126,11 +126,16 @@ export function evaluationZuordnungVorschlag(input) {
   if (codes.size === 1) return evZuoResult([...codes][0], 'known', 1, false, 'known-exact', [], diagnostics);
 
   // 3. Spaeter nativer Claude-Vorschlag (vom Aufrufer geliefert), nur Katalogcodes.
+  // Ein gelieferter, ungueltiger Vorschlag (nicht Katalogcode, nicht ausdruecklich 'none')
+  // ergibt hartes none: kein Rueckfall auf die niedriger priorisierte Wortaehnlichkeit.
   if (opts.aiProposal !== undefined && opts.aiProposal !== null) {
     const raw = typeof opts.aiProposal === 'string' ? opts.aiProposal : opts.aiProposal.code;
     const code = evZuoResolveCode(catalog, raw);
     if (code) return evZuoResult(code, 'ai', null, false, 'ai-proposal', [], diagnostics);
-    if (evaluationZuordnungNormalize(raw) !== none) diagnostics.aiRejected = true;
+    if (evaluationZuordnungNormalize(raw) !== none) {
+      diagnostics.aiRejected = true;
+      return evZuoResult(none, 'ai', null, false, 'ai-rejected', [], diagnostics);
+    }
   }
 
   // 4. Wortaehnlichkeit.

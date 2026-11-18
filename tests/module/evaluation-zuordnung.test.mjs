@@ -160,11 +160,47 @@ test('KI: nach bekannt, vor Aehnlichkeit; Antwort ausserhalb des Katalogs abgele
   const known = propose({ criterion: ROUND, aiProposal: 'M-N6', knownMappings: [{ criterion: ROUND, code: 'M-N1' }] });
   assert.equal(known.source, 'known');
   const rejected = propose({ criterion: ROUND, aiProposal: 'FAKE-1' });
-  assert.equal(rejected.source, 'similarity');
+  assert.equal(rejected.code, 'none');
+  assert.equal(rejected.source, 'ai');
+  assert.equal(rejected.reason, 'ai-rejected');
+  assert.equal(rejected.confidence, null);
+  assert.equal(rejected.ambiguous, false);
+  assert.deepEqual(rejected.candidates, []);
   assert.equal(rejected.diagnostics.aiRejected, true);
   const noneAi = propose({ criterion: 'Brings a water bottle to school', aiProposal: 'none' });
   assert.equal(noneAi.code, 'none');
   assert.equal(noneAi.diagnostics.aiRejected, false);
+});
+
+test('KI: ungueltiger Vorschlag ergibt hartes none, auch bei starkem Texttreffer (F01)', () => {
+  for (const aiProposal of ['FAKE-1', { code: 'FAKE-1' }, {}, { code: 5 }, '', '  ', 42, ['M-N3']]) {
+    const result = propose({ criterion: ROUND, aiProposal });
+    assert.equal(result.code, 'none', JSON.stringify(aiProposal));
+    assert.equal(result.source, 'ai');
+    assert.equal(result.reason, 'ai-rejected');
+    assert.equal(result.diagnostics.aiRejected, true);
+  }
+  // Katalogcode, der im injizierten Katalog fehlt, ist ebenfalls ungueltig.
+  const small = { 'T-1': { text: { en: 'Comparing fractions' } } };
+  assert.equal(propose({ criterion: 'Compares fractions', aiProposal: 'M-N3', catalog: small }).code, 'none');
+  // Toddle und bekannt haben weiterhin Vorrang vor einem ungueltigen KI-Vorschlag.
+  assert.equal(propose({ criterion: ROUND, aiProposal: 'FAKE-1', linkedStandards: ['M-N6'] }).source, 'toddle');
+  assert.equal(propose({ criterion: ROUND, aiProposal: 'FAKE-1', knownMappings: [{ criterion: ROUND, code: 'M-N1' }] }).code, 'M-N1');
+  // Leeres Kriterium bleibt sicher.
+  assert.equal(propose({ criterion: '', aiProposal: 'FAKE-1' }).reason, 'empty-criterion');
+});
+
+test('KI: Abwesenheit und ausdruecklich none bleiben gewoehnlicher Rueckfall auf Aehnlichkeit', () => {
+  for (const aiProposal of [undefined, null, 'none', ' None ', { code: 'NONE' }]) {
+    const result = propose({ criterion: ROUND, aiProposal });
+    assert.equal(result.code, 'M-N3', JSON.stringify(aiProposal));
+    assert.equal(result.source, 'similarity');
+    assert.equal(result.diagnostics.aiRejected, false);
+  }
+  const input = deepFreeze({ criterion: ROUND, aiProposal: { code: 'FAKE-1' } });
+  const before = JSON.stringify(input);
+  propose(input);
+  assert.equal(JSON.stringify(input), before);
 });
 
 test('Wachsender Katalog per Injektion; globaler Katalog bleibt unveraendert', () => {
