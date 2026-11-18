@@ -2704,6 +2704,7 @@ const MATH_EXAMPLES=[
   [/The scale shows the car’s mass/, ()=>ex1('The scale shows 50 g. What do you write?', '50 g', 'Write the number AND the unit: 50 g.')],
   [/Which unit is right/, q=>qAns(q)==='cm'?ex1('A room is about 5 ___ long. Which unit?', 'm', 'A room is long – metres fit. Centimetres are for short things like a book.'):ex1('A book is about 30 ___. Which unit?', 'cm', 'A book is short – centimetres fit. Metres are for long things like a room.')],
   [/Which is longer: .* cm or .* m\?/, q=>/m$/.test(qAns(q))&&!/cm$/.test(qAns(q))?ex1('Which is longer: 150 cm or 1 m?', '150 cm', '1 m = 100 cm. 150 cm is more than 100 cm, so 150 cm is longer.'):ex1('Which is longer: 50 cm or 1 m?', '1 m', '1 m = 100 cm. 100 cm is more than 50 cm, so 1 m is longer.')],
+  [/^Compare lengths: .* ___ /, ()=>ex1('Which is longer: 150 cm or 1 m?', '150 cm', '1 m = 100 cm. 150 cm is more than 100 cm, so 150 cm is longer.')],
   [/^[\d,]+ m = how many cm\?/, q=>qAns(q)==='100'?ex1('2 m = how many cm?', 200, 'Every metre has 100 centimetres. 2 m = 100 cm + 100 cm = 200 cm.'):ex1('1 m = how many cm?', 100, 'Every metre has 100 centimetres. So 1 m = 100 cm.')],
   [/A box holds .* stickers\. You have about/, ()=>ex1('A box holds 10 stickers. You have 12. What is true?', 'All but 2 fit', '10 fit in the box, 12 − 10 = 2 stay outside.')],
   [/How much is that in metres and centimetres/, ()=>ex1('120 cm = ? m ? cm', '1 m 20 cm', '100 cm make 1 m. 120 cm = 100 cm + 20 cm = 1 m 20 cm.')],

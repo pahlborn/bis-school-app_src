@@ -84,7 +84,7 @@ export function generatorCases(S){
   integer('convertQ/cm',math('convertQ',[0]),100,'single definition 1m=100cm');
   for(let m=2;m<=5;m++)integer('convertQ/metres',math('convertQ',[1,m-2]),100*m,'all 4 metre values');
   for(let i=0;i<38;i++){let cm=105+5*i;if(cm%100===0)cm+=5;put('convertQ/mixed',math('convertQ',[2,i]),o=>{const m=/^(\d+) m (\d+) cm$/.exec(o);return m&&100* +m[1]+ +m[2]===cm;},'all 38 source mixed-unit cases, numeric-equivalence oracle');}
-  for(let i=0;i<6;i++)put('convertQ/compare',math('convertQ',[3,i]),o=>o==='1 m','all 70–95cm comparisons; the cm alternative is the close unit-conversion error');
+  for(let i=0;i<6;i++)for(const reverse of[0,1])put('convertQ/compare',math('convertQ',[3,i,reverse]),o=>o===(reverse?'>':'<'),'all 6 source centimetre lengths × both sides; three genuine relation signs, each one character');
   for(let i=0;i<17;i++)put('rulerQ',math('rulerQ',[i]),o=>o===(15+5*i)+' cm','all 17 half-ten marks');
   // Surface labels are independent of scalar distances. For label questions,
   // only the target rank matters: all label permutations and all target slots.

@@ -65,3 +65,32 @@ test('revised numeric halfwayQ preserves every original worked-example availabil
     assert.deepEqual(plain(after.holen('exampleFor')(newQ)),plain(before.holen('exampleFor')(oldQ)));
   }
 });
+
+test('unit comparison removes the confirmed shortest/position cue and preserves its help and other conversions',()=>{
+  const before=appSandbox({seed:1,anpassen:()=>committedApp('cbb3711f2b4c3fb1518d9d98348c2310e333925e')}),after=appSandbox({seed:1});
+  const build=(app,draws)=>{let i=0;app.holen('Math').random=()=>draws[i++]??.123;return app.holen('convertQ')();};
+  const measure=s=>{const m=/^(\d+) (cm|m)$/.exec(s);assert.ok(m,'actual length operand');return +m[1]*(m[2]==='m'?100:1);};
+  const positions=new Set(),relations=new Set(),qs=[];
+  for(let n=0;n<6;n++){
+    const old=build(before,[.8,(n+.001)/6]),oldHelp=plain(before.holen('exampleFor')(old));
+    assert.equal(old.answer,1,'rejected checkpoint fixed the solution at position two');
+    assert.ok(old.options[old.answer].length<old.options[0].length,'rejected checkpoint had a uniquely shortest solution');
+    for(let side=0;side<2;side++)for(let j3=0;j3<3;j3++)for(let j2=0;j2<2;j2++){
+      const q=build(after,[.8,(n+.001)/6,(side+.001)/2,(j3+.001)/3,(j2+.001)/2]);
+      const m=/^Compare lengths: (\d+ (?:cm|m)) ___ (\d+ (?:cm|m))\./.exec(text(q.prompt));assert.ok(m);
+      const a=measure(m[1]),b=measure(m[2]),sign=a<b?'<':a>b?'>':'=';
+      assert.equal(q.options.filter(o=>o===sign).length,1);assert.equal(q.options[q.answer],sign);
+      assert.deepEqual([...q.options].sort(),['<','=','>']);assert.ok(q.options.every(o=>o.length===1));
+      assert.deepEqual(plain(after.holen('exampleFor')(q)),oldHelp,'same original 150cm/1m example');
+      positions.add(q.answer);relations.add(sign);qs.push(q);
+    }
+  }
+  assert.equal(qs.length,72);assert.equal(positions.size,3);assert.equal(relations.size,2);
+  assert.deepEqual(qualityFailures({comparison:qs}),[]);assert.ok(Math.abs(lengthQuality(qs).longestShare-1/3)<1e-12);
+  // All 43 cases in the other branches retain their exact task, id and help.
+  for(const draws of[[.01],...Array.from({length:4},(_,i)=>[.3,(i+.001)/4]),...Array.from({length:38},(_,i)=>[.6,(i+.001)/38])]){
+    const a=build(before,draws),b=build(after,draws);
+    assert.deepEqual(plain(b),plain(a));assert.equal(after.holen('qId')(b),before.holen('qId')(a));
+    assert.deepEqual(plain(after.holen('exampleFor')(b)),plain(before.holen('exampleFor')(a)));
+  }
+});

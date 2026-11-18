@@ -159,8 +159,8 @@ function convertQ(){
     const wrongs=uniq([m+" m "+(r+10)+" cm",(m+1)+" m "+r+" cm", m+" m "+(100-r)+" cm", (m+1)+" m "+(r+5)+" cm"]).filter(x=>x!==right).slice(0,3);
     return mc("The car rolled <b>"+cm+" cm</b>. How much is that in metres and centimetres?", right, wrongs, cm+" cm = "+m+" m and "+r+" cm, because 100 cm make 1 m.", Object.assign({grid:true},UNT));
   }
-  const a=70+5*rnd(6);
-  return two("Which is longer: <b>"+a+" cm</b> or <b>1 m</b>?", [a+" cm","1 m"], 1, "1 m = 100 cm, and 100 is more than "+a+".", UNT);
+  const a=70+5*rnd(6), metresFirst=rnd(2)===1;
+  return mc("Compare lengths: <b>"+(metresFirst?"1 m ___ "+a+" cm":a+" cm ___ 1 m")+"</b>. Which sign is correct?", metresFirst?">":"<", ["=",metresFirst?"<":">"], "1 m = 100 cm, and 100 is more than "+a+".", Object.assign({grid:true},UNT));
 }
 
 function rulerQ(){
