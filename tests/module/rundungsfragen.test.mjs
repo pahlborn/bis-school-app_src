@@ -191,6 +191,44 @@ test('unknown unreachable and unparsable bank consumers fail closed',()=>{
   assert.equal(qualityFailures({hiddenBank:banks.hiddenBank})[0].reason,'unreachable or unparsable collection');
   assert.equal(qualityFailures({'localBank.slice()':banks['localBank.slice()']})[0].reason,'unreachable or unparsable collection');
 });
+// Rework2: replace the existing consumer, so neither a new site nor its name
+// can be used as a shortcut for detecting the genuinely new bank object.
+function replaceRoundingBank(name){
+  return appLesen('utf8')
+    .replace('function buildRounding(){ return shuffle([',`function buildRounding(){ const ${name}=${badFutureBank}; return shuffle([`)
+    .replace('bankMC(ROUND_MC,RND)(pick(ROUND_MC))',`bankMC(${name},RND)(pick(${name}))`);
+}
+for(const name of ['bank','ROUND_MC'])test(`rework2 rejects actual local ${name} without changing the callsite inventory`,()=>{
+  const source=replaceRoundingBank(name),app=appSandbox({seed:184127,anpassen:()=>source});
+  const actual=app.holen('buildRounding')().find(q=>q.prompt==='New question?');
+  assert.equal(actual.kind,'mc');assert.equal(lengthQuality([actual]).strictRate,1);
+  assert.deepEqual(discoverMcCallsites(source),MC_CALLSITE_INVENTORY,'the actual consumer site was replaced, not added');
+  const banks=discoverBanks(app,source),unknown=Object.entries(banks).filter(([n])=>![...PENDING_BANKS,'ROUND_MC'].includes(n));
+  assert.ok(unknown.length>0,'a foreign bank must be unknown even under a generic or global-looking name');
+  assert.ok(unknown.some(([,qs])=>lengthQuality(qs).strictRate===1));
+  assert.equal(banks.ROUND_MC.length,5,'the global reviewed bank must not be overwritten by its local shadow');
+});
+test('rework2 retains every foreign array even when later generic forwarding is legitimate',()=>{
+  const source=replaceRoundingBank('bank').replace(/\}\)\(\);\s*<\/script>/,
+    'WORLDS.zzzGuardRound=WORLDS.round; WORLDS.zzzzGuardForward=WORLDS.opinion;})();</script>');
+  const app=appSandbox({seed:184127,anpassen:()=>source});
+  assert.deepEqual(discoverMcCallsites(source),MC_CALLSITE_INVENTORY);
+  const banks=discoverBanks(app,source),foreign=Object.entries(banks).filter(([n])=>n.startsWith('FOREIGN:bank'));
+  assert.equal(foreign.length,2,'two real build calls allocate two bad arrays before the last known forwarding');
+  assert.equal(qualityFailures(Object.fromEntries(foreign)).length,2);
+  for(const [,qs]of foreign)assert.equal(lengthQuality(qs).strictRate,1);
+});
+for(const [label,replacement]of [
+  ['generic forwarding','bankMC(bank,RND)(pick(bank))'],
+  ['concat followed by generic forwarding','fromBank(ROUND_MC.concat(ROUND_MC),RND,1)[0]']
+])test(`rework2 accepts genuine known ${label} by observed array identity`,()=>{
+  let source=appLesen('utf8').replace('bankMC(ROUND_MC,RND)(pick(ROUND_MC))',replacement);
+  if(label==='generic forwarding')source=source.replace('function buildRounding(){ return shuffle([','function buildRounding(){ const bank=ROUND_MC; return shuffle([');
+  const app=appSandbox({seed:184127,anpassen:()=>source});
+  assert.equal(app.holen('buildRounding')().length,8);
+  assert.deepEqual(discoverMcCallsites(source),MC_CALLSITE_INVENTORY);
+  assert.deepEqual(Object.keys(discoverBanks(app,source)).sort(),[...PENDING_BANKS,'ROUND_MC'].sort());
+});
 test('foundation and extraction-only generators match pinned original byte for byte, including qId and level wrappers',()=>{
   const oldSource=execFileSync('git',['show',`${BASE}:index.html`],{encoding:'utf8',maxBuffer:5e6});
   // New module exports are unused by the old source; its original local generators remain intact.

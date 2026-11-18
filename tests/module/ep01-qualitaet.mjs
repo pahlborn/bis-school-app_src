@@ -34,24 +34,45 @@ export function discoverBanks(S,source){
     let value;try{value=S.holen(name);}catch{continue;}
     const rows=bankRows(value);if(rows.length)result[name]=rows.filter(r=>r.level!==1);
   }
-  const seen=new Map();
+  // Keep EVERY distinct observed array, including earlier bad arrays under an
+  // expression that is later used for a legitimate forwarding. Names are not proof.
+  const seen=[];
   const instrumented=source.replace(/\b(bankMC|fromBank)\s*\(\s*([^,\n]+)/g,(whole,fn,expr)=>{
     // Known simple identifiers and .concat(otherBank) are the existing grammar.
     if(!/^\w+(?:\.concat\(\w+\))?$/.test(expr.trim()))return whole;
     return `${fn}(__ep01BankConsumer(${JSON.stringify(expr.trim())},${expr})`;
   });
-  const observed=appSandbox({seed:18112026,anpassen:()=>instrumented,globale:{__ep01BankConsumer:(name,bank)=>{seen.set(name,bank);return bank;}}});
+  const observed=appSandbox({seed:18112026,anpassen:()=>instrumented,globale:{__ep01BankConsumer:(name,bank)=>{seen.push({name,bank});return bank;}}});
   for(const [name,world]of Object.entries(observed.holen('WORLDS'))){
     if(name==='today'||name.startsWith('mix_')||typeof world.build!=='function')continue;
     observed.lauf(()=>world.build());
   }
-  for(const expr of consumerCalls(source)){
+  // Compare references in THIS observed app, never across the two VM contexts.
+  const globals=new Map([...known].map(name=>[name,observed.holen(name)]));
+  const allowedArrays=new Set(globals.values());
+  // A concat creates a new array. Certify it only when its complete ordered row
+  // identities are exactly those of the actual classified global inputs.
+  for(const {name,bank}of seen){
+    const concat=/^(\w+)\.concat\((\w+)\)$/.exec(name);
+    if(!concat||!globals.has(concat[1])||!globals.has(concat[2])||!Array.isArray(bank))continue;
+    const expected=globals.get(concat[1]).concat(globals.get(concat[2]));
+    if(bank.length===expected.length&&bank.every((row,i)=>row===expected[i]))allowedArrays.add(bank);
+  }
+  for(const expr of new Set(consumerCalls(source))){
     const grammar=/^(\w+)(?:\.concat\((\w+)\))?$/.exec(expr);
     const refs=grammar?[grammar[1],grammar[2]].filter(Boolean):[];
-    if(!grammar || refs.some(name=>name!=='bank'&&!known.has(name))){
-      // Active local banks get measured; unreachable/unparsable consumers get
-      // an empty explicit failure. Neither can disappear from the inventory.
-      result[expr]=bankRows(seen.get(expr)).filter(r=>r.level!==1);
+    const arrays=[...new Set(seen.filter(record=>record.name===expr).map(record=>record.bank))];
+    const foreign=arrays.filter(bank=>!allowedArrays.has(bank));
+    if(foreign.length){
+      // A familiar identifier may shadow a global. Its foreign values must be
+      // unknown keys; do not overwrite or silently classify the genuine global.
+      const key=known.has(expr)||expr==='bank'?'FOREIGN:'+expr:expr;
+      foreign.forEach((bank,i)=>{result[key+(i?'#'+(i+1):'')]=bankRows(bank).filter(r=>r.level!==1);});
+    }else if(!grammar || refs.some(name=>name!=='bank'&&!known.has(name))){
+      // Unreached or unparsable unknown consumers remain explicit failures.
+      // `bank` is only the existing helper parameter: every observed value above
+      // still requires real global/concat identity, with no generic-name waiver.
+      result[expr]=bankRows(arrays[0]).filter(r=>r.level!==1);
     }
   }
   result.OPFACT=S.holen('OPFACT').filter(s=>s.level!==1).flatMap(s=>[[s.op,s.fact],[s.fact,s.op]].flatMap(([right,wrong])=>right.map(r=>({options:[r,...wrong],answer:0}))));
