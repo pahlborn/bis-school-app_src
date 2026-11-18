@@ -98,13 +98,16 @@ test('Zurueck fuehrt ins Fach, aus dem die Quest kam; Practise Today zurueck zur
   await ctx.close();
 });
 
-test('Practise Today nimmt seine Fragen nur aus den Fokus-Themen', async () => {
+test('Practise Today behaelt die Fokus-Themen neben genau einem Neuland-Platz', async () => {
   const { ctx, page } = await app();
   const gesehen = new Set();
   for (let r = 0; r < 20; r++) {
     await zurStart(page);
     await klick(page, '#todayBtn');
-    (await zustand(page)).round.forEach((q) => gesehen.add(q.world));
+    const round=(await zustand(page)).round;
+    assert.equal(round.length,8);
+    assert.equal(round.filter(q=>q.neuland).length,1,'genau ein Neuland-Platz');
+    round.filter(q=>!q.neuland).forEach((q) => gesehen.add(q.world));
   }
   assert.deepEqual([...gesehen].filter((w) => !FOCUS.includes(w)), []);
   assert.ok(gesehen.size >= FOCUS.length - 1, `nur ${gesehen.size} Fokus-Themen in 20 Runden`);

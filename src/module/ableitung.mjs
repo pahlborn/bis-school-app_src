@@ -66,8 +66,11 @@ function abApply(st, ctx, e) {
     case 'answer': {                                                            // index.html: observeAttempt, showHint, showExample, showWorked
       abPushAttempt(st, abClone(p));                                            // the event IS the stored attempt
       const shown = p.hintShown || p.exampleShown || p.solutionShown;
-      if (!shown && p.attempt === 1) abPushEvidence(st, ctx, p.skill, [p.day, p.help ? 1 : p.level, p.ok ? 1 : 0]);   // first try; with help (tip or assisted question) = support level
-      else if (p.solutionShown && p.beforeTry) abPushEvidence(st, ctx, p.skill, [p.day, 1, 0]);                         // answer shown without an own try: not passed, support level
+      if (!shown && p.attempt === 1) {
+        const row=[p.day,p.help?1:p.level,p.ok?1:0];
+        if(typeof p.help==='boolean')row.push(p.ok===true&&p.help===false&&!p.example);
+        abPushEvidence(st,ctx,p.skill,row);
+      } else if (p.solutionShown && p.beforeTry) abPushEvidence(st, ctx, p.skill, [p.day,1,0,false]); // answer shown: support level
       break;
     }
     case 'round_done': {                                                        // index.html: showResults
@@ -111,7 +114,7 @@ function abApply(st, ctx, e) {
       if (!it || !it.q || it.res === p.res) break;
       if (it.res && !abUndoSheetResult(st, it)) break;
       const q = it.q, key = p.sheet + ':' + p.index;
-      const row = [p.day, p.res === 'help' ? 1 : (q.assisted ? 1 : abLevel(q)), p.res === 'no' ? 0 : 1];
+      const row = [p.day, p.res === 'help' ? 1 : (q.assisted ? 1 : abLevel(q)), p.res === 'no' ? 0 : 1, p.res === 'ok' && !q.assisted];
       if (q.world) abPushEvidence(st, ctx, q.world, row);
       it.rec = { ev: q.world ? abClone(row) : null, key, due: p.res === 'no' ? p.qid : null };
       abPushAttempt(st, { day: p.day, skill: q.world, level: abLevel(q), attempt: 1, ok: p.res !== 'no', help: p.res === 'help', sheet: key });
