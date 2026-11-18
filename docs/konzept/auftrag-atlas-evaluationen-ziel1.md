@@ -165,6 +165,8 @@ So kommt die Sperre bei einem späteren Wechsel auf privat nicht wieder.
   - Keine Kopien von Quelltext oder Dokumenten in andere Repos (z. B. Agentarium) oder Ablagen.
   - Verlangt ein Werkzeug technisch eine Kopie (z. B. ein Relay, das seine Eingaben anderswo liest), ist das eine **Abweichung**: einmal Peter vorlegen, mit Grund und Alternative. Wird sie genehmigt, muss jede Kopie ihren Quell-Commit nennen, und sie darf nur vorübergehend existieren. Nach der Aufgabe wird sie entfernt; sie ist nie Grundlage für Änderungen.
   - Hintergrund: Am 17.11. hatte Atlas Swift-Quelltextkopien im Agentarium vorgesehen, weil der Forge-Relay dort liest. Die automatische Freigabeprüfung lehnte das ab, und Atlas hat den Weg verworfen.
+  - **Geltungsbereich:** Diese Regel betrifft nur Kopien von Quelltext, Dokumenten, Paketen und Archiven. Agentarium bleibt der Auftrags- und Statuskanal, und die Claude-Agenten (Forge, Argus, Sentinel, Cadence, Archibald) bleiben die Standard-Worker: Aufträge dort enthalten Ziel, Abnahmekriterien und Verweise (Zweig, Commit, Pfad, Zeile); der Code wird direkt aus dem öffentlichen Produkt-Repo gelesen und als PR dort geliefert.
+  - **Werkzeugwechsel:** Ein anderes Werkzeug oder Modell (z. B. Codex) nur nach Peters Freigabe, mit Begründung: technisch nicht anders möglich oder nachweislich bessere Leistung. Jede Statusmeldung nennt, wer gearbeitet hat.
 - **`index.html` ist ein Engpass.** Plane Aufgaben so, dass nicht zwei Worker gleichzeitig dieselben Bereiche ändern. Logik möglichst in Module (`src/module/`) verlagern, wie in den Leitplanken vorgesehen.
 - **Stärken nutzen:**
   - Swift/iPad-Hülle (EV-1, EV-5.4)
