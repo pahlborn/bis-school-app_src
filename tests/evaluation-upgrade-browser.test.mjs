@@ -100,7 +100,8 @@ test('upgrade recovers an assessment rejected by the exact legacy app without re
   assert.equal(previousHTML.split('/*BQ_SPEICHER*/null').length, 2);
   assert.ok(!previousHTML.includes('school_evaluation'));
   const historical = previousHTML.replace('/*BQ_SPEICHER*/null', () => config);
-  const current = appLesen('utf8', { bauart: 'test' }).replace('/*BQ_SPEICHER*/null', () => config);
+  // This upgrade regression deliberately seeds the historical single-standard format.
+  const current = appLesen('utf8', { bauart: 'test' }).replace('/*BQ_SPEICHER*/null', () => config).replace(/\}\)\(\);\s*<\/script>/, 'window.__legacyEvaluationDraft=()=>{const t=schoolEvaluationTarget();schoolEvaluationDraft={child:t.id,author:t.author,title:"",day:"",standard:"",rating:"",evaluation:crypto.randomUUID(),revision:crypto.randomUUID(),preview:false,focus:false};renderSheets();};})();</script>');
   const server = http.createServer((req, res) => {
     const path = new URL(req.url, 'http://127.0.0.1').pathname;
     if (path !== '/' && path !== '/historisch') { res.writeHead(404); return res.end(); }
@@ -148,8 +149,7 @@ test('upgrade recovers an assessment rejected by the exact legacy app without re
   });
   await K.page.goto(anmEinladungslink(server.url, { zugang: TOKEN, anmeldename: LOGIN, code, fingerabdruck: await keyFingerprint(pub) }));
   await register(K.page);
-  await K.page.locator('#welcomeGo').click({ timeout: 60000 });
-  await K.page.waitForSelector('#home:not([hidden])');
+  await K.page.waitForSelector('#home:not([hidden])', { timeout: 60000 });
   await P.page.waitForFunction(() => /ist angemeldet/.test(document.querySelector('#kQrStatus')?.textContent || ''), null, { timeout: 30000 });
   await P.page.locator('#kQrFertig').click();
 
@@ -177,7 +177,7 @@ test('upgrade recovers an assessment rejected by the exact legacy app without re
 
   await elternSeite(P.page, 'school');
   const form = P.page.locator('#pSchoolEvaluation');
-  await form.getByRole('button', { name: 'Evaluation hinzufügen' }).click();
+  await P.page.evaluate(()=>window.__legacyEvaluationDraft());
   await form.getByLabel('Titel').fill(TITLE);
   await form.getByLabel('Bewertungsdatum').fill(await P.page.evaluate(() => new Date().toISOString().slice(0, 10)));
   await form.getByLabel('Kriterium').selectOption('M-N5');

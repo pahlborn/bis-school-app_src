@@ -320,6 +320,23 @@ test('Gegenprobe Sandbox: derselbe Testbau ohne Umwandlung liest Kathies bq2_-Ei
   assert.equal(S.lauf(() => S.holen('store').get('total', 0)), 777);
 });
 
+async function testBrowserBeenden(browser, ctx, server) {
+  try {
+    if (ctx) {
+      try {
+        // Stop timers and page requests while interception and ctx.request still exist.
+        await Promise.all(ctx.pages().map(page => page.close()));
+        await ctx.unrouteAll({ behavior: 'wait' });
+      } finally { await ctx.close(); }
+    }
+  } finally {
+    try { await browser.close(); }
+    finally {
+      await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+    }
+  }
+}
+
 test('Browser: die gebaute Testinstanz startet mit der Anmeldung, Zugang einmal eingeben, Kind meldet sich ueber das Test-Repo an, ein Fach oeffnet sich, nur bqt_-Eintraege gelesen und geschrieben', async () => {
   const server = http.createServer((req, res) => {
     const datei = { '/': 'index.html', '/index.html': 'index.html', '/manifest.webmanifest': 'manifest.webmanifest' }[req.url.split('?')[0]];
@@ -330,8 +347,9 @@ test('Browser: die gebaute Testinstanz startet mit der Anmeldung, Zugang einmal 
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   const url = `http://127.0.0.1:${server.address().port}/`;
   const browser = await browserStarten();
+  let ctx;
   try {
-    const ctx = await browser.newContext();
+    ctx = await browser.newContext();
     // nur die App und "api.github.com" (umgelenkt auf den Nachbau - die gebaute Datei bleibt, wie sie ist); alles andere nicht
     const github = [];
     await ctx.route('**/*', async (r) => {
@@ -391,7 +409,7 @@ test('Browser: die gebaute Testinstanz startet mit der Anmeldung, Zugang einmal 
     assert.deepEqual(r.gelesen.filter((k) => !k.startsWith('bqt')), [], 'nur bqt gelesen');
     for (const [k, v] of Object.entries(KATHIE)) assert.equal(r.alle[k], v, 'unveraendert: ' + k);
     assert.deepEqual(Object.keys(r.alle).filter((k) => !(k in KATHIE) && !k.startsWith('bqt_')), [], 'nur bqt_ geschrieben');
-  } finally { await browser.close(); server.close(); }
+  } finally { await testBrowserBeenden(browser, ctx, server); }
 });
 
 test('Abgleichstatus einer Bewertungsfassung folgt der bestätigten Übertragung im Testbau', () => {
@@ -410,3 +428,62 @@ test('Abgleichstatus einer Bewertungsfassung folgt der bestätigten Übertragung
   assert.equal(status({ log: [] }), false, 'saved only to the app log');
   assert.equal(status({}), true, 'signed and upload confirmed');
 });
+
+
+// Synthetic, local-only HTTP requests keep the actual route.fetch/fulfill callback
+// in flight while the same cleanup runs after success or an assertion failure.
+for (const assertionFails of [false, true]) {
+  test('Browser-Aufraeumen: laufender Fetch bei ' + (assertionFails ? 'Assertionfehler' : 'normalem Ende'), async () => {
+    let entered, release;
+    const fetchEntered = new Promise(resolve => { entered = resolve; });
+    const mayFetch = new Promise(resolve => { release = resolve; });
+    const status = assertionFails ? 503 : 200;
+    const server = http.createServer((request, response) => {
+      response.writeHead(status, { 'content-type': 'application/json' }); response.end('{"synthetic":true}');
+    });
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+    const local = `http://127.0.0.1:${server.address().port}/`;
+    const browser = await browserStarten();
+    const ctx = await browser.newContext();
+    let contextClosed = false, fulfilled = false, observedStatus, liveAtFulfill = false, finished;
+    const callbackFinished = new Promise(resolve => { finished = resolve; });
+    ctx.on('close', () => { contextClosed = true; });
+    // Pause the real fetch before its context cookie lookup. The old browser-first
+    // cleanup releases it only after disconnect; the corrected drain releases it alive.
+    const unroute = ctx.unrouteAll.bind(ctx);
+    ctx.unrouteAll = options => {
+      assert.equal(ctx.pages().length, 0, 'stop page activity before removing interception');
+      release();
+      return unroute(options);
+    };
+    browser.once('disconnected', () => release());
+    await ctx.route('**/*', async route => {
+      if (route.request().url() !== GITHUB + '/cleanup-probe') return route.abort();
+      const fetch = route.fetch.bind(route);
+      route.fetch = async options => { entered(); await mayFetch; return fetch(options); };
+      try {
+        const response = await route.fetch({ url: local });
+        observedStatus = response.status();
+        liveAtFulfill = !contextClosed;
+        await route.fulfill({ response });
+        fulfilled = true;
+      } finally { finished(); }
+    });
+    const page = await ctx.newPage();
+    await page.setContent(`<img src="${GITHUB}/cleanup-probe">`, { waitUntil: 'domcontentloaded' });
+    await fetchEntered;
+    const original = new assert.AssertionError({ message: 'Synthetic assertion remains observable' });
+    const run = async () => {
+      try { if (assertionFails) throw original; }
+      finally { await testBrowserBeenden(browser, ctx, server); }
+    };
+    if (assertionFails) await assert.rejects(run, error => error === original);
+    else await run();
+    await callbackFinished;
+    assert.equal(observedStatus, status, 'the original HTTP response remains visible, including 503');
+    assert.equal(liveAtFulfill, true, 'route.fetch and fulfill finish with their context alive');
+    assert.equal(fulfilled, true, 'fulfill after stopping the page completes without a callback error');
+    assert.equal(contextClosed, true);
+    assert.equal(browser.isConnected(), false);
+  });
+}
