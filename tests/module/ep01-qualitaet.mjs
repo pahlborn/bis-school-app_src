@@ -79,14 +79,15 @@ export function discoverBanks(S,source){
   result.SPECIFIC=S.holen('SPECIFIC').filter(r=>r[3]!==1).map(r=>({options:[r[1],r[2]],answer:0}));
   return result;
 }
-// Pending is explicit debt, NOT acceptance or an exemption. The standalone audit
-// exits nonzero for these failures. Only foundation and Word of the Day are exempt.
+// Historical bank inventory retained for the accepted identity/unknown-consumer guard.
+// Current content status is measured by the complete static/generator audit.
+// Only foundation and Word of the Day are exempt from the commissioned EP01 target.
 export const PENDING_BANKS=['ANL_MC','CHAMP_MC','COMPLETE_MC','COOP_MC','HYPO','INFER','LIB_MC','MUS_MC','NOW_MC','OPFACT','OPINION_MC','OREO_MC','POE_MC','PREFIX','RESP_MC','SCH_MC','SCI','SCI_READ','SPECIFIC','STK_MC','SUFFIX','TEAM_MC','TRIP_MC','WPR_MC'];
 
 // Conservative direct-MC callsite inventory; arrows after a function can be
 // attributed to that preceding function. Extra entries are safe; a new callsite
 // never silently passes. This inventory proves discovery, not generator quality.
-export const MC_CALLSITE_INVENTORY=["nearestHundredQ","benchmarkQ","roundWordQ","roundThousandQ","addendsQ","estimateQ","threeAddendsQ","distanceExplainQ","halfwayQ","tenVsHundredQ","roundTenQ","mc","two","takeFrom","varCtrlQ","clockRead","clockPick","ampm","numberLine","placeValue","expandedZeroQ","oddEven","mental","buildRounding","oreoMC","opinionFact","affixQ","inferenceQ","buildWords","buildLibrary","packQ","buildTrip","buildMusic","unitPickQ","convertQ","rulerQ","barReadQ","barMissingQ","tableConclusionQ","scaleStepQ","lineGraphQ","massRecordQ","buildGraphs","buildFinish","capitalFixQ","properNounQ","specificExampleQ","buildExamples","combosQ","anotherWayQ","reasonableQ","frictionTableQ","buildChampion","travelTableQ","estimateTotalQ","betweenHundredsQ","splitQ","buildOpinion","buildTeam","stickerComboQ","roundTenAddQ","buildStickers","findTotalQ","operationQ","calcCheckQ","buildWordProb","trennbarQ","zusammenQ","buildAnleitung","buildPoetry","buildSchool","baseQ","numbersBaseQ","combosBaseQ","wordprobBaseQ","unitsBaseQ","graphsBaseQ","arrayQ","shadedQ","unitCompareQ","areaWhichQ","laterQ","massUnitQ","kitchenScaleQ","roundedQuestion","bridgeFor","direct-MC-sites=116"];
+export const MC_CALLSITE_INVENTORY=["nearestHundredQ","benchmarkQ","roundWordQ","roundThousandQ","addendsQ","estimateQ","threeAddendsQ","distanceExplainQ","halfwayQ","tenVsHundredQ","roundTenQ","clockRead","clockPick","ampm","numberLine","placeValue","expandedZeroQ","oddEven","mental","unitPickQ","convertQ","rulerQ","barReadQ","barMissingQ","tableConclusionQ","scaleStepQ","lineGraphQ","massRecordQ","combosQ","anotherWayQ","reasonableQ","frictionTableQ","travelTableQ","estimateTotalQ","betweenHundredsQ","splitQ","stickerComboQ","roundTenAddQ","findTotalQ","operationQ","calcCheckQ","arrayQ","shadedQ","unitCompareQ","areaWhichQ","laterQ","massUnitQ","kitchenScaleQ","varCtrlQ","oreoMC","opinionFact","affixQ","inferenceQ","packQ","capitalFixQ","properNounQ","specificExampleQ","trennbarQ","zusammenQ","mc","two","takeFrom","buildRounding","buildWords","buildLibrary","buildTrip","buildMusic","buildGraphs","buildFinish","buildExamples","buildChampion","buildOpinion","buildTeam","buildStickers","buildWordProb","buildAnleitung","buildPoetry","buildSchool","baseQ","numbersBaseQ","combosBaseQ","wordprobBaseQ","unitsBaseQ","graphsBaseQ","roundedQuestion","bridgeFor","direct-MC-sites=117"];
 export function discoverMcCallsites(source){
   const f=[...source.matchAll(/^function (\w+)\(/gm)];
   const names=f.filter((m,i)=>/\b(?:mc|two|bankMC|fromBank)\(/.test(source.slice(m.index,f[i+1]?.index))).map(m=>m[1]);

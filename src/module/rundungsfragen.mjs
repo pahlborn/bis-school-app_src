@@ -102,8 +102,8 @@ function halfwayQ(){
   const lo=100*(1+rnd(8)), hi=lo+100;
   if(rnd(2)===0) return mc("What is the <b>halfway point</b> between "+lo+" and "+hi+"?", String(lo+50), fill3(lo+50,[lo+40,lo+60,lo+5,hi+50]).map(String), lo+" and "+hi+" are 100 apart. Half of 100 is 50, so halfway is "+(lo+50)+".", Object.assign({grid:true}, EXP));
   const n=lo+pick([10,20,30,40,60,70,80,90]);
-  return two(n+" is between "+lo+" and "+hi+". The halfway point is "+(lo+50)+". So "+n+"…", ["rounds down to "+lo, "rounds up to "+hi], n<lo+50?0:1,
-    n+" is "+(n<lo+50?"below":"above")+" the halfway point "+(lo+50)+", so it rounds "+(n<lo+50?"down to "+lo:"up to "+hi)+".", Object.assign({visual:benchLineSVG(n,lo,hi)}, EXP));
+  return mc(n+" is between "+lo+" and "+hi+". The halfway point is "+(lo+50)+". Round "+n+" to the nearest hundred.",String(n<lo+50?lo:hi),[String(n<lo+50?hi:lo),String(n),String(lo+50)],
+    n+" is "+(n<lo+50?"below":"above")+" the halfway point "+(lo+50)+", so it rounds "+(n<lo+50?"down to "+lo:"up to "+hi)+".",Object.assign({visual:benchLineSVG(n,lo,hi)},EXP));
 }
 function tenVsHundredQ(){
   let a,b,tens,hund,exact;
