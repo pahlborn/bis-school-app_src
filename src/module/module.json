@@ -8,6 +8,7 @@
     { "name": "geschichten", "bau": "live", "browserTests": ["spass"] },
     { "name": "textfragen", "bau": "live", "browserTests": ["aufgaben-node", "aufgaben-anpassung", "fragen", "lernlogik", "neutral"] },
     { "name": "grundlage", "bau": "live", "browserTests": ["aufgaben-node", "aufgaben-anpassung", "auftrag1-grundlage", "fragen", "lernlogik", "elternbereich-d2"] },
+    { "name": "grundlage-beispiele", "bau": "live", "browserTests": ["auftrag1-grundlage", "beispiele", "showme", "aufgaben-node"] },
     { "name": "runde", "bau": "live", "browserTests": ["aufgaben-node", "aufgaben-anpassung", "runde-ohne-doppelte", "fragen", "lernlogik", "elternbereich-d2"] },
     { "name": "krypto", "bau": "test", "browserTests": ["testbau"] },
     { "name": "ereignisse", "bau": "test", "browserTests": ["testbau"] },
