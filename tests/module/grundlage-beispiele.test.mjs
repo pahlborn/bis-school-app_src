@@ -9,6 +9,18 @@ const nums = s => (s.match(/\d+/g) || []).map(Number);
 const cells = q => [...q.visual.matchAll(/<td[^>]*>(\d)<\/td>/g)].map(m => +m[1]);
 const sum = a => a.reduce((s, v) => s + v, 0);
 const MATH = { numbers: 6, combos: 5, wordprob: 4, units: 4, graphs: 3 };
+// Independent acceptance matrix for the specifically approved EV33-CC-M1 exceptions.
+const FIXED_ANSWER_EXCEPTIONS = { sentences: [2, 3], anleitung: [2, 4], library: [1, 4] };
+const isException = q => (FIXED_ANSWER_EXCEPTIONS[q.world] || []).includes(q.foundationFamily)
+  || (q.world === 'units' && q.foundationFamily === 3 && answer(q) === '1 m');
+
+function textFamily(S, world, family) {
+  for (let i = 0; i < 200; i++) {
+    const q = S.holen('baseQ')(world, { world });
+    if (q.foundationFamily === family) return q;
+  }
+  assert.fail(`${world}/${family}: actual generator did not reach the requested family`);
+}
 
 // Independent arithmetic / drawing oracles, including the clock hands and graph geometry.
 function checkMath(q) {
@@ -87,6 +99,12 @@ for (const [world, count] of Object.entries(MATH)) {
     for (let family = 0; family < count; family++) for (let i = 0; i < 24; i++) {
       const q = S.holen(world + 'BaseQ')(family), before = JSON.stringify(q), id = S.holen('qId')(q);
       const ex = S.holen('exampleFor')(q);
+      if (isException(q)) {
+        assert.equal(ex, null, 'explicit fixed 1 m exception');
+        assert.equal(JSON.stringify(q), before);
+        assert.equal(S.holen('qId')(q), id);
+        continue;
+      }
       assert.ok(ex, `${world}/${family}/${i}: example exists`);
       assert.deepEqual([ex.world, ex.foundationFamily, ex.level], [world, family, 1]);
       if (q.foundationVariant) assert.deepEqual(ex.foundationVariant, q.foundationVariant, 'same minute, jump, place-value change or length relation');
@@ -100,7 +118,7 @@ for (const [world, count] of Object.entries(MATH)) {
   });
 }
 
-test('EV-3.3 all 40 text families: another concrete case with a worked explanation; original question untouched', () => {
+test('EV-3.3 all 40 text families: 34 worked examples and six explicit exceptions; original question untouched', () => {
   assert.deepEqual(Object.keys(GRUNDLAGE_BEISPIELE), Object.keys(GRUNDLAGE));
   const S = appSandbox({ seed: 3340 });
   for (const [world, bank] of Object.entries(GRUNDLAGE)) {
@@ -112,8 +130,16 @@ test('EV-3.3 all 40 text families: another concrete case with a worked explanati
       const before = JSON.stringify(q), ex = S.holen('exampleFor')(q);
       assert.equal(q.prompt, bank[family][0], 'actual generator family matches bank');
       assert.equal(answer(q), bank[family][1]);
+      if (isException(q)) {
+        assert.equal(ex, null, `${world}/${family}: fixed-answer exception`);
+        assert.equal(GRUNDLAGE_BEISPIELE[world][family], null, 'exception recorded explicitly');
+        assert.equal(JSON.stringify(q), before);
+        continue;
+      }
+      assert.ok(ex, `${world}/${family}: all other families require an example`);
       assert.equal(ex.level, 1); assert.equal(ex.foundationFamily, family);
       assert.notEqual(text(ex.prompt), text(q.prompt));
+      assert.notEqual(answer(ex), answer(q), 'provided text examples must not supply the original answer');
       assert.ok(ex.explain.length > 40 && ex.explain !== answer(ex), 'worked reasoning, not just an answer');
       assert.ok(!ex.explain.includes(q.prompt), 'no original question in worked case');
       assert.equal(JSON.stringify(q), before);
@@ -123,18 +149,18 @@ test('EV-3.3 all 40 text families: another concrete case with a worked explanati
   // Grammar and facts in specific cases, independently checked against the lesson.
   const words = GRUNDLAGE_BEISPIELE.words;
   assert.equal('un' + words[0][1], 'unkind'); assert.equal(words[1][1] + 'ful', 'playful');
-  assert.equal(words[2][1] + 'play', 'replay'); assert.equal('dark' + words[3][1], 'darkness');
+  assert.equal(words[2][1] + 'like', 'dislike'); assert.equal('care' + words[3][1], 'careless');
   assert.equal(words[4][1], 'dog' + 's'); assert.equal(words[5][1], 'un' + 'tie');
   assert.equal(words[6][1], 're' + 'read'); assert.equal(words[7][1], 'un' + 'fair');
   const sentences = GRUNDLAGE_BEISPIELE.sentences;
-  assert.equal(sentences[2][1], '?'); assert.equal(sentences[3][1], '.');
+  assert.equal(sentences[2], null); assert.equal(sentences[3], null);
   assert.equal(sentences[0][1][0], 'A'); assert.ok(sentences[4][1].endsWith('.'));
   assert.match(sentences[5][1], /Monday/); assert.match(sentences[7][1], /and I read/);
   assert.equal(GRUNDLAGE_BEISPIELE.anleitung[6][1], 'die Haustür');
   assert.equal(GRUNDLAGE_BEISPIELE.library[6][1], 'Between 120 and 140');
 });
 
-test('EV-3.3 repeated and boundary random values: every family and learning-step variant has another stimulus within 24 cases', () => {
+test('EV-3.3 repeated and boundary random values: examples within 24 cases, only fixed 1 m explicitly excluded', () => {
   for (const value of [0, 1 - Number.EPSILON]) {
     const S = appSandbox({ seed: 3399 });
     S.holen('Math').random = () => value;
@@ -150,6 +176,7 @@ test('EV-3.3 repeated and boundary random values: every family and learning-step
         const q = S.lauf(() => build(family, { draw: foundationDraw(0), variant }), 1000);
         let calls = 0;
         const ex = S.lauf(() => foundationExample(q, (...args) => { calls++; return build(...args); }), 1000);
+        if (isException(q)) { assert.equal(ex, null); assert.equal(calls, 0); continue; }
         assert.ok(ex, `${world}/${family}/${JSON.stringify(variant)}/random=${value}`);
         assert.ok(calls >= 2 && calls <= 24, 'first identical candidate skipped, finite selection');
         assert.notEqual(ex.prompt + (ex.visual || ''), q.prompt + (q.visual || ''));
@@ -195,5 +222,45 @@ test('EV-3.3 completing 100: one ten at 90, two tens at 80', () => {
     assert.ok(q.explain.includes(`That is ${phrase}, or ${amount}.`), q.explain);
     assert.doesNotMatch(q.explain, /\b1 tens\b/);
     checkMath(q);
+  }
+});
+
+for (const [family, base, exampleWord] of [[2, 'like', 'dislike'], [3, 'care', 'careless']]) {
+  test(`EV33-CC-M1 words/${family}: another correct affix without replay overlap`, () => {
+    const S = appSandbox({ seed: 3331 }), q = textFamily(S, 'words', family);
+    const before = JSON.stringify(q), id = S.holen('qId')(q), ex = S.holen('exampleFor')(q);
+    assert.ok(ex); assert.equal(ex.level, 1); assert.equal(ex.foundationFamily, family);
+    assert.notEqual(answer(ex), answer(q), 'example does not supply the child’s affix answer');
+    assert.equal(family === 2 ? answer(ex) + base : base + answer(ex), exampleWord);
+    assert.ok(ex.prompt.includes(exampleWord));
+    assert.ok(ex.explain.includes(family === 2 ? 'dis + like' : 'care + less'));
+    assert.doesNotMatch(ex.prompt + ex.explain, /\breplay\b/i);
+    assert.equal(JSON.stringify(q), before); assert.equal(S.holen('qId')(q), id);
+  });
+}
+
+for (const [world, families] of Object.entries(FIXED_ANSWER_EXCEPTIONS)) for (const family of families) {
+  test(`EV33-CC-M1 ${world}/${family}: explicit fixed-answer exception retains own tip and question`, () => {
+    const S = appSandbox({ seed: 3331 }), q = textFamily(S, world, family), before = JSON.stringify(q), id = S.holen('qId')(q);
+    assert.equal(S.holen('guidance')(q, null, false).text, q.tip);
+    assert.equal(S.holen('exampleFor')(q), null, 'no example that directly supplies the fixed answer');
+    assert.equal(JSON.stringify(q), before); assert.equal(S.holen('qId')(q), id);
+  });
+}
+
+test('EV33-CC-M1 units/3: retain other centimetre answers, omit the fixed longer answer 1 m', () => {
+  const S = appSandbox({ seed: 3331 }), build = S.holen('unitsBaseQ');
+  for (const short of [true, false]) {
+    const q = build(3, { draw: () => 2, variant: { short } }), before = JSON.stringify(q), id = S.holen('qId')(q);
+    const ex = S.holen('exampleFor')(q);
+    if (short) {
+      assert.ok(ex); assert.match(answer(ex), / cm$/); assert.notEqual(answer(ex), answer(q));
+      assert.deepEqual(ex.foundationVariant, q.foundationVariant); checkMath(ex);
+    } else {
+      assert.equal(answer(q), '1 m');
+      assert.equal(ex, null, 'longer comparison must not reveal the fixed answer');
+    }
+    assert.equal(JSON.stringify(q), before); assert.equal(S.holen('qId')(q), id);
+    assert.equal(S.holen('guidance')(q, null, false).text, q.tip);
   }
 });

@@ -1,7 +1,7 @@
 // EV-3.3: another worked case for each foundation family. No screen or storage.
 // Text entries follow the eight families in GRUNDLAGE; maths reuses the SAME family generator
-// and its classroom model. Repeated categorical answers (e.g. a full stop) are fine in a
-// different sentence; an identical stimulus is never an example.
+// and its classroom model. Explicit null entries are the approved EV33-CC-M1 exceptions:
+// their fixed answers would solve the child's question. The existing tip/answer path remains.
 export const GRUNDLAGE_BEISPIELE = {
   forces: [
     ['You press a shopping cart away from you. Push or pull?', 'Push', 'Your hands move the cart away from you. Moving something away is a push.'],
@@ -16,8 +16,8 @@ export const GRUNDLAGE_BEISPIELE = {
   sentences: [
     ['Fix the first letter: “a bird can sing.”', 'A bird can sing.', 'Find the first letter, a. A sentence starts with a capital, so change a to A.'],
     ['Which word needs a capital: “We visit berlin.”?', 'Berlin', 'Berlin names a city. Names start with a capital letter, so write Berlin.'],
-    ['Choose the end mark: “Can birds swim ___”', '?', 'Read what it does: it asks something. A question ends with a question mark: Can birds swim?'],
-    ['Choose the end mark: “The bird is blue ___”', '.', 'It tells something. A telling sentence ends with a full stop: The bird is blue.'],
+    null, // sentences/2: every question-mark example would directly supply the child's fixed answer “?”.
+    null, // sentences/3: every telling-sentence example would directly supply the child's fixed answer “.”.
     ['Fix the ending: “Birds have feathers”', 'Birds have feathers.', 'This tells something. Add a full stop after the last word to close the sentence.'],
     ['Fix the day: “We swim on monday.”', 'We swim on Monday.', 'Find the day, monday. Days are names, so give Monday a capital M.'],
     ['Fix the place: “The train goes to rome.”', 'The train goes to Rome.', 'Rome names a city. Change its first letter to a capital: Rome.'],
@@ -26,8 +26,8 @@ export const GRUNDLAGE_BEISPIELE = {
   words: [
     ['Find the base word in “unkind”.', 'kind', 'Split the word: un + kind. Cover the prefix un-. The base word left is kind.'],
     ['Find the base word in “playful”.', 'play', 'Split the word: play + ful. Cover the suffix -ful. The base word left is play.'],
-    ['Find the prefix in “replay”.', 're', 'Split it into re + play. The added part at the front is the prefix re-.'],
-    ['Find the suffix in “darkness”.', 'ness', 'Split it into dark + ness. The added part at the end is the suffix -ness.'],
+    ['Find the prefix in “dislike”.', 'dis', 'Split it into dis + like. The added part at the front is the prefix dis-.'],
+    ['Find the suffix in “careless”.', 'less', 'Split it into care + less. The added part at the end is the suffix -less.'],
     ['One dog, two …', 'dogs', 'There is more than one dog. Add -s to dog: dogs.'],
     ['Put un- before “tie”. What word do you make?', 'untie', 'Write the prefix first, then the base word: un + tie = untie.'],
     ['Which has a prefix: “reread” or “reader”?', 'reread', 'Split the words: re + read and read + er. Only reread adds a part at the front: the prefix re-.'],
@@ -36,19 +36,19 @@ export const GRUNDLAGE_BEISPIELE = {
   anleitung: [
     ['Du beginnst eine Anleitung zum Falten. Wie beginnt der erste Schritt?', 'Als Erstes faltet man das Papier.', 'Der erste Schritt steht am Anfang. „Als Erstes“ zeigt diesen Anfang. Danach beschreibst du, was man tut.'],
     ['Schreibe „Ich rühre die Farbe.“ in der Man-Form.', 'Man rührt die Farbe.', 'Ersetze „Ich“ durch „Man“. Passe das Verb an: ich rühre → man rührt.'],
-    ['„Als Erstes legt man das Papier hin.“ Wie beginnt der nächste Schritt?', 'Als Nächstes', 'Der Anfang ist beschrieben. Nun folgt der nächste Schritt: „Als Nächstes faltet man das Papier.“'],
+    null, // anleitung/2: der nächste Satzanfang wäre wieder die feste eigene Antwort „Als Nächstes“.
     ['Zerlege „zumachen“. Welche Vorsilbe findest du?', 'zu', 'Trenne zu + machen. Vor dem Verb „machen“ steht die Vorsilbe „zu“.'],
-    ['Wo steht „auf“ in „Man räumt das Zimmer auf.“?', 'am Satzende', 'Das Verb heißt „aufräumen“. Im Satz trennst du es: räumt … auf. „Auf“ steht nach „das Zimmer“, am Satzende.'],
+    null, // anleitung/4: die Stellung der getrennten Vorsilbe wäre wieder die eigene Antwort „am Satzende“.
     ['Eine Anleitung erklärt das Händewaschen. Was gehört hinein?', 'Die Schritte vom Nassmachen bis zum Abtrocknen', 'Überlege, was man nachmachen soll. Beschreibe die nötigen Handlungen der Reihe nach: nass machen, einseifen, abspülen, abtrocknen.'],
     ['Setze zusammen: „Haus“ + „Tür“. Schreibe den Artikel dazu.', 'die Haustür', 'Schreibe Haus + Tür zusammen: Haustür. Das letzte Wort gibt den Artikel vor: die Tür → die Haustür.'],
     ['Du willst ein Blatt ausschneiden. Was tust du zuerst?', 'Papier und Schere bereitlegen', 'Prüfe, was du für den nächsten Schritt brauchst. Erst legst du Papier und Schere bereit, dann kannst du schneiden.']
   ],
   library: [
     ['A book stands on a shelf. Where do you look for its call number label?', 'On its spine', 'The spine faces out when a book stands on the shelf. Look there for the call number label, then use it to locate the book.'],
-    ['You want to watch an explanation of how plants grow. Which source fits?', 'BrainPop', 'Decide what you need: a video. BrainPop has short explanation videos, so choose it for watching.'],
+    null, // library/1: changing the video topic still supplies the child's fixed source answer “BrainPop”.
     ['Which can you research: “How many legs does an ant have?” or “Are ants the nicest insects?”', 'How many legs does an ant have?', 'You can check the number of legs in a factual book. “Nicest” depends on an opinion, so choose the question with a checkable answer.'],
     ['You need checked facts about planets. An encyclopedia or a space adventure comic?', 'An encyclopedia', 'Choose by purpose: an encyclopedia explains checked facts. An adventure comic tells a story, so use the encyclopedia for your facts.'],
-    ['You need a search website made for kids to find pages about rocks. Which source fits?', 'Kiddle', 'You need to search for pages, rather than watch a video. Kiddle is a search website for kids, so use it to search.'],
+    null, // library/4: changing the search topic still supplies the child's fixed source answer “Kiddle”.
     ['Your poster uses a fact from a book about space. What source note helps someone check it?', 'The book title and page', 'A reader needs to find the same fact. Write down the book title and the page where you found it.'],
     ['A shelf has call numbers 120, 140 and 160. Where does a book labeled 130 go?', 'Between 120 and 140', 'Read the call number on the spine. 130 comes after 120 and before 140, so place it between those books.'],
     ['You want to research melting ice. What do you write before searching?', 'A question, such as “What makes ice melt?”', 'Choose what you want to find out. Write that question, then use it to guide your search for facts.']
@@ -60,6 +60,7 @@ const foundationStimulus = q => String(q.prompt) + '|' + (q.visual || '');
 
 // Enumerate alternative stimuli independently of the app's random source.
 // The first draw changes with the case; subsequent draws move seven places along each finite range.
+// N2: answer-option mixing in the existing mc()/shuffle() still consumes app random values.
 export function foundationDraw(seed) {
   let cursor = 0;
   return n => (seed + 7 * cursor++) % n;
@@ -74,6 +75,9 @@ export function foundationShuffle(items, draw) {
 /** Separate task; build(family, {draw, variant}) reuses its quest's model and exact learning step. */
 export function foundationExample(q, build) {
   if (q.level !== 1 || !Number.isInteger(q.foundationFamily)) return null;
+  // units/3, longer: all available cm lengths are below 1 m, so every matching example
+  // would directly supply the same fixed answer. Shorter/cm cases retain other results.
+  if (q.world === 'units' && q.foundationFamily === 3 && foundationAnswer(q) === '1 m') return null;
   const row = GRUNDLAGE_BEISPIELE[q.world]?.[q.foundationFamily];
   if (row) return { kind: 'type', level: 1, world: q.world, foundationFamily: q.foundationFamily, prompt: row[0], answer: row[1], explain: row[2] };
   if (!build) return null;

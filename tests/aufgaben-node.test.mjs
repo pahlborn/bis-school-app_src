@@ -140,6 +140,9 @@ test('jede Quest: Runden mit richtigen Antworten ergeben 8 von 8 (Node)', (t) =>
 
 /* ---------- "Show me an example" (bisher beispiele.test.mjs, echte Klicks) ---------- */
 const antwort = (q) => q.kind === 'mc' ? text(String(q.options[q.answer])) : String(q.answer);
+const FIXED_ANSWER_EXCEPTIONS = { sentences: [2, 3], anleitung: [2, 4], library: [1, 4] };
+const foundationException = q => (FIXED_ANSWER_EXCEPTIONS[q.world] || []).includes(q.foundationFamily)
+  || (q.world === 'units' && q.foundationFamily === 3 && antwort(q) === '1 m');
 
 /** Je Karte `runden` Runden: Tipp, dann "Show me an example", falls angeboten; zaehlt, wo es eins gibt. */
 function beispieleDurchgehen(S, items, runden, { zaehlt, beschriftung, kennung, beispielText, loesung }) {
@@ -155,13 +158,14 @@ function beispieleDurchgehen(S, items, runden, { zaehlt, beschriftung, kennung, 
         const prompt = text(String(q.prompt));
         S.klick('#helpBtn');                                                   // Tipp
         const angeboten = S.sichtbar('#helpBtn') && beschriftung.test(S.$('#helpBtn').textContent);
+        if (q.foundationFamily !== undefined && level(q) === 1 && angeboten === foundationException(q)) fehl.push('example/exception matrix violated: ' + q.world + '/' + q.foundationFamily);
         if (zaehlt(q, prompt)) { n++; if (angeboten) mit++; else ohne.add(kennung(q, prompt)); }
         if (angeboten) {
           S.klick('#helpBtn');                                                 // leichteres Beispiel
           const fb = S.$('#feedback').textContent;
           if (q.foundationFamily !== undefined && level(q) === 1) {
             const ex = s.example;
-            if (!/An example|Ein Beispiel/.test(fb) || !ex || ex.foundationFamily !== q.foundationFamily || S.holen('qId')(ex) === S.holen('qId')(q)) fehl.push('bad foundation example: ' + prompt);
+            if (!/An example|Ein Beispiel/.test(fb) || !ex || ex.foundationFamily !== q.foundationFamily || ex.prompt + (ex.visual || '') === q.prompt + (q.visual || '')) fehl.push('bad foundation example: ' + prompt);
           } else {
           if (!beispielText.test(fb)) fehl.push('kein Beispiel-Text: ' + prompt);
           const ex = ((fb.match(loesung) || [])[1] || '').trim();

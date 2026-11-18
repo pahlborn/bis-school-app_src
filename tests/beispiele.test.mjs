@@ -2,6 +2,8 @@
 // easier and it never shows the task's own answer. In the browser: a short way per subject with real clicks (tip, then
 // the example). The long runs over many rounds (coverage >= 85 %, never the answer, never below the support level)
 // run without a browser since 04.11.: tests/aufgaben-node.test.mjs.
+// This file covers higher-level easier examples. The explicit foundation example/exception matrix
+// and neutral headings are checked in tests/auftrag1-grundlage.test.mjs (EV33-CC-M1).
 //   node --test tests/beispiele.test.mjs
 
 import { test, before, after } from 'node:test';
@@ -31,7 +33,6 @@ test('Bedienweg je Fach: Tipp, dann "Show me an example" / "Zeig mir ein Beispie
         await page.locator('#helpBtn').click();                                // the tip
         const label = await page.textContent('#helpBtn');
         if ((q.level || 2) > 1 && (await page.isVisible('#helpBtn')) && /Show me an example|Zeig mir ein Beispiel/.test(label)) {
-          assert.ok((q.level || 2) > 1, 'example for a support-level task: ' + text);
           await page.locator('#helpBtn').click();                              // the easier example
           const fb = await page.textContent('#feedback');
           assert.match(fb, /An easier example|Ein leichteres Beispiel/, text);
