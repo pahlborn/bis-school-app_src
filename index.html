@@ -1403,65 +1403,10 @@ function buildNumbers(){ return shuffle(shuffle([clockRead(), clockPick(), ampm(
 
 /* ======================= PAST · ROUNDING ROAD ======================= */
 const RND={label:'Rounding Road', world:'round'};
+const EXP={label:'Explain Your Rounding', world:'explain'};
 function randNotMid(){ let n; do { n=101+rnd(799); } while(n%100===0 || n%100===50); return n; }
-function nearestHundredQ(tag){
-  const n=randNotMid(), lo=Math.floor(n/100)*100, hi=lo+100, near=(n-lo<50)?lo:hi;
-  return two("Which hundred is <b>closest</b> to <b>"+n+"</b>?", [String(lo),String(hi)], near===lo?0:1,
-    n+" sits between "+lo+" and "+hi+". It is "+(n-lo)+" away from "+lo+" and "+(hi-n)+" away from "+hi+", so the nearest hundred is "+near+".",
-    Object.assign({visual:benchLineSVG(n,lo,hi), coach:{family:'round', n:n, step:100}}, tag||RND));
-}
-function benchmarkQ(){
-  const n=randNotMid(), lo=Math.floor(n/100)*100, hi=lo+100, less=rnd(2)===0;
-  const right=less?lo:hi;
-  const wrongs=fill3(right,[less?hi:lo, lo-100, hi+100, round10(n)]);
-  return mc("Which benchmark hundred is just <b>"+(less?"less than":"greater than")+"</b> <b>"+n+"</b>?", String(right), wrongs.map(String),
-    "The hundreds around "+n+" are "+lo+" (less) and "+hi+" (greater).", Object.assign({grid:true, coach:{family:'benchmark', n:n, step:100, less:less}}, RND));
-}
-function roundWordQ(){
-  const n=randNotMid(), lo=Math.floor(n/100)*100, hi=lo+100, near=(n-lo<50)?lo:hi;
-  const wrongs=fill3(near,[near===lo?hi:lo, round10(n), near+100, near-100]);
-  return mc("Round <b>"+n+"</b> to the nearest hundred.", String(near), wrongs.map(String),
-    n+" is between "+lo+" and "+hi+". Compare its distances from the two hundreds, or use the halfway point "+(lo+50)+".", Object.assign({grid:true, coach:{family:'round', n:n, step:100}}, RND));
-}
-/* Gap from the school standards (01.11.): round to the nearest 1,000 - same model as for 10 and 100
-   (neighbouring thousands, halfway point 500). */
-function roundThousandQ(){
-  let n; do { n=1000+rnd(8000); } while(n%1000===0 || n%1000===500);
-  const lo=Math.floor(n/1000)*1000, hi=lo+1000, near=(n-lo<500)?lo:hi;
-  const wrongs=fill3(near,[near===lo?hi:lo, round100(n), near+1000, near-1000].filter(x=>x>0));
-  return mc("Round <b>"+fmt(n)+"</b> to the nearest thousand.", fmt(near), wrongs.map(fmt),
-    fmt(n)+" is between "+fmt(lo)+" and "+fmt(hi)+". The halfway point is "+fmt(lo+500)+". "+fmt(n)+" comes "+(near===lo?"before":"after")+" it, so it rounds to "+fmt(near)+".",
-    Object.assign({grid:true, coach:{family:'round', n:n, step:1000}}, RND));
-}
-function addendsQ(){
-  const target=pick([100,100,200,500,500,1000,300]);
-  const a=10*(1+rnd(target/10-1)), b=target-a;
-  const right=a+" + "+b;
-  const bad=[[a+10,b],[a,b+10],[a-10,b],[a+100,b],[a+1,b],[a,b-1]].filter(p=>p[0]>0&&p[1]>0).map(p=>p[0]+" + "+p[1]);
-  return mc("Which two addends make <b>"+fmt(target)+"</b>?", right, shuffle(uniq(bad).filter(x=>x!==right)).slice(0,3),
-    a+" + "+b+" = "+target+". Addends are the numbers you add together.", Object.assign({grid:true}, RND));
-}
-function estimateQ(){
-  const a=randNotMid(), b=randNotMid();
-  const ra=round100(a), rb=round100(b), right=ra+rb;
-  const wrongs=fill3(right,[right+100,right-100,ra+rb+200,right-200,round10(a+b)]);
-  return mc("Round each number to the nearest hundred, then add. About how much is <b>"+a+" + "+b+"</b>?", fmt(right), wrongs.map(fmt),
-    a+" is about "+ra+" and "+b+" is about "+rb+". "+ra+" + "+rb+" = "+fmt(right)+". The exact answer is "+fmt(a+b)+", so the estimate is close!", Object.assign({grid:true}, RND));
-}
-function threeAddendsQ(){
-  const nums=[randNotMid(),randNotMid(),randNotMid()];
-  const rounded=nums.map(round100), right=rounded.reduce((p,c)=>p+c,0);
-  const wrongs=fill3(right,[right+100,right-100,right+200,right-200]);
-  return mc("Travel for Work: estimate <b>"+nums.join(" + ")+"</b> by rounding each number to the nearest hundred.", fmt(right), wrongs.map(fmt),
-    rounded.join(" + ")+" = "+fmt(right)+". Rounding first makes big sums quick to estimate.", Object.assign({grid:true}, RND));
-}
-const ROUND_MC=[
- ["Why do we round numbers before adding?","To estimate quickly and check the real answer",["To get the exact answer","Because rounded numbers are always right","To change the numbers in the problem"],"Rounding gives a quick estimate. If the real answer is far away from it, check again."],
- ["Round 347 to the nearest hundred. How do you decide?","Find the halfway point 350: 347 is before it, so 300",["Look at the 7: it is big, so 400","Always round up, so 400","Take away the 47, so 340"],"300 and 400 are the neighbouring hundreds. The halfway point is 350. 347 comes before 350, so it is closer to 300."],
- ["What are the two benchmark hundreds around 470?","400 and 500",["300 and 400","470 and 480","100 and 1000"],"400 is just below 470. 500 is just above."],
- ["Which number rounds to 600?","582",["549","651","509"],"582 is close to 600. Only 18 away."],
- ["Which number is exactly halfway between 300 and 400?","350",["310","390","305"],"350 is right in the middle. Middle numbers round up."]
-];
+let {nearestHundredQ,benchmarkQ,roundWordQ,roundThousandQ,addendsQ,estimateQ,threeAddendsQ,distanceExplainQ,halfwayQ,tenVsHundredQ,roundTenQ,ROUND_MC}=createRoundingQuestions({rnd,pick,shuffle,uniq,fmt,round10,round100,mc,two,fill3,benchLineSVG,randNotMid,retag,bankMC,RND,EXP});
+
 function buildRounding(){ return shuffle([roundThousandQ(), nearestHundredQ(), benchmarkQ(), roundWordQ(), retag([roundTenQ()],RND)[0], estimateQ(), threeAddendsQ(), bankMC(ROUND_MC,RND)(pick(ROUND_MC))]); }
 
 /* ======================= PAST · WORD WORKSHOP (OREO + Persuade for the Park) ======================= */
@@ -1796,35 +1741,7 @@ function buildSentences(){ return shuffle([capitalFixQ(), capitalFixQ(), baseQ('
 function buildExamples(){ return retag(shuffle([specificExampleQ(), specificExampleQ(), specificExampleQ(), specificExampleQ(), sequenceOrderQ()].concat(fromBank(HYPO,SEN,3))), EXA); }
 
 /* ======================= PRACTICE · EXPLAIN IT MATHS ======================= */
-const EXP={label:'Explain Your Rounding', world:'explain'};
 const COM={label:'Number Combinations', world:'combos'};
-function distanceExplainQ(){
-  const n=randNotMid(), lo=Math.floor(n/100)*100, hi=lo+100, d1=n-lo, d2=hi-n, near=d1<d2?lo:hi, far=near===lo?hi:lo;
-  const right=n+" is "+d1+" away from "+lo+" and "+d2+" away from "+hi+". "+Math.min(d1,d2)+" is smaller, so "+near+" is closer.";
-  const wrongs=[n+" is "+d2+" away from "+lo+" and "+d1+" away from "+hi+", so "+far+" is closer.", near+" is closer because I like that number more.", far+" is closer because it is the bigger number."];
-  return mc("Which explanation shows <b>how you know</b> which hundred is closest to "+n+"?", right, wrongs, "Explain with distances: count how far the number is from each hundred, then pick the smaller distance. The halfway point "+(lo+50)+" helps too.", Object.assign({visual:benchLineSVG(n,lo,hi), coach:{family:'round-explain', n:n, step:100}}, EXP));
-}
-function halfwayQ(){
-  const lo=100*(1+rnd(8)), hi=lo+100;
-  if(rnd(2)===0) return mc("What is the <b>halfway point</b> between "+lo+" and "+hi+"?", String(lo+50), fill3(lo+50,[lo+40,lo+60,lo+5,hi+50]).map(String), lo+" and "+hi+" are 100 apart. Half of 100 is 50, so halfway is "+(lo+50)+".", Object.assign({grid:true}, EXP));
-  const n=lo+pick([10,20,30,40,60,70,80,90]);
-  return two(n+" is between "+lo+" and "+hi+". The halfway point is "+(lo+50)+". So "+n+"…", ["rounds down to "+lo, "rounds up to "+hi], n<lo+50?0:1,
-    n+" is "+(n<lo+50?"below":"above")+" the halfway point "+(lo+50)+", so it rounds "+(n<lo+50?"down to "+lo:"up to "+hi)+".", Object.assign({visual:benchLineSVG(n,lo,hi)}, EXP));
-}
-function tenVsHundredQ(){
-  let a,b,tens,hund,exact;
-  do { a=randNotMid(); b=randNotMid(); exact=a+b; tens=round10(a)+round10(b); hund=round100(a)+round100(b); } while(tens===hund || a%10===5 || b%10===5);
-  const tensCloser=Math.abs(tens-exact)<=Math.abs(hund-exact);
-  const optT="Nearest ten: "+round10(a)+" + "+round10(b)+" = "+fmt(tens), optH="Nearest hundred: "+round100(a)+" + "+round100(b)+" = "+fmt(hund);
-  return two("Which estimate is <b>closer</b> to the exact answer of <b>"+a+" + "+b+"</b>?", [optT,optH], tensCloser?0:1,
-    "Exact: "+fmt(exact)+". The nearest-ten estimate is "+Math.abs(tens-exact)+" away, the nearest-hundred estimate is "+Math.abs(hund-exact)+" away. Rounding to tens is usually closer, rounding to hundreds is quicker.", EXP);
-}
-function roundTenQ(){
-  let n; do { n=randNotMid(); } while(n%10===0||n%10===5);
-  const right=round10(n);
-  return mc("Round <b>"+n+"</b> to the nearest <b>ten</b>.", String(right), fill3(right,[right+10,right-10,round100(n),n-n%10+(n%10<5?10:0)]).map(String),
-    "Compare the distances to the neighbouring tens. At halfway, choose the higher ten.", Object.assign({grid:true, coach:{family:'round', n:n, step:10}}, EXP));
-}
 const COMBO_SETS={
  900:[["400 + 400 + 100","500 + 200 + 200","300 + 300 + 300"],["450 + 250 + 200","600 + 200 + 100","350 + 350 + 200"]],
  600:[["200 + 200 + 200","300 + 200 + 100","400 + 100 + 100"],["250 + 250 + 100","350 + 150 + 100","500 + 50 + 50"]],
@@ -2402,6 +2319,10 @@ function roundedQuestion(world, level, family, step, n, less){
   const lo=Math.floor(n/step)*step, hi=lo+step, right=Math.round(n/step)*step;
   let q;
   if(family==='benchmark') q=mc(`Which neighbouring multiple of ${step} is just <b>${less?'below':'above'} ${n}</b>?`,String(less?lo:hi),[String(less?hi:lo),String(lo-step),String(hi+step)],`${n} lies between ${lo} and ${hi}.`,{grid:true});
+  else if(family==='round-explain' && level>1){
+    const reasons=roundingReasonChoices(n,step);
+    q=mc(`Which reason explains how to round <b>${n}</b> to the nearest ${step}?`,reasons.right,reasons.wrongs,`Compare both distances; at halfway choose the higher multiple.`,{});
+  }
   else if(family==='round-explain') q=mc(`Which reason explains how to round <b>${n}</b> to the nearest ${step}?`,`${right} is nearer: compare ${n-lo} and ${hi-n}.`,[`${right===lo?hi:lo} is nearer: choose the larger distance.`,'Choose the number you like most.','Always choose the higher number.'],`Compare both distances; at halfway choose the higher multiple.`,{});
   else q=mc(`Round <b>${fmt(n)}</b> to the nearest <b>${({10:'ten',100:'hundred',1000:'thousand'})[step]}</b>.`,String(right),[String(right===lo?hi:lo),String(lo-step),String(hi+step)],`${n} is ${n-lo} from ${lo} and ${hi-n} from ${hi}.`,{grid:true});
   return Object.assign(q,{world:world,label:WORLDS[world].name,level:level,coach:{family:family,n:n,step:step,less:less},visual:level===1?roundingModel(n,step,false):''});

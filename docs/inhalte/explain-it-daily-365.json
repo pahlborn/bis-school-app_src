@@ -1,0 +1,1831 @@
+{
+ "source": "Explain_It_Daily_365_Questions_3rd_Grade_EN.docx (KI-erstellt, frei verwendbar, von Peter bereitgestellt am 18.11.2026)",
+ "note": "Gesprächsanstöße ohne Antworten; 62 Fragen kommen doppelt vor und bleiben bewusst (Peter, 18.11.2026).",
+ "items": [
+  {
+   "day": 1,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we do not leave a book in the rain."
+  },
+  {
+   "day": 2,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we wear a seatbelt in a car."
+  },
+  {
+   "day": 3,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a baker has to get up early."
+  },
+  {
+   "day": 4,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why soap bubbles float in the air."
+  },
+  {
+   "day": 5,
+   "topic": "Nature & Animals",
+   "question": "Explain why a dog sticks out its tongue when it is hot."
+  },
+  {
+   "day": 6,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why a band-aid helps a cut."
+  },
+  {
+   "day": 7,
+   "topic": "Nature & Animals",
+   "question": "Explain why ants walk in a line."
+  },
+  {
+   "day": 8,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we use a ruler."
+  },
+  {
+   "day": 9,
+   "topic": "Nature & Animals",
+   "question": "Explain why an elephant has a long trunk."
+  },
+  {
+   "day": 10,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why it stays light longer in summer."
+  },
+  {
+   "day": 11,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why a broken arm needs a cast."
+  },
+  {
+   "day": 12,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why a banana turns brown."
+  },
+  {
+   "day": 13,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we stand in line."
+  },
+  {
+   "day": 14,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why your home is your favorite place."
+  },
+  {
+   "day": 15,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why we can go sledding in winter."
+  },
+  {
+   "day": 16,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we feel good after sports."
+  },
+  {
+   "day": 17,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why we sometimes have to shovel snow in winter."
+  },
+  {
+   "day": 18,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we dream."
+  },
+  {
+   "day": 19,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain what you would do if you were an animal for a day."
+  },
+  {
+   "day": 20,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why we learn how to do math."
+  },
+  {
+   "day": 21,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain what you would do if you were a superhero."
+  },
+  {
+   "day": 22,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we say please."
+  },
+  {
+   "day": 23,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a bike moves when you pedal."
+  },
+  {
+   "day": 24,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why 2 + 2 = 4."
+  },
+  {
+   "day": 25,
+   "topic": "Nature & Animals",
+   "question": "Explain why a bird has feathers."
+  },
+  {
+   "day": 26,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why your heart beats faster when you run."
+  },
+  {
+   "day": 27,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why the moon shines at night."
+  },
+  {
+   "day": 28,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why the Earth spins even though we do not feel it."
+  },
+  {
+   "day": 29,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why we put salt on fries."
+  },
+  {
+   "day": 30,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why a rainbow is colorful."
+  },
+  {
+   "day": 31,
+   "topic": "Nature & Animals",
+   "question": "Explain why a bird has feathers."
+  },
+  {
+   "day": 32,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why a book has a beginning and an end."
+  },
+  {
+   "day": 33,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain what you would do if you could breathe under water."
+  },
+  {
+   "day": 34,
+   "topic": "Nature & Animals",
+   "question": "Explain why a chicken lays eggs."
+  },
+  {
+   "day": 35,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why we can fly a kite in fall."
+  },
+  {
+   "day": 36,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we should listen to our friends."
+  },
+  {
+   "day": 37,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we cough when we are sick."
+  },
+  {
+   "day": 38,
+   "topic": "Nature & Animals",
+   "question": "Explain why an apple falls from a tree."
+  },
+  {
+   "day": 39,
+   "topic": "Nature & Animals",
+   "question": "Explain why a dog sometimes digs."
+  },
+  {
+   "day": 40,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why your home is your favorite place."
+  },
+  {
+   "day": 41,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why we learn how to write."
+  },
+  {
+   "day": 42,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a doctor uses a stethoscope."
+  },
+  {
+   "day": 43,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why we learn how to do math."
+  },
+  {
+   "day": 44,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why it is good to be curious."
+  },
+  {
+   "day": 45,
+   "topic": "Nature & Animals",
+   "question": "Explain why a chameleon changes its color."
+  },
+  {
+   "day": 46,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain what you would do if you were the teacher for a day."
+  },
+  {
+   "day": 47,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why your home is your favorite place."
+  },
+  {
+   "day": 48,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why a rectangle is not the same as a square."
+  },
+  {
+   "day": 49,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why a stuffed animal watches over you at night."
+  },
+  {
+   "day": 50,
+   "topic": "Nature & Animals",
+   "question": "Explain why a frog croaks."
+  },
+  {
+   "day": 51,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why a calendar tells you when your birthday is."
+  },
+  {
+   "day": 52,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we should share our toys."
+  },
+  {
+   "day": 53,
+   "topic": "Nature & Animals",
+   "question": "Explain why a butterfly used to be a caterpillar."
+  },
+  {
+   "day": 54,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a car needs gas or electricity."
+  },
+  {
+   "day": 55,
+   "topic": "Nature & Animals",
+   "question": "Explain why a bear sleeps in winter."
+  },
+  {
+   "day": 56,
+   "topic": "Nature & Animals",
+   "question": "Explain why a rock does not grow but a plant does."
+  },
+  {
+   "day": 57,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we use a backpack instead of a plastic bag."
+  },
+  {
+   "day": 58,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why an airplane needs wings."
+  },
+  {
+   "day": 59,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we do homework."
+  },
+  {
+   "day": 60,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why an apple crunches when you bite it."
+  },
+  {
+   "day": 61,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why an airplane needs wings."
+  },
+  {
+   "day": 62,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why it is good to be brave."
+  },
+  {
+   "day": 63,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why it is good to be patient."
+  },
+  {
+   "day": 64,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a phone can take photos."
+  },
+  {
+   "day": 65,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we have to sharpen a pencil."
+  },
+  {
+   "day": 66,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why we have even and odd numbers."
+  },
+  {
+   "day": 67,
+   "topic": "Nature & Animals",
+   "question": "Explain why a bird has feathers."
+  },
+  {
+   "day": 68,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why a question mark goes at the end of a question."
+  },
+  {
+   "day": 69,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we put a letter in an envelope."
+  },
+  {
+   "day": 70,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a TV can show pictures."
+  },
+  {
+   "day": 71,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a clock ticks."
+  },
+  {
+   "day": 72,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why a picture can say more than 1000 words."
+  },
+  {
+   "day": 73,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain what you would do if you could fly."
+  },
+  {
+   "day": 74,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why we learn how to read."
+  },
+  {
+   "day": 75,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why sports are good for your body."
+  },
+  {
+   "day": 76,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why your best friend is your best friend."
+  },
+  {
+   "day": 77,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a fridge keeps food cold."
+  },
+  {
+   "day": 78,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we choose our clothes for the weather."
+  },
+  {
+   "day": 79,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we should not eat too much candy."
+  },
+  {
+   "day": 80,
+   "topic": "Nature & Animals",
+   "question": "Explain why a snowman melts when the sun shines."
+  },
+  {
+   "day": 81,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we sweat when it is hot."
+  },
+  {
+   "day": 82,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why chocolate melts in the sun."
+  },
+  {
+   "day": 83,
+   "topic": "Nature & Animals",
+   "question": "Explain why a shark has so many teeth."
+  },
+  {
+   "day": 84,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why there are numbers."
+  },
+  {
+   "day": 85,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why a kiss does not heal a bump but still helps."
+  },
+  {
+   "day": 86,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why ice cream melts in summer."
+  },
+  {
+   "day": 87,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a phone has to be charged."
+  },
+  {
+   "day": 88,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we brush our teeth at night."
+  },
+  {
+   "day": 89,
+   "topic": "Nature & Animals",
+   "question": "Explain why apple seeds can grow into a new tree."
+  },
+  {
+   "day": 90,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why we should make up after a fight."
+  },
+  {
+   "day": 91,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why an ice cube melts faster in warm water than in cold water."
+  },
+  {
+   "day": 92,
+   "topic": "Nature & Animals",
+   "question": "Explain why a dog sometimes digs."
+  },
+  {
+   "day": 93,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a mountain is so high."
+  },
+  {
+   "day": 94,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why a day without school can sometimes be boring."
+  },
+  {
+   "day": 95,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why a circle has no corners."
+  },
+  {
+   "day": 96,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why your home is your favorite place."
+  },
+  {
+   "day": 97,
+   "topic": "Nature & Animals",
+   "question": "Explain why snow is white."
+  },
+  {
+   "day": 98,
+   "topic": "Nature & Animals",
+   "question": "Explain why a tree does not need leaves in winter."
+  },
+  {
+   "day": 99,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why it smells so good after rain."
+  },
+  {
+   "day": 100,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we feel good after sports."
+  },
+  {
+   "day": 101,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why it is good to meet someone new."
+  },
+  {
+   "day": 102,
+   "topic": "Nature & Animals",
+   "question": "Explain why a firefly glows."
+  },
+  {
+   "day": 103,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we should wash our hands."
+  },
+  {
+   "day": 104,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why popcorn pops."
+  },
+  {
+   "day": 105,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why we wear shorts in summer."
+  },
+  {
+   "day": 106,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why a secret code only works if not everyone knows it."
+  },
+  {
+   "day": 107,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we have rules in school."
+  },
+  {
+   "day": 108,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why we need a clock to know when school starts."
+  },
+  {
+   "day": 109,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why you like to draw, sing, or dance."
+  },
+  {
+   "day": 110,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain what you would do if you were an animal for a day."
+  },
+  {
+   "day": 111,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why a square has four equal sides."
+  },
+  {
+   "day": 112,
+   "topic": "Nature & Animals",
+   "question": "Explain why bees make honey."
+  },
+  {
+   "day": 113,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why we sometimes do not know a word and have to ask."
+  },
+  {
+   "day": 114,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why an apple crunches when you bite it."
+  },
+  {
+   "day": 115,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we have to sleep."
+  },
+  {
+   "day": 116,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why your cheeks turn red when you feel shy."
+  },
+  {
+   "day": 117,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we take off our shoes in the house."
+  },
+  {
+   "day": 118,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we put on shoes before we go outside."
+  },
+  {
+   "day": 119,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a light bulb shines."
+  },
+  {
+   "day": 120,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why we hear birds sing in spring."
+  },
+  {
+   "day": 121,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we write our name on our things."
+  },
+  {
+   "day": 122,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why there are deserts and forests in the world."
+  },
+  {
+   "day": 123,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why a leaf falls down in fall."
+  },
+  {
+   "day": 124,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a phone can take photos."
+  },
+  {
+   "day": 125,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain what you would do if you never had to sleep."
+  },
+  {
+   "day": 126,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why a word is made of letters."
+  },
+  {
+   "day": 127,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why a lollipop is sticky."
+  },
+  {
+   "day": 128,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we need to rest after playing."
+  },
+  {
+   "day": 129,
+   "topic": "Nature & Animals",
+   "question": "Explain why a horse walks on four legs."
+  },
+  {
+   "day": 130,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why an airplane needs wings."
+  },
+  {
+   "day": 131,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why a game needs rules."
+  },
+  {
+   "day": 132,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why we learn how to do math."
+  },
+  {
+   "day": 133,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why a snowball melts when you hold it."
+  },
+  {
+   "day": 134,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why vegetables are good for you."
+  },
+  {
+   "day": 135,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we say thank you."
+  },
+  {
+   "day": 136,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why people speak different languages."
+  },
+  {
+   "day": 137,
+   "topic": "Nature & Animals",
+   "question": "Explain why a dog sometimes digs."
+  },
+  {
+   "day": 138,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a river flows into the sea."
+  },
+  {
+   "day": 139,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we feel good after sports."
+  },
+  {
+   "day": 140,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we blink."
+  },
+  {
+   "day": 141,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why a recipe needs numbers."
+  },
+  {
+   "day": 142,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a volcano erupts."
+  },
+  {
+   "day": 143,
+   "topic": "Nature & Animals",
+   "question": "Explain why a mole lives underground."
+  },
+  {
+   "day": 144,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we turn off the light when we leave a room."
+  },
+  {
+   "day": 145,
+   "topic": "Nature & Animals",
+   "question": "Explain why a dog sometimes digs."
+  },
+  {
+   "day": 146,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why water turns into ice when it freezes."
+  },
+  {
+   "day": 147,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why an airplane can fly even though it is so heavy."
+  },
+  {
+   "day": 148,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why chocolate melts in the sun."
+  },
+  {
+   "day": 149,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why an apple crunches when you bite it."
+  },
+  {
+   "day": 150,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a kite stays in the air."
+  },
+  {
+   "day": 151,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why your favorite animal is your favorite animal."
+  },
+  {
+   "day": 152,
+   "topic": "Nature & Animals",
+   "question": "Explain why a fish can breathe in water but you cannot."
+  },
+  {
+   "day": 153,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why it is good to help others."
+  },
+  {
+   "day": 154,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we should listen to our friends."
+  },
+  {
+   "day": 155,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why chocolate melts in the sun."
+  },
+  {
+   "day": 156,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we treat books carefully."
+  },
+  {
+   "day": 157,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we have to be quiet in school when someone is talking."
+  },
+  {
+   "day": 158,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a fire truck is so loud."
+  },
+  {
+   "day": 159,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why a wet towel dries in the sun."
+  },
+  {
+   "day": 160,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we laugh when something is funny."
+  },
+  {
+   "day": 161,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we wear a helmet when we ride a bike."
+  },
+  {
+   "day": 162,
+   "topic": "Nature & Animals",
+   "question": "Explain why a rabbit has long ears."
+  },
+  {
+   "day": 163,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why an apple falls from the tree in fall."
+  },
+  {
+   "day": 164,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we are quiet in the library."
+  },
+  {
+   "day": 165,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why a timetable needs times."
+  },
+  {
+   "day": 166,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain what you would do if you had a robot as a friend."
+  },
+  {
+   "day": 167,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why laughing is contagious."
+  },
+  {
+   "day": 168,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why we get fresh fruit and vegetables from the field in summer."
+  },
+  {
+   "day": 169,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why there are so many flowers in spring."
+  },
+  {
+   "day": 170,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why there is wind."
+  },
+  {
+   "day": 171,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain what you would do if you were an animal for a day."
+  },
+  {
+   "day": 172,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we take off our shoes in the house."
+  },
+  {
+   "day": 173,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we should not laugh at our friends."
+  },
+  {
+   "day": 174,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we yawn when we are tired."
+  },
+  {
+   "day": 175,
+   "topic": "Nature & Animals",
+   "question": "Explain why a dog sometimes digs."
+  },
+  {
+   "day": 176,
+   "topic": "Nature & Animals",
+   "question": "Explain why owls are awake at night."
+  },
+  {
+   "day": 177,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain what you would do if you were an animal for a day."
+  },
+  {
+   "day": 178,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain what you would do if you lived in a treehouse."
+  },
+  {
+   "day": 179,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why lightning flashes."
+  },
+  {
+   "day": 180,
+   "topic": "Nature & Animals",
+   "question": "Explain why a cactus can survive in the desert."
+  },
+  {
+   "day": 181,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why a riddle is fun."
+  },
+  {
+   "day": 182,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why we build a bridge over a river."
+  },
+  {
+   "day": 183,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why your home is your favorite place."
+  },
+  {
+   "day": 184,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a parachute brings a person down slowly."
+  },
+  {
+   "day": 185,
+   "topic": "Nature & Animals",
+   "question": "Explain why a squirrel buries nuts."
+  },
+  {
+   "day": 186,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we say sorry when we hurt someone."
+  },
+  {
+   "day": 187,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we should listen to our friends."
+  },
+  {
+   "day": 188,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why a friend can comfort you when you are sad."
+  },
+  {
+   "day": 189,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a photo shows you even though you are not inside it."
+  },
+  {
+   "day": 190,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we have to brush our teeth."
+  },
+  {
+   "day": 191,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a mirror shows your face."
+  },
+  {
+   "day": 192,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain what you would do if you had a time machine."
+  },
+  {
+   "day": 193,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a house needs a roof."
+  },
+  {
+   "day": 194,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why it is important to be honest."
+  },
+  {
+   "day": 195,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why we eat warm soup in winter."
+  },
+  {
+   "day": 196,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we need to focus to learn something."
+  },
+  {
+   "day": 197,
+   "topic": "Nature & Animals",
+   "question": "Explain why a bird has feathers."
+  },
+  {
+   "day": 198,
+   "topic": "Nature & Animals",
+   "question": "Explain why spiders build webs."
+  },
+  {
+   "day": 199,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why we drink more on hot days."
+  },
+  {
+   "day": 200,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why we learn how to do math."
+  },
+  {
+   "day": 201,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain what you would do if you were an animal for a day."
+  },
+  {
+   "day": 202,
+   "topic": "Nature & Animals",
+   "question": "Explain why a whale can get so big."
+  },
+  {
+   "day": 203,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a chair can hold you."
+  },
+  {
+   "day": 204,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why 10 is more than 9."
+  },
+  {
+   "day": 205,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a train rides on tracks."
+  },
+  {
+   "day": 206,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we can be scared of the dark."
+  },
+  {
+   "day": 207,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we should clean up our room."
+  },
+  {
+   "day": 208,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we feel good after sports."
+  },
+  {
+   "day": 209,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we wash an apple before we eat it."
+  },
+  {
+   "day": 210,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why we put periods in sentences."
+  },
+  {
+   "day": 211,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why you like playing outside or inside better."
+  },
+  {
+   "day": 212,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why a cake tastes sweet."
+  },
+  {
+   "day": 213,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why we have day and night."
+  },
+  {
+   "day": 214,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why chocolate melts in the sun."
+  },
+  {
+   "day": 215,
+   "topic": "Nature & Animals",
+   "question": "Explain why a bird has feathers."
+  },
+  {
+   "day": 216,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why we need sunscreen in summer."
+  },
+  {
+   "day": 217,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we remember some things and forget others."
+  },
+  {
+   "day": 218,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why sharing makes friends happy."
+  },
+  {
+   "day": 219,
+   "topic": "Nature & Animals",
+   "question": "Explain why a dog sometimes digs."
+  },
+  {
+   "day": 220,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why it is a different time in other countries."
+  },
+  {
+   "day": 221,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we sometimes feel lonely."
+  },
+  {
+   "day": 222,
+   "topic": "Nature & Animals",
+   "question": "Explain why an earthworm is important for the garden."
+  },
+  {
+   "day": 223,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why chess needs two players."
+  },
+  {
+   "day": 224,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain what you would do if you lived on the moon."
+  },
+  {
+   "day": 225,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why it rains."
+  },
+  {
+   "day": 226,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we should not talk with our mouth full."
+  },
+  {
+   "day": 227,
+   "topic": "Nature & Animals",
+   "question": "Explain why a dog barks."
+  },
+  {
+   "day": 228,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why we learn how to do math."
+  },
+  {
+   "day": 229,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we sometimes feel embarrassed."
+  },
+  {
+   "day": 230,
+   "topic": "Nature & Animals",
+   "question": "Explain why a penguin cannot fly but can swim well."
+  },
+  {
+   "day": 231,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why bread rises in the oven."
+  },
+  {
+   "day": 232,
+   "topic": "Nature & Animals",
+   "question": "Explain why a cat purrs."
+  },
+  {
+   "day": 233,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why we have a globe in school."
+  },
+  {
+   "day": 234,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we have to drink water."
+  },
+  {
+   "day": 235,
+   "topic": "Nature & Animals",
+   "question": "Explain why a spider has 8 legs."
+  },
+  {
+   "day": 236,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why chocolate melts in the sun."
+  },
+  {
+   "day": 237,
+   "topic": "Nature & Animals",
+   "question": "Explain why a bird has feathers."
+  },
+  {
+   "day": 238,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we feel good after sports."
+  },
+  {
+   "day": 239,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain what you would do if you had a dinosaur as a pet."
+  },
+  {
+   "day": 240,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why your hands shake when you are excited."
+  },
+  {
+   "day": 241,
+   "topic": "Nature & Animals",
+   "question": "Explain why birds fly south in winter."
+  },
+  {
+   "day": 242,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why a puddle is gone after a few days."
+  },
+  {
+   "day": 243,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why a day has 24 hours."
+  },
+  {
+   "day": 244,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we sneeze."
+  },
+  {
+   "day": 245,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a phone can take photos."
+  },
+  {
+   "day": 246,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why we learn how to do math."
+  },
+  {
+   "day": 247,
+   "topic": "Nature & Animals",
+   "question": "Explain why a fox hunts at night."
+  },
+  {
+   "day": 248,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why an airplane needs wings."
+  },
+  {
+   "day": 249,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we should come to school on time."
+  },
+  {
+   "day": 250,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why a dice has 6 sides."
+  },
+  {
+   "day": 251,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain what you would do if everyone in the world was your friend."
+  },
+  {
+   "day": 252,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we wear a watch or look at the clock."
+  },
+  {
+   "day": 253,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why an airplane needs wings."
+  },
+  {
+   "day": 254,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why a triangle has three corners."
+  },
+  {
+   "day": 255,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why an apple crunches when you bite it."
+  },
+  {
+   "day": 256,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we use an eraser."
+  },
+  {
+   "day": 257,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why a dream sometimes feels so real."
+  },
+  {
+   "day": 258,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why a birthday is a special day."
+  },
+  {
+   "day": 259,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain what you would do if you had a million dollars."
+  },
+  {
+   "day": 260,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why clouds float in the sky and do not fall down."
+  },
+  {
+   "day": 261,
+   "topic": "Nature & Animals",
+   "question": "Explain why a dog sometimes digs."
+  },
+  {
+   "day": 262,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we use an umbrella."
+  },
+  {
+   "day": 263,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why an apple crunches when you bite it."
+  },
+  {
+   "day": 264,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain what you would do if you were an animal for a day."
+  },
+  {
+   "day": 265,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why we learn letters."
+  },
+  {
+   "day": 266,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain what you would do if you were an animal for a day."
+  },
+  {
+   "day": 267,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a letter gets from one place to another."
+  },
+  {
+   "day": 268,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why we have to count to know how many candies we have."
+  },
+  {
+   "day": 269,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why it thunders."
+  },
+  {
+   "day": 270,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why your favorite book is your favorite book."
+  },
+  {
+   "day": 271,
+   "topic": "Nature & Animals",
+   "question": "Explain why you can only see a rainbow after rain."
+  },
+  {
+   "day": 272,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we take off our shoes in the house."
+  },
+  {
+   "day": 273,
+   "topic": "Nature & Animals",
+   "question": "Explain why a parrot can learn to talk."
+  },
+  {
+   "day": 274,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why we sometimes estimate instead of counting exactly."
+  },
+  {
+   "day": 275,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we ask before we take someone's toy."
+  },
+  {
+   "day": 276,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we cry when we are sad."
+  },
+  {
+   "day": 277,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we stop at a red traffic light."
+  },
+  {
+   "day": 278,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why the Earth is round."
+  },
+  {
+   "day": 279,
+   "topic": "Nature & Animals",
+   "question": "Explain why flowers need bees."
+  },
+  {
+   "day": 280,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why a smile can make someone happy."
+  },
+  {
+   "day": 281,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we wash our hands after playing."
+  },
+  {
+   "day": 282,
+   "topic": "Nature & Animals",
+   "question": "Explain why a dog can smell so well."
+  },
+  {
+   "day": 283,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why a sentence starts with a capital letter."
+  },
+  {
+   "day": 284,
+   "topic": "Nature & Animals",
+   "question": "Explain why a hedgehog rolls into a ball."
+  },
+  {
+   "day": 285,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why you like going to school – or not."
+  },
+  {
+   "day": 286,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we feel good after sports."
+  },
+  {
+   "day": 287,
+   "topic": "Nature & Animals",
+   "question": "Explain why frogs can live in water and on land."
+  },
+  {
+   "day": 288,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we wash our hands before we eat."
+  },
+  {
+   "day": 289,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why half an apple is smaller than a whole apple."
+  },
+  {
+   "day": 290,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why we split money into cents and dollars / euros."
+  },
+  {
+   "day": 291,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why stairs have steps."
+  },
+  {
+   "day": 292,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a computer does not work without electricity."
+  },
+  {
+   "day": 293,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a magnet sticks to a fridge."
+  },
+  {
+   "day": 294,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we wear a hat in winter."
+  },
+  {
+   "day": 295,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why we eat ice cream in summer."
+  },
+  {
+   "day": 296,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we shiver when it is cold."
+  },
+  {
+   "day": 297,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why hot cocoa feels good in winter."
+  },
+  {
+   "day": 298,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a police officer helps people."
+  },
+  {
+   "day": 299,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a robot needs instructions."
+  },
+  {
+   "day": 300,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a balloon pops if you blow it up too much."
+  },
+  {
+   "day": 301,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why milk has to stay in the fridge."
+  },
+  {
+   "day": 302,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we sort our trash."
+  },
+  {
+   "day": 303,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why your home is your favorite place."
+  },
+  {
+   "day": 304,
+   "topic": "Nature & Animals",
+   "question": "Explain why the sun helps plants grow."
+  },
+  {
+   "day": 305,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why a joke is funny."
+  },
+  {
+   "day": 306,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a teacher teaches kids."
+  },
+  {
+   "day": 307,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why a rainbow should make wishes come true."
+  },
+  {
+   "day": 308,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why a dragon would not be a good pet – or would it?"
+  },
+  {
+   "day": 309,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we take off our shoes in the house."
+  },
+  {
+   "day": 310,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why a secret sometimes should stay a secret."
+  },
+  {
+   "day": 311,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why the sea is salty."
+  },
+  {
+   "day": 312,
+   "topic": "Nature & Animals",
+   "question": "Explain why a dog sometimes walks in a circle before lying down."
+  },
+  {
+   "day": 313,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why a week has 7 days."
+  },
+  {
+   "day": 314,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we have to pack our backpack."
+  },
+  {
+   "day": 315,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why we measure how tall we are."
+  },
+  {
+   "day": 316,
+   "topic": "Nature & Animals",
+   "question": "Explain why a dolphin is not a fish."
+  },
+  {
+   "day": 317,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we should listen to our friends."
+  },
+  {
+   "day": 318,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we should listen to our friends."
+  },
+  {
+   "day": 319,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why an apple crunches when you bite it."
+  },
+  {
+   "day": 320,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why a pumpkin turns orange in fall."
+  },
+  {
+   "day": 321,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why we tell stories."
+  },
+  {
+   "day": 322,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we remember our birthday."
+  },
+  {
+   "day": 323,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why chocolate melts in the sun."
+  },
+  {
+   "day": 324,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we get hungry."
+  },
+  {
+   "day": 325,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain what you would do if you could talk to animals."
+  },
+  {
+   "day": 326,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why it is okay to make mistakes."
+  },
+  {
+   "day": 327,
+   "topic": "Nature & Animals",
+   "question": "Explain why a tree gets leaves again in spring."
+  },
+  {
+   "day": 328,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we should not waste water."
+  },
+  {
+   "day": 329,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why a year has 12 months."
+  },
+  {
+   "day": 330,
+   "topic": "Nature & Animals",
+   "question": "Explain why a ladybug has spots."
+  },
+  {
+   "day": 331,
+   "topic": "Nature & Animals",
+   "question": "Explain why cows eat grass and make milk."
+  },
+  {
+   "day": 332,
+   "topic": "Nature & Animals",
+   "question": "Explain why a lion has a mane."
+  },
+  {
+   "day": 333,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why there are earthquakes."
+  },
+  {
+   "day": 334,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a ball bounces back up when you throw it."
+  },
+  {
+   "day": 335,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why a ruler has numbers."
+  },
+  {
+   "day": 336,
+   "topic": "Nature & Animals",
+   "question": "Explain why an earthworm does not need legs."
+  },
+  {
+   "day": 337,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we cannot just take something from a store without paying."
+  },
+  {
+   "day": 338,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a phone can take photos."
+  },
+  {
+   "day": 339,
+   "topic": "Nature & Animals",
+   "question": "Explain why a tree has rings in its trunk."
+  },
+  {
+   "day": 340,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we need money to buy things."
+  },
+  {
+   "day": 341,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a boat floats on water but a rock sinks."
+  },
+  {
+   "day": 342,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why hugs feel good."
+  },
+  {
+   "day": 343,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a raincoat keeps you dry."
+  },
+  {
+   "day": 344,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain what you would do if you were invisible for a day."
+  },
+  {
+   "day": 345,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we sometimes get angry."
+  },
+  {
+   "day": 346,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a phone can take photos."
+  },
+  {
+   "day": 347,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why an airplane needs wings."
+  },
+  {
+   "day": 348,
+   "topic": "Nature & Animals",
+   "question": "Explain why a dog wags its tail."
+  },
+  {
+   "day": 349,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why we want to know how heavy something is."
+  },
+  {
+   "day": 350,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we need a key for our front door."
+  },
+  {
+   "day": 351,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a phone can take photos."
+  },
+  {
+   "day": 352,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain what you would do if it never rained again."
+  },
+  {
+   "day": 353,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we take off our shoes in the house."
+  },
+  {
+   "day": 354,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why it snows."
+  },
+  {
+   "day": 355,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why you sometimes want to be alone."
+  },
+  {
+   "day": 356,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a traffic light has three colors."
+  },
+  {
+   "day": 357,
+   "topic": "Nature & Animals",
+   "question": "Explain why leaves turn colorful in fall."
+  },
+  {
+   "day": 358,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a farmer works in a field."
+  },
+  {
+   "day": 359,
+   "topic": "Body, Feelings & Health",
+   "question": "Explain why we feel happy when we see someone again."
+  },
+  {
+   "day": 360,
+   "topic": "Technology, Inventions & World",
+   "question": "Explain why a key fits into a lock."
+  },
+  {
+   "day": 361,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we take off our shoes in the house."
+  },
+  {
+   "day": 362,
+   "topic": "Numbers, Logic & Language",
+   "question": "Explain why a puzzle only fits if all pieces are in the right place."
+  },
+  {
+   "day": 363,
+   "topic": "Everyday Life, Home & School",
+   "question": "Explain why we should listen to our friends."
+  },
+  {
+   "day": 364,
+   "topic": "Food, Weather & Seasons",
+   "question": "Explain why it gets dark earlier in winter."
+  },
+  {
+   "day": 365,
+   "topic": "Imagination, Friends & What If",
+   "question": "Explain why a game is more fun when everyone plays."
+  }
+ ]
+}
