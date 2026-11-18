@@ -1,0 +1,15 @@
+Big Quest iPad Test 14 — 0.152.2-beta
+Quell-Commit: 86ce3930b8e6972ed60db3d0877d3e511efd3764
+Quellstand: clean
+Native Ausgangsbasis (selektiv integriert): f88e82ab013daf6f8a095224af6cd4d7ef0dc880
+App-Kennung: de.bigquest.ipad
+Reader-Quelle: ios/BigQuestMVP/ToddleField.swift
+Reader: auf eindeutig sichtbare Rubrikzeilen begrenzt
+Automatische Tests beweisen NICHT das Verhalten in der echten Toddle-WebView.
+Bestehende Formular- und Toddle-Ansicht. Der Provider-Schlüssel bleibt im iPad-Schlüsselbund.
+Keine echten personenbezogenen Schuldaten an Claude senden.
+
+Quellintegritaet (SHA-256):
+BigQuestApp.swift	0da993080b9b9485a87eb9ac20b3c5f5d98f4b3bd7c99c916de26ba47f38132b
+ClaudeClient.swift	40c32965c72075e589bc11990cc88d55f440adc200597170da5e4af024b6a6da
+ToddleField.swift	1fe5313a5822204af42ee16e1b5e23ee9b83f910fefe1cadb51a6010aba14aa3
