@@ -12,6 +12,8 @@ struct BigQuestApp: App {
 @MainActor
 private final class BrowserPage: NSObject, ObservableObject, WKScriptMessageHandlerWithReply {
     private var busy = false
+    private var catalog: [StandardCatalogEntry]?
+    var toddleOpener: (@MainActor () async -> Bool)?
     private let url: URL
     private let persistent: Bool
 
@@ -63,14 +65,42 @@ private final class BrowserPage: NSObject, ObservableObject, WKScriptMessageHand
             }
             return
         }
-        guard message.name == "bigQuestEvaluation", !busy,
-              let body = message.body as? [String: Any], let source = body["source"] as? String,
-              !source.isEmpty, source.utf8.count <= 48000 else { replyHandler(nil, "Ungültiger Formularaufruf."); return }
+        guard message.name == "bigQuestEvaluation", let body = message.body as? [String: Any] else {
+            replyHandler(nil, KeychainText.text("Ungültiger Formularaufruf.", "Invalid form request.")); return
+        }
+        if let action = body["action"] as? String {
+            switch action {
+            case "catalog":
+                // The approved catalog is supplied by the web module; native validates, bounds and holds it for the next source request only.
+                guard body.count == 2, let parsed = StandardCatalog.parse(body["catalog"]) else {
+                    catalog = nil
+                    replyHandler(nil, KeychainText.text("Ungültiger Katalog.", "Invalid catalog.")); return
+                }
+                catalog = parsed
+                replyHandler("ok", nil)
+            case "toddle":
+                guard body.count == 1, !busy, let opener = toddleOpener else {
+                    replyHandler(nil, KeychainText.text("Ungültiger Formularaufruf.", "Invalid form request.")); return
+                }
+                Task {
+                    if await opener() { replyHandler("opened", nil) }
+                    else { replyHandler(nil, KeychainText.text("Bitte zuerst ein neues, noch leeres Formular im Bereich Schulische Einstufungen öffnen.", "Open a new form in the school assessments section first.")) }
+                }
+            default:
+                replyHandler(nil, KeychainText.text("Ungültiger Formularaufruf.", "Invalid form request."))
+            }
+            return
+        }
+        guard !busy, body.count == 1, let source = body["source"] as? String, !source.isEmpty, source.utf8.count <= 48000,
+              let approved = catalog else {
+            replyHandler(nil, KeychainText.text("Ungültiger Formularaufruf.", "Invalid form request.")); return
+        }
+        catalog = nil
         busy = true
         Task {
             defer { busy = false }
             do {
-                let result = try await ClaudeClient.extractEvaluation(source: source, key: ClaudeKey.read())
+                let result = try await ClaudeClient.extractEvaluation(source: source, key: ClaudeKey.read(), catalog: approved)
                 replyHandler(try JSONSerialization.jsonObject(with: JSONEncoder().encode(result)), nil)
             } catch { replyHandler(nil, error.localizedDescription) }
         }
@@ -88,7 +118,7 @@ private struct BrowserPane: UIViewRepresentable {
 @MainActor
 private struct BigQuestScreen: View {
     @StateObject private var bigQuest = BrowserPage(
-        url: URL(string: "https://big-quest-test.github.io/probe-evaluation-form/")!, persistent: true
+        url: URL(string: "https://big-quest-test.github.io/")!, persistent: true
     )
     @StateObject private var toddle = BrowserPage(
         url: URL(string: "https://web.toddleapp.com/")!, persistent: false
@@ -118,31 +148,30 @@ private struct BigQuestScreen: View {
                     ToolbarItem(placement: .navigationBarLeading) {
                         Button(KeychainText.text("Claude-Schlüssel", "Claude key")) { showKey = true }
                     }
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Evaluation aus Toddle") {
-                            Task {
-                                do {
-                                    guard bigQuest.isEvaluationPage, let context = try await bigQuest.view.callAsyncJavaScript("return window.bigQuestEvaluationForm?.context()", arguments: [:], in: nil, contentWorld: .page) as? String else {
-                                        error = "Bitte als Elternteil das Kind und den Bereich Schulische Einstufungen öffnen."; return
-                                    }
-                                    evaluationContext = context; error = nil; showToddle = true
-                                } catch { self.error = error.localizedDescription }
-                            }
-                        }
-                    }
                 }
         }
-        .onAppear { if startup == nil { startup = ClaudeKey.startupDiagnostics() } }
+        .onAppear {
+            if startup == nil { startup = ClaudeKey.startupDiagnostics() }
+            bigQuest.toddleOpener = { await openToddle() }
+        }
         .alert("Evaluation", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) { Button("OK") { error = nil } } message: { Text(error ?? "") }
         .sheet(isPresented: $showKey) { ClaudeKeyScreen() }
         .sheet(isPresented: $showToddle) {
             ToddleFieldScreen(page: toddle) { source in
-                guard bigQuest.isEvaluationPage, let context = evaluationContext else { throw NSError(domain:"BigQuest",code:1,userInfo:[NSLocalizedDescriptionKey:"Kindzuordnung fehlt."]) }
+                guard bigQuest.isEvaluationPage, showToddle, let context = evaluationContext else { throw NSError(domain:"BigQuest",code:1,userInfo:[NSLocalizedDescriptionKey:KeychainText.text("Kindzuordnung fehlt.", "The child assignment is missing.")]) }
                 let result = try await bigQuest.view.callAsyncJavaScript("return window.bigQuestEvaluationForm?.source(context, transfer, source)", arguments:["context":context,"transfer":UUID().uuidString.lowercased(),"source":source], in:nil, contentWorld:.page) as? String
-                guard result == "opened" || result == "saved" else { throw NSError(domain:"BigQuest",code:2,userInfo:[NSLocalizedDescriptionKey:"Das Kind wurde gewechselt oder ein Formular ist bereits offen. Bitte zuerst in Big Quest prüfen."]) }
+                guard result == "opened" || result == "saved" else { throw NSError(domain:"BigQuest",code:2,userInfo:[NSLocalizedDescriptionKey:KeychainText.text("Das Formular wurde gewechselt oder ist nicht mehr offen. Bitte in Big Quest erneut „Aus Toddle“ wählen.", "The form changed or is no longer open. Choose “From Toddle” in Big Quest again.")]) }
                 showToddle = false
             }
         }
+    }
+
+    private func openToddle() async -> Bool {
+        let value = try? await bigQuest.view.callAsyncJavaScript("return window.bigQuestEvaluationForm?.context()", arguments: [:], in: nil, contentWorld: .page)
+        guard bigQuest.isEvaluationPage, !showToddle, let context = value as? String else { return false }
+        evaluationContext = context
+        showToddle = true
+        return true
     }
 }
 
@@ -218,8 +247,8 @@ private struct ToddleFieldScreen: View {
             VStack(spacing: 0) {
                 BrowserPane(view: page.view).frame(maxHeight: .infinity)
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Öffne die Evaluation in Toddle. Die erfassten Inhalte werden im Formular angezeigt.")
-                    Button(reading ? "Wird gelesen …" : "Evaluation ins Formular übernehmen") {
+                    Text(KeychainText.text("Öffne die Evaluation in Toddle. Die erfassten Inhalte werden im Formular angezeigt.", "Open the evaluation in Toddle. The captured content appears in the form."))
+                    Button(reading ? KeychainText.text("Wird gelesen …", "Reading …") : KeychainText.text("Evaluation ins Formular übernehmen", "Bring the evaluation into the form")) {
                         Task {
                             reading = true
                             error = nil
@@ -237,8 +266,8 @@ private struct ToddleFieldScreen: View {
             .navigationTitle("Toddle")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Fertig") { dismiss() } }
-                ToolbarItem(placement: .navigationBarTrailing) { Button("Zurück") { page.view.goBack() } }
+                ToolbarItem(placement: .cancellationAction) { Button(KeychainText.text("Fertig", "Done")) { dismiss() } }
+                ToolbarItem(placement: .navigationBarTrailing) { Button(KeychainText.text("Zurück", "Back")) { page.view.goBack() } }
             }
 
         }
