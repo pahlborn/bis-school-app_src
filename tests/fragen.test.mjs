@@ -51,6 +51,47 @@ test('Bedienweg je Fach: erste Quest eine Runde mit richtigen Antworten (8 von 8
   await ctx.close();
 });
 
+test('EP01 Rounding Road: real quest card scores 8/8; help keeps the neighbouring-number bridge playable', async () => {
+  const {ctx,page,fehler}=await app();
+  try {
+    const rounding=(await alleKarten(page)).find(k=>k.item==='round');
+    assert.ok(rounding,'actual Rounding Road card');
+    await karteOeffnen(page,rounding);
+    await durchspielen(page,fehler);
+    // Use a fresh round and the real "show answer" action to schedule two
+    // foundation tasks and the same-level return; never replace the app's round.
+    await karteOeffnen(page,rounding);
+    let found=false;
+    for(let i=0;i<8;i++){
+      const s=await zustand(page),q=s.round[s.idx];
+      if(q.coach && ['round','round-explain','benchmark'].includes(q.coach.family)){
+        await klick(page,'#helpBtn');
+        assert.match(await page.textContent('#feedback'),/halfway|neighbouring/);
+        await klick(page,'#answerBtn');
+        const changed=await zustand(page);
+        const bridge=changed.round.slice(changed.idx+1).filter(x=>x.bridge);
+        const queued=await page.evaluate(()=>JSON.parse(localStorage.getItem('bq2_bridgeNext')||'[]'));
+        const all=[...bridge,...queued];
+        assert.ok(all.length>=3,'two easier tasks plus return are scheduled');
+        assert.equal(all[0].level,1);assert.equal(all[1].level,1);
+        assert.equal(all[0].bridgePart,'practice');assert.equal(all[1].bridgePart,'practice');
+        assert.equal(all[2].bridgePart,'return');
+        await klick(page,'#nextBtn');
+        found=true;
+        break;
+      }
+      await frageBeantworten(page,q);await klick(page,'#nextBtn');
+    }
+    assert.ok(found,'rounding coach available in merged quest');
+    while(await sichtbar(page,'#play')){
+      const s=await zustand(page);await frageBeantworten(page,s.round[s.idx]);
+      assert.ok(await page.evaluate(()=>document.querySelector('#feedback').classList.contains('good')));
+      await klick(page,'#nextBtn');
+    }
+    assert.ok(await sichtbar(page,'#results'));assert.deepEqual(fehler,[]);
+  } finally {await ctx.close();}
+});
+
 // Strategie- und Verstaendnisfragen (01.11.): falsche Antworten sollen typische
 // Denkfehler sein, keine Scherzantworten, die man ohne Nachdenken ausschliesst;
 // Runden nach dem Schulmodell (Nachbarzahlen und Mitte), nicht "ab 5 aufrunden".

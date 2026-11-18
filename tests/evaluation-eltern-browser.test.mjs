@@ -71,7 +71,7 @@ async function solveRounding(page) {
   const lower = number - lowerDistance;
   const upper = number + upperDistance;
   const nearest = lowerDistance < upperDistance ? lower : upper;
-  const answer = `${number} is ${lowerDistance} away from ${lower} and ${upperDistance} away from ${upper}. ${Math.min(lowerDistance, upperDistance)} is smaller, so ${nearest} is closer.`;
+  const answer = `${number} is ${lowerDistance} from ${lower} and ${upperDistance} from ${upper}, so ${nearest} is nearer.`;
   await page.locator('#qAnswers').getByRole('button', { name: answer, exact: true }).click();
   await page.locator('#feedback.good').waitFor();
   assert.match(await page.locator('#feedback').innerText(), /Explain with distances/);
