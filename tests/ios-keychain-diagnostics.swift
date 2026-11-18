@@ -200,10 +200,15 @@ import Security
         let rubricSource = "Assessment Criteria\n" + criterion + "\nM\nLearning goals\nInvented goal"
         let valid = try ClaudeClient.validateEvaluation(raw: encoded("S-3"), source: criterion + " M", catalog: catalog)
         precondition(valid.criteria[0].standard == "S-3" && valid.criteria[0].rating == "M" && valid.criteria[0].evidence == criterion + " M", "No-quest code accepted; source grade and evidence preserved")
-        precondition(try ClaudeClient.validateEvaluation(raw: encoded("none"), source: criterion + " M", catalog: catalog).criteria[0].standard == "none")
-        precondition(rejects(try encoded("Z-NOT-LISTED")) && rejects(try encoded(nil)) && rejects(try encoded("s-3")) && rejects(try encoded("")), "Out-of-list or missing code is never a silent success")
+        let noneValidated = try ClaudeClient.validateEvaluation(raw: encoded("none"), source: criterion + " M", catalog: catalog)
+        precondition(noneValidated.criteria[0].standard == "none")
+        let encodedUnlisted = try encoded("Z-NOT-LISTED")
+        let encodedMissing = try encoded(nil)
+        let encodedWrongCase = try encoded("s-3")
+        let encodedEmpty = try encoded("")
+        precondition(rejects(encodedUnlisted) && rejects(encodedMissing) && rejects(encodedWrongCase) && rejects(encodedEmpty), "Out-of-list or missing code is never a silent success")
         precondition(rejects("{}") && rejects("not json"))
-        precondition(rejects(try encoded("Z-NOT-LISTED"), source: rubricSource), "Invalid code is rejected before rubric replacement")
+        precondition(rejects(encodedUnlisted, source: rubricSource), "Invalid code is rejected before rubric replacement")
         let replaced = try ClaudeClient.validateEvaluation(raw: encoded("S-3", rating: "E"), source: rubricSource, catalog: catalog)
         precondition(replaced.criteria[0].rating == "M" && replaced.criteria[0].standard == "S-3", "Rubric grade wins; exact-criterion hint survives")
         let differentSource = "Assessment Criteria\nInvented: a different long criterion for this test\nM\nLearning goals\nInvented goal"
