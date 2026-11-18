@@ -122,3 +122,16 @@ test('EV-1.3: late invalid reply and conditional forget cannot undo a fresh manu
   assert.equal(await restoring, 'uebersprungen');
   assert.equal(saved, NEW);
 });
+
+test('EV-1.3: a stale save failure cannot replace the result of a newer successful save', async () => {
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  const device = anmNativeGeraet({ postMessage: async m => {
+    if (m.code === CODE) { await gate; return { status: 'error' }; }
+    return { status: 'ok' };
+  } });
+  const oldSave = device.merken(CODE);
+  assert.equal(await device.merken(NEW), 'ok');
+  release();
+  assert.equal(await oldSave, 'uebersprungen');
+});

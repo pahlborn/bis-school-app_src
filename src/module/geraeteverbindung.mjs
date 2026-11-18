@@ -11,11 +11,13 @@ export function anmNativeGeraet({ postMessage, verbunden, pruefen, uebernehmen }
   const verbundenJetzt = () => !!verbunden();
   return {
     async merken(code) {
-      generation++;
+      const stand = ++generation;
       if (!verfuegbar) return 'ohne-native';
       if (!anmNativeZugangGueltig(code)) return 'fehler';
-      try { return (await postMessage({ action: 'remember', code }))?.status === 'ok' ? 'ok' : 'fehler'; }
-      catch { return 'fehler'; }
+      try {
+        const reply = await postMessage({ action: 'remember', code });
+        return stand !== generation ? 'uebersprungen' : reply?.status === 'ok' ? 'ok' : 'fehler';
+      } catch { return stand !== generation ? 'uebersprungen' : 'fehler'; }
     },
     async starten() {
       if (gestartet) return 'uebersprungen';

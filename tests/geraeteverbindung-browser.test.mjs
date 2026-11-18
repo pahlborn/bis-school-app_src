@@ -11,12 +11,13 @@ import { anmStartlink } from '../src/module/anmeldung.mjs';
 const REPO = 'example/synthetic-device-storage';
 const TOKEN = 'synthetic-device-access-for-browser-test';
 const OLD = 'synthetic-rejected-device-access';
+const ADMIN_PASSWORD = 'Synthetic-Admin-Fixture-1';
 let storage, server, browser, invitation;
 before(async () => {
   storage = await githubNachbau({ token: TOKEN, repos: [REPO] });
   const access = githubSpeicher({ repo: REPO, token: TOKEN, basis: storage.basis }).geraet('d_SyntheticTool');
   const initial = await startcodeAusstellen({ zugang: access, aussteller: null, anmeldename: 'admin', art: 'admin', now: Date.now() });
-  const admin = await ersteAnmeldung({ zugang: access, code: initial.code, passwort: 'Synthetic-Admin-Fixture-1', now: Date.now(), runden: 1000 });
+  const admin = await ersteAnmeldung({ zugang: access, code: initial.code, passwort: ADMIN_PASSWORD, now: Date.now() });
   invitation = await startcodeAusstellen({ zugang: access, aussteller: admin, anmeldename: 'testparent', art: 'parent', now: Date.now() });
   assert.equal(await access.verbunden(), true, 'fixture includes the account directory required by the existing access check');
   const config = JSON.stringify({ art: 'github', repo: REPO, wurzel: '', basis: storage.basis });
@@ -25,7 +26,7 @@ before(async () => {
 });
 after(async () => { await browser?.close(); server?.close(); await storage?.schliessen(); });
 
-async function device({ native = null, existing = null, bridge = true, locale = 'en-US', readGate = null, failSave = false, hash = '' } = {}) {
+async function device({ native = null, existing = null, bridge = true, locale = 'en-US', readGate = null, rememberGate = null, failSave = false, hash = '' } = {}) {
   const context = await browser.newContext({ locale });
   await context.route('**/*', r => r.request().url().startsWith(server.url) || r.request().url().startsWith(storage.basis) ? r.continue() : r.abort());
   const calls = [], errors = [];
@@ -39,6 +40,7 @@ async function device({ native = null, existing = null, bridge = true, locale = 
       return old ? { status: 'ok', code: old } : { status: 'missing' };
     }
     if (message.action === 'remember') {
+      if (rememberGate) await rememberGate;
       if (failSave) return { status: 'error' };
       native = message.code;
     }
@@ -172,4 +174,34 @@ test('EV-1.3: browser-only behavior is unchanged and a native save failure is vi
     assert.equal(failed.native(), null);
     assert.deepEqual(failed.errors, []);
   } finally { await failed.context.close(); }
+});
+
+test('EV-1.3: parent reconnect keeps fast and late save failures visible after the final render', async () => {
+  for (const late of [false, true]) {
+    let release;
+    const gate = new Promise(resolve => { release = resolve; });
+    const d = await device({ existing: TOKEN, native: OLD, failSave: true, rememberGate: late ? gate : null });
+    try {
+      await d.page.locator('#roleAdult').click();
+      await d.page.locator('#loginUser').fill('admin');
+      await d.page.locator('#loginPw').fill(ADMIN_PASSWORD);
+      await d.page.locator('#loginGo').click();
+      await d.page.locator('#parentClose').waitFor();
+      await d.page.evaluate(value => localStorage.setItem('bqt_gh', value), OLD);
+      await d.page.reload();
+      await d.page.locator('#kTokenNeu').click();
+      await d.page.locator('#kTokenNeuWert').fill(TOKEN);
+      await d.page.locator('#kTokenGo').click();
+      await d.page.waitForFunction(() => !document.querySelector('#kTokenForm'));
+      release();
+      const notice = d.page.locator('#aboutBody').getByText(/could not be remembered|konnte nicht gemerkt werden/);
+      await notice.waitFor({ state: 'visible', timeout: 5000 });
+      assert.equal(await d.page.locator('#login').isVisible(), false);
+      assert.equal(await d.page.evaluate(() => localStorage.getItem('bqt_gh')), TOKEN);
+      assert.equal(d.native(), OLD, 'failed save does not become a native success');
+      await d.page.locator('#pSettings').click();
+      await notice.waitFor({ state: 'visible', timeout: 5000 });
+      assert.deepEqual(d.errors, []);
+    } finally { release(); await d.context.close(); }
+  }
 });

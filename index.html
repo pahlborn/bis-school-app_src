@@ -4953,6 +4953,7 @@ function renderSheets(){
     if(onOverview) html+=secHTML(secs);
   }
   body.innerHTML=html;
+  if(KONTO_UI) kontoNativeHinweisZeigen();
   body.querySelectorAll('details.psec').forEach(d=>d.addEventListener('toggle',()=>{ const id=d.dataset.psec, i=open.indexOf(id); if(d.open && i<0) open.push(id); if(!d.open && i>=0) open.splice(i,1); if(d.open && id==='concept') markConceptSeen(); }));
   const nh=body.querySelector('[data-pconcept]'); if(nh) nh.addEventListener('click',()=>{ if(!parentAccess) return; markConceptSeen(); if(!open.includes('concept')) open.push('concept'); renderSheets(); const d=$('#aboutBody details.psec[data-psec="concept"]'); if(d) d.scrollIntoView({block:'start'}); });
   body.querySelectorAll('[data-pgoto]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess) return; pviewPushed=true; location.hash=VIEW_HASH.settings+'/'+b.dataset.pgoto; }));
@@ -5293,6 +5294,7 @@ function renderLogin(role, opts){
     $('#roleStudent').addEventListener('click',()=>renderLogin('student'));
     // accounts in the storage: a grown-up who only closed the grown-ups area is still logged in (concept 10.4)
     $('#roleAdult').addEventListener('click',()=>{ if(KONTO_UI && adultResume()) return; renderLogin('adult', adultUnlockLoginOpts()||undefined); });
+    if(KONTO_UI) kontoNativeHinweisZeigen();
     return;
   }
   b.innerHTML=`${zeile}<h2>${role==='student'?T.student:T.adult}</h2>${role==='student'?whosHereHTML():''}<form id="loginForm" class="login-form"><div class="field"><label for="loginUser">${T.user}</label><input id="loginUser" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required></div>${pwFeldHTML('loginPw', T.pw, ' autocomplete="current-password" required')}<button class="btn primary" id="loginGo" type="submit">${T.go}</button><p id="loginMsg" class="small" role="status"></p></form>${KONTO_UI?`<button class="btn small" id="loginForgot" type="button">${T.forgot}</button>`:''}<button class="btn small" id="loginBack" type="button">${T.back}</button>${KONTO_UI?LOGIN_HELP_KONTO:LOGIN_HELP}`;
@@ -5323,6 +5325,7 @@ function renderLogin(role, opts){
   if(o.name){ $('#loginUser').value=o.name; $('#loginPw').focus(); }
   else if(startPrefill){ $('#loginUser').value=startPrefill.name; $('#loginPw').value=startPrefill.code; startPrefill=null; $('#loginGo').focus(); }
   else $('#loginUser').focus();
+  if(KONTO_UI) kontoNativeHinweisZeigen();
 }
 function renderSetPassword(u, renew){
   const adult=u.role!=='student', T=loginTxt(adult), de=adult && store.get('parentLang','de')!=='en';
@@ -5371,7 +5374,7 @@ function loginDone(u, welcomed){
    "Log out". Children, partners and grants come with task "Einladungen"; syncing with the storage is a task of its own. */
 const kontoOffen=new Map(), kontoFehlerListe=[], kontoAlt=new Map();
 let kontoZug=null, kontoLinkFp=null, kontoBlatt=null;
-let kontoNativeGeraet=null;
+let kontoNativeGeraet=null, kontoNativeSpeicherfehler=false;
 function kontoNativeBruecke(){
   const handler=window.webkit?.messageHandlers?.bigQuestDeviceConnection;
   if(!KONTO_UI || typeof anmNativeGeraet!=='function' || typeof handler?.postMessage!=='function') return null;
@@ -5384,15 +5387,20 @@ function kontoNativeBruecke(){
   return kontoNativeGeraet;
 }
 function kontoNativeSpeicherhinweis(){
-  const de=kontoVerbDe();
+  const de=parentAccess?PL()!=='en':kontoVerbDe();
   return de?'Die Geräteverbindung konnte nicht gemerkt werden. Bitte das Gerät bei Bedarf erneut verbinden.':'The device connection could not be remembered. Connect this device again if needed.';
+}
+function kontoNativeHinweisZeigen(){
+  const vorher=document.getElementById('nativeDeviceHint'); if(vorher) vorher.remove();
+  if(!kontoNativeSpeicherfehler) return;
+  const b=parentAccess && state.screen==='about'?$('#aboutBody'):$('#loginBody'); if(!b) return;
+  const p=document.createElement('p'); p.id='nativeDeviceHint'; p.className='small'; p.setAttribute('role','status'); p.textContent=kontoNativeSpeicherhinweis(); b.prepend(p);
 }
 function kontoNativeMerken(code){
   const n=kontoNativeBruecke(); if(!n) return;
   n.merken(code).then(r=>{
-    if(r!=='fehler') return;
-    const b=$('#loginBody'); if(!b) return;
-    const p=document.createElement('p'); p.className='small'; p.setAttribute('role','status'); p.textContent=kontoNativeSpeicherhinweis(); b.prepend(p);
+    if(r!=='fehler' && r!=='ok') return;
+    kontoNativeSpeicherfehler=r==='fehler'; kontoNativeHinweisZeigen();
   });
 }
 function kontoNativeStart(){
@@ -5460,6 +5468,7 @@ function renderVerbinden(meldung){
   $('#verbScan').addEventListener('click',kameraStart);
   $('#verbStop').addEventListener('click',()=>{ kameraStopp(); const m=$('#verbKameraMsg'); if(m) m.textContent=''; });
   $('#verbForm').addEventListener('submit',e=>{ e.preventDefault(); kontoEingabe($('#verbLink').value, $('#verbMsg')); });
+  kontoNativeHinweisZeigen();
 }
 /* a pasted link / code or a scanned QR code -> connect (and with a start code: the invitation as if opened) */
 function kontoEingabe(text, msg){
