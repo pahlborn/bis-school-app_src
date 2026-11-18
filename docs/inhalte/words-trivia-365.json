@@ -1,0 +1,4386 @@
+{
+ "source": "Words_Trivia_365_3rd_Grade_EN.docx (KI-erstellt, frei verwendbar, von Peter bereitgestellt am 18.11.2026)",
+ "note": "answer = Index in options (0=A). example: echter Beispielsatz noch zu ergänzen (Original enthielt nur 'The word ... means: ...').",
+ "items": [
+  {
+   "day": 1,
+   "word": "brave",
+   "options": [
+    "to move quickly back and forth",
+    "nice and easy to talk to",
+    "not afraid, ready to try something hard",
+    "to give some of yours to others"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 2,
+   "word": "kind",
+   "options": [
+    "a shiny ball from inside a shell",
+    "water falling down from high up",
+    "to think of something from before",
+    "nice and caring to others"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 3,
+   "word": "curious",
+   "options": [
+    "to find the answer to a problem",
+    "thankful for what you have",
+    "wanting to know or learn more",
+    "happy to share and give"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 4,
+   "word": "honest",
+   "options": [
+    "losing a game",
+    "a part of a book",
+    "telling the truth",
+    "a tricky question"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 5,
+   "word": "patient",
+   "options": [
+    "able to wait calmly",
+    "telling the truth",
+    "the part of a plant under the ground",
+    "what you see in a mirror or water"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 6,
+   "word": "gentle",
+   "options": [
+    "the part of a plant under the ground",
+    "soft and careful",
+    "huge, super big",
+    "to bite food again and again"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 7,
+   "word": "happy",
+   "options": [
+    "feeling good and glad",
+    "to tell what something looks like",
+    "to find the answer to a problem",
+    "a beat that repeats"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 8,
+   "word": "sad",
+   "options": [
+    "how much one thing is not like another",
+    "to get away",
+    "very fast",
+    "feeling unhappy"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 9,
+   "word": "angry",
+   "options": [
+    "an old story about gods or heroes",
+    "feeling mad",
+    "to jump up after hitting the ground",
+    "to keep safe"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 10,
+   "word": "scared",
+   "options": [
+    "with no more room inside",
+    "feeling afraid",
+    "not fast",
+    "not ever"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 11,
+   "word": "excited",
+   "options": [
+    "very happy and eager",
+    "a beat that repeats",
+    "the place where an animal lives",
+    "to think and ask why"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 12,
+   "word": "proud",
+   "options": [
+    "happy about something you did",
+    "a small town",
+    "people walking together in a line to celebrate",
+    "normal, not special"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 13,
+   "word": "shy",
+   "options": [
+    "in a short time",
+    "to open your mouth wide when tired",
+    "what a king or queen wears on their head",
+    "quiet around new people"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 14,
+   "word": "friendly",
+   "options": [
+    "nice and easy to talk to",
+    "a small animal with 6 legs",
+    "to run after someone",
+    "normal, not special"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 15,
+   "word": "polite",
+   "options": [
+    "using good manners",
+    "a person in a story",
+    "very excited to do something",
+    "to move quickly back and forth"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 16,
+   "word": "helpful",
+   "options": [
+    "ready to help others",
+    "happy to share and give",
+    "not hard, smooth to touch",
+    "words you send to someone"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 17,
+   "word": "grateful",
+   "options": [
+    "the outside of a book",
+    "does not weigh much",
+    "thankful for what you have",
+    "something done wrong"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 18,
+   "word": "generous",
+   "options": [
+    "to move your head up and down for yes",
+    "happy to share and give",
+    "all of it together",
+    "what you remember"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 19,
+   "word": "creative",
+   "options": [
+    "good at making new ideas",
+    "soft covering on a bird",
+    "to save someone",
+    "where and when a story happens"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 20,
+   "word": "clever",
+   "options": [
+    "paying attention to one thing",
+    "how a group of people live, eat, and celebrate",
+    "smart and quick to understand",
+    "to give off soft light"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 21,
+   "word": "huge",
+   "options": [
+    "to say you will really do something",
+    "very, very big",
+    "full of light / very smart",
+    "to repair something broken"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 22,
+   "word": "tiny",
+   "options": [
+    "sounds that go well together",
+    "what is really true",
+    "a green jewel",
+    "very, very small"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 23,
+   "word": "enormous",
+   "options": [
+    "sounds that go well together",
+    "extremely big",
+    "to get something you were looking for",
+    "a long trip by sea or space"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 24,
+   "word": "rapid",
+   "options": [
+    "very fast",
+    "a green jewel",
+    "what a king or queen wears on their head",
+    "to take something and give it back later"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 25,
+   "word": "slow",
+   "options": [
+    "to keep safe",
+    "not fast",
+    "a shape with 4 equal sides",
+    "to give some of yours to others"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 26,
+   "word": "bright",
+   "options": [
+    "not the same",
+    "a group of animals like wolves",
+    "a place where bread is made",
+    "full of light / very smart"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 27,
+   "word": "dark",
+   "options": [
+    "to talk very quietly",
+    "clapping for a good show",
+    "with little or no light",
+    "to move quickly back and forth"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 28,
+   "word": "loud",
+   "options": [
+    "to put yourself where no one can see you",
+    "unusual, not normal",
+    "to watch and keep safe",
+    "makes a lot of noise"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 29,
+   "word": "quiet",
+   "options": [
+    "to give some of yours to others",
+    "makes little noise",
+    "a big, old home of a king or queen",
+    "feeling afraid"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 30,
+   "word": "soft",
+   "options": [
+    "an animal with scales that lays eggs",
+    "not smooth",
+    "the outside of a book",
+    "not hard, smooth to touch"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 31,
+   "word": "rough",
+   "options": [
+    "not smooth",
+    "low land between mountains",
+    "to try to find",
+    "with no more room inside"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 32,
+   "word": "smooth",
+   "options": [
+    "an old story that may not be true",
+    "so good it surprises you",
+    "flat and even",
+    "a group of birds"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 33,
+   "word": "sharp",
+   "options": [
+    "with a thin edge that can cut",
+    "a shiny yellow metal",
+    "tastes very good",
+    "paying attention to one thing"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 34,
+   "word": "heavy",
+   "options": [
+    "soft covering on a bird",
+    "a short piece of writing with rhythm",
+    "a very big sea",
+    "weighs a lot"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 35,
+   "word": "light",
+   "options": [
+    "words you send to someone",
+    "a person who does something brave",
+    "does not weigh much",
+    "what you see in a mirror or water"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 36,
+   "word": "empty",
+   "options": [
+    "not smooth",
+    "to turn around gracefully",
+    "with nothing inside",
+    "not always, but now and then"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 37,
+   "word": "full",
+   "options": [
+    "with no more room inside",
+    "a little hot",
+    "to hear carefully",
+    "how food tastes"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 38,
+   "word": "warm",
+   "options": [
+    "to watch and keep safe",
+    "something hard to fix",
+    "a little hot",
+    "a place where plants and flowers grow"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 39,
+   "word": "cold",
+   "options": [
+    "to tell how or why something works",
+    "believing someone will do what they say",
+    "like magic",
+    "very low temperature"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 40,
+   "word": "freezing",
+   "options": [
+    "a small town",
+    "extremely cold",
+    "what is really true",
+    "being nice and caring"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 41,
+   "word": "adventure",
+   "options": [
+    "a path with many turns to find your way out",
+    "a shiny gray-white metal",
+    "to close one eye quickly",
+    "an exciting trip or experience"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 42,
+   "word": "journey",
+   "options": [
+    "to make up your mind",
+    "what a bird uses to fly",
+    "a long trip from one place to another",
+    "wanting to drink"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 43,
+   "word": "discover",
+   "options": [
+    "exactly the same amount",
+    "to find something new",
+    "water falling down from high up",
+    "what is really true"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 44,
+   "word": "explore",
+   "options": [
+    "very low temperature",
+    "a ball shape",
+    "an old story that may not be true",
+    "to look around and learn about a place"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 45,
+   "word": "invent",
+   "options": [
+    "to make something new for the first time",
+    "an animal that is hunted",
+    "to find the answer to a problem",
+    "really, really good"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 46,
+   "word": "create",
+   "options": [
+    "believing you can do it",
+    "to make something new",
+    "not smooth",
+    "something hard to fix"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 47,
+   "word": "build",
+   "options": [
+    "to make something by putting parts together",
+    "how heavy something is",
+    "being brave even when you are scared",
+    "a group of birds"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 48,
+   "word": "fix",
+   "options": [
+    "all living things and the world around us",
+    "like magic",
+    "to repair something broken",
+    "huge, super big"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 49,
+   "word": "solve",
+   "options": [
+    "tastes like a lemon",
+    "to find the answer to a problem",
+    "not hard, smooth to touch",
+    "full of light / very smart"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 50,
+   "word": "explain",
+   "options": [
+    "a long trip from one place to another",
+    "to talk very loudly",
+    "to tell how or why something works",
+    "not hard, smooth to touch"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 51,
+   "word": "describe",
+   "options": [
+    "a very hard, shiny jewel",
+    "waiting calmly - see patient",
+    "an animal that hunts other animals",
+    "to tell what something looks like"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 52,
+   "word": "imagine",
+   "options": [
+    "very, very big",
+    "a loud or unpleasant sound",
+    "a small, weak light",
+    "to picture something in your mind"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 53,
+   "word": "wonder",
+   "options": [
+    "something very valuable, like gold",
+    "a group of animals that live together",
+    "to think and ask why",
+    "doing something again and again to get better"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 54,
+   "word": "remember",
+   "options": [
+    "to think of something from before",
+    "a shiny yellow metal",
+    "what you remember",
+    "a place where plants and flowers grow"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 55,
+   "word": "forget",
+   "options": [
+    "a little hot",
+    "able to wait calmly",
+    "all of it together",
+    "to not remember"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 56,
+   "word": "choose",
+   "options": [
+    "to talk very quietly",
+    "a place where plants and flowers grow",
+    "to pick one thing",
+    "a group of birds"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 57,
+   "word": "decide",
+   "options": [
+    "to make up your mind",
+    "people walking together in a line to celebrate",
+    "yellow dust that helps flowers make seeds",
+    "very, very old"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 58,
+   "word": "promise",
+   "options": [
+    "to get something you were looking for",
+    "to jump far or high",
+    "a path with many turns to find your way out",
+    "to say you will really do something"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 59,
+   "word": "share",
+   "options": [
+    "words said to do magic",
+    "a field with grass and flowers",
+    "to give some of yours to others",
+    "to think of something from before"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 60,
+   "word": "borrow",
+   "options": [
+    "a person who does something brave",
+    "to take something and give it back later",
+    "to pick crops when they are ready",
+    "huge, super big"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 61,
+   "word": "forest",
+   "options": [
+    "a big place with many trees",
+    "to let food go down your throat",
+    "the land ruled by a king or queen",
+    "doing something again and again to get better"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 62,
+   "word": "desert",
+   "options": [
+    "with little or no light",
+    "a very dry place with little rain",
+    "a sharp nail on an animal",
+    "to repair something broken"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 63,
+   "word": "ocean",
+   "options": [
+    "sand next to the sea",
+    "nice and caring to others",
+    "a very big sea",
+    "a small thing to eat"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 64,
+   "word": "river",
+   "options": [
+    "an old story about gods or heroes",
+    "every time",
+    "something you must follow",
+    "water that flows across land"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 65,
+   "word": "mountain",
+   "options": [
+    "the loud sound after lightning",
+    "right now",
+    "not wanting to work",
+    "a very high hill"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 66,
+   "word": "valley",
+   "options": [
+    "very, very small",
+    "low land between mountains",
+    "the form of something",
+    "land with water all around it"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 67,
+   "word": "island",
+   "options": [
+    "what a king or queen wears on their head",
+    "land with water all around it",
+    "doing what you tried to do",
+    "a land with its own people and rules"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 68,
+   "word": "beach",
+   "options": [
+    "believing someone will do what they say",
+    "what happens in a story",
+    "sand next to the sea",
+    "a small town"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 69,
+   "word": "garden",
+   "options": [
+    "a place where plants and flowers grow",
+    "quiet around new people",
+    "telling the truth",
+    "seen or found a lot"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 70,
+   "word": "meadow",
+   "options": [
+    "being nice and caring",
+    "what a bird uses to fly",
+    "a field with grass and flowers",
+    "something very valuable, like gold"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 71,
+   "word": "cave",
+   "options": [
+    "smart and quick to understand",
+    "to go from one place to another",
+    "a hole inside a rock or mountain",
+    "the tune of a song"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 72,
+   "word": "cliff",
+   "options": [
+    "a message you write to someone",
+    "something built to do work",
+    "a high, steep rock",
+    "a person who lives near you"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 73,
+   "word": "waterfall",
+   "options": [
+    "the part of a plant under the ground",
+    "one thing you put in food",
+    "paying attention to one thing",
+    "water falling down from high up"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 74,
+   "word": "volcano",
+   "options": [
+    "to move your hand side to side",
+    "paying attention to one thing",
+    "a mountain that can spit out hot lava",
+    "to talk very loudly"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 75,
+   "word": "glacier",
+   "options": [
+    "a group of animals that live together",
+    "to shine with little flashes",
+    "a huge, slow-moving river of ice",
+    "not the same"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 76,
+   "word": "storm",
+   "options": [
+    "to try food with your tongue",
+    "bad weather with wind and rain",
+    "sounds that go well together",
+    "a shape with 4 equal sides"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 77,
+   "word": "breeze",
+   "options": [
+    "like magic",
+    "a show where people play music",
+    "a soft, gentle wind",
+    "the lesson of a story"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 78,
+   "word": "thunder",
+   "options": [
+    "the loud sound after lightning",
+    "to look quickly",
+    "to save someone",
+    "not afraid, ready to try something hard"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 79,
+   "word": "lightning",
+   "options": [
+    "with nothing inside",
+    "a bright flash in a storm cloud",
+    "how food tastes",
+    "a stick used for magic"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 80,
+   "word": "rainbow",
+   "options": [
+    "colors in the sky after rain",
+    "to talk very quietly",
+    "power that makes things work",
+    "something you use to do work"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 81,
+   "word": "gigantic",
+   "options": [
+    "all living things and the world around us",
+    "a person who does something brave",
+    "huge, super big",
+    "prepared to start"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 82,
+   "word": "ancient",
+   "options": [
+    "very, very old",
+    "a shiny ball from inside a shell",
+    "a beat that repeats",
+    "a stick used for magic"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 83,
+   "word": "modern",
+   "options": [
+    "not afraid, ready to try something hard",
+    "new, from our time",
+    "treating others as important",
+    "what happened long ago"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 84,
+   "word": "strange",
+   "options": [
+    "unusual, not normal",
+    "cloth that covers a stage",
+    "the form of something",
+    "a small, weak light"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 85,
+   "word": "ordinary",
+   "options": [
+    "a ball shape",
+    "normal, not special",
+    "a very hard, shiny jewel",
+    "something hard to fix"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 86,
+   "word": "amazing",
+   "options": [
+    "something done to fool you",
+    "yellow dust that helps flowers make seeds",
+    "so good it surprises you",
+    "to look around and learn about a place"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 87,
+   "word": "wonderful",
+   "options": [
+    "a short piece of writing with rhythm",
+    "something you use to do work",
+    "really, really good",
+    "a shiny gray-white metal"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 88,
+   "word": "terrible",
+   "options": [
+    "the place you are going to",
+    "a small animal with 6 legs",
+    "very fast",
+    "very, very bad"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 89,
+   "word": "perfect",
+   "options": [
+    "just right, with no mistakes",
+    "a short story that teaches a lesson",
+    "to turn around fast",
+    "the winner of a game or contest"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 90,
+   "word": "famous",
+   "options": [
+    "bad weather with wind and rain",
+    "an animal that lives in water and on land",
+    "something that helps you find the answer",
+    "known by many people"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 91,
+   "word": "rare",
+   "options": [
+    "what you say to a question",
+    "seen or found a lot",
+    "hard to find, not common",
+    "prepared to start"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 92,
+   "word": "common",
+   "options": [
+    "seen or found a lot",
+    "a very big sea",
+    "how much there is",
+    "a place where plants and flowers grow"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 93,
+   "word": "different",
+   "options": [
+    "not the same",
+    "a ball shape",
+    "to jump far or high",
+    "a small, happy laugh"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 94,
+   "word": "similar",
+   "options": [
+    "how wide something is",
+    "very, very old",
+    "almost the same",
+    "the place you are going to"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 95,
+   "word": "equal",
+   "options": [
+    "exactly the same amount",
+    "a path under the ground or water",
+    "to move back and forth",
+    "to look quickly"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 96,
+   "word": "opposite",
+   "options": [
+    "completely different",
+    "an animal that hunts other animals",
+    "extremely cold",
+    "earth where plants grow"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 97,
+   "word": "invisible",
+   "options": [
+    "a long trip from one place to another",
+    "a hole inside a rock or mountain",
+    "cannot be seen",
+    "to watch and keep safe"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 98,
+   "word": "visible",
+   "options": [
+    "a bright flash in a storm cloud",
+    "every time",
+    "can be seen",
+    "with nothing to do / not costing money"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 99,
+   "word": "magical",
+   "options": [
+    "how food tastes",
+    "like magic",
+    "believing someone will do what they say",
+    "the time that has not come yet"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 100,
+   "word": "mysterious",
+   "options": [
+    "being brave even when you are scared",
+    "trying hard",
+    "being fair to everyone",
+    "hard to understand, secret"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 101,
+   "word": "champion",
+   "options": [
+    "the winner of a game or contest",
+    "the people who live in one place",
+    "a person who shows you the way",
+    "telling the truth"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 102,
+   "word": "victory",
+   "options": [
+    "right now",
+    "winning a game or battle",
+    "the words of a song",
+    "to save someone"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 103,
+   "word": "defeat",
+   "options": [
+    "a path under the ground or water",
+    "a shape with 4 sides, opposite sides equal",
+    "to pick crops when they are ready",
+    "losing a game"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 104,
+   "word": "team",
+   "options": [
+    "a red jewel",
+    "a group that plays or works together",
+    "treating others as important",
+    "something very valuable, like gold"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 105,
+   "word": "coach",
+   "options": [
+    "to go up something",
+    "a person who teaches a team",
+    "to run after someone",
+    "nice and easy to talk to"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 106,
+   "word": "practice",
+   "options": [
+    "to move your head up and down for yes",
+    "doing something again and again to get better",
+    "something that repeats",
+    "to find something new"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 107,
+   "word": "effort",
+   "options": [
+    "a beat that repeats",
+    "full of light / very smart",
+    "trying hard",
+    "a group of animals that live together"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 108,
+   "word": "goal",
+   "options": [
+    "something you want to reach",
+    "a beat that repeats",
+    "steps to make food",
+    "wanting to eat"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 109,
+   "word": "success",
+   "options": [
+    "to go from one place to another",
+    "feeling afraid",
+    "a long trip from one place to another",
+    "doing what you tried to do"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 110,
+   "word": "mistake",
+   "options": [
+    "a game that makes you think",
+    "with nothing inside",
+    "a tricky question",
+    "something done wrong"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 111,
+   "word": "problem",
+   "options": [
+    "to go up something",
+    "very happy and eager",
+    "something hard to fix",
+    "losing a game"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 112,
+   "word": "solution",
+   "options": [
+    "the answer to a problem",
+    "something very valuable, like gold",
+    "to give some of yours to others",
+    "to leave a place"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 113,
+   "word": "question",
+   "options": [
+    "so good it surprises you",
+    "a big party or celebration",
+    "cloth that covers a stage",
+    "something you ask"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 114,
+   "word": "answer",
+   "options": [
+    "what you say to a question",
+    "to pick one thing",
+    "nice and easy to talk to",
+    "a small, weak light"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 115,
+   "word": "story",
+   "options": [
+    "winning a game or battle",
+    "very low temperature",
+    "something told about real or made-up people",
+    "listening and looking carefully"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 116,
+   "word": "author",
+   "options": [
+    "a very dry place with little rain",
+    "a song or melody",
+    "the special chair of a king or queen",
+    "a person who writes books"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 117,
+   "word": "poem",
+   "options": [
+    "with nothing inside",
+    "something that seems impossible",
+    "a short piece of writing with rhythm",
+    "people walking together in a line to celebrate"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 118,
+   "word": "letter",
+   "options": [
+    "a message you write to someone",
+    "a big, old home of a king or queen",
+    "a shape with 3 sides",
+    "to not remember"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 119,
+   "word": "message",
+   "options": [
+    "words you send to someone",
+    "a shape with 4 equal sides",
+    "a bright flash in a storm cloud",
+    "not always, but now and then"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 120,
+   "word": "secret",
+   "options": [
+    "something not many people know",
+    "to save someone",
+    "to walk like a soldier",
+    "something built over water to cross it"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 121,
+   "word": "habitat",
+   "options": [
+    "to make something new for the first time",
+    "the place where an animal lives",
+    "just made or picked, not old",
+    "a small animal with 6 legs"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 122,
+   "word": "predator",
+   "options": [
+    "one sheet in a book",
+    "an animal that hunts other animals",
+    "one of two equal parts",
+    "to fall and roll"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 123,
+   "word": "prey",
+   "options": [
+    "old bread, not fresh",
+    "a place where old and special things are kept",
+    "an animal that is hunted",
+    "almost the same"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 124,
+   "word": "mammal",
+   "options": [
+    "a hole animals dig to live in",
+    "an animal that has hair and feeds its babies milk",
+    "the part that holds a plant up",
+    "to bite food again and again"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 125,
+   "word": "reptile",
+   "options": [
+    "an animal with scales that lays eggs",
+    "to look around and learn about a place",
+    "can be seen",
+    "to watch carefully"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 126,
+   "word": "amphibian",
+   "options": [
+    "an animal that lives in water and on land",
+    "a big, old home of a king or queen",
+    "a bad person in a story",
+    "an animal that has hair and feeds its babies milk"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 127,
+   "word": "insect",
+   "options": [
+    "to repair something broken",
+    "how long something is",
+    "a small animal with 6 legs",
+    "feeling mad"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 128,
+   "word": "feather",
+   "options": [
+    "soft covering on a bird",
+    "something built to do work",
+    "having a lot to do",
+    "an animal with scales that lays eggs"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 129,
+   "word": "wing",
+   "options": [
+    "what a bird uses to fly",
+    "something said that is not true",
+    "how food tastes",
+    "an old story that may not be true"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 130,
+   "word": "claw",
+   "options": [
+    "what a bird uses to fly",
+    "something built to do work",
+    "a sharp nail on an animal",
+    "to move to another place for the seasons"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 131,
+   "word": "tail",
+   "options": [
+    "to get away",
+    "a very dry place with little rain",
+    "the part at the back of an animal",
+    "tastes like sugar"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 132,
+   "word": "horn",
+   "options": [
+    "something built over water to cross it",
+    "what you see in a mirror or water",
+    "a hard point on an animal's head",
+    "the part that grows into a new plant"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 133,
+   "word": "nest",
+   "options": [
+    "a short piece of writing with rhythm",
+    "a home birds build",
+    "words people use to talk",
+    "all living things and the world around us"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 134,
+   "word": "burrow",
+   "options": [
+    "not always, but now and then",
+    "a very high hill",
+    "a hole animals dig to live in",
+    "to run after someone"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 135,
+   "word": "herd",
+   "options": [
+    "a group of animals that live together",
+    "after the time you should be there",
+    "dirty air, water, or land",
+    "a person who does something brave"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 136,
+   "word": "pack",
+   "options": [
+    "a group of animals like wolves",
+    "poems together",
+    "to think and ask why",
+    "feeling good and glad"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 137,
+   "word": "flock",
+   "options": [
+    "exactly the same amount",
+    "to bite food again and again",
+    "a box shape with 6 square sides",
+    "a group of birds"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 138,
+   "word": "swarm",
+   "options": [
+    "to give some of yours to others",
+    "weighs a lot",
+    "a big group of bees or insects",
+    "believing you can do it"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 139,
+   "word": "hibernate",
+   "options": [
+    "the loud sound after lightning",
+    "a part of a book",
+    "to sleep all winter",
+    "a soft, gentle wind"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 140,
+   "word": "migrate",
+   "options": [
+    "to move to another place for the seasons",
+    "being free to choose",
+    "a person in a story",
+    "a big place with many trees"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 141,
+   "word": "harvest",
+   "options": [
+    "a ball shape",
+    "to pick crops when they are ready",
+    "how wide something is",
+    "the world around us: air, water, land"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 142,
+   "word": "crop",
+   "options": [
+    "to tell what something looks like",
+    "plants grown for food",
+    "trying hard",
+    "to fall and roll"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 143,
+   "word": "seed",
+   "options": [
+    "huge, super big",
+    "an animal that is hunted",
+    "just right, with no mistakes",
+    "the part that grows into a new plant"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 144,
+   "word": "root",
+   "options": [
+    "how wide something is",
+    "the part of a plant under the ground",
+    "being friends",
+    "very excited to do something"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 145,
+   "word": "stem",
+   "options": [
+    "the part that holds a plant up",
+    "words you send to someone",
+    "every time",
+    "old plants turned into food for soil"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 146,
+   "word": "petal",
+   "options": [
+    "with no more room inside",
+    "a colorful part of a flower",
+    "something not many people know",
+    "the land ruled by a king or queen"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 147,
+   "word": "pollen",
+   "options": [
+    "the time before now",
+    "yellow dust that helps flowers make seeds",
+    "to give some of yours to others",
+    "something said that is not true"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 148,
+   "word": "soil",
+   "options": [
+    "water falling down from high up",
+    "a group of birds",
+    "with no more room inside",
+    "earth where plants grow"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 149,
+   "word": "compost",
+   "options": [
+    "one sheet in a book",
+    "a loud or unpleasant sound",
+    "old plants turned into food for soil",
+    "earth where plants grow"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 150,
+   "word": "recycle",
+   "options": [
+    "to use something again",
+    "using electricity to work",
+    "very excited to do something",
+    "before the time you should be there"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 151,
+   "word": "pollution",
+   "options": [
+    "the steady sound in music",
+    "a long trip from one place to another",
+    "a round shape with no corners",
+    "dirty air, water, or land"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 152,
+   "word": "protect",
+   "options": [
+    "where actors or singers perform",
+    "what a bird uses to fly",
+    "nice and easy to talk to",
+    "to keep safe"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 153,
+   "word": "nature",
+   "options": [
+    "a big group of bees or insects",
+    "a shiny gray-white metal",
+    "the lesson of a story",
+    "all living things and the world around us"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 154,
+   "word": "environment",
+   "options": [
+    "a ball shape",
+    "to see something",
+    "the world around us: air, water, land",
+    "a tricky question"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 155,
+   "word": "energy",
+   "options": [
+    "power that makes things work",
+    "a big, beautiful home of a king or queen",
+    "to make something not straight",
+    "to make something by putting parts together"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 156,
+   "word": "solar",
+   "options": [
+    "makes a crunch sound when you eat it",
+    "a small thing to eat",
+    "a shiny yellow metal",
+    "using power from the sun"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 157,
+   "word": "electric",
+   "options": [
+    "using electricity to work",
+    "being nice and caring",
+    "a place where old and special things are kept",
+    "with nothing to do / not costing money"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 158,
+   "word": "machine",
+   "options": [
+    "how heavy something is",
+    "good at making new ideas",
+    "an old story that may not be true",
+    "something built to do work"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 159,
+   "word": "engine",
+   "options": [
+    "waiting calmly - see patient",
+    "just made or picked, not old",
+    "to take something and give it back later",
+    "the part that makes a car or machine move"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 160,
+   "word": "tool",
+   "options": [
+    "something you use to do work",
+    "telling the truth",
+    "cannot be seen",
+    "makes a lot of noise"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 161,
+   "word": "delicious",
+   "options": [
+    "a ball shape",
+    "tastes very good",
+    "with little or no light",
+    "to move back and forth"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 162,
+   "word": "sour",
+   "options": [
+    "earth where plants grow",
+    "a round shape with no corners",
+    "tastes like a lemon",
+    "after the time you should be there"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 163,
+   "word": "sweet",
+   "options": [
+    "clapping for a good show",
+    "tastes like sugar",
+    "an animal that is hunted",
+    "to turn around fast"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 164,
+   "word": "salty",
+   "options": [
+    "believing someone will do what they say",
+    "to repair something broken",
+    "tastes like salt",
+    "an old story about gods or heroes"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 165,
+   "word": "spicy",
+   "options": [
+    "tastes hot",
+    "a big place with many trees",
+    "to open your mouth wide when tired",
+    "a bright flash in a storm cloud"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 166,
+   "word": "crunchy",
+   "options": [
+    "makes a crunch sound when you eat it",
+    "every time",
+    "to talk very loudly",
+    "to move to another place for the seasons"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 167,
+   "word": "fresh",
+   "options": [
+    "how much there is",
+    "just made or picked, not old",
+    "an old story about gods or heroes",
+    "an animal with scales that lays eggs"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 168,
+   "word": "stale",
+   "options": [
+    "a field with grass and flowers",
+    "to talk very loudly",
+    "the steady sound in music",
+    "old bread, not fresh"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 169,
+   "word": "recipe",
+   "options": [
+    "a group of birds",
+    "to talk very quietly",
+    "to bite food again and again",
+    "steps to make food"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 170,
+   "word": "ingredient",
+   "options": [
+    "a small, weak light",
+    "a dark shape made when light is blocked",
+    "one thing you put in food",
+    "something done to fool you"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 171,
+   "word": "flavor",
+   "options": [
+    "how food tastes",
+    "to save someone",
+    "to try food with your tongue",
+    "something built over water to cross it"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 172,
+   "word": "snack",
+   "options": [
+    "a small thing to eat",
+    "cannot be seen",
+    "tastes hot",
+    "how much there is"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 173,
+   "word": "meal",
+   "options": [
+    "food you eat at breakfast, lunch, or dinner",
+    "something not many people know",
+    "extremely big",
+    "being nice and caring"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 174,
+   "word": "hungry",
+   "options": [
+    "the tune of a song",
+    "wanting to eat",
+    "a show where people play music",
+    "every time"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 175,
+   "word": "thirsty",
+   "options": [
+    "sound that comes back to you",
+    "a very high hill",
+    "wanting to drink",
+    "a place where food is grown"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 176,
+   "word": "chew",
+   "options": [
+    "to picture something in your mind",
+    "how much there is",
+    "to look hard for something",
+    "to bite food again and again"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 177,
+   "word": "swallow",
+   "options": [
+    "colors in the sky after rain",
+    "something that helps you find the answer",
+    "being friends",
+    "to let food go down your throat"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 178,
+   "word": "taste",
+   "options": [
+    "wanting to eat",
+    "to try food with your tongue",
+    "to move smoothly down",
+    "having a lot to do"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 179,
+   "word": "smell",
+   "options": [
+    "to notice with your nose",
+    "a very hard, shiny jewel",
+    "steps to make food",
+    "to run after someone"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 180,
+   "word": "texture",
+   "options": [
+    "good at making new ideas",
+    "the time that has not come yet",
+    "to walk on your toes quietly",
+    "how something feels in your mouth or hand"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 181,
+   "word": "neighbor",
+   "options": [
+    "a short piece of writing with rhythm",
+    "a shape with 4 equal sides",
+    "to make something by putting parts together",
+    "a person who lives near you"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 182,
+   "word": "community",
+   "options": [
+    "the corner where two lines meet",
+    "with nothing to do / not costing money",
+    "the people who live in one place",
+    "so good it surprises you"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 183,
+   "word": "village",
+   "options": [
+    "a small town",
+    "dirty air, water, or land",
+    "just made or picked, not old",
+    "makes little noise"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 184,
+   "word": "city",
+   "options": [
+    "a huge, slow-moving river of ice",
+    "a big town with many people",
+    "an animal that lives in water and on land",
+    "to put yourself where no one can see you"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 185,
+   "word": "country",
+   "options": [
+    "very, very bad",
+    "a land with its own people and rules",
+    "known by many people",
+    "an exciting trip or experience"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 186,
+   "word": "language",
+   "options": [
+    "words people use to talk",
+    "to give off soft light",
+    "a mountain that can spit out hot lava",
+    "a place with many books"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 187,
+   "word": "culture",
+   "options": [
+    "a magic drink",
+    "the part at the back of an animal",
+    "how much one thing is not like another",
+    "how a group of people live, eat, and celebrate"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 188,
+   "word": "tradition",
+   "options": [
+    "huge, super big",
+    "right now",
+    "a shiny ball from inside a shell",
+    "something people do again and again every year"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 189,
+   "word": "celebrate",
+   "options": [
+    "to have fun for a special day",
+    "a dark shape made when light is blocked",
+    "the world around us: air, water, land",
+    "to move quickly back and forth"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 190,
+   "word": "festival",
+   "options": [
+    "power that makes things work",
+    "a big party or celebration",
+    "how much there is",
+    "winning a game or battle"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 191,
+   "word": "parade",
+   "options": [
+    "people walking together in a line to celebrate",
+    "an animal that hunts other animals",
+    "a picture in a book",
+    "the tune of a song"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 192,
+   "word": "costume",
+   "options": [
+    "to keep safe",
+    "clothes you wear to look like someone else",
+    "before the time you should be there",
+    "happy about something you did"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 193,
+   "word": "mask",
+   "options": [
+    "the land ruled by a king or queen",
+    "something you wear over your face",
+    "the name of a book or story",
+    "full of light / very smart"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 194,
+   "word": "dance",
+   "options": [
+    "to move your body to music",
+    "something you ask",
+    "a person who lives near you",
+    "cloth that covers a stage"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 195,
+   "word": "music",
+   "options": [
+    "a green jewel",
+    "sounds made to sing or play",
+    "something done to fool you",
+    "a red jewel"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 196,
+   "word": "rhythm",
+   "options": [
+    "very, very big",
+    "a beat that repeats",
+    "to jump up after hitting the ground",
+    "to close one eye quickly"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 197,
+   "word": "melody",
+   "options": [
+    "sand next to the sea",
+    "how a group of people live, eat, and celebrate",
+    "a small, weak light",
+    "the tune of a song"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 198,
+   "word": "instrument",
+   "options": [
+    "something you play to make music",
+    "losing a game",
+    "known by many people",
+    "doing what you are supposed to do"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 199,
+   "word": "concert",
+   "options": [
+    "a show where people play music",
+    "a place where bread is made",
+    "to move to another place for the seasons",
+    "to put yourself where no one can see you"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 200,
+   "word": "audience",
+   "options": [
+    "to keep safe",
+    "wanting to eat",
+    "people who watch a show",
+    "to give some of yours to others"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 201,
+   "word": "courage",
+   "options": [
+    "being brave even when you are scared",
+    "a person who writes books",
+    "a shiny ball from inside a shell",
+    "a very hard, shiny jewel"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 202,
+   "word": "wisdom",
+   "options": [
+    "to make something by putting parts together",
+    "knowing what is right and smart",
+    "feeling unhappy",
+    "what you remember"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 203,
+   "word": "knowledge",
+   "options": [
+    "things you know and have learned",
+    "how heavy something is",
+    "a shiny gray-white metal",
+    "to have fun for a special day"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 204,
+   "word": "memory",
+   "options": [
+    "people walking together in a line to celebrate",
+    "what you remember",
+    "to pick one thing",
+    "to turn something around"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 205,
+   "word": "attention",
+   "options": [
+    "old bread, not fresh",
+    "listening and looking carefully",
+    "where and when a story happens",
+    "to move on hands and knees"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 206,
+   "word": "focus",
+   "options": [
+    "paying attention to one thing",
+    "to make something not straight",
+    "before the time you should be there",
+    "one of two equal parts"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 207,
+   "word": "confidence",
+   "options": [
+    "very fast",
+    "a high, steep rock",
+    "to take something and give it back later",
+    "believing you can do it"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 208,
+   "word": "patience",
+   "options": [
+    "waiting calmly - see patient",
+    "to tell how or why something works",
+    "the place where an animal lives",
+    "to take something and give it back later"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 209,
+   "word": "respect",
+   "options": [
+    "a big party or celebration",
+    "treating others as important",
+    "a shiny yellow metal",
+    "prepared to start"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 210,
+   "word": "trust",
+   "options": [
+    "believing someone will do what they say",
+    "doing what you are supposed to do",
+    "something that helps you find the answer",
+    "to tell what something looks like"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 211,
+   "word": "friendship",
+   "options": [
+    "not wanting to work",
+    "the part of a plant under the ground",
+    "being friends",
+    "thankful for what you have"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 212,
+   "word": "kindness",
+   "options": [
+    "words people use to talk",
+    "the corner where two lines meet",
+    "the place where an animal lives",
+    "being nice and caring"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 213,
+   "word": "honesty",
+   "options": [
+    "a land with its own people and rules",
+    "to open your mouth wide when tired",
+    "right now",
+    "telling the truth"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 214,
+   "word": "responsibility",
+   "options": [
+    "can be seen",
+    "how heavy something is",
+    "a very big sea",
+    "doing what you are supposed to do"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 215,
+   "word": "freedom",
+   "options": [
+    "to move quickly back and forth",
+    "to move your hand side to side",
+    "sounds that go well together",
+    "being free to choose"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 216,
+   "word": "peace",
+   "options": [
+    "the name of a book or story",
+    "a very high hill",
+    "when there is no fighting",
+    "an animal with scales that lays eggs"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 217,
+   "word": "justice",
+   "options": [
+    "a dark shape made when light is blocked",
+    "something not many people know",
+    "being fair to everyone",
+    "something hard to fix"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 218,
+   "word": "truth",
+   "options": [
+    "plants grown for food",
+    "land with water all around it",
+    "what is really true",
+    "a huge, slow-moving river of ice"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 219,
+   "word": "lie",
+   "options": [
+    "nice and easy to talk to",
+    "sand next to the sea",
+    "something that seems impossible",
+    "something said that is not true"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 220,
+   "word": "rule",
+   "options": [
+    "makes a crunch sound when you eat it",
+    "something you must follow",
+    "feeling mad",
+    "what you see in a mirror or water"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 221,
+   "word": "pattern",
+   "options": [
+    "a very high hill",
+    "to look hard for something",
+    "when there is no fighting",
+    "something that repeats"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 222,
+   "word": "shape",
+   "options": [
+    "how long something is",
+    "words people use to talk",
+    "the place you are going to",
+    "the form of something"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 223,
+   "word": "triangle",
+   "options": [
+    "something done to fool you",
+    "a shape with 3 sides",
+    "to run very fast for a short time",
+    "extremely big"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 224,
+   "word": "square",
+   "options": [
+    "flat and even",
+    "a shape with 4 equal sides",
+    "a drawing that shows places",
+    "paying attention to one thing"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 225,
+   "word": "rectangle",
+   "options": [
+    "the corner where two lines meet",
+    "a little hot",
+    "a big, beautiful home of a king or queen",
+    "a shape with 4 sides, opposite sides equal"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 226,
+   "word": "circle",
+   "options": [
+    "a round shape with no corners",
+    "to pick crops when they are ready",
+    "weighs a lot",
+    "a very high hill"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 227,
+   "word": "cube",
+   "options": [
+    "how heavy something is",
+    "a small, happy laugh",
+    "a box shape with 6 square sides",
+    "where actors or singers perform"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 228,
+   "word": "sphere",
+   "options": [
+    "a ball shape",
+    "a tricky question",
+    "an old story about gods or heroes",
+    "something that helps you find the answer"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 229,
+   "word": "angle",
+   "options": [
+    "the corner where two lines meet",
+    "being nice and caring",
+    "a short piece of writing with rhythm",
+    "wanting to eat"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 230,
+   "word": "measure",
+   "options": [
+    "to find how big or long something is",
+    "to find the answer to a problem",
+    "something said that is not true",
+    "tastes very good"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 231,
+   "word": "length",
+   "options": [
+    "clothes you wear to look like someone else",
+    "a bright flash in a storm cloud",
+    "how long something is",
+    "the land ruled by a king or queen"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 232,
+   "word": "width",
+   "options": [
+    "the form of something",
+    "to look around and learn about a place",
+    "to repair something broken",
+    "how wide something is"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 233,
+   "word": "height",
+   "options": [
+    "land with water all around it",
+    "how tall something is",
+    "not smooth",
+    "a bad person in a story"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 234,
+   "word": "weight",
+   "options": [
+    "being friends",
+    "how heavy something is",
+    "the people who live in one place",
+    "a stick used for magic"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 235,
+   "word": "amount",
+   "options": [
+    "earth where plants grow",
+    "something you use to do work",
+    "how much there is",
+    "a song or melody"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 236,
+   "word": "total",
+   "options": [
+    "a small help to find the answer",
+    "a tool that shows north, south, east, west",
+    "all of it together",
+    "colors in the sky after rain"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 237,
+   "word": "difference",
+   "options": [
+    "a bad person in a story",
+    "how much one thing is not like another",
+    "to give some of yours to others",
+    "to have fun for a special day"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 238,
+   "word": "double",
+   "options": [
+    "to go up something",
+    "something you must follow",
+    "where and when a story happens",
+    "two times as much"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 239,
+   "word": "half",
+   "options": [
+    "one of two equal parts",
+    "to move to another place for the seasons",
+    "using good manners",
+    "not the same"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 240,
+   "word": "quarter",
+   "options": [
+    "telling the truth",
+    "not the same",
+    "one of four equal parts",
+    "a mountain that can spit out hot lava"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 241,
+   "word": "voyage",
+   "options": [
+    "a long trip by sea or space",
+    "ready to help others",
+    "to make something by putting parts together",
+    "to make your body long and straight"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 242,
+   "word": "travel",
+   "options": [
+    "to go from one place to another",
+    "huge, super big",
+    "how tall something is",
+    "wanting to drink"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 243,
+   "word": "arrive",
+   "options": [
+    "the outside of a book",
+    "sounds that go well together",
+    "to look around and learn about a place",
+    "to get to a place"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 244,
+   "word": "depart",
+   "options": [
+    "a very hard, shiny jewel",
+    "full of light / very smart",
+    "to walk on your toes quietly",
+    "to leave a place"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 245,
+   "word": "destination",
+   "options": [
+    "the place you are going to",
+    "what is really true",
+    "something that seems impossible",
+    "a path under the ground or water"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 246,
+   "word": "guide",
+   "options": [
+    "to give some of yours to others",
+    "a person who shows you the way",
+    "something hard to fix",
+    "to have trouble saying words smoothly"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 247,
+   "word": "map",
+   "options": [
+    "a drawing that shows places",
+    "a colorful part of a flower",
+    "a red jewel",
+    "no sound at all"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 248,
+   "word": "compass",
+   "options": [
+    "very fast",
+    "something you ask",
+    "things you know and have learned",
+    "a tool that shows north, south, east, west"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 249,
+   "word": "bridge",
+   "options": [
+    "something built over water to cross it",
+    "a hole inside a rock or mountain",
+    "power that makes things work",
+    "doing what you tried to do"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 250,
+   "word": "tunnel",
+   "options": [
+    "a very dry place with little rain",
+    "telling the truth",
+    "a path under the ground or water",
+    "a place with many books"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 251,
+   "word": "tower",
+   "options": [
+    "a tall building",
+    "not ever",
+    "to try to find",
+    "sounds made to sing or play"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 252,
+   "word": "castle",
+   "options": [
+    "what you remember",
+    "with no more room inside",
+    "a big, old home of a king or queen",
+    "very, very small"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 253,
+   "word": "palace",
+   "options": [
+    "a big, beautiful home of a king or queen",
+    "extremely cold",
+    "tastes very good",
+    "a short story that teaches a lesson"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 254,
+   "word": "temple",
+   "options": [
+    "doing what you are supposed to do",
+    "most of the time",
+    "a place where people pray",
+    "to move quickly back and forth"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 255,
+   "word": "museum",
+   "options": [
+    "a place where old and special things are kept",
+    "very happy and eager",
+    "just made or picked, not old",
+    "very, very bad"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 256,
+   "word": "library",
+   "options": [
+    "a place with many books",
+    "a shape with 4 equal sides",
+    "to not remember",
+    "to make something new"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 257,
+   "word": "market",
+   "options": [
+    "a place where people buy and sell things",
+    "to look quickly",
+    "things you know and have learned",
+    "an exciting trip or experience"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 258,
+   "word": "bakery",
+   "options": [
+    "what you say to a question",
+    "really, really good",
+    "how food tastes",
+    "a place where bread is made"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 259,
+   "word": "farm",
+   "options": [
+    "hard to understand, secret",
+    "a place where food is grown",
+    "to put yourself where no one can see you",
+    "to talk quietly and not clearly"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 260,
+   "word": "giggle",
+   "options": [
+    "the place where an animal lives",
+    "a huge, slow-moving river of ice",
+    "a small, happy laugh",
+    "to think and ask why"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 261,
+   "word": "whisper",
+   "options": [
+    "a bright flash in a storm cloud",
+    "the words of a song",
+    "something that helps you find the answer",
+    "to talk very quietly"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 262,
+   "word": "shout",
+   "options": [
+    "to talk very loudly",
+    "two times as much",
+    "a part of a book",
+    "a small, weak light"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 263,
+   "word": "mumble",
+   "options": [
+    "tastes like a lemon",
+    "to jump up after hitting the ground",
+    "to talk quietly and not clearly",
+    "the loud sound after lightning"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 264,
+   "word": "stutter",
+   "options": [
+    "a box shape with 6 square sides",
+    "to have trouble saying words smoothly",
+    "using power from the sun",
+    "to turn around gracefully"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 265,
+   "word": "listen",
+   "options": [
+    "to hear carefully",
+    "a little hot",
+    "a person who lives near you",
+    "a small, happy laugh"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 266,
+   "word": "observe",
+   "options": [
+    "smart and quick to understand",
+    "to have fun for a special day",
+    "to watch carefully",
+    "not hard, smooth to touch"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 267,
+   "word": "notice",
+   "options": [
+    "a loud or unpleasant sound",
+    "to see something",
+    "to run very fast for a short time",
+    "a small, happy laugh"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 268,
+   "word": "peek",
+   "options": [
+    "to look quickly",
+    "poems together",
+    "a path with many turns to find your way out",
+    "how long something is"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 269,
+   "word": "stare",
+   "options": [
+    "the loud sound after lightning",
+    "a place where people buy and sell things",
+    "to look for a long time",
+    "flat and even"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 270,
+   "word": "glance",
+   "options": [
+    "to open your mouth wide when tired",
+    "a place where food is grown",
+    "to look quickly",
+    "to look around and learn about a place"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 271,
+   "word": "search",
+   "options": [
+    "to look hard for something",
+    "a shape with 4 sides, opposite sides equal",
+    "to look for a long time",
+    "not always, but now and then"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 272,
+   "word": "find",
+   "options": [
+    "the part that holds a plant up",
+    "to get something you were looking for",
+    "believing someone will do what they say",
+    "a show where people play music"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 273,
+   "word": "hide",
+   "options": [
+    "to open your mouth wide when tired",
+    "a small thing to eat",
+    "to turn around gracefully",
+    "to put yourself where no one can see you"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 274,
+   "word": "seek",
+   "options": [
+    "something you play to make music",
+    "to try to find",
+    "a person in a story",
+    "a red jewel"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 275,
+   "word": "chase",
+   "options": [
+    "to run after someone",
+    "a long trip from one place to another",
+    "to give off soft light",
+    "how food tastes"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 276,
+   "word": "escape",
+   "options": [
+    "something that helps you find the answer",
+    "after the time you should be there",
+    "to get away",
+    "words said to do magic"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 277,
+   "word": "rescue",
+   "options": [
+    "the part that makes a car or machine move",
+    "something you wear over your face",
+    "to save someone",
+    "what happens in a story"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 278,
+   "word": "guard",
+   "options": [
+    "being fair to everyone",
+    "to close one eye quickly",
+    "to watch and keep safe",
+    "a shiny yellow metal"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 279,
+   "word": "future",
+   "options": [
+    "something done wrong",
+    "the time that has not come yet",
+    "the part that makes a car or machine move",
+    "not the same"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 280,
+   "word": "past",
+   "options": [
+    "a hole inside a rock or mountain",
+    "colors in the sky after rain",
+    "a person who writes books",
+    "the time before now"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 281,
+   "word": "present",
+   "options": [
+    "to look quickly",
+    "a small, happy laugh",
+    "to save someone",
+    "right now"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 282,
+   "word": "history",
+   "options": [
+    "to walk on your toes quietly",
+    "sand next to the sea",
+    "what happened long ago",
+    "sounds that go well together"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 283,
+   "word": "legend",
+   "options": [
+    "an old story that may not be true",
+    "to move smoothly down",
+    "having a lot to do",
+    "not the same"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 284,
+   "word": "myth",
+   "options": [
+    "an old story about gods or heroes",
+    "being friends",
+    "how a group of people live, eat, and celebrate",
+    "extremely big"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 285,
+   "word": "hero",
+   "options": [
+    "a person who does something brave",
+    "something not many people know",
+    "to try to find",
+    "to find how big or long something is"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 286,
+   "word": "villain",
+   "options": [
+    "a bad person in a story",
+    "to have fun for a special day",
+    "hard to understand, secret",
+    "a red jewel"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 287,
+   "word": "character",
+   "options": [
+    "a beat that repeats",
+    "a place where bread is made",
+    "a person in a story",
+    "to look hard for something"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 288,
+   "word": "plot",
+   "options": [
+    "what a bird uses to fly",
+    "where actors or singers perform",
+    "a hole inside a rock or mountain",
+    "what happens in a story"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 289,
+   "word": "setting",
+   "options": [
+    "an old story about gods or heroes",
+    "to think and ask why",
+    "people walking together in a line to celebrate",
+    "where and when a story happens"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 290,
+   "word": "chapter",
+   "options": [
+    "to move to another place for the seasons",
+    "a part of a book",
+    "how long something is",
+    "new, from our time"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 291,
+   "word": "title",
+   "options": [
+    "how long something is",
+    "to notice with your nose",
+    "what you say to a question",
+    "the name of a book or story"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 292,
+   "word": "cover",
+   "options": [
+    "a place where bread is made",
+    "the outside of a book",
+    "clothes you wear to look like someone else",
+    "things you know and have learned"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 293,
+   "word": "page",
+   "options": [
+    "using good manners",
+    "clothes you wear to look like someone else",
+    "one sheet in a book",
+    "something told about real or made-up people"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 294,
+   "word": "illustration",
+   "options": [
+    "smart and quick to understand",
+    "a picture in a book",
+    "a huge, slow-moving river of ice",
+    "a hole inside a rock or mountain"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 295,
+   "word": "poetry",
+   "options": [
+    "every time",
+    "a long trip by sea or space",
+    "to find how big or long something is",
+    "poems together"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 296,
+   "word": "fable",
+   "options": [
+    "something hard to fix",
+    "a hard point on an animal's head",
+    "a short story that teaches a lesson",
+    "a soft, gentle wind"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 297,
+   "word": "moral",
+   "options": [
+    "power that makes things work",
+    "an animal that hunts other animals",
+    "a very big sea",
+    "the lesson of a story"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 298,
+   "word": "glimmer",
+   "options": [
+    "to go up something",
+    "to move quickly back and forth",
+    "how much there is",
+    "a small, weak light"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 299,
+   "word": "sparkle",
+   "options": [
+    "feeling mad",
+    "to shine with little flashes",
+    "to run after someone",
+    "sounds that go well together"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 300,
+   "word": "glow",
+   "options": [
+    "not afraid, ready to try something hard",
+    "to use something again",
+    "to give off soft light",
+    "something you must follow"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 301,
+   "word": "shine",
+   "options": [
+    "something very valuable, like gold",
+    "completely different",
+    "a stick used for magic",
+    "to give off bright light"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 302,
+   "word": "shadow",
+   "options": [
+    "the time that has not come yet",
+    "to look quickly",
+    "does not weigh much",
+    "a dark shape made when light is blocked"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 303,
+   "word": "reflection",
+   "options": [
+    "a show where people play music",
+    "what you see in a mirror or water",
+    "extremely big",
+    "to make something not straight"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 304,
+   "word": "echo",
+   "options": [
+    "to let food go down your throat",
+    "sound that comes back to you",
+    "does not weigh much",
+    "a small town"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 305,
+   "word": "silence",
+   "options": [
+    "a place where plants and flowers grow",
+    "how food tastes",
+    "a small, weak light",
+    "no sound at all"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 306,
+   "word": "noise",
+   "options": [
+    "a loud or unpleasant sound",
+    "to move your head up and down for yes",
+    "known by many people",
+    "the special chair of a king or queen"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 307,
+   "word": "harmony",
+   "options": [
+    "a field with grass and flowers",
+    "to turn around gracefully",
+    "almost the same",
+    "sounds that go well together"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 308,
+   "word": "beat",
+   "options": [
+    "good at making new ideas",
+    "dirty air, water, or land",
+    "a group that plays or works together",
+    "the steady sound in music"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 309,
+   "word": "tune",
+   "options": [
+    "a song or melody",
+    "tastes like a lemon",
+    "the part that makes a car or machine move",
+    "to have trouble saying words smoothly"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 310,
+   "word": "lyrics",
+   "options": [
+    "the words of a song",
+    "good at making new ideas",
+    "to open your mouth wide when tired",
+    "a sharp nail on an animal"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 311,
+   "word": "stage",
+   "options": [
+    "one thing you put in food",
+    "not fast",
+    "where actors or singers perform",
+    "something that helps you find the answer"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 312,
+   "word": "curtain",
+   "options": [
+    "listening and looking carefully",
+    "cloth that covers a stage",
+    "a shape with 4 equal sides",
+    "a round shape with no corners"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 313,
+   "word": "applause",
+   "options": [
+    "to have fun for a special day",
+    "a place where old and special things are kept",
+    "clapping for a good show",
+    "having a lot to do"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 314,
+   "word": "tumble",
+   "options": [
+    "to fall and roll",
+    "a song or melody",
+    "something that repeats",
+    "an exciting trip or experience"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 315,
+   "word": "leap",
+   "options": [
+    "to jump far or high",
+    "tastes hot",
+    "an exciting trip or experience",
+    "to think and ask why"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 316,
+   "word": "sprint",
+   "options": [
+    "the corner where two lines meet",
+    "using electricity to work",
+    "to run very fast for a short time",
+    "a song or melody"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 317,
+   "word": "march",
+   "options": [
+    "to walk like a soldier",
+    "how something feels in your mouth or hand",
+    "very, very small",
+    "the corner where two lines meet"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 318,
+   "word": "tiptoe",
+   "options": [
+    "not hard, smooth to touch",
+    "to pick crops when they are ready",
+    "to move quickly back and forth",
+    "to walk on your toes quietly"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 319,
+   "word": "crawl",
+   "options": [
+    "a red jewel",
+    "to talk quietly and not clearly",
+    "to move on hands and knees",
+    "how a group of people live, eat, and celebrate"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 320,
+   "word": "climb",
+   "options": [
+    "cloth that covers a stage",
+    "a red jewel",
+    "a shape with 4 sides, opposite sides equal",
+    "to go up something"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 321,
+   "word": "slide",
+   "options": [
+    "something people do again and again every year",
+    "to move smoothly down",
+    "the place where an animal lives",
+    "to close one eye quickly"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 322,
+   "word": "swing",
+   "options": [
+    "to move back and forth",
+    "a bright flash in a storm cloud",
+    "the words of a song",
+    "a red jewel"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 323,
+   "word": "bounce",
+   "options": [
+    "to jump up after hitting the ground",
+    "a picture in a book",
+    "extremely cold",
+    "a ball shape"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 324,
+   "word": "spin",
+   "options": [
+    "what you remember",
+    "a game that makes you think",
+    "to turn around fast",
+    "tastes very good"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 325,
+   "word": "twirl",
+   "options": [
+    "nice and easy to talk to",
+    "to turn around gracefully",
+    "completely different",
+    "a place with many books"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 326,
+   "word": "stretch",
+   "options": [
+    "a hole animals dig to live in",
+    "a group of animals that live together",
+    "to make your body long and straight",
+    "not ever"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 327,
+   "word": "bend",
+   "options": [
+    "with nothing to do / not costing money",
+    "a big, old home of a king or queen",
+    "losing a game",
+    "to make something not straight"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 328,
+   "word": "twist",
+   "options": [
+    "a ball shape",
+    "how wide something is",
+    "just right, with no mistakes",
+    "to turn something around"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 329,
+   "word": "shake",
+   "options": [
+    "most of the time",
+    "a magic drink",
+    "to try food with your tongue",
+    "to move quickly back and forth"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 330,
+   "word": "wave",
+   "options": [
+    "huge, super big",
+    "to move your hand side to side",
+    "most of the time",
+    "the world around us: air, water, land"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 331,
+   "word": "nod",
+   "options": [
+    "losing a game",
+    "to move your head up and down for yes",
+    "a high, steep rock",
+    "a very big sea"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 332,
+   "word": "wink",
+   "options": [
+    "a picture in a book",
+    "to close one eye quickly",
+    "a land with its own people and rules",
+    "an old story about gods or heroes"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 333,
+   "word": "yawn",
+   "options": [
+    "to open your mouth wide when tired",
+    "weighs a lot",
+    "to fall and roll",
+    "to make something new for the first time"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 334,
+   "word": "puzzle",
+   "options": [
+    "being friends",
+    "to look quickly",
+    "believing someone will do what they say",
+    "a game that makes you think"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 335,
+   "word": "riddle",
+   "options": [
+    "a tricky question",
+    "to move quickly back and forth",
+    "a little hot",
+    "how long something is"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 336,
+   "word": "maze",
+   "options": [
+    "an old story that may not be true",
+    "to turn something around",
+    "a path with many turns to find your way out",
+    "low land between mountains"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 337,
+   "word": "clue",
+   "options": [
+    "makes little noise",
+    "something that helps you find the answer",
+    "water that flows across land",
+    "a place where bread is made"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 338,
+   "word": "hint",
+   "options": [
+    "a small help to find the answer",
+    "makes a crunch sound when you eat it",
+    "most of the time",
+    "new, from our time"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 339,
+   "word": "trick",
+   "options": [
+    "the winner of a game or contest",
+    "an exciting trip or experience",
+    "something done to fool you",
+    "what a bird uses to fly"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 340,
+   "word": "magic",
+   "options": [
+    "to repair something broken",
+    "something that seems impossible",
+    "to try to find",
+    "to jump far or high"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 341,
+   "word": "spell",
+   "options": [
+    "very, very bad",
+    "words said to do magic",
+    "to go up something",
+    "a small help to find the answer"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 342,
+   "word": "wand",
+   "options": [
+    "using good manners",
+    "a stick used for magic",
+    "very fast",
+    "a long trip from one place to another"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 343,
+   "word": "potion",
+   "options": [
+    "to walk like a soldier",
+    "doing what you are supposed to do",
+    "one sheet in a book",
+    "a magic drink"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 344,
+   "word": "treasure",
+   "options": [
+    "something very valuable, like gold",
+    "a tool that shows north, south, east, west",
+    "power that makes things work",
+    "to move quickly back and forth"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 345,
+   "word": "gold",
+   "options": [
+    "how tall something is",
+    "all living things and the world around us",
+    "a little hot",
+    "a shiny yellow metal"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 346,
+   "word": "silver",
+   "options": [
+    "a tool that shows north, south, east, west",
+    "a shiny gray-white metal",
+    "two times as much",
+    "telling the truth"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 347,
+   "word": "diamond",
+   "options": [
+    "tastes like salt",
+    "tastes very good",
+    "a very hard, shiny jewel",
+    "to let food go down your throat"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 348,
+   "word": "pearl",
+   "options": [
+    "to not remember",
+    "to have trouble saying words smoothly",
+    "a shiny ball from inside a shell",
+    "what happens in a story"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 349,
+   "word": "ruby",
+   "options": [
+    "how long something is",
+    "a group of birds",
+    "a red jewel",
+    "a very big sea"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 350,
+   "word": "emerald",
+   "options": [
+    "full of light / very smart",
+    "old plants turned into food for soil",
+    "a green jewel",
+    "the tune of a song"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 351,
+   "word": "crown",
+   "options": [
+    "a short story that teaches a lesson",
+    "tastes very good",
+    "what a king or queen wears on their head",
+    "old bread, not fresh"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 352,
+   "word": "throne",
+   "options": [
+    "a place with many books",
+    "the special chair of a king or queen",
+    "to have trouble saying words smoothly",
+    "one of four equal parts"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 353,
+   "word": "kingdom",
+   "options": [
+    "to make something by putting parts together",
+    "knowing what is right and smart",
+    "the land ruled by a king or queen",
+    "a place where food is grown"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 354,
+   "word": "eager",
+   "options": [
+    "not fast",
+    "a person who lives near you",
+    "to shine with little flashes",
+    "very excited to do something"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 355,
+   "word": "lazy",
+   "options": [
+    "a tricky question",
+    "not wanting to work",
+    "a loud or unpleasant sound",
+    "a shiny yellow metal"
+   ],
+   "answer": 1,
+   "example": ""
+  },
+  {
+   "day": 356,
+   "word": "busy",
+   "options": [
+    "having a lot to do",
+    "to pick one thing",
+    "a place where plants and flowers grow",
+    "something that repeats"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 357,
+   "word": "free",
+   "options": [
+    "believing you can do it",
+    "something people do again and again every year",
+    "with nothing to do / not costing money",
+    "very fast"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 358,
+   "word": "ready",
+   "options": [
+    "earth where plants grow",
+    "an old story about gods or heroes",
+    "words people use to talk",
+    "prepared to start"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 359,
+   "word": "late",
+   "options": [
+    "what happened long ago",
+    "the part of a plant under the ground",
+    "to go up something",
+    "after the time you should be there"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 360,
+   "word": "early",
+   "options": [
+    "knowing what is right and smart",
+    "wanting to eat",
+    "before the time you should be there",
+    "clothes you wear to look like someone else"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 361,
+   "word": "soon",
+   "options": [
+    "a song or melody",
+    "to talk very quietly",
+    "paying attention to one thing",
+    "in a short time"
+   ],
+   "answer": 3,
+   "example": ""
+  },
+  {
+   "day": 362,
+   "word": "never",
+   "options": [
+    "a hole inside a rock or mountain",
+    "how food tastes",
+    "not ever",
+    "to get to a place"
+   ],
+   "answer": 2,
+   "example": ""
+  },
+  {
+   "day": 363,
+   "word": "always",
+   "options": [
+    "every time",
+    "to fall and roll",
+    "tastes like salt",
+    "old bread, not fresh"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 364,
+   "word": "sometimes",
+   "options": [
+    "not always, but now and then",
+    "sound that comes back to you",
+    "food you eat at breakfast, lunch, or dinner",
+    "a small, happy laugh"
+   ],
+   "answer": 0,
+   "example": ""
+  },
+  {
+   "day": 365,
+   "word": "usually",
+   "options": [
+    "to leave a place",
+    "most of the time",
+    "to have fun for a special day",
+    "feeling mad"
+   ],
+   "answer": 1,
+   "example": ""
+  }
+ ]
+}
