@@ -51,3 +51,30 @@ Die UI-Korrektur begann erst nach dem tatsächlichen Ende des lokalen Gesamtlauf
 - **Geräteabnahme EV-1.3: NOT_TESTED.** Mit Peter im selben Playground-Projekt erfolgreich verbinden und Playgrounds vollständig schließen und neu starten: Das Gerät muss ohne erneute Codeeingabe verbunden sein. Falls beim Start die Webbindung fehlt, soll der gemerkte Zugang sie wiederherstellen. Startdiagnose und Zustand unmittelbar protokollieren. Ein separates neues Projekt ist kein gleichwertiger Neustartfall.
 
 Nächster Owner Atlas: unabhängige Prüfung des exakten Produktstands, tatsächliche CI-Ergebnisse und fehlenden Geräte-/Bereitstellungsnachweis zusammenführen. Kein Merge ohne Peters Ja zu genau PR #216; keine App-Veröffentlichung durch die Agenten.
+
+
+## Nachtrag 18.11.2026 · Test 14 auf dem iPad
+
+### Getesteter Stand
+
+- Die Software aus [PR #216](https://github.com/pahlborn/bis-school-app_src/pull/216) ist mit Peters ausdrücklicher Freigabe auf main: `86ce3930b8e6972ed60db3d0877d3e511efd3764`. Der bisherige Bericht oben bleibt als historischer Stand vor der Geräteabnahme erhalten.
+- [Test-14-Paket](https://raw.githubusercontent.com/pahlborn/bis-school-app_src/5d2863bec89fe548ef0e9003f9dd096f0dffae9a/handoffs/big-quest/device-tests/TEST-14/Big-Quest-iPad-Test-14.zip), [Übergabe und Anleitung](https://github.com/pahlborn/bis-school-app_src/blob/5d2863bec89fe548ef0e9003f9dd096f0dffae9a/handoffs/big-quest/device-tests/TEST-14/README.md), Zweig `handoff/2026.0005-test14-device`, Übergabecommit `5d2863bec89fe548ef0e9003f9dd096f0dffae9a`. Das Paket stammt aus sauberem main `86ce393…`; die drei Swift-Dateien stimmen bytegenau überein. ZIP-SHA-256: `6e134e937b9dc1a2aa144c84cf367006fcffbe6e38cff860908a8d870d505c25`.
+- Vor dem Test wurde ausdrücklich die passende Webfassung aus main nach PR #216 unter `https://big-quest-test.github.io/probe-evaluation-form/` verlangt. Peter antwortete darauf „Ich bestätige“. Dies ist die Rückmeldung im Projektchat; Atlas hat weder veröffentlicht noch den tatsächlich ausgelieferten Web-Commit unabhängig festgestellt.
+
+### Unmittelbare Rückmeldung
+
+Atlas gab diesen Ablauf vor: **Test 14 starten, einmal verbinden, Playgrounds vollständig schließen und dasselbe Projekt Test 14 wieder öffnen.** Gefragt wurde danach ausschließlich „weiterhin verbunden“ oder „nicht verbunden“.
+
+| Abnahmekriterium | Rückmeldung von Peter am 18.11.2026 | Ergebnis |
+|---|---|---|
+| EV-1.3: 📱 Neustart desselben Playground-Projekts ohne Neuverbindung | **„Weiterhin verbunden“** | **PASS aufgrund von Peters unmittelbarer Geräterückmeldung zum angeleiteten Ablauf.** |
+
+Damit ist das bisher offene Geräte-Abnahmekriterium **EV-1.3: Neustart ohne Neuverbindung** erfüllt. Der frühere Status NOT_TESTED oben wird für diesen Test durch dieses Ergebnis abgelöst. Ein Zugriff auf die interne Schlüsselbund-Ablage oder ein gezieltes Entfernen der Webbindung wurde dabei nicht rückgemeldet; aus dem sichtbaren Erfolg wird kein zusätzlich beobachteter interner Wiederherstellungsschritt abgeleitet. Neue iOS-Diagnosecodes wurden nicht mitgeteilt und werden nicht rekonstruiert.
+
+Der Test bestätigt den Neustart im selben Projekt. Er bestätigt keinen Wechsel zwischen getrennten Playground-Projekten und keine gesamte End-to-End-Abnahme von Ziel 1 (EV-7.3/EV-7.4). **EV-1.4 bleibt nicht ausgelöst**: Test 12 belegte unterschiedliche Zugriffsgruppen zweier Projekte, keinen Schlüsselbund-Reset im selben Projekt.
+
+### Bereits vorliegende Softwareprüfungen
+
+Für den finalen PR-Kopf `0a3fd770df698f72b3dbad728ff59b72660aeeb0`, dessen Produktdateien identisch zum genannten main-Stand sind: [Webprüfung 941/941](https://github.com/pahlborn/bis-school-app_src/actions/runs/44276051763), [iPad-Build und ausgeführte synthetische Swift-Regression](https://github.com/pahlborn/bis-school-app_src/actions/runs/44276051782), [Paketexport](https://github.com/pahlborn/bis-school-app_src/actions/runs/44276051784). Keine neue Softwareprüfung oder Veröffentlichung für diesen reinen Berichtsnachtrag. Der historische lokale Gesamt-FAIL weiter oben bleibt unverändert dokumentiert.
+
+EV-3.3 bleibt auf Peters Wunsch bis zum aktualisierten Auftrag mit den neuen Abschnitten 0 und 7 eingefroren. Ein nachfolgender Versuch über Agentarium mit Claude-Agenten wird erst nach Lesen dieses Auftrags begonnen; die vorhandene native Arbeit ist keine Claude-Ausführung.
