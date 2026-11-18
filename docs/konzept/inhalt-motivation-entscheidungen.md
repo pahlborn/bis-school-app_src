@@ -83,6 +83,7 @@ Ausgangslage, am Stand von main gemessen: In 107 von 161 Multiple-Choice-Aufgabe
 - Der **Witz zur Begrüßung** auf dem Startbildschirm bleibt.
 - **Neu: „📖 Word of the Day“** als Leckerli, eins pro Tag, aus `docs/inhalte/words-trivia-365.json` (365 KI-erstellte, frei verwendbare Einträge). **Nicht nach EP01:** Die Trivia soll leicht sein und neue Wörter zeigen; **keine Sterne, keine Belohnung**, Antworten bleiben wie geliefert. Ergänzt werden nur **echte Beispielsätze** (das Original wiederholt nur die Definition). Stichprobe von 25 Definitionen geprüft: richtig.
 - **„💡 Explain it“ gehört nicht in die Kinder-App**, sondern in den **Elternbereich**: täglich eine „Frage des Tages für ein Gespräch mit Ihrem Kind“ aus `docs/inhalte/explain-it-daily-365.json`. Keine Antworten nötig; die 62 doppelten Fragen bleiben bewusst (Wiederholung schadet nicht). Für das Kind ändert sich nichts.
+- **Bewertung durch das Kind (👍/👎)** bei Witzen, Pisolala und Word of the Day: zwei kleine Daumen unter dem Inhalt, freiwillig, ohne Nachfrage oder Fenster, ohne Sterne oder Belohnung. Wirkung: Ein Witz mit 👎 kommt nie wieder; im Elternbereich zeigt eine kurze Übersicht „Was deinem Kind gefällt“ (auch als Hinweis für künftige Inhalte). **Keine Bewertung** bei Aufgaben/Quests (lädt zum Ausweichen ein) und bei Explain it (liegt im Elternbereich).
 - Offener Beobachtungspunkt für die Abnahme: Kinder, die sich an Neuland oder Herausforderung wagen und dabei keinen Stern schaffen, bekommen kein Leckerli. An echten Runden prüfen.
 
 ## 7. EP05 · Der Baum zeigt Wissen (Entscheidung D)
