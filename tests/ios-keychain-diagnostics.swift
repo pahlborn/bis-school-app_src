@@ -52,7 +52,72 @@ import Security
         }
     }
 
+    private static func deviceAccessChecks() {
+        let scope = "probe-evaluation-form", old = "synthetic-device-access", fresh = "synthetic-new-device-access"
+        final class DeviceMock {
+            var value: String?
+            var writeStatus = errSecSuccess
+            var readStatus = errSecSuccess
+            var deletes = 0
+            var calls = 0
+            var store: ClaudeKey.Store {
+                let check: ([String: Any]) -> Void = { query in
+                    precondition(query[kSecAttrService as String] as? String == "de.bigquest.ipad.device-access")
+                    precondition(query[kSecAttrAccount as String] as? String == "probe-evaluation-form")
+                    self.calls += 1
+                }
+                return ClaudeKey.Store(update: { query, values in
+                    check(query)
+                    if self.value == nil { return errSecItemNotFound }
+                    if self.writeStatus == errSecSuccess { self.value = String(data: values[kSecValueData as String] as! Data, encoding: .utf8) }
+                    return self.writeStatus
+                }, add: { query in
+                    check(query)
+                    precondition(query[kSecAttrAccessible as String] as? String == kSecAttrAccessibleWhenUnlockedThisDeviceOnly as String)
+                    if self.writeStatus == errSecSuccess { self.value = String(data: query[kSecValueData as String] as! Data, encoding: .utf8) }
+                    return (self.writeStatus, nil)
+                }, copy: { query in
+                    check(query)
+                    if self.readStatus != errSecSuccess { return (self.readStatus, nil) }
+                    guard let value = self.value else { return (errSecItemNotFound, nil) }
+                    return (errSecSuccess, [kSecValueData as String: Data(value.utf8)])
+                }, delete: { query in
+                    check(query); self.deletes += 1; self.value = nil; return errSecSuccess
+                })
+            }
+        }
+        let store = DeviceMock()
+        precondition(DeviceAccessKey.save(old, scope: scope, store: store.store))
+        precondition(DeviceAccessKey.read(scope: scope, store: store.store).1 == old)
+        precondition(DeviceAccessKey.save(fresh, scope: scope, store: store.store))
+        precondition(DeviceAccessKey.forget(old, scope: scope, store: store.store))
+        precondition(store.deletes == 0 && store.value == fresh, "Stale forget must preserve the fresh device access")
+        precondition(DeviceAccessKey.forget(fresh, scope: scope, store: store.store))
+        precondition(store.deletes == 1 && store.value == nil)
+        let failed = DeviceMock()
+        failed.writeStatus = errSecMissingEntitlement
+        precondition(!DeviceAccessKey.save(old, scope: scope, store: failed.store))
+        failed.value = old
+        precondition(!DeviceAccessKey.save(old, scope: scope, store: failed.store), "An old matching value cannot hide a failed write")
+        failed.readStatus = errSecInteractionNotAllowed
+        precondition(!DeviceAccessKey.forget(old, scope: scope, store: failed.store))
+        let provider = DeviceMock()
+        precondition(!DeviceAccessKey.save("sk-ant-synthetic-only", scope: scope, store: provider.store))
+        precondition(provider.calls == 0)
+
+        let app = URL(string: "https://big-quest-test.github.io/probe-evaluation-form/")!
+        func allowed(_ frame: URL? = nil, main: Bool = true, proto: String = "https", host: String = "big-quest-test.github.io", port: Int = 0) -> Bool {
+            BigQuestBridgePolicy.scope(active: app, frame: frame ?? app, mainFrame: main, originProtocol: proto, originHost: host, originPort: port) == scope
+        }
+        precondition(allowed() && allowed(port: 443))
+        precondition(!allowed(main: false) && !allowed(proto: "http") && !allowed(host: "example.invalid") && !allowed(port: 8443))
+        for address in ["https://example.invalid/probe-evaluation-form/", "https://big-quest-test.github.io/other/", "https://big-quest-test.github.io/probe-evaluation-local/", "https://big-quest-test.github.io:8443/probe-evaluation-form/"] {
+            precondition(!allowed(URL(string: address)))
+        }
+    }
+
     static func main() throws {
+        deviceAccessChecks()
         let updated = Mock()
         let success = try ClaudeKey.save(fakeKey, store: updated.store)
         precondition(updated.calls == ["update", "read"])
@@ -133,6 +198,6 @@ import Security
             precondition(KeychainText.status(code, locale: Locale(identifier: "de-DE")).contains(de))
             precondition(KeychainText.status(code, locale: Locale(identifier: "en-US")).contains(enUS))
         }
-        print("EV-1.2: save/readback, status codes, access group, cleanup and DE/en-US diagnostics passed with synthetic storage")
+        print("EV-1.2 / EV-1.3: synthetic Keychain diagnostics, separate device storage, stale-forget protection and bridge policy passed")
     }
 }

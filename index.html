@@ -5371,6 +5371,42 @@ function loginDone(u, welcomed){
    "Log out". Children, partners and grants come with task "Einladungen"; syncing with the storage is a task of its own. */
 const kontoOffen=new Map(), kontoFehlerListe=[], kontoAlt=new Map();
 let kontoZug=null, kontoLinkFp=null, kontoBlatt=null;
+let kontoNativeGeraet=null;
+function kontoNativeBruecke(){
+  const handler=window.webkit?.messageHandlers?.bigQuestDeviceConnection;
+  if(!KONTO_UI || typeof anmNativeGeraet!=='function' || typeof handler?.postMessage!=='function') return null;
+  if(!kontoNativeGeraet) kontoNativeGeraet=anmNativeGeraet({
+    postMessage:m=>handler.postMessage(m),
+    verbunden:()=>!anmTokenNoetig(KONTO_SPEICHER, localStorage),
+    pruefen:code=>anmZugangPruefen({speicher:KONTO_SPEICHER, token:code, fetch:(a,o)=>fetch(a,o), geraet:kontoGeraet()}),
+    uebernehmen:code=>{ anmTokenSpeichern(localStorage, code); kontoZug=null; kontoStatus.fehler=null; }
+  });
+  return kontoNativeGeraet;
+}
+function kontoNativeSpeicherhinweis(){
+  const de=kontoVerbDe();
+  return de?'Die Geräteverbindung konnte nicht gemerkt werden. Bitte das Gerät bei Bedarf erneut verbinden.':'The device connection could not be remembered. Connect this device again if needed.';
+}
+function kontoNativeMerken(code){
+  const n=kontoNativeBruecke(); if(!n) return;
+  n.merken(code).then(r=>{
+    if(r!=='fehler') return;
+    const b=$('#loginBody'); if(!b) return;
+    const p=document.createElement('p'); p.className='small'; p.setAttribute('role','status'); p.textContent=kontoNativeSpeicherhinweis(); b.prepend(p);
+  });
+}
+function kontoNativeStart(){
+  const n=kontoNativeBruecke(); if(!n) return;
+  n.starten().then(r=>{
+    if(r==='verbunden'){
+      if(kontoStartWartet){ const start=kontoStartWartet; kontoStartWartet=null; kontoLinkOeffnen({start, zugang:null}); return; }
+      kontoNeuWeg(); renderLogin(undefined,{meldung:kontoVerbTxt().okAnmelden}); kontoAbgleich();
+    }
+    else if(['falsch','offline','limit','fehler'].includes(r)){
+      const V=kontoVerbTxt(); renderVerbinden(r==='fehler'?kontoNativeSpeicherhinweis():(V[r]||V.falsch));
+    }
+  });
+}
 function kontoListe(){ try{ return anmListe(JSON.parse(localStorage.getItem('bq2_kontoListe')||'[]')); }catch(e){ return []; } }
 /* the accounts of this device in the form of konten.json (called once at the start, for APP_ACCOUNTS) */
 function kontoKontenStart(){
@@ -5508,6 +5544,7 @@ async function kontoLinkAblauf(e){
     if(lauf!==kontoLinkLaeuft) return;
     kontoZug=null; kontoStatus.fehler=null;
     if(r!=='ok') return kontoLinkFehler(V[r]||V.falsch);
+    kontoNativeMerken(e.zugang);
     ok=V.ok;
   } else if(anmTokenNoetig(KONTO_SPEICHER, localStorage)){ if(e.start) kontoStartWartet=e.start; return kontoLinkFehler(V.fehlt); }
   if(!e.start){ kontoNeuWeg(); renderLogin(undefined, {meldung:ok}); kontoAbgleich(); return; }
@@ -6419,6 +6456,7 @@ function kontoBinden(body){
     kontoSchritt('#kTokenGo', async()=>{
       const r=await anmZugangUebernehmen({ablage:localStorage, speicher:KONTO_SPEICHER, token:e.zugang, fetch:(a,o)=>fetch(a,o), geraet:kontoGeraet()});
       if(r!=='ok'){ const m2=$('#aboutBody').querySelector('#kMsg'), k2=$('#aboutBody').querySelector('#kTokenGo'); if(m2) m2.textContent=r==='offline'?(de?'❌ Kein Netz – bitte später noch einmal versuchen.':'❌ No connection – please try again later.'):r==='limit'?(de?'❌ Gerade zu viele Anfragen – bitte in einer Stunde noch einmal versuchen.':'❌ Too many requests right now – please try again in an hour.'):(de?'❌ Der Zugangscode passt nicht oder ist abgelaufen.':'❌ The access code does not work or has expired.'); if(k2) k2.disabled=false; return; }
+      kontoNativeMerken(e.zugang);
       kontoZug=null; kontoStatus.fehler=null; kontoMeldungen.push({art:'info', text:de?'✅ Gerät verbunden.':'✅ Device connected.'});
       await kontoAbgleich(); kontoBlattZeigen(null);
     });
@@ -7726,6 +7764,7 @@ function boot(data){
   else if(parentRoute()) applyParentRoute();
   else if(accountsOn() && store.get('adultSession',null) && !isTestAccount() && adultResume()){ /* grown-up stays logged in */ }
   else show('home');   // with accounts and no login, show() leads to the login screen
+  if(KONTO_UI) kontoNativeStart();
   setTimeout(checkForUpdate,3000);
 }
 const hot=window.claude&&window.claude.hot;
