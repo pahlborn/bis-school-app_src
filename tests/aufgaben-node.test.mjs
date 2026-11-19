@@ -2,7 +2,7 @@
 // (fragen, lernlogik, beispiele) rechnen hier in Node: das unveraenderte App-Skript laeuft in einer Sandbox
 // (tests/app-sandbox.mjs), Karten und Antwortknoepfe werden wie im Browser angeklickt, nur ohne Darstellung.
 // Dazu, was seit #112 (Modul grundlage) und #115 (Modul runde) in jeder Runde stecken muss: 8 Aufgaben, keine
-// doppelt, in den 10 Quests aus Auftrag 1 immer eine Grundlage-Aufgabe, nie ein leichteres Beispiel fuer sie.
+// doppelt, in den 10 Quests aus Auftrag 1 immer eine Grundlage-Aufgabe, andere Beispiele auf derselben Grundlage-Stufe (EV-3.3).
 // Zufall mit Startwert: steht bei jedem Test als BQ_SEED=… in der Ausgabe; damit laesst sich ein Rot wiederholen.
 //   node --test tests/aufgaben-node.test.mjs
 // Im Browser bleibt je Fach ein kurzer Bedienweg (fragen.test.mjs, beispiele.test.mjs).
@@ -65,11 +65,17 @@ function pruefeFrage(q) {
     if (!satz) p.push('Satz nicht gefunden: ' + zitat);
     else {
       const woerter = satz[0].split(' ').map(ohneZeichen);
+      if(q.prompt.startsWith('Which sentence correctly shows')){
+        const canonical=satz[0];
+        if(q.options[q.answer]!==canonical)p.push('proper-name sentence: wrong canonical capitalization');
+        if(q.options.filter(o=>o===canonical).length!==1)p.push('proper-name sentence: duplicate/missing correct answer');
+      }else{
       const gross = (o) => woerter.some((w, i) => i > 0 && w.toLowerCase() === o && /^[A-ZÄÖÜ]/.test(w));
       q.options.forEach((o, i) => {
         if (i === q.answer && !gross(o)) p.push(`Eigenname: Loesung "${o}" steht im Satz nicht gross`);
         if (i !== q.answer && gross(o)) p.push(`Eigenname: "${o}" als falsch angeboten, steht im Satz aber gross`);
       });
+      }
     }
   }
   return p;
@@ -140,6 +146,9 @@ test('jede Quest: Runden mit richtigen Antworten ergeben 8 von 8 (Node)', (t) =>
 
 /* ---------- "Show me an example" (bisher beispiele.test.mjs, echte Klicks) ---------- */
 const antwort = (q) => q.kind === 'mc' ? text(String(q.options[q.answer])) : String(q.answer);
+const FIXED_ANSWER_EXCEPTIONS = { sentences: [2, 3], anleitung: [2, 4], library: [1, 4] };
+const foundationException = q => (FIXED_ANSWER_EXCEPTIONS[q.world] || []).includes(q.foundationFamily)
+  || (q.world === 'units' && q.foundationFamily === 3 && antwort(q) === '1 m');
 
 /** Je Karte `runden` Runden: Tipp, dann "Show me an example", falls angeboten; zaehlt, wo es eins gibt. */
 function beispieleDurchgehen(S, items, runden, { zaehlt, beschriftung, kennung, beispielText, loesung }) {
@@ -155,14 +164,20 @@ function beispieleDurchgehen(S, items, runden, { zaehlt, beschriftung, kennung, 
         const prompt = text(String(q.prompt));
         S.klick('#helpBtn');                                                   // Tipp
         const angeboten = S.sichtbar('#helpBtn') && beschriftung.test(S.$('#helpBtn').textContent);
+        if (q.foundationFamily !== undefined && level(q) === 1 && angeboten === foundationException(q)) fehl.push('example/exception matrix violated: ' + q.world + '/' + q.foundationFamily);
         if (zaehlt(q, prompt)) { n++; if (angeboten) mit++; else ohne.add(kennung(q, prompt)); }
         if (angeboten) {
           S.klick('#helpBtn');                                                 // leichteres Beispiel
           const fb = S.$('#feedback').textContent;
+          if (q.foundationFamily !== undefined && level(q) === 1) {
+            const ex = s.example;
+            if (!/An example|Ein Beispiel/.test(fb) || !ex || ex.foundationFamily !== q.foundationFamily || ex.prompt + (ex.visual || '') === q.prompt + (q.visual || '')) fehl.push('bad foundation example: ' + prompt);
+          } else {
           if (!beispielText.test(fb)) fehl.push('kein Beispiel-Text: ' + prompt);
           const ex = ((fb.match(loesung) || [])[1] || '').trim();
           if (ex.toLowerCase() === antwort(q).trim().toLowerCase()) fehl.push('gives away the answer: ' + prompt);
-          if (level(q) <= 1) fehl.push('example for a support-level task: ' + prompt);
+          if (level(q) <= 1) fehl.push('example for an unrelated support-level task: ' + prompt);
+          }
         }
         S.klick('#answerBtn'); S.klick('#nextBtn');
         if (S.sichtbar('#results')) break;

@@ -63,7 +63,7 @@ test('attempts: jede Antwort steht so da, wie die App sie heute speichert, in Ze
   v.answer({ attempt: 1, ok: true, level: 2, qid: 'q7', day: D2 });                                             // 12 [D2,2,1]
   const s = run(shuffledCopy(v.list, 5));
   assert.deepEqual(s.attempts, v.rows(), 'attempts = the stored rows, in the order of the events');
-  assert.deepEqual(s.ev, { round: [[D1, 2, 1], [D1, 2, 0], [D1, 1, 1], [D1, 3, 1], [D1, 1, 0], [D1, 2, 0], [D2, 2, 1]], units: [[D1, 1, 1]] });
+  assert.deepEqual(s.ev, { round: [[D1, 2, 1], [D1, 2, 0, false], [D1, 1, 1, false], [D1, 3, 1, true], [D1, 1, 0, false], [D1, 2, 0], [D2, 2, 1]], units: [[D1, 1, 1]] });
   assert.deepEqual(s._days, [D1, D2]);
 });
 const shuffledCopy = (list, seed) => shuffled(list, seeded(seed));
@@ -205,26 +205,26 @@ test('sheets: Ergebnisse eintragen wie die App (Eintrag in ev und attempts, Merk
   v.add('sheet_result', { sheet: 's1', index: 0, res: 'ok', day: D2, qid: 'k0' });
   v.add('sheet_result', { sheet: 's1', index: 1, res: 'help', day: D2, qid: 'k1' });
   s = run(v.list);
-  assert.deepEqual(s.ev, { round: [[D2, 2, 1]], units: [[D2, 1, 1]] }, 'help = support level, whatever the level of the task');
+  assert.deepEqual(s.ev, { round: [[D2, 2, 1, true]], units: [[D2, 1, 1, false]] }, 'help = support level, whatever the level of the task');
   assert.deepEqual(s.attempts, [
     { day: D2, skill: 'round', level: 2, attempt: 1, ok: true, help: false, sheet: 's1:0' },
     { day: D2, skill: 'units', level: 3, attempt: 1, ok: true, help: true, sheet: 's1:1' },
   ]);
-  assert.deepEqual(s.sheets[0].items[0], { q: q('round', { level: 2 }), res: 'ok', rec: { ev: [D2, 2, 1], key: 's1:0', due: null } });
+  assert.deepEqual(s.sheets[0].items[0], { q: q('round', { level: 2 }), res: 'ok', rec: { ev: [D2, 2, 1, true], key: 's1:0', due: null } });
   assert.equal(s.sheets[0].principled, undefined, 'one task is still open');
   v.add('sheet_result', { sheet: 's1', index: 2, res: 'no', day: D2, qid: 'k2' });
   s = run(v.list);
-  assert.deepEqual(s.ev.round, [[D2, 2, 1], [D2, 2, 0]], 'a task without a level counts as level 2');
-  assert.deepEqual(s.sheets[0].items[2], { q: q('round'), res: 'no', rec: { ev: [D2, 2, 0], key: 's1:2', due: 'k2' } });
+  assert.deepEqual(s.ev.round, [[D2, 2, 1, true], [D2, 2, 0, false]], 'a task without a level counts as level 2');
+  assert.deepEqual(s.sheets[0].items[2], { q: q('round'), res: 'no', rec: { ev: [D2, 2, 0, false], key: 's1:2', due: 'k2' } });
   assert.equal(s.sheets[0].principled, true, 'every task has an entry');
   assert.deepEqual(s.badges, {}, 'the badge itself is its own event');
   // correction: the first task was entered wrongly
   v.add('sheet_result', { sheet: 's1', index: 0, res: 'no', day: D3, qid: 'k0' });
   s = run(v.list);
-  assert.deepEqual(s.ev.round, [[D2, 2, 0], [D3, 2, 0]], 'the old entry is taken back, the new one is appended');
+  assert.deepEqual(s.ev.round, [[D2, 2, 0, false], [D3, 2, 0, false]], 'the old entry is taken back, the new one is appended');
   assert.deepEqual(s.attempts.map((a) => a.sheet), ['s1:1', 's1:2', 's1:0']);
   assert.equal(s.attempts[2].ok, false);
-  assert.deepEqual(s.sheets[0].items[0].rec, { ev: [D3, 2, 0], key: 's1:0', due: 'k0' });
+  assert.deepEqual(s.sheets[0].items[0].rec, { ev: [D3, 2, 0, false], key: 's1:0', due: 'k0' });
   assert.equal(s.sheets[0].principled, true, 'stays');
   // the same result again changes nothing
   const vorher = run(v.list);
@@ -234,7 +234,7 @@ test('sheets: Ergebnisse eintragen wie die App (Eintrag in ev und attempts, Merk
   v.add('sheet_result', { sheet: 's1', index: 0, res: 'ok', day: dayOf(6), qid: 'k0' });
   s = run(v.list);
   assert.equal(s.ev.round.length, 2);
-  assert.deepEqual(s.ev.round.slice(-1), [[dayOf(6), 2, 1]]);
+  assert.deepEqual(s.ev.round.slice(-1), [[dayOf(6), 2, 1, true]]);
   assert.equal(s.attempts.filter((a) => a.sheet === 's1:0').length, 1);
 });
 
@@ -263,7 +263,7 @@ test('sheets: Blatt ohne Ergebnis verwerfen; hoechstens 8 Blaetter; sheetNo = ho
   s = run(w.list);
   assert.deepEqual(s.sheets.map((x) => x.id), ['a4', 'a5', 'a6', 'a7', 'a8', 'a9', 'a10', 'z']);
   assert.equal(s.sheetNo, 10, 'highest number, not the count');
-  assert.deepEqual(s.ev, { round: [[D1, 2, 1]] }, 'the early entry stays, the late one for a dropped sheet is ignored');
+  assert.deepEqual(s.ev, { round: [[D1, 2, 1, true]] }, 'the early entry stays, the late one for a dropped sheet is ignored');
   assert.equal(s.attempts.length, 1);
   assert.equal(DERIVE_LIMITS.sheets, 8);
 });

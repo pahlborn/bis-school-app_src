@@ -18,7 +18,8 @@
 //
 // Names: helpers start with "ab"/"AB" because all modules and index.html share one scope in the app.
 
-import { mergeLog, lastWins, lastWinsOrder, effectiveTime, SCHOOL_EVALUATION_TARGETS } from './ereignisse.mjs';
+import { mergeLog, lastWins, lastWinsOrder, effectiveTime, SCHOOL_EVALUATION_TARGETS, schoolEvaluationNeedsPractice } from './ereignisse.mjs';
+import { schoolStandardInfo } from './standardkatalog.mjs';
 
 /* the limits of today's app (index.html: slice(-200) in attempts, EVIDENCE_MAX, DUE_MAX, GAPS, slice(-8) in sheets,
    TREE_AT, RANKS); the browser test compares them with the app */
@@ -65,8 +66,11 @@ function abApply(st, ctx, e) {
     case 'answer': {                                                            // index.html: observeAttempt, showHint, showExample, showWorked
       abPushAttempt(st, abClone(p));                                            // the event IS the stored attempt
       const shown = p.hintShown || p.exampleShown || p.solutionShown;
-      if (!shown && p.attempt === 1) abPushEvidence(st, ctx, p.skill, [p.day, p.help ? 1 : p.level, p.ok ? 1 : 0]);   // first try; with help (tip or assisted question) = support level
-      else if (p.solutionShown && p.beforeTry) abPushEvidence(st, ctx, p.skill, [p.day, 1, 0]);                         // answer shown without an own try: not passed, support level
+      if (!shown && p.attempt === 1) {
+        const row=[p.day,p.help?1:p.level,p.ok?1:0];
+        if(typeof p.help==='boolean')row.push(p.ok===true&&p.help===false&&!p.example);
+        abPushEvidence(st,ctx,p.skill,row);
+      } else if (p.solutionShown && p.beforeTry) abPushEvidence(st, ctx, p.skill, [p.day,1,0,false]); // answer shown: support level
       break;
     }
     case 'round_done': {                                                        // index.html: showResults
@@ -110,7 +114,7 @@ function abApply(st, ctx, e) {
       if (!it || !it.q || it.res === p.res) break;
       if (it.res && !abUndoSheetResult(st, it)) break;
       const q = it.q, key = p.sheet + ':' + p.index;
-      const row = [p.day, p.res === 'help' ? 1 : (q.assisted ? 1 : abLevel(q)), p.res === 'no' ? 0 : 1];
+      const row = [p.day, p.res === 'help' ? 1 : (q.assisted ? 1 : abLevel(q)), p.res === 'no' ? 0 : 1, p.res === 'ok' && !q.assisted];
       if (q.world) abPushEvidence(st, ctx, q.world, row);
       it.rec = { ev: q.world ? abClone(row) : null, key, due: p.res === 'no' ? p.qid : null };
       abPushAttempt(st, { day: p.day, skill: q.world, level: abLevel(q), attempt: 1, ok: p.res !== 'no', help: p.res === 'help', sheet: key });
@@ -305,6 +309,21 @@ function abSchoolContenders(siblings) {
   return siblings.filter(p => known.has(p.revision) && !superseded.has(p.revision));
 }
 
+/* Shared with the confirmation preview (EV-4). The first grade in ratingOrder
+   wins; changing that policy does not require changing any original criteria.
+   Overrides are explicit confirmed parent decisions in the same revision. */
+export function schoolEvaluationStandards(criteria, { ratingOrder = ['RS', 'C', 'M', 'E'], standardOverrides = {} } = {}) {
+  if (!Array.isArray(ratingOrder) || ratingOrder.length !== 4 || !['RS', 'C', 'M', 'E'].every(r => ratingOrder.includes(r))) throw new Error('schoolEvaluationStandards: invalid ratingOrder');
+  const ratings = new Map();
+  for (const c of Array.isArray(criteria) ? criteria : []) {
+    if (!c || c.standard === 'none' || schoolStandardInfo(c.standard) === null || !ratingOrder.includes(c.rating)) continue;
+    if (!ratings.has(c.standard) || ratingOrder.indexOf(c.rating) < ratingOrder.indexOf(ratings.get(c.standard))) ratings.set(c.standard, c.rating);
+  }
+  if (!standardOverrides || typeof standardOverrides !== 'object' || Array.isArray(standardOverrides)
+    || Object.entries(standardOverrides).some(([code, rating]) => !ratings.has(code) || !ratingOrder.includes(rating))) throw new Error('schoolEvaluationStandards: invalid standardOverrides');
+  return Object.fromEntries([...ratings].map(([code, rating]) => [code, abOwn(standardOverrides, code) ? standardOverrides[code] : rating]));
+}
+
 function abSchoolManual(revisions) {
   const root = [...revisions.values()].find(p => !p.base);
   if (!root) return null;
@@ -327,11 +346,21 @@ function abSchoolManual(revisions) {
     contenders = [];
   }
   const { evaluation, revision, standard, focus, withdrawn } = active;
-  const focusNext = withdrawn || focus === 'none' ? [] : [SCHOOL_EVALUATION_TARGETS[standard].world];
+  const criteria = active.assessment?.criteria;
+  const criterionFormat = criteria?.some(c => abOwn(c, 'standard'));
+  const std = criterionFormat ? schoolEvaluationStandards(criteria, { standardOverrides: active.standardOverrides })
+    : standard === 'unmapped' ? {} : { [standard]: active.rating };
+  const focusNext = withdrawn ? [] : criterionFormat
+    ? [...new Set(Object.entries(std).filter(([, rating]) => schoolEvaluationNeedsPractice(rating)).flatMap(([code]) => schoolStandardInfo(code).quests))]
+    : focus === 'none' ? [] : [SCHOOL_EVALUATION_TARGETS[standard].world];
   return {
-    title: active.title, day: active.day, area: 'math', std: { [standard]: active.rating },
+    title: active.title, day: active.day, area: active.assessment?.area || 'math', std,
+    ...(active.assessment ? { assessment: abClone(active.assessment), rubric: active.assessment.criteria.map(c => ({ crit: c.criterion, teacher: c.rating, self: '' })) } : {}),
     quests: focusNext, focusNext,
-    manual: { evaluation, revision, standard, focus, withdrawn: !!withdrawn, history,
+    // focus:none prevents the old single-standard pilot from scheduling special
+    // cards for the new format; catalog quest metadata above is available to EV-4/EV-7.
+    manual: { evaluation, revision, ...(criterionFormat ? { focus: 'none' } : { standard, focus }),
+      ...(active.standardOverrides ? { standardOverrides: abClone(active.standardOverrides) } : {}), withdrawn: !!withdrawn, history: abClone(history),
       conflicts: contenders.map(p => p.revision) },
   };
 }

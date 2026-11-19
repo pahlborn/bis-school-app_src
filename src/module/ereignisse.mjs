@@ -9,8 +9,11 @@
 //
 // Names: every helper starts with "ev"/"EV_" because all modules and index.html share one scope in the app.
 
+import { schoolStandardInfo } from './standardkatalog.mjs';
+
 export const EVENT_VERSION = 1;
 export const EVENT_FUTURE_MS = 24 * 3600 * 1000;
+export const SCHOOL_EVALUATION_CRITERIA_MAX = 50;
 
 export const SCHOOL_EVALUATION_TARGETS = Object.freeze({
   'M-N5': Object.freeze({ focus: 'two-step', world: 'wordprob' }),
@@ -22,6 +25,22 @@ export const schoolEvaluationNeedsPractice = (rating) => rating === 'RS' || rati
 const evObj = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
 const evStr = (x) => typeof x === 'string' && x.length > 0;
 const evEvalId = (x) => typeof x === 'string' && /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(x);
+const evCriterionRating = (x) => ['RS', 'C', 'M', 'E', ''].includes(x);
+const evCriterionStandards = (x) => Array.isArray(x?.criteria) && x.criteria.some(c => evObj(c) && evOwn(c, 'standard'));
+// Test-11 assessments without criterion standards remain readable. A new assessment
+// maps every criterion explicitly, including "none"; partially mapped data is invalid.
+function evEvalDocument(x) {
+  if (!evObj(x) || !Object.keys(x).every(k => ['area', 'goal', 'instructions', 'feedback', 'criteria'].includes(k))) return false;
+  if (!['area', 'goal', 'instructions', 'feedback'].every(k => typeof x[k] === 'string' && x[k].length <= 12000) || !x.area.length) return false;
+  if (!Array.isArray(x.criteria) || !x.criteria.length || x.criteria.length > SCHOOL_EVALUATION_CRITERIA_MAX) return false;
+  const mapped = evCriterionStandards(x);
+  return x.criteria.every(c => evObj(c)
+    && Object.keys(c).every(k => ['criterion', 'rating', 'evidence', ...(mapped ? ['standard'] : [])].includes(k))
+    && typeof c.criterion === 'string' && c.criterion.trim().length > 0 && c.criterion.length <= 2000
+    && evCriterionRating(c.rating)
+    && (typeof c.evidence === 'string' && c.evidence.length <= 4000 || mapped && !evOwn(c, 'evidence'))
+    && (!mapped || evOwn(c, 'standard') && typeof c.standard === 'string' && (c.standard === 'none' || schoolStandardInfo(c.standard) !== null)));
+}
 const evDayOk = (s) => { if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false; const t = Date.parse(s + 'T00:00:00Z'); return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === s; };
 const evMs = (s) => {      // strict UTC time "YYYY-MM-DDTHH:MM:SS[.mmm]Z" -> milliseconds, else NaN
   if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/.test(s)) return NaN;
@@ -32,6 +51,7 @@ const evField = {
   day: evDayOk,
   evalId: evEvalId,
   evalRevisions: (x) => Array.isArray(x) && x.length >= 2 && new Set(x).size === x.length && x.every(evEvalId),
+  evalDocument: evEvalDocument,
   evalTitle: (x) => evStr(x) && x.length <= 160 && x === x.trim() && !/[\x00-\x1f\x7f]/.test(x),
   str: evStr, nstr: (x) => x === null || evStr(x), bool: (x) => typeof x === 'boolean', any: (x) => x !== undefined,
   int: (x) => Number.isInteger(x) && x >= 0, pos: (x) => Number.isInteger(x) && x >= 1, lvl: (x) => x === 1 || x === 2 || x === 3,
@@ -69,7 +89,7 @@ const EV_SPEC = {
   checklist_set: ['studio:str index:int value:bool', 'size:pos'],   // size: number of items (the app stores the whole list, task 3b-1b)
   day_flag: ['flag:enum(greetDay|mysteryDone|bdayParty) day:day', ''],
   school_import: ['asOf:day data:obj', 'source:str'],
-  school_evaluation: [`child:pid evaluation:evalId revision:evalId title:evalTitle day:day standard:enum(${Object.keys(SCHOOL_EVALUATION_TARGETS).join('|')}) rating:enum(RS|C|M|E) focus:enum(${Object.values(SCHOOL_EVALUATION_TARGETS).map((t) => t.focus).join('|')}|none)`, 'base:evalId withdrawn:bool resolves:evalRevisions'],
+  school_evaluation: ['child:pid evaluation:evalId revision:evalId title:evalTitle day:day', `standard:enum(${Object.keys(SCHOOL_EVALUATION_TARGETS).join('|')}|unmapped) rating:enum(RS|C|M|E|N) focus:enum(${Object.values(SCHOOL_EVALUATION_TARGETS).map((t) => t.focus).join('|')}|none) base:evalId withdrawn:bool resolves:evalRevisions assessment:evalDocument standardOverrides:obj`],
   grant_set: ['grant:str grantee:pid scope:scope from:day until:day', 'text:str'],
   grant_revoked: ['grant:str grantee:pid', ''],
   grant_opened: ['grant:str grantee:pid', 'scope:scope'],
@@ -161,13 +181,28 @@ export function checkEvent(e) {
     for (const [f, ok] of Object.entries(req)) { if (!evHas(e.payload, f)) err.push(`payload.${f}: missing`); else if (!ok(e.payload[f])) err.push(`payload.${f}: invalid`); }
     for (const [f, ok] of Object.entries(opt)) if (evHas(e.payload, f) && !ok(e.payload[f])) err.push(`payload.${f}: invalid`);
     if (e.type === 'school_evaluation') {
-      const { standard, focus, rating, revision, base, withdrawn, resolves } = e.payload;
-      if (focus !== 'none') {
-        if (typeof standard === 'string' && evOwn(SCHOOL_EVALUATION_TARGETS, standard) && focus !== SCHOOL_EVALUATION_TARGETS[standard].focus) err.push('payload.focus: incompatible with standard');
-        if (!schoolEvaluationNeedsPractice(rating)) err.push('payload.focus: incompatible with rating');
+      const { standard, focus, rating, revision, base, withdrawn, resolves, assessment, standardOverrides } = e.payload;
+      const mapped = evCriterionStandards(assessment);
+      if (mapped) {
+        // There is only one authoritative set of grades, never a second legacy
+        // top-level grade beside the original criterion grades.
+        if (['standard', 'rating', 'focus'].some(k => evHas(e.payload, k))) err.push('payload: criterion standards cannot be combined with legacy rating fields');
+      } else {
+        for (const k of ['standard', 'rating', 'focus']) if (!evHas(e.payload, k)) err.push(`payload.${k}: missing`);
+        if (standard === 'unmapped' && (!assessment || rating !== 'N' || focus !== 'none')) err.push('payload: unmapped requires assessment and no focus');
+        if (standard !== 'unmapped' && rating === 'N') err.push('payload.rating: invalid mapped rating');
+        if (focus !== 'none') {
+          if (typeof standard === 'string' && evOwn(SCHOOL_EVALUATION_TARGETS, standard) && focus !== SCHOOL_EVALUATION_TARGETS[standard].focus) err.push('payload.focus: incompatible with standard');
+          if (!schoolEvaluationNeedsPractice(rating)) err.push('payload.focus: incompatible with rating');
+        }
+        if (withdrawn && focus !== 'none') err.push('payload.focus: withdrawn evaluation');
+      }
+      if (evHas(e.payload, 'standardOverrides')) {
+        if (!mapped) err.push('payload.standardOverrides: requires criterion standards');
+        const rated = new Set((Array.isArray(assessment?.criteria) ? assessment.criteria : []).filter(c => evObj(c) && c.standard !== 'none' && evCriterionRating(c.rating) && c.rating !== '').map(c => c.standard));
+        if (!evObj(standardOverrides) || Object.entries(standardOverrides).some(([code, grade]) => !rated.has(code) || schoolStandardInfo(code) === null || !evCriterionRating(grade) || grade === '')) err.push('payload.standardOverrides: invalid');
       }
       if (base === revision || ((withdrawn || resolves) && !base)) err.push('payload.base: invalid revision base');
-      if (withdrawn && focus !== 'none') err.push('payload.focus: withdrawn evaluation');
       if (Array.isArray(resolves) && (resolves.includes(revision) || resolves.includes(base))) err.push('payload.resolves: invalid conflict revisions');
     }
     for (const k of Object.keys(e.payload)) if (!evOwn(req, k) && !evOwn(opt, k)) err.push(`payload.${k}: unknown field`);

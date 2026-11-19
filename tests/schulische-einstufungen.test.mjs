@@ -15,6 +15,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { appLesen } from '../werkzeug/module.mjs';
+import { SCHOOL_STANDARD_CATALOG } from '../src/module/standardkatalog.mjs';
 import { browserStarten, appServer, appOeffnen } from './app-hilfen.mjs';
 import { konto, kontenServer, oeffnen, anmelden, passwortSetzen } from './konten-hilfen.mjs';
 
@@ -84,6 +85,84 @@ async function filtern(page, f) {
   if (f.weak !== undefined) await kapitel(page).locator('input[data-psf="weak"]').setChecked(f.weak);
 }
 const fmtDe = (d) => d.split('-').reverse().join('.');
+
+
+async function checkSchoolFilterLayout(page) {
+  const sort = page.locator('select[data-psf="sort"]');
+  const options = await sort.locator('option').allTextContents();
+  // DejaVu exposes the select's intrinsic minimum width; default metrics must fit too.
+  for (const profile of ['DejaVu Sans', '']) {
+    await page.evaluate(profile => {
+      for (const key of ['--body', '--display']) profile ? document.documentElement.style.setProperty(key, '"' + profile + '"') : document.documentElement.style.removeProperty(key);
+    }, profile);
+    await page.evaluate(async () => { await document.fonts.ready; await new Promise(requestAnimationFrame); await new Promise(requestAnimationFrame); });
+    const layout = await parentLayout(page);
+    assert.ok(layout.document <= layout.viewport, `320 px (${profile || 'default'}): ${JSON.stringify(layout)}`);
+    const controls = await page.locator('.psfilters label, .psfilters select').evaluateAll(elements => elements.map(e => {
+      const r = e.getBoundingClientRect(), parent = e.closest('.psfilters').getBoundingClientRect();
+      return { tag: e.tagName, field: e.dataset.psf || '', left: r.left, right: r.right, parentLeft: parent.left, parentRight: parent.right };
+    }));
+    assert.ok(controls.every(e => e.left >= e.parentLeft && e.right <= e.parentRight), `filter controls fit their parent: ${JSON.stringify(controls)}`);
+    assert.deepEqual(await sort.locator('option').allTextContents(), options, 'all option texts remain intact');
+    await sort.selectOption('subject');
+    assert.equal(await sort.inputValue(), 'subject');
+    await sort.selectOption('date');
+  }
+}
+
+async function parentLayout(page) {
+  return page.evaluate(() => {
+    const viewport = innerWidth, path = e => e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + (typeof e.className === 'string' && e.className ? '.' + e.className.trim().replace(/\s+/g, '.') : '') + (e.dataset?.l ? '[data-l="' + e.dataset.l + '"]' : '') + (e.dataset?.psf ? '[data-psf="' + e.dataset.psf + '"]' : '');
+    const visible = e => e.getClientRects().length && e.checkVisibility({ checkVisibilityCSS: true });
+    const elements = [...document.body.querySelectorAll('*')].filter(visible);
+    const boxes = elements.filter(e => e.getBoundingClientRect().right > viewport || e.scrollWidth > e.clientWidth).map(e => {
+      const r = e.getBoundingClientRect(), css = getComputedStyle(e);
+      return { element: path(e), parent: path(e.parentElement), left: r.left, right: r.right, scroll: e.scrollWidth, client: e.clientWidth, minWidth: css.minWidth, width: css.width, font: css.font, whiteSpace: css.whiteSpace, overflowWrap: css.overflowWrap,
+        before: getComputedStyle(e, '::before').content, after: getComputedStyle(e, '::after').content };
+    }).sort((a, b) => b.right - a.right).slice(0, 25);
+    const texts = [], walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      if (!node.textContent.trim() || !visible(node.parentElement)) continue;
+      const range = document.createRange(); range.selectNodeContents(node);
+      for (const r of range.getClientRects()) if (r.right > viewport) texts.push({ element: path(node.parentElement), text: node.textContent.trim().slice(0, 120), left: r.left, right: r.right });
+    }
+    return { document: document.documentElement.scrollWidth, viewport, rootClient: document.documentElement.clientWidth, bodyClient: document.body.clientWidth, bodyScroll: document.body.scrollWidth, boxes, texts: texts.slice(0, 25) };
+  });
+}
+
+test('EV3: alle Lernbereiche nach Fach, ohne Quest mit Hinweis, DE/EN und per Tastatur bei 320 px', async () => {
+  const { ctx, page, fehler } = await oeffnen(browser, server, { viewport: { width: 320, height: 800 } });
+  await kindAnmelden(page); await erwachsen(page, 'papa');
+  for (const lang of ['de', 'en']) {
+    await page.locator(`.phdr [data-plang="${lang}"]`).click();
+    await kapitelOeffnen(page);
+    const catalog = page.locator('#pStandardCatalog');
+    await catalog.locator('summary').focus();
+    await page.keyboard.press('Enter');
+    assert.equal(await catalog.evaluate(element => element.open), true, 'native Tastaturbedienung');
+    const codes = await catalog.locator('[data-standard-code]').evaluateAll(elements => elements.map(element => element.dataset.standardCode));
+    assert.deepEqual(codes.slice().sort(), Object.keys(SCHOOL_STANDARD_CATALOG).sort());
+    assert.equal(new Set(codes).size, codes.length);
+    for (const [code, entry] of Object.entries(SCHOOL_STANDARD_CATALOG)) {
+      const row = catalog.locator(`[data-standard-code="${code}"]`);
+      assert.ok((await row.innerText()).includes(entry.text[lang]), `${code}: ${lang}`);
+      assert.equal(await row.evaluate(element => element.closest('[data-standard-subject]').dataset.standardSubject), entry.subject);
+    }
+    assert.match(await catalog.locator('[data-standard-code="E-S1"]').innerText(), lang === 'de' ? /wird angezeigt, keine Übung in Big Quest/ : /shown here, no exercise in Big Quest/);
+    // Measure final font metrics and the layout after rendering, without relaxing the width limit.
+    await page.evaluate(async () => {
+      await document.fonts.ready;
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      await new Promise(resolve => requestAnimationFrame(resolve));
+    });
+    await checkSchoolFilterLayout(page);
+    const width = await page.evaluate(() => [document.documentElement.scrollWidth, window.innerWidth]);
+    assert.ok(width[0] <= width[1], `320 px ohne Überlauf: ${JSON.stringify(await parentLayout(page))}`);
+  }
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
 
 test('T1–T3 table, filters, sorting and fixed outline (German, 60 assignments)', async () => {
   const { ctx, page, fehler } = await oeffnen(browser, server, { viewport: { width: 1000, height: 900 } });

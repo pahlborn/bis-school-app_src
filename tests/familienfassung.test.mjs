@@ -147,7 +147,7 @@ test('Gegenproben Suchlauf: jede Abweichung wird gefunden', () => {
   assert.ok(funde(APP, HTML.replace('<script type="application/json" id="tresor">', '<script type="application/json" id="leer">')).some((f) => f.startsWith('verschluesselt')), 'Huelle ohne Tresor');
   nurFund(APP, 'verschluesselt', HTML.replace('</body>', '<script>const KONTO_SPEICHER=null;</script></body>'));
   for (const w of WOERTER) nurFund(APP, 'keine verbotenen Woerter', HTML.replace('</body>', `<!-- ${w} --></body>`));
-  nurFund(APP, 'keine verbotenen Woerter', HTML, JSON.stringify({ ...JSON.parse(MANIFEST), description: 'Toddle' }));
+  nurFund(APP, 'keine verbotenen Woerter', HTML, JSON.stringify({ ...JSON.parse(MANIFEST), description: 'Bhan' }));
   nurFund(APP, 'Version nicht im oeffentlichen Teil', HTML.replace('</body>', `<!-- ${VERSION.hash} --></body>`));
   nurFund(APP, 'Repo der Familie nicht im oeffentlichen Teil', HTML.replace('</body>', `<!-- ${REPO} --></body>`));
 });

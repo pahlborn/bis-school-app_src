@@ -1,0 +1,42 @@
+name: Big Quest iPad Playgrounds Testpaket
+
+on:
+  pull_request:
+    paths:
+      - 'werkzeug/ipad-playgrounds-paket.mjs'
+      - '.github/workflows/ipad-playgrounds-paket.yml'
+      - 'ios/BigQuestMVP/**'
+      - 'tests/module/ipad-playgrounds-paket.test.mjs'
+      - 'package.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ipad-playgrounds-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  export:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify N and N+1 identity, ZIP members, source bytes and checksums
+        run: node --test tests/module/ipad-playgrounds-paket.test.mjs
+      - name: Build versioned Swift Playgrounds app package
+        run: node werkzeug/ipad-playgrounds-paket.mjs
+      - name: Upload importable iPad test package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Big-Quest-iPad-Test-12-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            dist-playgrounds/Big-Quest-iPad-Test-12.zip
+            dist-playgrounds/TEST-12-INFO.txt
+          retention-days: 14

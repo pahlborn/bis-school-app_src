@@ -23,10 +23,6 @@ export const RELEASE_NOTES = {
     ],
     bugfixes: [
       {
-        de: 'Geräte-Einladungslink vor dem QR-Code eingeblendet und zum Kopieren bereitgestellt.',
-        en: 'Device invitation link displayed before the QR code with a copy action.'
-      },
-      {
         de: 'Nach dem Upgrade werden zuvor übersprungene Schulbewertungen beim Abgleich nachgeholt.',
         en: 'After an upgrade, sync recovers previously skipped school evaluations.'
       }

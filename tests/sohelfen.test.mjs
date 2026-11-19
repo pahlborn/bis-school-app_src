@@ -4,6 +4,7 @@
 
 import { test, before, after } from 'node:test';
 import { appLesen } from '../werkzeug/module.mjs';
+import { schoolStandardsByQuest } from '../src/module/standardkatalog.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -26,7 +27,7 @@ async function mitDaten(page, serien) {
 }
 
 test('every quest with an assessment has help in German and English (4 parts and a basis)', () => {
-  const keys = [...quelltext.match(/const STANDARDS=\{([\s\S]*?)\};/)[1].matchAll(/(\w+):\[/g)].map((m) => m[1]);
+  const keys = Object.keys(schoolStandardsByQuest());
   assert.ok(keys.length >= 14);
   const block = quelltext.match(/const HELP_Q=\{([\s\S]*?)\n\};/)[1];
   for (const k of [...keys, 'finish']) {

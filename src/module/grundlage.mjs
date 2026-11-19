@@ -6,7 +6,7 @@
 //
 // Foundation = ONE step, the wrong answers are clearly wrong (like level 1 in module textfragen), and the right answer
 // is not the longest or the shortest by default (the module test measures it). Every entry has its own tip
-// ("Show me how"); a task at the foundation level gets no easier example (nothing is easier).
+// ("Show me how"); EV-3.3 adds another worked case at the same level (grundlage-beispiele).
 //
 // An entry: [prompt, right answer, wrong answers, explanation, level (always 1), tip, picture text (optional)].
 

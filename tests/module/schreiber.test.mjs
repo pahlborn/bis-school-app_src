@@ -121,7 +121,7 @@ test('Was der Schreiber speichert, liest derive wie die App (Antworten, Runde, A
   assert.deepEqual(a.w.problems, []);
   const s = derive(a.list, { now: T0 + 86400000 });
   assert.equal(s.attempts.length, 3);
-  assert.deepEqual(s.ev.round, [[DAY, 2, 0], [DAY, 2, 1], [DAY, 2, 1]]);
+  assert.deepEqual(s.ev.round, [[DAY, 2, 0, false], [DAY, 2, 1, true], [DAY, 2, 1, true]]);
   assert.deepEqual(s.due.map((d) => [d.id, d.box, d.at]), [['q1', 0, '2026-11-04']]);
   assert.equal(s.total, 7); assert.equal(s.best_round, 7);
   assert.deepEqual(s.badges, { inquirer: 1 }); assert.deepEqual(s.tried, ['round']);
