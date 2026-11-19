@@ -150,11 +150,12 @@ enum BigQuestBridgePolicy {
         guard let address, address.scheme == "https", address.host == "big-quest-test.github.io",
               address.port == nil || address.port == 443,
               address.user == nil, address.password == nil else { return nil }
+        guard let path = URLComponents(url: address, resolvingAgainstBaseURL: false)?.percentEncodedPath else { return nil }
         // The complete app root reuses the device-credential scope of the first full-app probe
         // (same origin, same stored device access). Exact root paths only, no query/fragment.
-        if address.query == nil, address.fragment == nil, ["/", "/index.html"].contains(address.path) { return "probe-evaluation-form" }
+        if address.query == nil, address.fragment == nil, ["/", "/index.html"].contains(path) { return "probe-evaluation-form" }
         for scope in ["probe-evaluation-form", "probe-evaluation-local"] {
-            if ["/" + scope, "/" + scope + "/", "/" + scope + "/index.html"].contains(address.path) { return scope }
+            if ["/" + scope, "/" + scope + "/", "/" + scope + "/index.html"].contains(path) { return scope }
         }
         return nil
     }
