@@ -100,6 +100,7 @@ Ausgangslage, am Stand von main gemessen: In 107 von 161 Multiple-Choice-Aufgabe
 - **Schrumpft nie, welkt nie.** Fällt eine Quest zurück, bleiben die Blätter.
 - Bei der Umstellung wird der größere von altem und neuem Baum gezeigt, bis der neue den alten überholt; altes Tageswachstum wird nicht als Wissen ausgegeben (Katalog EP05 A05).
 - „Me as a Learner“ und „Events“ bekommen keinen eigenen Ast.
+- **Darstellung (Peters Präzisierung vom 19.11.):** Der ursprüngliche bunte Gesamtbaum **2A** gehört in den Kinderteil; eine vergrößerte Ansicht beim Antippen der Rubrik ist vorgesehen. Eltern und Lehrkräfte erhalten einen sachlichen Lernverlauf ohne Baumvisualisierung (gewählte Fächerübersicht 1B und Lückenverlauf 3A, siehe `elternbereich-entscheidungen-2026-11-18.md`).
 
 ## 8. Reihenfolge und Vorgehen
 

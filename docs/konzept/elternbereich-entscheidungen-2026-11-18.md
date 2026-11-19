@@ -1,6 +1,6 @@
 # Elternbereich, Lücken und Fokus – Peters Entscheidungen
 
-Stand 18.11.2026 · Grundlage: Analyse des Elternbereichs am Stand `main` (Testkind mit synthetischen Übungsdaten, Elternbereich zu- und aufgeklappt, Fachansicht Science) und Peters Rückmeldungen. Ergänzt `docs/konzept/elternbereich.md` und `docs/konzept/inhalt-motivation-entscheidungen.md`; wo es abweicht, gilt dieses Dokument.
+Stand 18.11.2026, Darstellung präzisiert durch Peter am 19.11.2026 · Grundlage: Analyse des Elternbereichs am Stand `main` (Testkind mit synthetischen Übungsdaten, Elternbereich zu- und aufgeklappt, Fachansicht Science) und Peters Rückmeldungen. Ergänzt `docs/konzept/elternbereich.md` und `docs/konzept/inhalt-motivation-entscheidungen.md`; wo es abweicht, gilt dieses Dokument.
 
 ## Befund in Kürze
 
@@ -21,7 +21,9 @@ Stand 18.11.2026 · Grundlage: Analyse des Elternbereichs am Stand `main` (Testk
 - Kleine Fehler: „1 Aufgaben“ → „1 Aufgabe“; kein Konfetti über dem Elternbereich.
 
 **Später, zusammen mit EP03–EP05:**
-- Umbau nach den drei Fragen der Eltern: **Was ist passiert?** (Rückblick seit dem letzten Besuch: Runden, Aufgaben, neu sichere Quests, entdecktes Neuland, genutzte Hilfe – ohne Zeit als Maßstab) · **Wo steht mein Kind?** (je Fach in Worten, z. B. „3 sicher · 1 wird sicherer · 2 noch offen“; Titel und Baum mit Weg zum nächsten Titel) · **Was kann ich tun?** (ein bis zwei konkrete Vorschläge).
+- Umbau nach den drei Fragen der Eltern: **Was ist passiert?** (Rückblick seit dem letzten Besuch: Runden, Aufgaben, neu sichere Quests, entdecktes Neuland, genutzte Hilfe – ohne Zeit als Maßstab) · **Wo steht mein Kind?** (je Fach in Worten, z. B. „3 sicher · 1 wird sicherer · 2 noch offen“; Titel mit Weg zum nächsten Titel) · **Was kann ich tun?** (ein bis zwei konkrete Vorschläge).
+- **Gewählte Darstellung (19.11.):** Fächerübersicht **1B** mit den drei Fragen je Fach und sachlicher Lückenverlauf **3A** in der Fachansicht. Eltern und Lehrkräfte sollen sehen, was das Kind vorher konnte, wo es jetzt steht und welche Verbesserung erkennbar ist. Quellen Schule und App bleiben getrennt; fehlende Vergleichsdaten werden benannt. Antwortzahlen werden dem jeweiligen Thema und ihrem Umfang zugeordnet, nicht als allgemeine Leistungsnote ausgegeben.
+- **Erwachsenenansicht:** ruhige Gestaltung und sachliche, hilfreiche Sprache; keine Baumvisualisierung. Der ursprüngliche bunte Gesamtbaum **2A** gehört in den Kinderteil (Abschnitt 7 der Inhaltsentscheidungen). Die getrennte Titel-/Nächstes-Ziel-Information bleibt bestehen.
 - „Das Konzept“ auf eine Seite kürzen; Quellen auf eine eigene Unterseite; überholte Aussagen (Titel nach Sternen, Baum nach Tagen, Beispiel „immer leichter“) anpassen.
 
 ## Thema 2 · Lücken: aufgeholt und gehalten
