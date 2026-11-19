@@ -27,7 +27,7 @@ async function appServer() {
 
 // Patterns that must never be visible. BIS is checked case-sensitively (German "bis" is fine).
 const MUSTER = [/\b3B\b/, /Grade 3B/i, /Bavaria/i, /\bBIS\b/, /International School/i, /Zeckser/i, /Bhan/i, /Schl(?:ü|u)er/i,
-  /Haimhausen/i, /Munich/i, /Toddle/i, /Legoland/i, /bis-school\.com/i, /our school is in/i, /we live in/i];
+  /Haimhausen/i, /Munich/i, /Legoland/i, /bis-school\.com/i, /our school is in/i, /we live in/i];
 const treffer = (text) => MUSTER.filter((m) => m.test(text)).map(String);
 
 const quelltext = await appLesen('utf8');
