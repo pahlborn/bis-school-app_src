@@ -139,7 +139,7 @@ import Security
             _ = try checked(original, proposed: "C", source: "A different invented source")
             preconditionFailure("Unquoted model evidence must be rejected")
         } catch { /* expected */ }
-        let source = "Assessment Criteria\n" + criterion + "\nM\nLearning goals\nInvented goal"
+        let source = "Assessment Criteria\n" + criterion + "\nM\nYour response\nLearning goals\nInvented goal"
         let rubric = try checked(original, proposed: "C", source: source); precondition(rubric.criteria[0].rating == "M", "Original rubric remains authoritative")
     }
 
@@ -197,7 +197,7 @@ import Security
             do { _ = try ClaudeClient.validateEvaluation(raw: answer, source: source ?? criterion + " M", catalog: catalog); return false }
             catch { return true }
         }
-        let rubricSource = "Assessment Criteria\n" + criterion + "\nM\nLearning goals\nInvented goal"
+        let rubricSource = "Assessment Criteria\n" + criterion + "\nM\nYour response\nLearning goals\nInvented goal"
         let valid = try ClaudeClient.validateEvaluation(raw: encoded("S-3"), source: criterion + " M", catalog: catalog)
         precondition(valid.criteria[0].standard == "S-3" && valid.criteria[0].rating == "M" && valid.criteria[0].evidence == criterion + " M", "No-quest code accepted; source grade and evidence preserved")
         let noneValidated = try ClaudeClient.validateEvaluation(raw: encoded("none"), source: criterion + " M", catalog: catalog)
@@ -211,7 +211,7 @@ import Security
         precondition(rejects(encodedUnlisted, source: rubricSource), "Invalid code is rejected before rubric replacement")
         let replaced = try ClaudeClient.validateEvaluation(raw: encoded("S-3", rating: "E"), source: rubricSource, catalog: catalog)
         precondition(replaced.criteria[0].rating == "M" && replaced.criteria[0].standard == "S-3", "Rubric grade wins; exact-criterion hint survives")
-        let differentSource = "Assessment Criteria\nInvented: a different long criterion for this test\nM\nLearning goals\nInvented goal"
+        let differentSource = "Assessment Criteria\nInvented: a different long criterion for this test\nM\nYour response\nLearning goals\nInvented goal"
         let different = try ClaudeClient.validateEvaluation(raw: encoded("S-3"), source: differentSource, catalog: catalog)
         precondition(different.criteria[0].standard == nil && different.criteria[0].rating == "M", "A hint for another criterion is not carried over positionally")
         let blank = try ClaudeClient.validateEvaluation(raw: encoded("S-3", rating: "C", evidence: criterion), source: criterion, catalog: catalog)
