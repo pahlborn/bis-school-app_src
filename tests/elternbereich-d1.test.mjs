@@ -48,7 +48,7 @@ const setze = (page, daten) => page.evaluate(([ns, d]) => { for (const [k, v] of
 const lies = (page, k) => page.evaluate(([ns, key]) => JSON.parse(localStorage.getItem(ns + key) || 'null'), [NS(), k]);
 const lage = (page) => page.evaluate(() => { const G = window.__g, a = G.activeGap(); return { offen: G.openGaps().map((g) => g.s + ':' + g.st + ':' + g.quests.join('+')), aktiv: a && a.s, fokus: G.focusAuto() }; });
 
-test('T14 gaps: which quests, one active, order, focus, closing only when confirmed, closed stays closed, reopening, chosen by parents, manual untouched', async () => {
+test('T14 gaps: which quests, one active, order, focus, closing at the common secure status, closed stays closed, reopening, chosen by parents, manual untouched', async () => {
   const { ctx, page, fehler } = await oeffnen(browser, server);
   await anmelden(page, 'student', 'mia', C.mia); await passwortSetzen(page, 'Tiger-Lamp-River-4271');
   await page.waitForSelector('#home:not([hidden])');
@@ -58,14 +58,14 @@ test('T14 gaps: which quests, one active, order, focus, closing only when confir
   assert.equal(l.aktiv, 'M-N1');
   assert.ok(l.fokus.includes('numbers') && l.fokus.includes('forces'), 'active gap and the teacher\'s next step in the focus');
   assert.ok(!l.fokus.includes('detective') && !l.fokus.includes('combos'), 'waiting gaps are not in the focus');
-  // provisionally secure: does not close
-  await setze(page, uebung('numbers', 10, [1, 2, 3]));
-  assert.equal((await page.evaluate(() => window.__g.assessQuest('numbers'))).sure, 'provisional');
-  assert.equal((await lage(page)).offen.length, 3, 'provisional "secure" is not enough');
-  // confirmed secure: closed by the app, the next gap becomes active
-  await setze(page, uebung('numbers', 24, [1, 3, 5, 8, 12, 16]));
+  // Five own answers: the weak school fallback still applies, so the gap stays open
+  await setze(page, uebung('numbers', 5, [0]));
+  assert.equal((await page.evaluate(() => window.__g.assessQuest('numbers'))).sure, 'few');
+  assert.equal((await lage(page)).offen.length, 3, 'fewer than six answers retain the weak school status');
+  // Six same-day correct L2 answers: common M closes immediately, even with few detail records
+  await setze(page, uebung('numbers', 6, [0]));
   const a = await page.evaluate(() => window.__g.assessQuest('numbers'));
-  assert.equal(a.sure, 'confirmed'); assert.ok(['m', 'e'].includes(a.level));
+  assert.equal(a.sure, 'few'); assert.ok(['m', 'e'].includes(a.level));
   l = await lage(page);
   assert.deepEqual(l.offen, ['M-N2:C:detective', 'M-N4:C:combos+wordprob']); assert.equal(l.aktiv, 'M-N2');
   assert.ok(l.fokus.includes('detective'));

@@ -16,6 +16,7 @@
     { "name": "grundlage-beispiele", "bau": "live", "browserTests": ["auftrag1-grundlage", "beispiele", "showme", "aufgaben-node", "neuland"] },
     { "name": "runde", "bau": "live", "browserTests": ["aufgaben-node", "aufgaben-anpassung", "runde-ohne-doppelte", "fragen", "lernlogik", "elternbereich-d2"] },
     { "name": "practise-heute", "bau": "live", "browserTests": ["lernlogik", "elternbereich-d2", "runde-ohne-doppelte", "fragen", "neuland"] },
+    { "name": "elterntexte", "bau": "live", "browserTests": ["auftrag2-bestaetigt", "elternbereich-d1", "elternbereich-d2", "elternbereich-d4", "elternbereich-e1", "elternbereich-e3", "elternbereich-f6"] },
     { "name": "krypto", "bau": "test", "browserTests": ["testbau"] },
     { "name": "ereignisse", "bau": "test", "browserTests": ["testbau"] },
     { "name": "ableitung", "bau": "test", "browserTests": ["ableitung-vergleich"] },

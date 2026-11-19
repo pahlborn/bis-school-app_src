@@ -136,13 +136,13 @@ test('new active/preview entries use the real Today slot and three variants surv
   assert.equal(rd.filter(q=>q.dueId).length,2);assert.equal(rd.length,8);assert.equal(new Set(rd.map(S.holen('qId'))).size,8);
  }
 });
-test('all existing quest questions and IDs, foundation/help snapshots, and W1 status code remain unchanged',()=>{
+test('all existing quest questions, IDs and help stay unchanged; W1 keeps numeric thresholds',()=>{
  const html=committedApp(BASE),before=appSandbox({seed:49,anpassen:()=>html}),after=appSandbox({seed:49});
  for(const k of Object.keys(before.holen('WORLDS')).filter(k=>k!=='today'&&!k.startsWith('mix_')))for(let round=0;round<6;round++){
   const a=before.holen('WORLDS')[k].build(),b=after.holen('WORLDS')[k].build();assert.deepEqual(plain(b),plain(a));assert.deepEqual(Array.from(b,after.holen('qId')),Array.from(a,before.holen('qId')));
  }
- for(const fn of['standOf','meetsOf','yearLevelEv','qId','guidance','exampleFor','bridgeFor','roundedQuestion'])assert.equal(String(after.holen(fn)),String(before.holen(fn)),fn+' protected code');
- assert.deepEqual(plain(after.holen('KEY')),plain(before.holen('KEY')));
+ for(const fn of['yearLevelEv','qId','guidance','exampleFor','bridgeFor','roundedQuestion'])assert.equal(String(after.holen(fn)),String(before.holen(fn)),fn+' protected code');
+ assert.deepEqual(plain(after.holen('KEY')),{minAnswers:6,meetsAcc:.8,meetsN:6,extAcc:.7,extN:4},'W1 keeps quantity/accuracy, removes only days');
 });
 test('real event-writing build accepts new answers in the baseline validator and replays the same independent proof',()=>{
  const S=onlyNew('numbers',{bauart:'test'}),q=reachDiscovery(S);S.frageBeantworten(q);

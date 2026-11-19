@@ -42,13 +42,13 @@ test('T19/T17 parents: work on it now, mark as closed, keep practising - with no
   const { ctx, page, fehler } = await oeffnen(browser, server);
   await anmelden(page, 'student', 'mia', C.mia); await passwortSetzen(page, 'Tiger-Lamp-River-4271');
   await page.waitForSelector('#home:not([hidden])');
-  await setze(page, uebung('numbers', 12, [1, 2, 3, 4]));
+  await setze(page, uebung('numbers', 5, [0]));
   await page.locator('#adultBtn').click();
   await anmelden(page, 'adult', 'papa', C.papa); await passwortSetzen(page, 'Moon-Glass-Paper-8812');
   await page.waitForSelector('#parentClose');
   await mathe(page);
   let t = await liste(page);
-  assert.match(t, /🎯[^\n]*Stellenwert[\s\S]*noch etwa 8 Aufgaben/, 'active gap with progress in tasks (12 of 20)');
+  assert.match(t, /🎯[^\n]*Stellenwert[\s\S]*noch 1 Aufgabe auf Klassenniveau richtig/, 'active gap needs one more relevant answer (five of six)');
   assert.match(t, /Zahlen vergleichen[\s\S]*wartet/);
   assert.equal(await page.locator('#pSchool .pgapbar').count(), 1, 'one bar: the active gap');
   for (const w of ['fällig', 'Rückstand', 'verpasst', 'Tage bis', 'noch 3 Tage']) assert.ok(!t.includes(w), 'no time words: ' + w);
@@ -64,7 +64,7 @@ test('T19/T17 parents: work on it now, mark as closed, keep practising - with no
   assert.match(t, /Lücke geschlossen ✓[^\n]*Zahlen vergleichen[^\n]*von Ihnen geschlossen/);
   assert.equal((await lies(page)).closed['M-N2'].by, 'parents');
   assert.equal(await karte(page, 'numbers').locator('.ptag.gap').count(), 1);
-  // the app closes Time & Numbers (confirmed secure) → "keep practising"
+  // the app closes Time & Numbers at the common secure stand → "keep practising"
   await setze(page, uebung('numbers', 24, [1, 3, 5, 8, 12, 16]));
   await mathe(page);
   t = await liste(page);
@@ -84,7 +84,7 @@ test('T19/T17 parents: work on it now, mark as closed, keep practising - with no
   // ⓘ explains, honestly (R11), without time words
   await page.locator('#pSchool .info-btn[data-help="gaps"]').click();
   const h = await page.locator('#helpDlg').innerText();
-  assert.match(h, /sicher bei den Antworten in der App/); assert.ok(!/fällig|Rückstand|verpasst/.test(h));
+  assert.match(h, /derselbe Stand wie bei der Aufgabenwahl/); assert.ok(!/fällig|Rückstand|verpasst/.test(h));
   await page.locator('#helpClose').click();
   // English
   await page.locator('.phdr [data-plang="en"]').click();
