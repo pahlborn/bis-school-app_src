@@ -1868,23 +1868,34 @@ const addDays = (k, n) => { const d=new Date(k+'T12:00:00'); d.setDate(d.getDate
 
 /* Evidence: [day, level, ok, independent?]. Legacy rows keep their original three fields. */
 const EVIDENCE_MAX=60;
-function recordAnswer(q, ok){
+function recordAnswer(q, ok, gapSheet){
   if(!q.world) return;
   const ev=store.get('ev',{}); const list=ev[q.world]||[];
+  const before=secureEvidence(list), previous=list.slice();
   const observation=[dayKey(), q.assisted?1:levelOf(q), ok?1:0];
   observation.push(ok&&!q.assisted);
   list.push(observation);
   ev[q.world]=list.slice(-EVIDENCE_MAX); store.set('ev',ev);
+  // The event-reading build observes this same first response in abPushEvidence.
+  // Plain storage keeps only the gap trace; no extra answer or wire fields.
+  if(!EV_LESEN && !gapReadOnly()){
+    const standard=mainStd(q.world),rating=standard&&stdRating(standard);
+    if(rating&&GAP_WEAK.includes(rating.st)){
+      const d=gapData(); d.journey ||= {};
+      gapObserve(d.journey,{standard,quest:q.world,rating,row:observation,originalLevel:levelOf(q),secureBefore:before,secureAfter:secureEvidence(list),complete:!previous.some(r=>r[0]>=rating.day),previous,sheet:gapSheet});
+      gapSave(d,[]);
+    }
+  }
 }
 /* Thresholds are starting values (not from the school) and can be tuned. */
-const KEY={minAnswers:6, meetsAcc:.8, meetsN:6, extAcc:.7, extN:4};
+const KEY=KNOWLEDGE_LIMITS;
 /* Descriptive evidence quantity only; it never vetoes knowledge or gap closure. */
 const CONF={n:20};
 const evAcc = a => a.length?a.reduce((s,x)=>s+x[2],0)/a.length:null, evDays = a => new Set(a.map(x=>x[0])).size;
 /* "secure" (M): among the last 20 year-level answers at least meetsN, meetsAcc right
    (also used by the gap progress, so bar and rule cannot drift apart) */
 const yearLevelEv = skill => (((store.get('ev',{})[skill])||[]).filter(x=>x[1]===2)).slice(-20);
-const meetsOf = l2 => l2.length>=KEY.meetsN && evAcc(l2)>=KEY.meetsAcc;
+const meetsOf = meetsYearLevel;
 function standOf(skill){
   const e=(store.get('ev',{})[skill])||[];
   // too little own practice: start from the school's latest rating of this quest's main standard (Peter, 01.11.)
@@ -2158,11 +2169,11 @@ function gapData(){
   const g=store.get('gaps',null)||{}, closed={};
   for(const [k,v] of Object.entries(g.closed||{})){ const s=gapKey(k); if(s && (!closed[s] || (v.schoolDay||'')>(closed[s].schoolDay||''))) closed[s]=v; }
   // hold (D4, "keep practising"): the parents keep a gap open the app had closed - {standard:{at, schoolDay}}
-  return {closed, active:g.active ? gapKey(g.active) : null, hold:g.hold||{}};
+  return {...g,closed, active:g.active ? gapKey(g.active) : null, hold:g.hold||{}};
 }
 /* evs: the events of this change (task 3b-1b-3, one per standard; types from 3b-0) - written only when the change is
    stored, so a teacher looking through a grant (nothing stored) writes nothing either */
-const gapSave = (d, evs) => { store.set('gaps',{closed:d.closed, active:d.active, hold:d.hold}); (evs||[]).forEach(([t,p])=>eventHook(t,p)); };
+const gapSave = (d, evs) => { store.set('gaps',d); (evs||[]).forEach(([t,p])=>eventHook(t,p)); };
 /* the quests whose main standard is s (only those that can be in the focus at all) */
 const gapQuests = s => cleanFocus(SUBJECTS.flatMap(questsIn)).filter(k=>mainStd(k)===s);
 /* the latest school rating of a standard: {st, day} */
@@ -2181,7 +2192,7 @@ function openGaps(){
     const c=data.closed[s]; if(c && c.schoolDay>=r.day) continue;
     const quests=gapQuests(s); if(!quests.length) continue;
     const held=data.hold[s] && data.hold[s].schoolDay>=r.day;   // kept open by the parents: the app does not close it
-    const done=!held && quests.find(k=>['M','E'].includes(standOf(k)));
+    const done=!held && gapHeldQuest(data.journey,s,r.day,quests);
     if(done){ data.closed[s]={at:dayKey(), by:'app', schoolDay:r.day, quest:done}; changed=true;
       evs.push(['gap_state', {standard:s, state:'closed', by:'app', schoolDay:r.day, quest:done, day:dayKey()}]); continue; }
     out.push({s, st:r.st, day:r.day, quests, held:!!held});
@@ -3634,9 +3645,9 @@ function sheetResult(sheetId, idx, res){
   if(!RES_T.en[res]) return;
   const all=store.get('sheets',[]), sh=all.find(s=>s.id===sheetId), it=sh && sh.items[idx]; if(!it || !it.q || it.res) return;
   const q=it.q, key=sheetId+':'+idx;
-  if(res==='ok') recordAnswer(q,true);
-  else if(res==='help') recordAnswer(Object.assign({},q,{level:1,assisted:true}),true);
-  else { recordAnswer(q,false); rememberWrong(q); }
+  if(res==='ok') recordAnswer(q,true,key);
+  else if(res==='help') recordAnswer(Object.assign({},q,{level:1,assisted:true}),true,key);
+  else { recordAnswer(q,false,key); rememberWrong(q); }
   const list=(store.get('ev',{})[q.world])||[];
   it.rec={ev:list[list.length-1]||null, key, due:res==='no'?(q.dueId||qId(q)):null};
   logAttempt({day:dayKey(), skill:q.world, level:levelOf(q), attempt:1, ok:res!=='no', help:res==='help', sheet:key});
