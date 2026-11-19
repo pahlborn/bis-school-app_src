@@ -18,6 +18,7 @@
     { "name": "practise-heute", "bau": "live", "browserTests": ["lernlogik", "elternbereich-d2", "runde-ohne-doppelte", "fragen", "neuland"] },
     { "name": "wissen", "bau": "live", "browserTests": ["auftrag2-bestaetigt", "lernlogik"] },
     { "name": "lueckenverlauf", "bau": "live", "browserTests": ["auftrag2-bestaetigt", "elternbereich-d1", "elternbereich-d2", "elternbereich-d4"] },
+    { "name": "lueckentexte", "bau": "live", "browserTests": ["auftrag2-bestaetigt", "elternbereich-d1", "elternbereich-d4"] },
     { "name": "elterntexte", "bau": "live", "browserTests": ["auftrag2-bestaetigt", "elternbereich-d1", "elternbereich-d2", "elternbereich-d4", "elternbereich-e1", "elternbereich-e3", "elternbereich-f6"] },
     { "name": "krypto", "bau": "test", "browserTests": ["testbau"] },
     { "name": "ereignisse", "bau": "test", "browserTests": ["testbau"] },

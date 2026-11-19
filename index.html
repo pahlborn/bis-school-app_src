@@ -11,7 +11,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" type="image/png" href="icon-192.png">
-<style>[hidden]{display:none!important}html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}</style>
+<style>[hidden]{display:none!important}html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}img{max-width:100%}
+</style>
 <title>Grade 3 – Big Quest</title>
 <!-- Fredoka and Nunito are embedded when building (werkzeug/schriften.mjs, SIL Open Font License) - the app loads no fonts from outside -->
 <style>/*BQ_SCHRIFTEN*/</style>
@@ -515,6 +516,23 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 @media (max-width:380px){h1{font-size:2rem}#home .hero h1{font-size:1.6rem}.hero .eyebrow .long{display:none}.hero .eyebrow .short{display:inline}.prompt{font-size:1.18rem}.chip{max-width:50%}.answers.grid3{grid-template-columns:1fr 1fr}}
+/* Adult 3A journey: one connected track, vertical until all four fit. */
+.pgap.on{background:#edf5f4}.pgap.done{background:#f0f5f3}
+.pgapjourney{margin:14px 0 4px;padding:14px;border:1px solid #cbdad6;border-radius:12px;background:#fff;color:#263d38}
+.pgapjourney h5{font-size:16px;margin:0 0 5px}.gjstate{font-weight:700;margin:4px 0 16px}
+.about ol.gjstations{list-style:none;padding:0 0 0 13px;margin:0;display:grid;grid-template-columns:1fr;gap:0}
+.about .gjstations>li{position:relative;min-width:0;margin:0;padding:0 0 22px 27px;border-left:2px solid #cdd8d5;overflow-wrap:break-word}
+.about .gjstations>li:last-child{border-left-color:transparent;padding-bottom:0}.about .gjstations>li.done{border-left-color:#28756a}.about .gjstations>li:last-child.done{border-left-color:transparent}
+.about .gjstations>li>b{font-size:15px}.about .gjstations p{font-size:14px;line-height:1.4;margin:6px 0 0}
+.gjnumber{position:absolute;left:-14px;top:0;display:inline-flex;justify-content:center;align-items:center;width:26px;height:26px;border:1px solid #a8bcb7;border-radius:50%;background:#fff;z-index:1}
+.done .gjnumber{background:#28756a;color:white;border-color:#28756a}
+.gjchecks{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}.gjdot{width:22px;height:22px;display:inline-flex;justify-content:center;align-items:center;border:1px solid #bbc9c6;border-radius:4px}.gjdot.yes{background:#e0f0e9;color:#165c48}.gjdot.no{background:#f5e7df;color:#743f25}.gjshaky{padding:8px;background:#fff1df;border-radius:6px;font-size:14px}
+@media(min-width:900px) and (orientation:landscape){
+ .about ol.gjstations{padding:0;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+ .about .gjstations>li{border:0;padding:0}.about .gjstations>li>b{display:flex;flex-direction:column;align-items:flex-start;gap:7px}
+ .gjstations>li:not(:last-child)::before{content:'';position:absolute;top:12px;left:13px;right:-29px;height:2px;background:#cdd8d5}.gjstations>li.done:not(:last-child)::before{background:#28756a}
+ .gjnumber{position:relative;left:auto;top:auto;flex:none}
+}
 </style>
 
 </head>
@@ -1882,7 +1900,7 @@ function recordAnswer(q, ok, gapSheet){
     const standard=mainStd(q.world),rating=standard&&stdRating(standard);
     if(rating&&GAP_WEAK.includes(rating.st)){
       const d=gapData(); d.journey ||= {};
-      gapObserve(d.journey,{standard,quest:q.world,rating,row:observation,originalLevel:levelOf(q),secureBefore:before,secureAfter:secureEvidence(list),complete:!previous.some(r=>r[0]>=rating.day),previous,sheet:gapSheet});
+      gapObserve(d.journey,{standard,quest:q.world,rating,row:observation,originalLevel:levelOf(q),secureBefore:before,secureAfter:secureEvidence(list),complete:!previous.some(r=>r[0]>=rating.day),previous,sheet:gapSheet,closed:d.closed[standard]?.schoolDay>=rating.day});
       gapSave(d,[]);
     }
   }
@@ -2155,8 +2173,8 @@ function focusAuto(){
 /* ---------- gaps (concept "Elternbereich" 6; D1, per standard since D1b - Peter 02.11.: decision B) ----------
    The school rates a topic once and moves on. A STANDARD is a GAP when its latest school rating is "requires support"
    (RS, also N) or "consolidating" (C) and it is the main standard (first in STANDARDS) of at least one quest. All
-   quests with that main standard belong to the gap. The app closes it when ONE of these quests is "secure"/"extending"
-   in the common quest stand; a newer school rating of at least "meeting" ends it too.
+   quests with that main standard belong to the gap. After one quest reaches the common M/E stand, the following six topic tasks must
+   have at least five correct first responses. A newer school M/E rating ends it too.
    Closed stays closed (stored with the school rating that opened it); only a newer weak rating opens it again. Never
    closed by time. Only ONE gap is active (all its quests in the focus); the others wait (RS before C, oldest first).
    Difficulty and the parents' assessment stay own practice.
@@ -2242,10 +2260,49 @@ function gapProgress(g){
   return best || {frac:0,left:KEY.meetsN,right:KEY.meetsN};
 }
 function gapProgressHTML(g){
-  const de=PL()==='de', p=gapProgress(g);
-  const txt=p.right>0 ? (de?`noch ${p.right} ${p.right===1?'Aufgabe':'Aufgaben'} auf Klassenniveau richtig`:`${p.right} more grade-level ${p.right===1?'task':'tasks'} right`)
-    : (de?'sicher':'secure');
-  return `<span class="pgapbar" role="img" aria-label="${txt}"><i style="width:${Math.floor(p.frac*100+1e-9)}%"></i></span> <span class="small">${txt}</span>`;
+  const de=PL()==='de',T=GAP_TEXT[PL()],p=gapProgress(g),j=gapData().journey?.[g.s],v=j?.schoolDay===g.day?gapJourneyBest(j):null;
+  if(v?.reached)return `<span class="small">${T.stages[2]} · ${T.checking(v.checks.length,v.checks.filter(x=>x.ok).length)} · ${T.open}</span>`;
+  const txt=p.right>0 ? (de?`noch ${p.right} ${p.right===1?'Aufgabe':'Aufgaben'} auf Klassenniveau richtig`:`${p.right} more grade-level ${p.right===1?'task':'tasks'} right`) : T.stages[2];
+  return `<span class="pgapbar" role="img" aria-label="${txt}"><i style="width:${Math.floor(p.frac*100+1e-9)}%"></i></span> <span class="small">${txt}${p.right===0?' · '+T.open:''}</span>`;
+}
+function gapJourneyHTML(s,r,c){
+  const T=GAP_TEXT[PL()],d=gapData(),trace=d.journey?.[s],same=trace?.schoolDay===r.day;
+  const v=gapJourneyBest(same?trace:c?trace:null),schoolClosed=['M','E'].includes(r.st),closed=schoolClosed||!!(c&&c.schoolDay>=r.day);
+  const source=c?.by==='parents'?T.parentClosed:schoolClosed?T.schoolClosed:v?.held?'':T.oldClosed;
+  const count=a=>T.right(a.filter(x=>x.ok).length,a.length);
+  const selected=v?.k||gapQuests(s)[0],currentSecure=selected&&['M','E'].includes(standOf(selected));
+  const recent=(store.get('attempts',[])||[]).filter(a=>a.skill===selected&&a.day>=r.day&&a.attempt===1&&!a.hintShown&&!a.exampleShown&&!a.solutionShown).slice(-6);
+  const practice=v?`${v.complete?T.before:T.missing+'<br>'+T.observed}<br><b>${count(v.first)}</b><br>${T.now}: <b>${count(v.recent)}</b>`:recent.length?`${T.missing}<br>${T.now}: <b>${count(recent)}</b>`:T.noPractice;
+  const reach=v?.reached?`${v.reached.kind==='observed'?T.legacy:T.reached+' '+fmtDay(v.reached.day)}`:currentSecure?T.currentSecure:T.notReached;
+  const checks=v?.checks||[],held=v?.held&&!v.uncertain;
+  const proof=(closed&&source?source+'<br>':'')+(held?T.held(checks.filter(x=>x.ok).length):!closed?T.checking(checks.length,checks.filter(x=>x.ok).length)+'<br>'+T.target:'');
+  const done=[true,!!v||!!recent.length,!!v?.reached||currentSecure,!!held];
+  const content=[`${esc(PSTAND[PL()][SL[r.st]]||r.st)} (${esc(r.st)}) · ${fmtDay(r.day)}<br>${T.source}`,practice,reach,proof];
+  const dots=Array.from({length:6},(_,i)=>`<span class="gjdot ${checks[i]?(checks[i].ok?'yes':'no'):''}" aria-label="${i+1}: ${checks[i]?(checks[i].ok?'✓':'×'):'○'}">${checks[i]?(checks[i].ok?'✓':'×'):'○'}</span>`).join('');
+  const shaky=closed&&(v?.later||[]).some(x=>!x.ok);
+  return `<section class="pgapjourney" data-journey="${esc(s)}" aria-label="${T.title}"><h5>${T.title}${selected?` · ${esc(WORLDS[selected]?.name||selected)}`:''}</h5><p class="gjstate">${closed?T.closed:T.open}${d.hold[s]?.schoolDay>=r.day?' · '+(PL()==='de'?'von Ihnen offen gehalten':'kept open by you'):''}</p><ol class="gjstations">${T.stages.map((title,i)=>`<li class="${done[i]?'done':''}" data-stage="${i+1}"><b><span class="gjnumber">${done[i]?'✓':i+1}</span> ${title}</b><p>${content[i]}</p>${i===3?`<div class="gjchecks">${dots}</div>`:''}</li>`).join('')}</ol><p class="small">${T.sample}</p>${v?.uncertain?`<p class="small">${T.uncertain}</p>`:''}${shaky?`<p class="gjshaky">${T.shaky}</p>`:''}</section>`;
+}
+/* A grant renders the same proven closure without persisting it or moving the
+   stored active gap. Parent actions continue to use gapData, never this copy. */
+function gapVisibleClosures(d){
+  const closed={...d.closed};
+  for(const s of Object.keys(d.journey||{})){
+    const r=stdRating(s);if(!r||!GAP_WEAK.includes(r.st)||closed[s]?.schoolDay>=r.day||d.hold[s]?.schoolDay>=r.day)continue;
+    const k=gapHeldQuest(d.journey,s,r.day,gapQuests(s));
+    if(k)closed[s]={at:d.journey[s].quests[k].held.day,by:'app',schoolDay:r.day,quest:k};
+  }
+  return closed;
+}
+function gapOverviewHTML(){
+  if(!schoolData())return '';
+  const T=GAP_TEXT[PL()],open=openGaps(),d=gapData(),closed=gapVisibleClosures(d),standards=uniq(open.map(g=>g.s).concat(Object.keys(closed),Object.keys(d.journey||{})));
+  let held=0,other=0;
+  for(const s of standards){const r=stdRating(s);if(!r)continue;const c=closed[s],j=d.journey?.[s];
+    if(['M','E'].includes(r.st)){if(c||j)other++;}
+    else if(c?.schoolDay>=r.day){if(c.by==='app'&&gapJourneyBest(j)?.held)held++;else other++;}
+  }
+  const n=open.length+held+other;if(!n)return '';
+  return `<p class="phow" id="gapOverview"><b>${n} ${T.gaps}:</b> ${held} ${T.heldN} · ${open.length} ${T.work}${other?' · '+other+' '+T.otherClosed:''}</p>`;
 }
 /* the gaps of a subject (by the subject of their standard) for the block "From school": open (active / waiting),
    kept open, closed - with the parents' buttons */
@@ -2260,13 +2317,14 @@ function gapsSubjectHTML(key){
     rows.push(`<li class="pgap ${on?'on':'wait'}"><b>${on?'🎯 ':''}${name(g.s)}</b> <span class="small">(${de?'Einstufung':'rating'} ${fmtDay(g.day)} · ${qn(g)})</span><br>`
       +`${on?gapProgressHTML(g):`<span class="small">${de?'wartet':'waiting'}</span>`}`
       +(g.held?` <span class="small">· ${de?'von Ihnen offen gehalten':'kept open by you'} (${fmtDay(d.hold[g.s].at)})</span>`:'')
-      +(on?'':btn('go',g.s,de?'Jetzt angehen':'Work on it now'))+btn('close',g.s,de?'Als geschlossen markieren':'Mark as closed')+`</li>`);
+      +(on?'':btn('go',g.s,de?'Jetzt angehen':'Work on it now'))+btn('close',g.s,de?'Als geschlossen markieren':'Mark as closed')+gapJourneyHTML(g.s,{st:g.st,day:g.day})+`</li>`);
   }
-  for(const [s,c] of Object.entries(d.closed)){
+  for(const [s,c] of Object.entries(gapVisibleClosures(d))){
     const r=stdRating(s); if(!r || stdSubject(s)!==key || c.schoolDay<r.day || !GAP_WEAK.includes(r.st)) continue;
     rows.push(`<li class="pgap done"><b>${de?'Lücke geschlossen':'Gap closed'} ✓</b> ${name(s)} <span class="small">(${fmtDay(c.at)} · ${c.by==='parents'?(de?'von Ihnen geschlossen':'closed by you'):(de?'laut den Antworten in der App':'according to the answers in the app')})</span>`
-      +(c.by==='app'?btn('hold',s,de?'Weiter üben':'Keep practicing'):'')+`</li>`);
+      +(c.by==='app'?btn('hold',s,de?'Weiter üben':'Keep practicing'):'')+gapJourneyHTML(s,r,c)+`</li>`);
   }
+  for(const s of Object.keys(d.journey||{})){const r=stdRating(s);if(r&&stdSubject(s)===key&&['M','E'].includes(r.st))rows.push(`<li class="pgap done"><b>${de?'Lücke geschlossen':'Gap closed'} ✓</b> ${name(s)}${gapJourneyHTML(s,r,d.closed[s])}</li>`);}
   if(!rows.length) return '';
   return `<h4 class="psub">${de?'Lücken laut Schule':'Gaps per school'} <button type="button" class="info-btn" data-help="gaps" aria-label="Info">ⓘ</button></h4><ul class="pgaps">${rows.join('')}</ul>`;
 }
@@ -3900,7 +3958,7 @@ function parentHomeHTML(){
   const noKid=accountsOn() && !viewedKid() ? myKidsNote() : '';
   if(noKid) return noKid;   // nothing to show: without a logged-in child the data on this device are not the child's
   // concept 5.3 (B4): notes only when something is to do - data move, backup, waiting sheet, "new here?"
-  return `${migrLine()}${backupLine()}${note}${schoolYearLine()}${newHereLine()}${glanceHTML()}<div class="playout"><div class="psubjects">${tiles}</div><aside class="pside"><div class="pcard" id="pSummary">${summaryHTML(all)}</div><div class="pcard">${legendHTML()}</div></aside></div>`;
+  return `${migrLine()}${backupLine()}${note}${schoolYearLine()}${newHereLine()}${gapOverviewHTML()}${glanceHTML()}<div class="playout"><div class="psubjects">${tiles}</div><aside class="pside"><div class="pcard" id="pSummary">${summaryHTML(all)}</div><div class="pcard">${legendHTML()}</div></aside></div>`;
 }
 function legendHTML(){
   // One line, dot + common status; evidence quantity is described separately.
@@ -4594,7 +4652,7 @@ const HELP={
   tree:{kid:true,title:'Your learning tree',text:'<p>Your tree grows on every day you practise – in the app or on a practice sheet. It never wilts, even if you take a break.</p><p>Your badges show how you learn: trying a challenge, thinking hard, finishing a sheet.</p>'},
   record:{kid:true,title:'Recording yourself',text:'<p>Tap “● Aufnahme starten”, read aloud, tap “■ Stopp”. Then listen to yourself!</p><p>The last three recordings stay on this iPad. To hand one in, tap “Teilen / Sichern” together with a grown-up.</p>'},
   sheet:{kid:true,title:'Practice sheet',text:'<p>A sheet with 6 tasks and a writing task, plus an answer page for grown-ups.</p><p>Share it as a PDF (by mail, message or into Files) or print it. When you are done on paper, tap your sheet under “My sheets” and type in your answers.</p>'},
-  gaps:{title:'Lücken laut Schule',text:'<p>Hat die Schule einen Standard mit „Requires support“ oder „Consolidating“ eingestuft, übt die App ihn als <b>Lücke</b>. Immer eine zur Zeit, höchstens 2 von 8 Aufgaben pro Runde. Lücken, die ohnehin aktuelles Thema sind, werden übersprungen.</p><p>Geschlossen ist eine Lücke, wenn eine ihrer Quests im gemeinsamen Quest-Stand <b>sicher oder darüber hinaus</b> ist. Es gilt derselbe Stand wie bei der Aufgabenwahl, einschließlich des schulischen Ausgangspunkts bei zu wenigen eigenen Antworten. Wer geantwortet hat und mit welchen Hilfsmitteln, weiß die App nicht; ob die Aufgaben den Standard so abdecken, wie die Schule ihn prüft, ist je Thema verschieden.</p><p>Sie entscheiden: <b>Jetzt angehen</b>, <b>Als geschlossen markieren</b> oder – nach dem Schließen durch die App – <b>Weiter üben</b>.</p>'},
+  gaps:GAP_TEXT.de.help,
   overview:{title:'Wie entsteht die Einschätzung?',text:'<p>Der Elternbereich zeigt denselben <b>Quest-Stand</b> wie die Aufgabenwahl. Gezählt werden Menge und Richtigkeit der ersten Antworten, nicht Übungstage. Solange weniger als 6 eigene Antworten vorliegen, gilt eine vorhandene Schulbeurteilung als Ausgangspunkt.</p><ul><li><b>Belegumfang:</b> wenige, erste oder breitere Belege; ab etwa 20 ersten Versuchen ist die Menge breiter. Das ist keine weitere Hürde für den Quest-Stand.</li><li><b>Tendenz:</b> nur, wenn zwei Zeiträume genug Aufgaben haben.</li><li><b>Ältere Belege:</b> nach mehr als 3 Wochen Pause – Ferien ändern den Wissensstand nicht.</li></ul><p>Das ist <b>keine schulische Bewertung</b> und wird dem Kind nie gezeigt.</p><p>Die App weiß nicht, wer eine Aufgabe gelöst hat und mit welchen Hilfsmitteln. Die Einschätzung ist ein Hinweis; die Verantwortung liegt bei den Eltern.</p>'},
   focusmode:{title:'Fokus: Automatisch oder Manuell',text:'<p><b>Automatisch:</b> Die App wählt selbst und passt sich von selbst an:</p><ul><li>die nächsten Schritte, die die Lehrkraft nennt,</li><li>was laut Einschätzung Unterstützung braucht,</li><li>die aktive Lücke laut Schule.</li></ul><p>Tippen Sie bei einer Quest auf „Im Fokus“, wechselt die Wahl auf „Manuell“.</p><p><b>Manuell:</b> Sie legen selbst fest, woraus „Practise Today“ und das Übungsblatt Aufgaben nehmen – zum Beispiel vor einem Test. Mit „Automatisch“ übernimmt wieder die App.</p><p>Alle Quests bleiben für das Kind spielbar; der Fokus bestimmt nur, was „Practise Today“ und das Übungsblatt bevorzugen. Mehr dazu in „📖 Das Konzept von Big Quest → Wie die App einstuft“.</p>'},
   focus:{title:'Fokus-Themen',text:'<p>Aus diesen Themen stellt „Practise Today“ die 8 Aufgaben zusammen; auch die Übungsblätter nutzen sie. Auf der Startseite tragen sie das Zeichen „Focus“.</p><p>Die App wählt sie selbst: die nächsten Schritte der Lehrkraft, Quests, bei denen Übung hilft, und die aktive Lücke. Unter „🎯 Fokus“ können Sie auf „Manuell“ umstellen und selbst wählen.</p>'},
@@ -4610,7 +4668,7 @@ const HELP={
 };
 /* Grown-ups help in English: meaning-based, American English (Peter, 31.10.). */
 const HELP_EN={
-  gaps:{title:'Gaps per school',text:'<p>When the school rated a standard “requires support” or “consolidating”, the app practices it as a <b>gap</b>. One at a time, at most 2 of 8 tasks per round. Gaps that are a current topic anyway are skipped.</p><p>A gap is closed when one of its quests is <b>secure or going beyond</b> in the common quest status. This is the same status used to choose tasks, including the school starting point when there are too few own answers. The app does not know who answered or with what help; whether the tasks cover the standard the way the school tests it differs from topic to topic.</p><p>You decide: <b>Work on it now</b>, <b>Mark as closed</b> or – after the app closed it – <b>Keep practicing</b>.</p>'},
+  gaps:GAP_TEXT.en.help,
   overview:{title:'How is the summary made?',text:'<p>The grown-ups area shows the same <b>quest status</b> used to choose tasks. It uses the quantity and accuracy of first answers, not practice days. With fewer than 6 own answers, an available school rating provides the starting point.</p><ul><li><b>Evidence amount:</b> little, initial, or broader evidence; about 20 first tries provide a broader quantity. This is no extra hurdle for the quest status.</li><li><b>Trend:</b> only when two periods have enough tasks.</li><li><b>Older evidence:</b> after a break of more than 3 weeks – vacations do not change knowledge.</li></ul><p>This is <b>not a school assessment</b> and is never shown to your child.</p><p>The app does not know who solved a task or with what help. The summary is a hint; responsibility lies with the parents.</p>'},
   focusmode:{title:'Focus: automatic or manual',text:'<p><b>Automatic:</b> the app chooses by itself and adapts by itself:</p><ul><li>the next steps the teacher names,</li><li>what needs support according to the summary,</li><li>the active gap per school.</li></ul><p>Tapping “In focus” at a quest switches to “Manual”.</p><p><b>Manual:</b> you decide where “Practise Today” and the practice sheet take their tasks from – for example before a test. Choose “Automatic” to let the app take over again.</p><p>All quests stay playable for your child; the focus only decides what “Practise Today” and the practice sheet prefer. More in “📖 The Big Quest concept → How the app judges”.</p>'},
   focus:{title:'Focus topics',text:'<p>“Practise Today” builds its 8 tasks from these topics; practice sheets use them too. On the start page they carry the “Focus” sign.</p><p>The app picks them by itself: the teacher’s next steps, quests where practice helps, and the active gap. Under “🎯 Focus” you can switch to “Manual” and choose yourself.</p>'},
@@ -6907,7 +6965,7 @@ const ABOUT_DE=()=>`
 <ul>
 <li><b>Was eine Lücke ist:</b> ein Standard, den die Schule zuletzt mit „Braucht Unterstützung“ oder „Wird sicherer“ eingestuft hat. Dazu gehören alle Quests zu diesem Standard.</li>
 <li><b>Eine zur Zeit:</b> Die App übt immer nur eine Lücke – höchstens 2 von 8 Aufgaben pro Runde, wo es eine gibt, zuerst eine Grundlage-Aufgabe. Zuerst kommt „Braucht Unterstützung“, dann die älteste Einstufung. Eine Lücke, die ohnehin aktuelles Thema ist, wird übersprungen.</li>
-<li><b>Geschlossen</b> ist eine Lücke, wenn eine ihrer Quests im gemeinsamen Quest-Stand sicher oder darüber hinaus ist, wenn eine neuere Einstufung der Schule mindestens „Sicher“ ist oder wenn Sie sie schließen.</li>
+<li>${GAP_TEXT.de.aboutClosed}</li>
 <li><b>Geschlossen bleibt geschlossen.</b> Nur eine neuere schwache Einstufung öffnet sie wieder. Eine Lücke endet nie durch Zeit.</li>
 <li><b>Sie entscheiden</b> in der Fachansicht unter „Lücken laut Schule“: „Jetzt angehen“, „Als geschlossen markieren“ oder „Weiter üben“.</li>
 </ul>
@@ -7000,7 +7058,7 @@ const ABOUT_EN=()=>`
 <ul>
 <li><b>What a gap is:</b> a standard the school last rated “needs support” or “getting there”. All quests of that standard belong to it.</li>
 <li><b>One at a time:</b> the app practices only one gap at a time – at most 2 of 8 tasks per round, starting with a foundation task where there is one. “Needs support” comes first, then the oldest rating. A gap that is a current topic anyway is skipped.</li>
-<li><b>A gap is closed</b> when one of its quests is secure or going beyond in the common quest status, when a newer school rating is at least “secure”, or when you close it.</li>
+<li>${GAP_TEXT.en.aboutClosed}</li>
 <li><b>Closed stays closed.</b> Only a newer weak rating opens it again. A gap never ends because time has passed.</li>
 <li><b>You decide</b> in the subject view under “Gaps per school”: “Work on it now”, “Mark as closed” or “Keep practicing”.</li>
 </ul>

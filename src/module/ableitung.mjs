@@ -20,7 +20,7 @@
 
 import { mergeLog, lastWins, lastWinsOrder, effectiveTime, SCHOOL_EVALUATION_TARGETS, schoolEvaluationNeedsPractice } from './ereignisse.mjs';
 import { schoolStandardInfo, schoolStandardsByQuest } from './standardkatalog.mjs';
-import {gapSchoolRatings,gapMergeRatings,gapObserve,gapUndo} from './lueckenverlauf.mjs';
+import {gapSchoolRatings,gapObserve,gapUndo} from './lueckenverlauf.mjs';
 import {secureEvidence} from './wissen.mjs';
 const AB_GAP_STANDARDS=schoolStandardsByQuest();
 
@@ -49,7 +49,7 @@ function abPushEvidence(st, ctx, skill, row, originalLevel=row[1],sheet) {
   if(rating){
     st.gaps ||= {closed:{},active:null,hold:{}};
     st.gaps.journey ||= {};
-    gapObserve(st.gaps.journey,{standard,quest:skill,rating,row,originalLevel,secureBefore:before,secureAfter:secureEvidence(list),complete,previous,sheet});
+    gapObserve(st.gaps.journey,{standard,quest:skill,rating,row,originalLevel,secureBefore:before,secureAfter:secureEvidence(list),complete,previous,sheet,closed:ctx.gapClosed[standard]?.schoolDay>=rating.day});
   }
   st.ev[skill] = list.slice(-DERIVE_LIMITS.evidence);
   ctx.days.add(row[0]);
@@ -75,7 +75,23 @@ function abUndoSheetResult(st, it) {
 function abApply(st, ctx, e) {
   const p = e.payload;
   switch (e.type) {
-    case 'answer': {                                                            // index.html: observeAttempt, showHint, showExample, showWorked
+    case 'school_import': {
+      // Same complete-replacement / newest-asOf contract as deriveSchool.
+      if(p.data.asOf===p.asOf&&Array.isArray(p.data.tasks)&&p.asOf>=ctx.gapAsOf){
+        ctx.gapAsOf=p.asOf;ctx.gapSchool=gapSchoolRatings(p.data);
+        st.gaps ||= {closed:{},active:null,hold:{}};st.gaps.school=ctx.gapSchool;st.gaps.schoolAsOf=p.asOf;
+      }
+      break;
+    }
+    case 'gap_state': {
+      const s=p.standard;if(s==='__proto__')break;
+      if(p.state==='closed'){
+        if(p.by==='app'&&ctx.gapHold[s]?.schoolDay>=p.schoolDay)break;
+        ctx.gapClosed[s]={schoolDay:p.schoolDay};if(p.by==='parents')delete ctx.gapHold[s];
+      }else{delete ctx.gapClosed[s];if(p.state==='hold')ctx.gapHold[s]={schoolDay:p.schoolDay};else delete ctx.gapHold[s];}
+      break;
+    }
+    case 'answer' : {                                                            // index.html: observeAttempt, showHint, showExample, showWorked
       abPushAttempt(st, abClone(p));                                            // the event IS the stored attempt
       const shown = p.hintShown || p.exampleShown || p.solutionShown;
       if (!shown && p.attempt === 1) {
@@ -286,16 +302,13 @@ function abGaps(st, list, now) {
 export function derive(events, { now, base } = {}) {
   if (now === undefined || now === null) throw new Error('derive: "now" is missing');
   const st = Object.assign({ attempts: [], ev: {}, due: [], total: 0, badges: {}, tried: [], treeStage: 0, sheets: [], sheetNo: 0, _days: [] }, base ? abClone(base.state) : {});
-  const ctx = { days: new Set(st._days), gapSchool: {} };
+  const ctx = { days: new Set(st._days), gapSchool:{...(st.gaps?.school||{})},gapAsOf:st.gaps?.schoolAsOf||'',gapClosed:{...(st.gaps?.closed||{})},gapHold:{...(st.gaps?.hold||{})} };
   let list = mergeLog([Array.isArray(events) ? events : []], now).events;
   if (base) {
     const upTo = effectiveTime(base.upTo, now);
     if (Number.isNaN(upTo)) throw new Error('derive: base.upTo is not a UTC time');
     list = list.filter((e) => effectiveTime(e.at, now) > upTo);
   }
-  ctx.gapSchool={...(st.gaps?.school||{})};
-  for(const e of list)if(e.type==='school_import')gapMergeRatings(ctx.gapSchool,gapSchoolRatings(e.payload.data));
-  if(Object.keys(ctx.gapSchool).length){st.gaps ||= {closed:{},active:null,hold:{}};st.gaps.school=ctx.gapSchool;}
   for (const e of list) abApply(st, ctx, e);
   for (const e of Object.values(lastWins(list, now))) abApplyWinner(st, e);
   abChecklistSize(st, list);

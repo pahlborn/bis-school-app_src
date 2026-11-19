@@ -2,6 +2,7 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
 import {appSandbox,stellbareUhr} from '../app-sandbox.mjs';
 import {appLesen} from '../../werkzeug/module.mjs';
+import {committedApp} from './ep01-rest-fixtures.mjs';
 import {ausV1,kontenEinsetzen} from '../../werkzeug/konten.mjs';import {schuleEinsetzen} from '../../werkzeug/schule.mjs';
 import {derive} from '../../src/module/ableitung.mjs';import {newEvent,checkEvent} from '../../src/module/ereignisse.mjs';
 import {makeSnapshot,stateFrom} from '../../src/module/schnappschuss.mjs';
@@ -9,7 +10,8 @@ const DAY='2026-11-19',NOW=Date.parse(DAY+'T12:00:00Z'),plain=x=>x===undefined?u
 const users=[{user:'mia',role:'student',start:{salt:Array(16).fill(1),hash:'00'.repeat(32)}},{user:'papa',role:'parent',kinder:['mia'],start:{salt:Array(16).fill(2),hash:'11'.repeat(32)}}],accounts=ausV1({users});
 const school=(day='2026-11-18',rating='RS')=>({asOf:day,tasks:[{day,area:'math',title:'Synthetic held regression',std:{'M-N1':rating},quests:['numbers'],focusNext:[],good:{de:'',en:''},next:{de:'',en:''}}]});
 function fixture({data=school(),speicher={},bauart='live',uhr=stellbareUhr(NOW)}={}){
- const html=schuleEinsetzen(kontenEinsetzen(appLesen('utf8',{bauart}),accounts),{version:1,kinder:{mia:data}},accounts).toString('utf8');
+ const source=process.env.BQ_HELD_CONTROL==='old'?committedApp('dfd354f131260dae12de6ad9dfd06a5c1708d04a'):appLesen('utf8',{bauart});
+ const html=schuleEinsetzen(kontenEinsetzen(source,accounts),{version:1,kinder:{mia:data}},accounts).toString('utf8');
  const S=appSandbox({seed:19,uhr,speicher,bauart,anpassen:()=>html});S.holen('store').set('session',{user:'mia',id:accounts.users.find(u=>u.user==='mia').id});return S;
 }
 const answer=(S,ok=true,extra={})=>S.holen('recordAnswer')({world:'numbers',level:2,...extra},ok);
@@ -62,12 +64,20 @@ test('actual event-reading app replays existing answer events into the same held
  assert.deepEqual(plain(S.holen('store').get('ev',{})),derive(v.list,{now:NOW+1e4}).ev);assert.deepEqual(plain(S.holen('eventErrors')),[]);
 });
 
-test('partial school imports preserve other standard epochs in full and snapshot replay',async()=>{
+test('a valid partial school_evaluation preserves the imported gap context through a snapshot',()=>{
  const v=events();for(let i=0;i<8;i++)v.answer();const early=derive(v.list,{now:NOW+1e4}),cut=v.list.at(-1).at;
- const other={asOf:DAY,tasks:[{...school().tasks[0],day:DAY,std:{'S-F1':'C'},quests:['forces']}]};
- v.add('school_import',{asOf:other.asOf,data:other});for(let i=0;i<4;i++)v.answer();
+ v.add('school_evaluation',{child:'p_kind',evaluation:'7d97af5e-6e19-46b8-85c6-d3c950a77680',revision:'7d97af5e-6e19-46b8-85c6-d3c950a77681',title:'Synthetic manual school update',day:DAY,standard:'M-N5',rating:'C',focus:'two-step'});
+ for(let i=0;i<4;i++)v.answer();
  const full=derive(v.list,{now:NOW+1e4}),part=derive(v.list.filter(e=>e.at>cut),{now:NOW+1e4,base:{upTo:cut,state:early}});
- assert.deepEqual(part,full);assert.equal(full.gaps.school['M-N1'].st,'RS');assert.equal(full.gaps.school['S-F1'].st,'C');assert.ok(full.gaps.journey['M-N1'].quests.numbers.held);
+ assert.deepEqual(part,full);assert.equal(full.gaps.school['M-N1'].st,'RS');assert.equal(full.gaps.school['M-N5'],undefined,'existing manual ratings do not open standard gaps');assert.ok(full.gaps.journey['M-N1'].quests.numbers.held);
+});
+test('a complete replacement school import stops removed-topic tracking in live, full and snapshot replay',()=>{
+ const S=fixture(),v=events();for(let i=0;i<2;i++){answer(S);v.answer();}
+ const early=derive(v.list,{now:NOW+1e4}),cut=v.list.at(-1).at,oldProof=proof(S),replacement={asOf:DAY,tasks:[]};
+ const R=fixture({data:replacement,speicher:Object.fromEntries(S.ablage)});answer(R);
+ v.add('school_import',{asOf:DAY,data:replacement});v.answer();
+ const full=derive(v.list,{now:NOW+1e4}),part=derive(v.list.filter(e=>e.at>cut),{now:NOW+1e4,base:{upTo:cut,state:early}});
+ assert.deepEqual(part,full);assert.deepEqual(full.gaps.school,{});assert.deepEqual(full.gaps.journey['M-N1'].quests.numbers,oldProof);assert.deepEqual(proof(R),oldProof,'removed source gets no new live/replayed observation');assert.equal(R.holen('openGaps')().length,0);
 });
 test('correcting the same historical sheet item replaces its gap observation and survives a snapshot cut',async()=>{
  const v=events();for(let i=0;i<6;i++)v.answer();
@@ -80,8 +90,9 @@ test('correcting the same historical sheet item replaces its gap observation and
  assert.equal(p.total,7);assert.equal(p.checks.length,1);assert.equal(p.checks[0].ok,true);assert.equal(full.ev.numbers.length,7);assert.equal(full.attempts.filter(a=>a.sheet).length,1);
  assert.deepEqual(derive(v.list.filter(e=>e.at>cut),{now:NOW+1e4,base:{upTo:cut,state:before}}),full);
 });
-test('the actual child writer uses unchanged wire fields and reload preserves the six following answers',()=>{
+test('the actual child writer uses unchanged wire fields and reload preserves the six following answers',async()=>{
  const S=fixture({bauart:'test'}),v=events();S.setzen(S.holen('evPre')()+'events',v.list);
+ await S.uhr.vor(100); // the imported assessment precedes this device's real writer clock
  for(let i=0;i<12;i++){
   answer(S);S.holen('logAttempt')({day:DAY,skill:'numbers',level:2,attempt:1,ok:true,qid:'actual-writer-'+i,help:false});
  }
@@ -89,4 +100,16 @@ test('the actual child writer uses unchanged wire fields and reload preserves th
  for(const e of all.filter(e=>e.type==='answer'))assert.deepEqual(checkEvent(e),[]);
  assert.equal(proof(S).checks.length,6);assert.ok(proof(S).held);assert.deepEqual(plain(S.holen('eventErrors')),[]);
  const R=fixture({bauart:'test',speicher:Object.fromEntries(S.ablage)});assert.deepEqual(proof(R),proof(S));
+});
+
+test('parent closure before M records later errors as later, never as a new opening',()=>{
+ const v=events();v.answer();v.add('gap_state',{standard:'M-N1',state:'closed',by:'parents',schoolDay:'2026-11-18',day:DAY});v.answer(false);
+ const st=derive(v.list,{now:NOW+1e4});assert.equal(st.gaps.closed['M-N1'].by,'parents');assert.equal(st.gaps.journey['M-N1'].quests.numbers.later.length,1);assert.equal(st.gaps.journey['M-N1'].quests.numbers.later[0].ok,false);
+});
+test('assisted correct original L1 is described as help and counts as one following task',()=>{
+ const S=fixture();for(let i=0;i<6;i++)answer(S);answer(S,true,{level:1,assisted:true});assert.equal(proof(S).checks.length,1);assert.equal(proof(S).checks[0].help,true);
+});
+
+test('held baseline control: six actual first answers reach M but must leave the gap open',()=>{
+ const S=fixture();for(let i=0;i<6;i++)answer(S);assert.equal(S.holen('standOf')('numbers'),'M');assert.equal(S.holen('openGaps')().length,1,'M reaching is not holding');
 });

@@ -10,15 +10,13 @@ export function gapSchoolRatings(data){
   }
   return out;
 }
-export function gapMergeRatings(out,incoming){
-  for(const [s,r]of Object.entries(incoming))if(!out[s]||r.day>=out[s].day)out[s]=r;
-  return out;
-}
 const gjClone=x=>JSON.parse(JSON.stringify(x));
 const gjEmpty=complete=>({total:0,first:[],recent:[],complete,checks:[]});
 function gjStep(p,entry,before,after){
-  const {row,originalLevel,sheet}=entry;
-  const answer={ok:row[2]===1,level:originalLevel,help:row[1]===1&&originalLevel>1,...sheet?{sheet}:{}};
+  const {row,originalLevel,sheet,closed}=entry;
+  const answer={ok:row[2]===1,level:originalLevel,help:(row[2]===1&&row[3]===false)||(row[1]===1&&originalLevel>1),...sheet?{sheet}:{}};
+  if(closed&&p.closedAfter===undefined)p.closedAfter=p.total;
+  if(p.held||p.closedAfter!==undefined){p.later ||= [];p.later.push(answer);p.later=p.later.slice(-GAP_CHECKS);}
   p.total++;if(p.first.length<GAP_CHECKS)p.first.push(answer);p.recent.push(answer);p.recent=p.recent.slice(-GAP_CHECKS);
   if(!p.reached){
     if(before)p.reached={day:row[0],kind:'observed'}; // M was observed BEFORE this answer: it already counts
@@ -29,13 +27,13 @@ function gjStep(p,entry,before,after){
 }
 // A bounded correction journal belongs only to an open school-gap epoch. It
 // preserves the established sheet undo semantics without another response.
-export function gapObserve(journeys,{standard,quest,rating,row,originalLevel,secureBefore,secureAfter,complete=false,previous=[],sheet}){
+export function gapObserve(journeys,{standard,quest,rating,row,originalLevel,secureBefore,secureAfter,complete=false,previous=[],sheet,closed=false}){
   if(!standard||!rating||!['RS','C'].includes(rating.st)||row[0]<rating.day)return;
   let g=journeys[standard];
   if(!g||g.schoolDay!==rating.day)g=journeys[standard]={schoolDay:rating.day,quests:{}};
   let p=g.quests[quest];
   if(!p)p=g.quests[quest]={...gjEmpty(complete),seed:gjClone(previous),journal:[],prefix:gjEmpty(complete)};
-  const entry={row:row.slice(),originalLevel,...sheet?{sheet}:{}};
+  const entry={row:row.slice(),originalLevel,...sheet?{sheet}:{},...closed?{closed:true}:{}};
   gjStep(p,entry,secureBefore,secureAfter);p.journal.push(entry);
   if(p.journal.length>200){
     const first=p.journal.shift(),before=secureEvidence(p.seed);p.seed.push(first.row);p.seed=p.seed.slice(-60);
@@ -49,6 +47,7 @@ export function gapUndo(journeys,standard,quest,sheet){
   p.journal.splice(at,1);
   const rebuilt=gjClone(p.prefix),ev=gjClone(p.seed);
   for(const entry of p.journal){const before=secureEvidence(ev);ev.push(entry.row);if(ev.length>60)ev.shift();gjStep(rebuilt,entry,before,secureEvidence(ev));}
+  if(p.uncertain){rebuilt.uncertain=true;delete rebuilt.held;}
   journeys[standard].quests[quest]={...rebuilt,seed:p.seed,journal:p.journal,prefix:p.prefix};
 }
 export function gapJourneyBest(g){

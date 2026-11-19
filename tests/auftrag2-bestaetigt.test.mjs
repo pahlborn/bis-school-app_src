@@ -13,7 +13,7 @@ const SCHULE = { version: 1, kinder: { mia: { asOf: tag(-1), tasks: [
   { day: tag(-20), area: 'math', title: 'Check B', std: { 'M-N1': 'RS' }, quests: ['numbers'], focusNext: [], good: txt('b', 'b'), next: txt('', '') },
   { day: tag(-5), area: 'science', title: 'Forces', std: { 'S-F1': 'M' }, quests: ['forces'], focusNext: ['forces'], good: txt('c', 'c'), next: txt('Begründen.', 'Explain.') }
 ] } } };
-const HAKEN = (app) => app.replace(/\}\)\(\);\s*<\/script>/, 'window.__g={assessQuest,openGaps,standOf,questProgress};})();</script>');
+const HAKEN = (app) => app.replace(/\}\)\(\);\s*<\/script>/, 'window.__g={assessQuest,openGaps,standOf,questProgress,recordAnswer,gapData};})();</script>');
 
 let browser, server, meetingServer;
 before(async () => {
@@ -82,33 +82,49 @@ test('Auftrag 2: Balken unter 100 % und der passende Text, wenn genau eine Bedin
 });
 
 async function tapRight(page,q){
+ if(await page.locator('#takeChallenge').isVisible())await page.locator('#takeChallenge').tap();
  if(q.kind==='mc')await page.locator('#qAnswers .opt[data-i="'+q.answer+'"]').tap();
  else if(q.kind==='type'){for(const digit of String(q.answer))await page.locator('#qAnswers .key[aria-label="'+digit+'"]').tap();await page.locator('#qAnswers .key.go').tap();}
  else{for(const i of q.correct)await page.locator('#qAnswers .ord[data-i="'+i+'"]').tap();await page.locator('#checkOrder').tap();}
  assert.ok(await page.locator('#feedback.good').isVisible());
 }
-test('W1 actual one-session answers reach M and close the gap; parent touch display and a month pause agree',async()=>{
+test('W1 real touch journey separates reached M and held, permits help, survives a pause and shows later shaky answers',async()=>{
  const{ctx,page,fehler}=await oeffnen(browser,server,{viewport:{width:768,height:1024},hasTouch:true});
  try{
   await anmelden(page,'student','mia',C.mia);await passwortSetzen(page,'Tiger-Lamp-River-4271');await page.waitForSelector('#home:not([hidden])');
-  await page.locator('#subjects button.subject').filter({hasText:'Maths'}).tap();await page.locator('[data-item="numbers"]').tap();
-  let relevant=0;
+  const openNumbers=async()=>{await page.locator('#subjects button.subject').filter({hasText:'Maths'}).tap();await page.locator('[data-item="numbers"]').tap();};
+  const home=async()=>{await page.locator('#homeBtn').tap();if(await page.locator('#subjectBack').isVisible())await page.locator('#subjectBack').tap();};
+  const enterParent=async(first=false)=>{await page.locator('#adultBtn').tap();await anmelden(page,'adult','papa',C.papa);if(first)await passwortSetzen(page,'Moon-Glass-Paper-8812');await page.waitForSelector('#parentClose');};
+  await openNumbers();let relevant=0;
   for(let i=0;i<8;i++){const s=await zustand(page),q=s.round[s.idx];if((q.level||2)===2)relevant++;await tapRight(page,q);await page.locator('#nextBtn').tap();}
-  assert.ok(relevant>=6,'real RS-adapted round supplies six year-level questions');assert.equal(await page.locator('#resScore').textContent(),'8');
-  let a=await page.evaluate(()=>window.__g.assessQuest('numbers'));assert.equal(a.level,'m');assert.equal(a.days,1);assert.equal(a.sure,'provisional');
-  await page.locator('#homeBtn').tap();if(await page.locator('#subjectBack').isVisible())await page.locator('#subjectBack').tap();
-  const closed=await page.evaluate(id=>JSON.parse(localStorage.getItem('bq2_'+id+'__gaps')).closed['M-N1'],ID('mia'));assert.equal(closed.by,'app');
-  await page.locator('#adultBtn').tap();await anmelden(page,'adult','papa',C.papa);await passwortSetzen(page,'Moon-Glass-Paper-8812');await page.waitForSelector('#parentClose');
-  let t=await mathe(page);assert.match(t,/Lücke geschlossen/);
-  const card=page.locator('.pquest').filter({has:page.locator('[data-pfocus="numbers"]')});
-  assert.match(await card.locator('.pqchips .pst').first().innerText(),/Sicher/);assert.doesNotMatch(await card.innerText(),/Noch nicht einschätzbar|Übungstage|practice days/);
-  await card.locator('.pbasis summary').tap();assert.match(await card.locator('.pbasis').innerText(),/Belegumfang/);
-  for(const viewport of[{width:768,height:1024},{width:1024,height:768}]){await page.setViewportSize(viewport);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));assert.ok(await card.locator('[data-pfocus="numbers"]').evaluate(e=>e.getBoundingClientRect().height>=44));}
-  await page.locator('[data-gapact="hold"][data-gapstd="M-N1"]').tap();assert.equal(await breite(page,'#pSchool'),100);assert.match(await page.locator('#pSchool .pgaps').innerText(),/sicher/);
-  assert.match(await mathe(page,'en'),/secure/);assert.match(await card.locator('.pqchips .pst').first().innerText(),/Secure/);assert.doesNotMatch(await card.innerText(),/Not yet possible to judge|practice days/);
-  await page.clock.install({time:Date.now()});await page.clock.setFixedTime(new Date(Date.now()+31*864e5));
-  a=await page.evaluate(()=>window.__g.assessQuest('numbers'));assert.equal(a.level,'m');assert.equal(a.old,true);assert.equal(await page.evaluate(()=>window.__g.questProgress('numbers').frac),1);
-  assert.deepEqual(fehler,[]);
+  assert.ok(relevant>=6);assert.equal(await page.locator('#resScore').textContent(),'8');await home();
+  let a=await page.evaluate(()=>window.__g.assessQuest('numbers'));assert.equal(a.level,'m');assert.equal(a.days,1);
+  assert.equal(await page.evaluate(()=>window.__g.openGaps().length),1,'M alone leaves gap open');
+  await enterParent(true);let t=await mathe(page);assert.match(t,/Sicher erreicht/);assert.match(t,/Lücke noch offen/);
+  const journey=page.locator('[data-journey="M-N1"]');assert.equal(await journey.locator('.gjstations>li').count(),4);assert.equal(await journey.locator('[data-stage="4"].done').count(),0);
+  assert.match(await journey.innerText(),/Erste Antworten nach der Schulbewertung/);assert.match(await journey.innerText(),/von 6 bearbeitet/);
+  await page.locator('#parentClose').tap();await page.waitForSelector('#home:not([hidden])');await openNumbers();
+  for(let i=0;i<8;i++){const s=await zustand(page),q=s.round[s.idx];if(i===0){if(await page.locator('#takeChallenge').isVisible())await page.locator('#takeChallenge').tap();await page.locator('#helpBtn').tap();}await tapRight(page,q);await page.locator('#nextBtn').tap();}
+  await home();await enterParent();t=await mathe(page);assert.match(t,/Lücke geschlossen/);assert.equal(await journey.locator('[data-stage="4"].done').count(),1);
+  assert.match(await journey.innerText(),/Gehalten · 6 von 6 richtig/);assert.ok(await page.evaluate(()=>window.__g.gapData().journey['M-N1'].quests.numbers.checks.some(x=>x.help)),'real help-first answer still confirms');
+  for(const lang of['de','en']){await mathe(page,lang);for(const viewport of[{width:768,height:1024},{width:1024,height:768}]){
+   await page.setViewportSize(viewport);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+   assert.equal(await journey.locator('.gjstations>li').count(),4);
+   const boxes=await journey.locator('.gjstations>li').evaluateAll(es=>es.map(e=>({x:Math.round(e.getBoundingClientRect().x),y:Math.round(e.getBoundingClientRect().y)})));
+   if(viewport.width===768)assert.equal(new Set(boxes.map(b=>b.x)).size,1,'portrait: one vertical connected track');else assert.equal(new Set(boxes.map(b=>b.y)).size,1,'landscape: four stations in one connected row');
+   assert.ok(await page.locator('[data-gapact="hold"][data-gapstd="M-N1"]').evaluate(e=>e.getBoundingClientRect().height>=44));
+   await journey.screenshot({path:process.env.BQ_HELD_SCREENSHOTS?process.env.BQ_HELD_SCREENSHOTS+'/'+lang+'-'+viewport.width+'.png':'/tmp/bq-held-'+lang+'-'+viewport.width+'.png'});
+  }}
+  await page.locator('[data-gapact="hold"][data-gapstd="M-N1"]').tap();assert.equal(await page.evaluate(()=>window.__g.openGaps().length),1);assert.match(await journey.innerText(),/kept open by you/);
+  await page.locator('[data-gapact="close"][data-gapstd="M-N1"]').tap();assert.match(await journey.innerText(),/Closed by you/);
+  await page.evaluate(()=>{for(let i=0;i<25;i++)window.__g.recordAnswer({world:'numbers',level:2},false);});
+  t=await mathe(page,'en');assert.match(t,/Shaky lately/);assert.equal(await page.evaluate(()=>window.__g.openGaps().length),0);
+  await page.clock.install({time:Date.now()});await page.clock.setFixedTime(new Date(Date.now()+31*864e5));await page.reload();await page.waitForSelector('#parentClose:visible,#home:not([hidden]),#login:not([hidden])');
+  if(!await page.locator('#parentClose').isVisible()){
+   if(await page.locator('#home').isVisible())await page.locator('#adultBtn').tap();
+   await anmelden(page,'adult','papa','Moon-Glass-Paper-8812');await page.waitForSelector('#parentClose');
+  }
+  t=await mathe(page,'en');assert.match(t,/Gap closed/);assert.match(t,/Shaky lately/);assert.deepEqual(fehler,[]);
  }finally{await ctx.close();}
 });
 test('W1 parent shows the school M starting point with five wrong own answers and its actual basis',async()=>{
