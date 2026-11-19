@@ -150,7 +150,7 @@ test('Gegenproben Suchlauf: jede Abweichung wird gefunden (Schuldaten, Konten, T
   nurFund(APP.replace(VERSION_AUS_KLARTEXT, () => VERSION_AUS_KLARTEXT.replace('const APP_VERSION=', 'const APP_NAME=')), 'Aktualisierung ohne Schluessel');
   // verbotene Woerter: jedes einzelne, irgendwo in der App, und im Manifest
   for (const w of [...WOERTER, ...ERSATZ.auchVerboten]) nurFund(APP.replace('</body>', `<!-- ${w.toUpperCase()} --></body>`), 'keine verbotenen Woerter');
-  nurFund(APP, 'keine verbotenen Woerter', JSON.stringify({ ...JSON.parse(MANIFEST), description: 'Toddle' }));
+  nurFund(APP, 'keine verbotenen Woerter', JSON.stringify({ ...JSON.parse(MANIFEST), description: 'Bhan' }));
   // Live-Bau statt Testbau, ohne Version, ohne Test-Namen
   const live = testinstanzUmwandeln(appLesen('utf8', { bauart: 'live' }).replace('/*BQ_VERSION*/null', JSON.stringify(VERSION)), ERSATZ);
   assert.ok(funde(live).some((f) => f.startsWith('Testbau')), 'Live-Bau erkannt');
