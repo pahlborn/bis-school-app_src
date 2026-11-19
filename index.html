@@ -3710,7 +3710,7 @@ function sheetResult(sheetId, idx, res){
   const all=store.get('sheets',[]), sh=all.find(s=>s.id===sheetId), it=sh && sh.items[idx]; if(!it || !it.q || it.res) return;
   const q=it.q, key=sheetId+':'+idx;
   if(res==='ok') recordAnswer(q,true,key);
-  else if(res==='help') recordAnswer(Object.assign({},q,{level:1,assisted:true}),true,key);
+  else if(res==='help') recordAnswer(Object.assign({},q,{assisted:true}),true,key);
   else { recordAnswer(q,false,key); rememberWrong(q); }
   const list=(store.get('ev',{})[q.world])||[];
   it.rec={ev:list[list.length-1]||null, key, due:res==='no'?(q.dueId||qId(q)):null};

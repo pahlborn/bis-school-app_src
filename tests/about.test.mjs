@@ -85,7 +85,11 @@ test('the concept explains how titles, tree, badges and levels are worked out (P
   await page.locator('#tabDe').click();
   const d = await aboutAbschnitt(page, 'Wie die App einstuft');
   const t = await d.textContent();
-  for (const w of ['Explorer ab 0', 'Investigator ab 25', 'Scientist ab 60', 'Professor ab 120', 'Legend ab 250', '1, 3, 6, 10, 15 und 25 Tagen', 'Silber ab 5-mal', 'mindestens 80 %', '8 ersten Versuchen an mindestens 3 Tagen', '15 Prozentpunkte']) assert.ok(t.includes(w), w);
+  for (const w of ['Explorer ab 0', 'Investigator ab 25', 'Scientist ab 60', 'Professor ab 120', 'Legend ab 250', '1, 3, 6, 10, 15 und 25 Tagen', 'Silber ab 5-mal', 'mindestens 80 %', '15 Prozentpunkte']) assert.ok(t.includes(w), w);
+  assert.match(t,/derselbe Quest-Stand, ohne zusätzliche Mengen- oder Tageshürde/);
+  assert.match(t,/Bei weniger als 6 eigenen Antworten[\s\S]*letzte vorhandene Schuleinstufung/,'school fallback remains part of the common stand');
+  assert.match(t,/ab 8 „erste Belege“, ab 20 „breitere Belege“/,'8/20 describe evidence quantity');
+  assert.ok(!t.includes('8 ersten Versuchen an mindestens 3 Tagen'),'no old parent knowledge/day veto');
   assert.ok(!t.includes('1, 3 und 7 Tagen'), 'the review rule is in "So lernt das Kind" only (F2)');
   assert.ok(!/Requires support|Consolidating|Meeting expectations|Extending/.test(t), 'no school terms on a child-reachable page');
   await ctx.close();

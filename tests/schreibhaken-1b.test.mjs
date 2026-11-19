@@ -14,7 +14,13 @@ import { altStand, LESEN_ANFANG } from '../src/module/lesen.mjs';
 
 const WERTE = ['name', 'lastName', 'birthday', 'mySchool', 'emoji', 'kidLang', 'storyCap', 'greetDay', 'mysteryDone', 'bdayParty', 'unlocked', 'focusMode', 'focusManual', 'gaps', 'jokeSeen', 'storyRead', 'muted', 'grants', 'grantlog', 'lastBackup'];
 const betroffen = (k) => WERTE.includes(k) || k.startsWith('chk_') || /^advent\d{4}$/.test(k);
-function haken() { window.__bqh = { listEvents, eventHook, jokesFor, themeNow, ohneKind: () => eventNoChild.slice(), ohnePerson: () => eventNoPerson.slice(), probleme: () => ({ abgelehnt: eventSink ? eventSink.problems.concat(personSink.problems) : null, fehler: eventErrors }) }; }
+function haken() { window.__bqh = { standOf,openGaps,gapData,
+  firstYearAnswer(skill){
+    const q=WORLDS[skill].build().find(q=>levelOf(q)===2&&!q.assisted);
+    if(!q)throw new Error('No actual year-level question for '+skill);
+    recordAnswer(q,true);
+    logAttempt({day:dayKey(),skill,level:levelOf(q),attempt:1,ok:true,qid:qId(q),help:false});
+  },listEvents, eventHook, jokesFor, themeNow, ohneKind: () => eventNoChild.slice(), ohnePerson: () => eventNoPerson.slice(), probleme: () => ({ abgelehnt: eventSink ? eventSink.problems.concat(personSink.problems) : null, fehler: eventErrors }) }; }
 /* 3b-1c: what the app keeps on the device only and computes from "until" when reading (task 3b-2) - not in the events */
 const ohneGeraetenotiz = (k, v) => (k === 'grants' && Array.isArray(v) ? v.map(({ expiredLogged, ...g }) => g) : k === 'grantlog' && Array.isArray(v) ? v.filter((e) => e.ev !== 'abgelaufen') : v);
 const mitHaken = (h) => h.replace(/\}\)\(\);\s*<\/script>/, () => `(${haken.toString()})();})();</script>`);
@@ -235,7 +241,11 @@ test('3b-1b-3 Luecken: Eltern waehlen, schliessen, halten; die App schliesst (El
     const { ctx, page, fehler } = await oeffnen(browser, ks);
     await anmelden(page, 'student', 'mia', C.mia); await passwortSetzen(page, 'Tiger-Lamp-River-4271');
     await page.waitForSelector('#home:not([hidden])');
-    await setze(page, uebung('numbers', 12, [1, 2, 3, 4]));
+    await setze(page, uebung('numbers',6,[0]));
+    assert.equal(await page.evaluate(()=>window.__bqh.standOf('numbers')),'M');
+    assert.ok(await page.evaluate(()=>window.__bqh.openGaps().some(g=>g.s==='M-N1')),'M alone does not close');
+    await page.evaluate(()=>{for(let i=0;i<5;i++)window.__bqh.firstYearAnswer('numbers');});
+    assert.equal(await page.evaluate(()=>window.__bqh.gapData().journey['M-N1'].quests.numbers.checks.length),5);
     await page.locator('#adultBtn').click();
     await anmelden(page, 'adult', 'papa', C.papa); await passwortSetzen(page, 'Moon-Glass-Paper-8812');
     await page.waitForSelector('#parentClose');
@@ -250,7 +260,12 @@ test('3b-1b-3 Luecken: Eltern waehlen, schliessen, halten; die App schliesst (El
     await page.waitForFunction(() => /von Ihnen geschlossen/.test(document.querySelector('#pSchool .pgaps')?.innerText || ''));
     r = await vergleich(page, mia);
     assert.equal(r.app.gaps.closed['M-N2'].by, 'parents');
-    await setze(page, uebung('numbers', 24, [1, 3, 5, 8, 12, 16]));                  // confirmed secure: the app closes M-N1
+    // The sixth genuine following answer is written by the child. Opening the
+    // parent view then writes the automatic closure on the parent's device.
+    await page.locator('#parentClose').click();await page.waitForSelector('#home:not([hidden])');
+    await page.evaluate(()=>window.__bqh.firstYearAnswer('numbers'));
+    assert.equal(await page.evaluate(()=>window.__bqh.gapData().journey['M-N1'].quests.numbers.checks.length),6);
+    await page.locator('#adultBtn').click();await anmelden(page,'adult','papa','Moon-Glass-Paper-8812');await page.waitForSelector('#parentClose');
     await mathe(page);
     r = await vergleich(page, mia);
     assert.equal(r.app.gaps.closed['M-N1'].by, 'app');
@@ -272,7 +287,10 @@ test('3b-1b-3 Luecken: Eltern waehlen, schliessen, halten; die App schliesst (El
     const k = await oeffnen(browser, ks);
     await anmelden(k.page, 'student', 'mia', C.mia); await passwortSetzen(k.page, 'Tiger-Lamp-River-4271');
     await k.page.waitForSelector('#home:not([hidden])');
-    await setze(k.page, uebung('numbers', 24, [1, 3, 5, 8, 12, 16]));
+    await setze(k.page,uebung('numbers',6,[0]));
+    assert.ok(await k.page.evaluate(()=>window.__bqh.openGaps().some(g=>g.s==='M-N1')),'child: M still open');
+    await k.page.evaluate(()=>{for(let i=0;i<6;i++)window.__bqh.firstYearAnswer('numbers');});
+    assert.equal(await k.page.evaluate(()=>window.__bqh.gapData().journey['M-N1'].quests.numbers.checks.length),6);
     await k.page.reload(); await k.page.waitForSelector('#home:not([hidden])');
     r = await vergleich(k.page, mia);
     assert.equal(r.app.gaps.closed['M-N1'].by, 'app');

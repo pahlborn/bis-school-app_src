@@ -17,7 +17,7 @@ import { lesenArt } from '../src/module/lesen.mjs';
 /* ---------- Zugang zum Bereich der App (nur lesen) ---------- */
 function haken() {
   window.__bqa = {
-    derive, checkEvent,
+    derive, checkEvent, qId,
     konst: () => ({ EVIDENCE_MAX, DUE_MAX, GAPS, TREE_AT, RANKS: RANKS.map((r) => r[1]) }),
     probleme: () => ({ abgelehnt: eventSink ? eventSink.problems : null, fehler: eventErrors }),
   };
@@ -141,6 +141,20 @@ test('Testbau = Live-Bau (3b-2a): derselbe Verlauf; was der Live-Bau speichert, 
   for (const k of schluessel) app[k] = await lies(page, k);
   for (const k of schluessel) assert.deepEqual(app[k], live[k], 'Testbau aus Ereignissen = Live-Bau gespeichert: ' + k);
   assert.equal(app.treeStage, live.treeStage, 'treeStage (Geraetenotiz, in beiden gespeichert)');
+  // Independent metadata oracle: the persisted original sheet question keeps
+  // its actual level/ID, while an assisted result contributes support evidence.
+  const helpedSheets=app.sheets.flatMap(s=>s.items).filter(it=>it.res==='help'&&app.gaps.history[it.q.world]);
+  assert.ok(helpedSheets.length>0,'the real click history includes assisted sheet tasks');
+  for(const it of helpedSheets){
+    const observation=app.gaps.history[it.q.world].rows.find(r=>r.sheet===it.rec.key);
+    assert.ok(observation,'the sheet result has one gap-history observation');
+    assert.equal(observation.originalLevel,it.q.level||2,'actual original question level is preserved');
+    assert.equal(observation.row[1],1,'help still contributes support-level evidence');
+    assert.equal(observation.row[3],false,'help is not independent success');
+    const originalId=it.q.dueId||await page.evaluate(q=>window.__bqa.qId(q),it.q);
+    const written=app.events.find(e=>e.type==='sheet_result'&&e.payload.sheet+':'+e.payload.index===it.rec.key);
+    assert.equal(written.payload.qid,originalId,'existing sheet-result wire ID still names the original question');
+  }
   const ereignisse = app.events, jetzt = Date.parse('2026-11-20T00:00:00Z');
   assert.ok(Array.isArray(ereignisse) && ereignisse.length > 50, 'die App hat Ereignisse geschrieben: ' + (ereignisse && ereignisse.length));
   assert.deepEqual(await page.evaluate(() => window.__bqa.probleme()), { abgelehnt: [], fehler: [] }, 'nichts abgelehnt, kein Fehler im Schreiber');
