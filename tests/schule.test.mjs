@@ -63,7 +63,7 @@ test('school data in the grown-ups area (C1): per subject "From school" with sta
   assert.match(t, /Schulische Einstufungen/);
   for (const w of ['Mastering Basic Numbers and Calculations – Milestone', 'Persuade for the Park!', 'Friction Frenzy', 'Lesson 4', 'Wartet auf Bewertung']) assert.ok(t.includes(w), w);
   assert.ok(!t.includes('Standards – zuletzt') && !t.includes('ES = mit Unterstützung'), 'standards table and learning skills moved to the subjects');
-  assert.ok(!/Toddle|BIS\b|3B/.test(t), 'neutral wording');
+  assert.ok(!/BIS\b|3B/.test(t), 'neutral wording');
   // rubric: the teacher's rating and the child's own rating side by side (Peter 01.11.) - since 05.11. in the details row
   const zeile = page.locator('details.psec[data-psec="school"] tr.psrow', { hasText: 'Milestone' });
   await zeile.locator('[data-psdet]').click();

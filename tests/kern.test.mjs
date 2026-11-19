@@ -66,7 +66,7 @@ test('Huelle: Platzhalter genau einmal, sonst Abbruch', () => {
 // S8 (30.10.): some words were removed from the app on purpose. The list keeps them so the
 // public shell stays protected; tests/neutral.test.mjs checks they are absent from visible text.
 // 01.11.: names of teachers, places and the platform appear in the app only base64-encoded (old-text rewriting).
-const BEWUSST_ENTFERNT = ['International School', 'Grade 3B', '3B Big Quest', '3B Quest', 'Bavarian', 'Bhan', 'Zeckser', 'Schlüer', 'Toddle'];
+const BEWUSST_ENTFERNT = ['International School', 'Grade 3B', '3B Big Quest', '3B Quest', 'Bavarian', 'Bhan', 'Zeckser', 'Schlüer'];
 test('jedes verbotene Wort steht in der App oder ist bewusst entfernt (sonst schuetzt es nichts)', () => {
   const fehlt = q.woerter.filter((w) => !appText.toLowerCase().includes(w.toLowerCase()) && !BEWUSST_ENTFERNT.includes(w));
   assert.deepEqual(fehlt, [], 'Diese Woerter stehen nicht in index.html - Liste nachziehen: ' + fehlt.join(', '));
@@ -75,13 +75,13 @@ test('jedes verbotene Wort steht in der App oder ist bewusst entfernt (sonst sch
 });
 
 test('Wortpruefung greift ausserhalb des Tresors und nicht innerhalb', () => {
-  const vorlage = q.vorlage.replace('<title>Big Quest</title>', '<title>Toddle</title>');
+  const vorlage = q.vorlage.replace('<title>Big Quest</title>', '<title>Bhan</title>');
   const html = huelleBauen(vorlage, { daten: 'x' });
-  assert.deepEqual(oeffentlichPruefen(html, q.manifest, q.woerter), ['index.html: "Toddle"']);
+  assert.deepEqual(oeffentlichPruefen(html, q.manifest, q.woerter), ['index.html: "Bhan"']);
 
-  const imTresor = huelleBauen(q.vorlage, { daten: 'Toddle Bhan' });
+  const imTresor = huelleBauen(q.vorlage, { daten: 'Zeckser Bhan' });
   assert.deepEqual(oeffentlichPruefen(imTresor, q.manifest, q.woerter), []);
-  assert.ok(!ohneTresor(imTresor).includes('Toddle'));
+  assert.ok(!ohneTresor(imTresor).includes('Bhan'));
 
   assert.deepEqual(oeffentlichPruefen(q.vorlage, '{"name":"3B Big Quest"}', q.woerter), ['manifest.webmanifest: "3B Big Quest"']);
 });
