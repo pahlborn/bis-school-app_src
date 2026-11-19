@@ -77,7 +77,7 @@ test('a complete replacement school import stops removed-topic tracking in live,
  const R=fixture({data:replacement,speicher:Object.fromEntries(S.ablage)});answer(R);
  v.add('school_import',{asOf:DAY,data:replacement});v.answer();
  const full=derive(v.list,{now:NOW+1e4}),part=derive(v.list.filter(e=>e.at>cut),{now:NOW+1e4,base:{upTo:cut,state:early}});
- assert.deepEqual(part,full);assert.deepEqual(full.gaps.school,{});assert.deepEqual(full.gaps.journey['M-N1'].quests.numbers,oldProof);assert.deepEqual(proof(R),oldProof,'removed source gets no new live/replayed observation');assert.equal(R.holen('openGaps')().length,0);
+ assert.deepEqual(part,full);assert.deepEqual(full.gaps.school,{});assert.equal(full.gaps.journey?.['M-N1'],undefined);assert.equal(proof(R),undefined,'inactive open projection is removed in both paths');assert.equal(full.ev.numbers.length,3,'all raw responses remain');assert.equal(R.holen('openGaps')().length,0);
 });
 test('correcting the same historical sheet item replaces its gap observation and survives a snapshot cut',async()=>{
  const v=events();for(let i=0;i<6;i++)v.answer();
@@ -92,7 +92,7 @@ test('correcting the same historical sheet item replaces its gap observation and
 });
 test('the actual child writer uses unchanged wire fields and reload preserves the six following answers',async()=>{
  const S=fixture({bauart:'test'}),v=events();S.setzen(S.holen('evPre')()+'events',v.list);
- await S.uhr.vor(100); // the imported assessment precedes this device's real writer clock
+ // An already received import may validly be ahead of this device's clock.
  for(let i=0;i<12;i++){
   answer(S);S.holen('logAttempt')({day:DAY,skill:'numbers',level:2,attempt:1,ok:true,qid:'actual-writer-'+i,help:false});
  }
@@ -112,4 +112,42 @@ test('assisted correct original L1 is described as help and counts as one follow
 
 test('held baseline control: six actual first answers reach M but must leave the gap open',()=>{
  const S=fixture();for(let i=0;i<6;i++)answer(S);assert.equal(S.holen('standOf')('numbers'),'M');assert.equal(S.holen('openGaps')().length,1,'M reaching is not holding');
+});
+
+for(const ahead of[0,10,86400000])test(`received school import +${ahead}ms: live/real writer/full replay/snapshot preserve M then six`,async()=>{
+ const L=fixture(),R=fixture({bauart:'test'}),v=events();v.list[0].at=new Date(NOW+ahead).toISOString();R.setzen(R.holen('evPre')()+'events',v.list);
+ assert.equal(R.holen('stdRating')('M-N1').st,'RS');
+ for(let i=0;i<12;i++){
+  answer(L);answer(R);R.holen('logAttempt')({day:DAY,skill:'numbers',level:2,attempt:1,ok:true,qid:'clock-'+i,help:false});
+  assert.deepEqual(proof(L),proof(R),'same projection after answer '+i);
+ }
+ const all=plain(R.holen('evKindLog')(R.holen('evPre')()).liste()),full=derive(all,{now:NOW+100});
+ assert.equal(proof(R).checks.length,6);assert.ok(proof(R).held);assert.equal(all.find(e=>e.type==='answer').at,new Date(NOW).toISOString(),'no writer-clock workaround');
+ const snap=await makeSnapshot(all.slice(0,7),{now:NOW+8,author:'p_eltern',device:'d_parent',rand:n=>new Uint8Array(n).fill(88)});
+ const restored=await stateFrom(all,snap,{now:NOW+100});assert.equal(restored.weg,'schnappschuss');assert.deepEqual(restored.state,full);
+});
+test('a later received assessment projects the six real earlier answers, then only the next six confirm',()=>{
+ const noSchool={asOf:'2026-11-17',tasks:[]},S=fixture({data:noSchool});for(let i=0;i<6;i++)answer(S);
+ const R=fixture({speicher:Object.fromEntries(S.ablage)});assert.equal(proof(R).checks.length,0);assert.equal(proof(R).reached.kind,'reached');assert.equal(R.holen('openGaps')().length,1);
+ for(let i=0;i<6;i++)answer(R);assert.ok(proof(R).held);assert.equal(proof(R).total,12);
+});
+test('a cut pre-import history cannot invent its original reaching date or first six',()=>{
+ const S=fixture({data:{asOf:'2026-11-17',tasks:[]}});for(let i=0;i<205;i++)answer(S);
+ const R=fixture({speicher:Object.fromEntries(S.ablage)});assert.equal(proof(R),undefined);assert.equal(R.holen('openGaps')().length,1);
+ answer(R);assert.equal(proof(R).reached.kind,'observed');assert.equal(proof(R).checks.length,1);
+ for(let i=0;i<5;i++)answer(R);assert.equal(proof(R).checks.length,6);assert.ok(proof(R).held);
+});
+
+test('a newer weak assessment cannot reuse the old closed block; six genuinely new same-day answers close it again',()=>{
+ const L=fixture(),R=fixture({bauart:'test'}),v=events();R.setzen(R.holen('evPre')()+'events',v.list);
+ for(let i=0;i<12;i++){answer(L);answer(R);R.holen('logAttempt')({day:DAY,skill:'numbers',level:2,attempt:1,ok:true,qid:'first-'+i,help:false});}
+ assert.equal(L.holen('openGaps')().length,0);assert.equal(R.holen('openGaps')().length,0);
+ const oldEvents=plain(R.holen('evKindLog')(R.holen('evPre')()).liste()),early=derive(oldEvents,{now:NOW+1000}),cut=oldEvents.at(-1).at;
+ const data=school(DAY),later=newEvent({type:'school_import',author:'p_eltern',device:'d_parent',at:new Date(NOW+100).toISOString(),payload:{asOf:DAY,data}},{rand:n=>new Uint8Array(n).fill(83)});
+ const A=fixture({data,speicher:Object.fromEntries(L.ablage)}),B=fixture({data,bauart:'test',speicher:Object.fromEntries(R.ablage)});
+ B.setzen(B.holen('evPre')()+'events',oldEvents.concat(later));assert.equal(A.holen('openGaps')().length,1);assert.equal(B.holen('openGaps')().length,1);
+ for(let i=0;i<6;i++){answer(A);answer(B);B.holen('logAttempt')({day:DAY,skill:'numbers',level:2,attempt:1,ok:true,qid:'new-epoch-'+i,help:false});assert.equal(proof(A).checks.length,i+1);assert.deepEqual(proof(A),proof(B));}
+ assert.equal(A.holen('openGaps')().length,0);assert.equal(B.holen('openGaps')().length,0);
+ const all=plain(B.holen('evKindLog')(B.holen('evPre')()).liste()),full=derive(all,{now:NOW+1000});
+ const partial=derive(all.filter(e=>e.at>cut),{now:NOW+1000,base:{upTo:cut,state:early}});assert.deepEqual(partial,full);assert.deepEqual(proof(B),full.gaps.journey['M-N1'].quests.numbers);
 });

@@ -1898,9 +1898,13 @@ function recordAnswer(q, ok, gapSheet){
   // Plain storage keeps only the gap trace; no extra answer or wire fields.
   if(!EV_LESEN && !gapReadOnly()){
     const standard=mainStd(q.world),rating=standard&&stdRating(standard);
-    if(rating&&GAP_WEAK.includes(rating.st)){
-      const d=gapData(); d.journey ||= {};
-      gapObserve(d.journey,{standard,quest:q.world,rating,row:observation,originalLevel:levelOf(q),secureBefore:before,secureAfter:secureEvidence(list),complete:!previous.some(r=>r[0]>=rating.day),previous,sheet:gapSheet,closed:d.closed[standard]?.schoolDay>=rating.day});
+    if(standard){
+      const d=gapData();
+      const seq=gapRemember(d,q.world,previous,observation,levelOf(q),gapSheet,d.closed[standard]?.schoolDay>=rating?.day);
+      if(rating&&GAP_WEAK.includes(rating.st)&&seq>gapConsumed(d,standard,q.world,rating)){
+        d.journey ||= {};
+        gapObserve(d.journey,{standard,quest:q.world,rating,row:observation,originalLevel:levelOf(q),secureBefore:before,secureAfter:secureEvidence(list),complete:!previous.some(r=>r[0]>=rating.day),previous,sheet:gapSheet,seq,used:d.used?.[standard],closed:d.closed[standard]?.schoolDay>=rating.day});
+      }
       gapSave(d,[]);
     }
   }
@@ -2187,11 +2191,13 @@ function gapData(){
   const g=store.get('gaps',null)||{}, closed={};
   for(const [k,v] of Object.entries(g.closed||{})){ const s=gapKey(k); if(s && (!closed[s] || (v.schoolDay||'')>(closed[s].schoolDay||''))) closed[s]=v; }
   // hold (D4, "keep practising"): the parents keep a gap open the app had closed - {standard:{at, schoolDay}}
-  return {...g,closed, active:g.active ? gapKey(g.active) : null, hold:g.hold||{}};
+  const d={...g,closed, active:g.active ? gapKey(g.active) : null, hold:g.hold||{}};
+  const source=schoolData();
+  return source?gapProjectSource(d,gapSchoolRatings(source)):d;
 }
 /* evs: the events of this change (task 3b-1b-3, one per standard; types from 3b-0) - written only when the change is
    stored, so a teacher looking through a grant (nothing stored) writes nothing either */
-const gapSave = (d, evs) => { store.set('gaps',d); (evs||[]).forEach(([t,p])=>eventHook(t,p)); };
+const gapSave = (d, evs) => { for(const [t,p]of evs||[])if(t==='gap_state'&&p.state==='closed')gapUse(d,p.standard,p.schoolDay); store.set('gaps',d); (evs||[]).forEach(([t,p])=>eventHook(t,p)); };
 /* the quests whose main standard is s (only those that can be in the focus at all) */
 const gapQuests = s => cleanFocus(SUBJECTS.flatMap(questsIn)).filter(k=>mainStd(k)===s);
 /* the latest school rating of a standard: {st, day} */

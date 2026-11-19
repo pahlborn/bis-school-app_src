@@ -20,7 +20,7 @@
 
 import { mergeLog, lastWins, lastWinsOrder, effectiveTime, SCHOOL_EVALUATION_TARGETS, schoolEvaluationNeedsPractice } from './ereignisse.mjs';
 import { schoolStandardInfo, schoolStandardsByQuest } from './standardkatalog.mjs';
-import {gapSchoolRatings,gapObserve,gapUndo} from './lueckenverlauf.mjs';
+import {gapSchoolRatings,gapObserve,gapUndo,gapProjectSource,gapRemember,gapForget,gapUse,gapConsumed} from './lueckenverlauf.mjs';
 import {secureEvidence} from './wissen.mjs';
 const AB_GAP_STANDARDS=schoolStandardsByQuest();
 
@@ -46,10 +46,15 @@ function abPushEvidence(st, ctx, skill, row, originalLevel=row[1],sheet) {
   const before=secureEvidence(list), complete=!list.some(r=>rating&&r[0]>=rating.day);
   const previous=list.slice();
   list.push(row);
-  if(rating){
+  let seq;
+  if(standard){
+    st.gaps ||= {closed:{},active:null,hold:{}};
+    seq=gapRemember(st.gaps,skill,previous,row,originalLevel,sheet,ctx.gapClosed[standard]?.schoolDay>=rating?.day);
+  }
+  if(rating&&seq>gapConsumed(st.gaps,standard,skill,rating)){
     st.gaps ||= {closed:{},active:null,hold:{}};
     st.gaps.journey ||= {};
-    gapObserve(st.gaps.journey,{standard,quest:skill,rating,row,originalLevel,secureBefore:before,secureAfter:secureEvidence(list),complete,previous,sheet,closed:ctx.gapClosed[standard]?.schoolDay>=rating.day});
+    gapObserve(st.gaps.journey,{standard,quest:skill,rating,row,originalLevel,secureBefore:before,secureAfter:secureEvidence(list),complete,previous,sheet,seq,used:st.gaps.used?.[standard],closed:ctx.gapClosed[standard]?.schoolDay>=rating.day});
   }
   st.ev[skill] = list.slice(-DERIVE_LIMITS.evidence);
   ctx.days.add(row[0]);
@@ -68,6 +73,7 @@ function abUndoSheetResult(st, it) {
   for (let i = list.length - 1; i >= 0; i--) if (abSameRow(list[i], r.ev)) { list.splice(i, 1); break; }
   st.ev[it.q.world] = list;
   st.attempts = st.attempts.filter((a) => a.sheet !== r.key);
+  if(st.gaps)gapForget(st.gaps,it.q.world,r.key);
   gapUndo(st.gaps?.journey,AB_GAP_STANDARDS[it.q.world]?.[0],it.q.world,r.key);
   return true;                                                                  // (the caller sets the new result and record)
 }
@@ -75,18 +81,11 @@ function abUndoSheetResult(st, it) {
 function abApply(st, ctx, e) {
   const p = e.payload;
   switch (e.type) {
-    case 'school_import': {
-      // Same complete-replacement / newest-asOf contract as deriveSchool.
-      if(p.data.asOf===p.asOf&&Array.isArray(p.data.tasks)&&p.asOf>=ctx.gapAsOf){
-        ctx.gapAsOf=p.asOf;ctx.gapSchool=gapSchoolRatings(p.data);
-        st.gaps ||= {closed:{},active:null,hold:{}};st.gaps.school=ctx.gapSchool;st.gaps.schoolAsOf=p.asOf;
-      }
-      break;
-    }
     case 'gap_state': {
       const s=p.standard;if(s==='__proto__')break;
       if(p.state==='closed'){
         if(p.by==='app'&&ctx.gapHold[s]?.schoolDay>=p.schoolDay)break;
+        st.gaps ||= {closed:{},active:null,hold:{}};gapUse(st.gaps,s,p.schoolDay);if(p.schoolDay<ctx.gapSchool[s]?.day)gapProjectSource(st.gaps,ctx.gapSchool);
         ctx.gapClosed[s]={schoolDay:p.schoolDay};if(p.by==='parents')delete ctx.gapHold[s];
       }else{delete ctx.gapClosed[s];if(p.state==='hold')ctx.gapHold[s]={schoolDay:p.schoolDay};else delete ctx.gapHold[s];}
       break;
@@ -309,11 +308,16 @@ export function derive(events, { now, base } = {}) {
     if (Number.isNaN(upTo)) throw new Error('derive: base.upTo is not a UTC time');
     list = list.filter((e) => effectiveTime(e.at, now) > upTo);
   }
+  // A received school's rating is applicable by assessment day, even when the
+  // other device's event clock is ahead. No timestamps or wire data are changed.
+  for(const e of list)if(e.type==='school_import'&&e.payload.data.asOf===e.payload.asOf&&Array.isArray(e.payload.data.tasks)&&e.payload.asOf>=ctx.gapAsOf){ctx.gapAsOf=e.payload.asOf;ctx.gapSchool=gapSchoolRatings(e.payload.data);}
+  if(ctx.gapAsOf){st.gaps ||= {closed:{},active:null,hold:{}};st.gaps.school=ctx.gapSchool;st.gaps.schoolAsOf=ctx.gapAsOf;gapProjectSource(st.gaps,ctx.gapSchool);}
   for (const e of list) abApply(st, ctx, e);
   for (const e of Object.values(lastWins(list, now))) abApplyWinner(st, e);
   abChecklistSize(st, list);
   abLists(st, list, now);
   abGaps(st, list, now);
+  if(ctx.gapAsOf&&st.gaps)gapProjectSource(st.gaps,ctx.gapSchool);
   st.treeStage = Math.max(st.treeStage || 0, abStage(ctx.days.size));         // the tree only grows (index.html keeps the highest stage)
   st._days = [...ctx.days].sort();
   return st;
