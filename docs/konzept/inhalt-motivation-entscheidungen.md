@@ -17,7 +17,7 @@ Stand 18.11.2026 · Entschieden von Peter im Abgleich mit Atlas' Katalog „BQ-C
 
 - Es gibt **eine** Definition von „sicher“: den vorhandenen Quest-Stand (`standOf` in `index.html`; Stufen NA, RS, C, M, E).
 - **Die Tagesbedingungen entfallen** (`KEY.minDays`, `KEY.meetsDays`, `KEY.extDays` und die zugehörigen Prüfungen). Mengen- und Genauigkeitsbedingungen bleiben (`minAnswers`, `meetsN`, `meetsAcc`, `extN`, `extAcc`). „Sicher“ kann damit in einer einzigen Sitzung entstehen.
-- Diese Definition gilt für **Titel, Baum, Sterne und Lücken** gleichermaßen. Hinweis: Lücken im Elternbereich können dadurch schneller schließen, wenn das Kind es kann – gewollt.
+- Diese Definition gilt für **Titel, Baum, Sterne, Lücken und die Einschätzung im Elternbereich** gleichermaßen (Elternbereich und „gehalten“ für Lücken: `elternbereich-entscheidungen-2026-11-18.md`). Hinweis: Lücken im Elternbereich können dadurch schneller schließen, wenn das Kind es kann – gewollt.
 - Eine Schulbewertung „sicher“ (M/E) zählt wie bisher, solange die App noch zu wenig eigene Antworten hat.
 - **Keine neue „Lernziel-/Nachweismatrix“** (Katalog EP03). Nur falls sich später zeigt, dass der Quest-Stand nicht reicht.
 
@@ -75,6 +75,7 @@ Ausgangslage, am Stand von main gemessen: In 107 von 161 Multiple-Choice-Aufgabe
 - Sterne nach Tipp oder Beispiel: **weiter ja** (Wertung „mit Hilfe“ im Hintergrund bleibt).
 - **Sternenregen** nur nach tatsächlich verdienten Sternen (heute ab 6 von 8).
 - Bereits gesammelte Sterne bleiben.
+- **Testfall:** Absichtliche Fehler, um eine sichere Quest unter „sicher“ fallen zu lassen und wieder volle Sterne zu bekommen, dürfen keinen Vorteil bringen.
 
 ### Lesestoff (Witz, Rätselfrage, Pisolala)
 
