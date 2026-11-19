@@ -29,3 +29,9 @@ Gepruefter Produktkopf `72a0d738cd79185f1d8b7bf3444d004db679f15a`, Tree `89279ce
 
 Kein Gesamt-PASS: Testfix und Neutralitaetskompatibilitaet muessen auf einem gemeinsamen Kopf geprueft werden; reale iPad-/Toddle-/EV7-Abnahme sowie das eine neue Paket bleiben offen. Merge nur nach Peters ausdruecklichem Ja zu genau PR227; keine App veroeffentlicht.
 
+## Fortsetzung nach PR230, 19.11.2026
+
+Peter hat die Fortsetzung und das eine gemeinsame iPad-Paket beauftragt. PR230 ist auf main `5ab69482c132ca459713698821454c8e2b6a36cd` gemergt: Toddle ist erlaubt, die Schutzpruefung fuer Schule, Slogans und Lehrkraefte bleibt erhalten. Dieser main ist im Lieferstand enthalten. Die nachgelieferte reine Umbenennung interner Zuordnungsquellen von `toddle` zu `linked` wird deshalb nicht uebernommen. Keine Aenderung am Pruefwerkzeug, Relay oder CI.
+
+Die bereits integrierte native Beschriftung bleibt Bestandteil der Lieferung: Die Huelle stellt die Importfaehigkeit samt DE/EN-Beschriftung bereit, der reine Browser zeigt keine native Importsteuerung. Der isolierte Swift-Testfix ist enthalten. Die bisherigen Nachweise oben behalten ihren jeweiligen Quellstand; die vollstaendige Pflichtpruefung des gemeinsamen Kopfes steht vor Paketbau noch aus. Bei erneutem Scheitern sofort anhalten und Peter berichten. Kein neuer Geraete-PASS, keine Merge- oder Veroeffentlichungsfreigabe.
+
