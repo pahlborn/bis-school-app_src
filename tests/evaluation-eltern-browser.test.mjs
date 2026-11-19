@@ -145,7 +145,7 @@ async function evaluationFamily(t, options = {}) {
   const admin = await ersteAnmeldung({ zugang: access, code: adminCode.code, passwort: 'Werkzeug-Admin-Passwort-1', now: Date.now() });
   const parentCode = await startcodeAusstellen({ zugang: access, aussteller: admin, anmeldename: 'mira.sonnenweg', art: 'parent', now: Date.now() });
   const config = JSON.stringify({ art: 'github', repo: REPO, wurzel: '', basis: storage.basis });
-  const server = await appServer({ bauart: 'test', anpassen: (h) => h.replace('/*BQ_SPEICHER*/null', () => config).replace(/\}\)\(\);\s*<\/script>/, 'window.__evaluationIntegration={eventHook,schoolEvaluationTarget,schoolFromAccount,renderSheets,schoolSectionOpen:()=>state.popen?.includes("school"),openLegacy(){const t=schoolEvaluationTarget();schoolEvaluationDraft={child:t.id,author:t.author,title:"",day:"",standard:"",rating:"",evaluation:crypto.randomUUID(),revision:crypto.randomUUID(),preview:false,focus:false};renderSheets();},draft:()=>schoolEvaluationDraft,adult:()=>adultUser&&{user:adultUser.user,role:adultUser.role},viewedKid,viewerGrant:()=>{const g=viewerGrant();return g&&{scope:[...g.scope]};},async loginAs(name,password){show("login");renderLogin("adult",{name});await kontoLoginAbsenden("adult",name,password);return adultUser&&adultUser.user;}};})();</script>') });
+  const server = await appServer({ bauart: 'test', anpassen: (h) => h.replace('/*BQ_SPEICHER*/null', () => config).replace(/\}\)\(\);\s*<\/script>/, 'window.__evaluationIntegration={eventHook,schoolEvaluationTarget,schoolFromAccount,renderSheets,openGaps,activeGap,focusTopics,classTopics,schoolStandFor,standOf,round:()=>state.round,schoolSectionOpen:()=>state.popen?.includes("school"),openLegacy(){const t=schoolEvaluationTarget();schoolEvaluationDraft={child:t.id,author:t.author,title:"",day:"",standard:"",rating:"",evaluation:crypto.randomUUID(),revision:crypto.randomUUID(),preview:false,focus:false};renderSheets();},draft:()=>schoolEvaluationDraft,adult:()=>adultUser&&{user:adultUser.user,role:adultUser.role},viewedKid,viewerGrant:()=>{const g=viewerGrant();return g&&{scope:[...g.scope]};},async loginAs(name,password){show("login");renderLogin("adult",{name});await kontoLoginAbsenden("adult",name,password);return adultUser&&adultUser.user;}};})();</script>') });
   t.after(() => server.close());
   const browser = await browserStarten();
   t.after(() => browser.close());
@@ -228,6 +228,7 @@ test('legacy correction drafts preserve the current focus, a synced confirmation
   await K.page.waitForFunction((rev) => Object.keys(localStorage).some((key) => /^bq2_p_[A-Za-z0-9]+__events$/.test(key)
     && JSON.parse(localStorage.getItem(key)).some((e) => e.type === 'school_evaluation' && e.payload.revision === rev)), revision, { timeout: 65000 });
   assert.equal((await evaluationEvents(K.page)).length, 1);
+  assert.deepEqual(await K.page.evaluate(() => window.__evaluationIntegration.openGaps()), [], 'legacy pilot cards do not enter the regular gap lane');
   assert.equal(await K.page.locator('#pSchoolEvaluation').count(), 0);
   const subtractionTarget = { label: /Word Problems/i, solve: solveSubtraction };
   const first = (await solveTargets(K.page, new Map([[revision, subtractionTarget]]))).get(revision);
@@ -531,8 +532,8 @@ test('integration A2: a stored 160-character assessment title wraps completely i
 });
 
 // EV4 uses invented documents and the real authenticated parent/event path.
-test('EV4 manual: three original criteria share one preview and one confirmed event', { timeout: 120000 }, async t => {
-  const { P } = await evaluationFamily(t);
+test('EV4/EV7 manual: confirmed criteria activate the visible gap, automatic focus and school starting value', { timeout: 120000 }, async t => {
+  const { P, K } = await evaluationFamily(t);
   await elternSeite(P.page, 'school');
   const form = P.page.locator('#pSchoolEvaluation');
   await form.getByRole('button', { name: 'Evaluation hinzufügen' }).click();
@@ -576,7 +577,37 @@ test('EV4 manual: three original criteria share one preview and one confirmed ev
   const derived = await P.page.evaluate(() => { const app = window.__evaluationIntegration; return app.schoolFromAccount(app.schoolEvaluationTarget().id).tasks.find(t => t.title === 'Fiktive drei Kriterien'); });
   assert.deepEqual(derived.std, { 'M-N1': 'C', 'M-N3': 'M' });
   assert.equal(derived.area, 'maths');
+  assert.equal(derived.manual.focus, 'none', 'criterion evaluations keep revision metadata without pilot cards');
+  t.diagnostic('Setup reached: real form preview wrote zero events; double confirmation stored one validated three-criterion evaluation and derived M-N1=C / M-N3=M.');
+  await P.page.locator('[data-psubj="maths"]').click();
+  assert.equal(await P.page.locator('.pgap.on').count(), 1, 'confirmed M-N1=C is visibly the active school gap');
+  assert.match(await P.page.locator('.pgap.on').innerText(), /Stellenwert.*Time & Numbers/s);
+  assert.equal(await P.page.locator('.pgap.wait').count(), 0, 'M-N3=M does not create another gap');
+  await waitForRevision(K.page, events[0].payload.revision);
+  const effect = await K.page.evaluate(() => {
+    const app = window.__evaluationIntegration;
+    return { gaps: app.openGaps().map(g => g.s), active: app.activeGap()?.s, focus: app.focusTopics(),
+      school: app.schoolStandFor('numbers'), stand: app.standOf('numbers') };
+  });
+  assert.deepEqual(effect.gaps, ['M-N1']);
+  assert.equal(effect.active, 'M-N1');
+  assert.ok(effect.focus.includes('numbers'), 'the actual automatic focus contains Time & Numbers');
+  assert.deepEqual(effect.school, { st: 'C', day: events[0].payload.day });
+  assert.equal(effect.stand, 'C', 'standOf really starts at C before any own answers');
+  // Existing test-build storage adapter prepares only invented practice evidence;
+  // assertions call the actual app decision, without reproducing its threshold logic.
+  for (const [answers, days, expected] of [[5, 2, 'C'], [6, 1, 'C'], [6, 2, 'RS']]) {
+    const actual = await K.page.evaluate(({ answers, days }) => {
+      const child = JSON.parse(localStorage.getItem('bq2_session')).id;
+      const ev = Array.from({ length: answers }, (_, i) => [new Date(Date.now() - (i % days) * 864e5).toISOString().slice(0, 10), 2, 0]);
+      localStorage.setItem('bq2_' + child + '__ev', JSON.stringify({ numbers: ev }));
+      return window.__evaluationIntegration.standOf('numbers');
+    }, { answers, days });
+    assert.equal(actual, expected, `${answers} own answers on ${days} practice days`);
+  }
+  assert.deepEqual(await evaluationEvents(K.page), events, 'practice evidence leaves the confirmed evaluation intact');
   assert.deepEqual(P.errors, []);
+  assert.deepEqual(K.errors, []);
 });
 
 async function fillDocument(form, title, area, criteria) {
@@ -590,6 +621,56 @@ async function fillDocument(form, title, area, criteria) {
     await form.locator(`[data-doc-standard="${i}"]`).selectOption(criteria[i].standard);
   }
 }
+
+test('EV7 D5: confirmed criterion gap keeps the 2/8 share with other topics and may fill the round alone', { timeout: 120000 }, async t => {
+  const { P, K } = await evaluationFamily(t);
+  const form = P.page.locator('#pSchoolEvaluation');
+  await form.locator('[data-eval-action="open"]').click();
+  await fillDocument(form, 'Invented practice effect', 'maths', [
+    { criterion: 'Invented place value criterion', rating: 'C', standard: 'M-N1' },
+    { criterion: 'Invented secondary subtraction criterion', rating: 'RS', standard: 'M-N5' },
+  ]);
+  await form.locator('button[type="submit"]').click();
+  assert.deepEqual(await evaluationEvents(P.page), [], 'preview still writes nothing');
+  await form.locator('button[type="submit"]').click();
+  const [event] = await evaluationEvents(P.page);
+  assert.ok(event?.payload.assessment, 'the genuine form confirmation stored the criterion document');
+  await waitForRevision(K.page, event.payload.revision);
+  assert.deepEqual(await K.page.evaluate(() => window.__evaluationIntegration.openGaps().map(g => g.s)), ['M-N1'], 'a weak secondary M-N5 does not open a gap for M-N4');
+  for (const topic of ['forces', 'numbers']) {
+    // One existing import supplies the teacher's current topic. The confirmed
+    // criterion evaluation stays on the same child's normal school event path.
+    const imported = await P.page.evaluate(topic => {
+      const app = window.__evaluationIntegration, child = app.schoolEvaluationTarget().id;
+      const day = new Date().toISOString().slice(0, 10);
+      return app.eventHook('school_import', { asOf: day, data: { asOf: day, tasks: [
+        { day, title: 'Invented current topic', area: 'maths', std: {}, quests: [topic], focusNext: [topic], good: { de: '', en: '' }, next: { de: '', en: '' } },
+      ] } }, child);
+    }, topic);
+    assert.ok(imported?.id, 'the app accepted the synthetic current-topic import');
+    await K.page.waitForFunction(topic => window.__evaluationIntegration.classTopics().join() === topic, topic, { timeout: 70000 });
+    const focus = await K.page.evaluate(() => window.__evaluationIntegration.focusTopics());
+    assert.ok(focus.includes('numbers'), 'the active criterion gap is in the automatic focus');
+    for (let run = 0; run < 5; run++) {
+      await startToday(K.page);
+      const round = await K.page.evaluate(() => window.__evaluationIntegration.round().map(q => ({ world: q.world, gap: !!q.gap, revision: q.schoolRevision || null })));
+      assert.equal(round.length, 8, 'the actual started Practise Today round has eight tasks');
+      assert.ok(round.every(q => !q.revision), 'criterion evaluations add no legacy pilot cards');
+      const fromGap = round.filter(q => q.world === 'numbers');
+      if (topic === 'forces') {
+        assert.equal(fromGap.length, 2, 'other current topics leave exactly two tasks for the active gap');
+        assert.ok(fromGap.every(q => q.gap), 'both tasks use the regular gap lane');
+        assert.ok(round.some(q => q.world === 'forces'), 'the other current topic is actually practised');
+      } else {
+        assert.equal(fromGap.length, 8, 'with no other current topic the gap can fill the whole round');
+      }
+      await leaveRound(K.page);
+    }
+  }
+  assert.deepEqual(await evaluationEvents(K.page), [event], 'imports and rounds preserve the confirmed evaluation');
+  assert.deepEqual(P.errors, []);
+  assert.deepEqual(K.errors, []);
+});
 
 async function formFits(page) {
   await settledSchoolLayout(page);

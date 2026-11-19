@@ -23,6 +23,10 @@ export const RELEASE_NOTES = {
     ],
     bugfixes: [
       {
+        de: 'Bestätigte Einstufungen je Kriterium wirken auf Schullücken, automatischen Fokus und Startschwierigkeit.',
+        en: 'Confirmed ratings for each criterion affect school gaps, automatic focus and starting difficulty.'
+      },
+      {
         de: 'Nach dem Upgrade werden zuvor übersprungene Schulbewertungen beim Abgleich nachgeholt.',
         en: 'After an upgrade, sync recovers previously skipped school evaluations.'
       },
