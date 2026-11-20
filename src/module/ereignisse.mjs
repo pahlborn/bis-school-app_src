@@ -81,7 +81,7 @@ const EV_SPEC = {
   review: ['day:day qid:str box:int', 'dueAt:day question:obj'],
   practice_day: ['day:day', ''],
   profile_set: ['field:enum(name|lastName|birthday|emoji|kidLang|muted|mySchool) value:any', ''],   // muted: the child's sound switch (3b-1b-4); lastName: task "Name und Geburtsdatum" (04.11.); mySchool {grade, cls?, school?, year}: task "Schule und Klasse" (05.11.)
-  rank_seen: ['rank:str', ''],
+  rank_seen: ['rank:str', 'policy:enum(legacy.v1|knowledge.v1)'],
   sheet_created: ['sheet:str day:day no:pos writing:enum(de|en) items:arr', ''],
   sheet_result: ['sheet:str index:int res:enum(ok|no|help) day:day qid:str', ''],
   sheet_discarded: ['sheet:str', ''],

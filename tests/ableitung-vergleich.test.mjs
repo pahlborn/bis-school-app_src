@@ -17,7 +17,7 @@ import { lesenArt } from '../src/module/lesen.mjs';
 /* ---------- Zugang zum Bereich der App (nur lesen) ---------- */
 function haken() {
   window.__bqa = {
-    derive, checkEvent, qId,
+    derive, checkEvent, qId, titel:()=>shownRank(),
     konst: () => ({ EVIDENCE_MAX, DUE_MAX, GAPS, TREE_AT, RANKS: RANKS.map((r) => r[1]) }),
     probleme: () => ({ abgelehnt: eventSink ? eventSink.problems : null, fehler: eventErrors }),
   };
@@ -164,7 +164,7 @@ test('Testbau = Live-Bau (3b-2a): derselbe Verlauf; was der Live-Bau speichert, 
   const wer = {}; for (const e of ereignisse) wer[e.author] = (wer[e.author] || 0) + 1;
   assert.deepEqual(Object.keys(wer).sort(), ['p_eltern', 'p_kind'], 'Kind und (beim Verwerfen) Eltern: ' + JSON.stringify(wer));
   assert.deepEqual(ereignisse.filter((e) => e.author === 'p_eltern').map((e) => e.type), ['sheet_discarded'], 'die Eltern haben nur das Blatt verworfen');
-  assert.deepEqual([ereignisse[0].type, ereignisse[0].payload], ['rank_seen', { rank: DERIVE_RANKS[0] }], 'erster Start: der erste Titel wird still gemerkt - auch als Ereignis');
+  assert.deepEqual([ereignisse[0].type, ereignisse[0].payload], ['rank_seen', { rank: DERIVE_RANKS[0],policy:'legacy.v1' }], 'erster Start: der erste Titel wird still gemerkt - auch als Ereignis');
   for (let i = 1; i < ereignisse.length; i++) assert.ok(Date.parse(ereignisse[i].at) > Date.parse(ereignisse[i - 1].at), 'Zeiten steigen: ' + i);
 
   /* die Ereignisse sind gueltig und der Verlauf hat alles beruehrt */
@@ -183,7 +183,8 @@ test('Testbau = Live-Bau (3b-2a): derselbe Verlauf; was der Live-Bau speichert, 
   assert.deepEqual(Object.keys(inNode).filter((k) => k.startsWith('best_')).sort(), Object.keys(app).filter((k) => k.startsWith('best_')).sort(), 'best_-Schluessel');
   for (const k of Object.keys(app).filter((k) => k.startsWith('best_'))) assert.equal(inNode[k], app[k], k);
   assert.equal(inNode.rankSeen, app.rankSeen, 'rankSeen');
-  assert.ok(DERIVE_RANKS.indexOf(app.rankSeen) >= 1, 'a title above the first one was reached: ' + app.rankSeen);
+  assert.equal(inNode.rankPolicy,'knowledge.v1','one-time conversion survives full replay');
+  assert.equal(app.rankSeen,await page.evaluate(()=>window.__bqa.titel()),'title follows the shared knowledge projection and retention, not a star minimum');
   assert.ok(Object.keys(app.ev).length >= 3 && app.due.length >= 1 && app.sheets.length === 1, 'der Stand ist nicht leer');
   assert.ok(app.treeStage >= 2, 'treeStage: ' + app.treeStage);
 

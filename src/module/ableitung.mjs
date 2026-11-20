@@ -22,6 +22,7 @@ import { mergeLog, lastWins, lastWinsOrder, effectiveTime, SCHOOL_EVALUATION_TAR
 import { schoolStandardInfo, schoolStandardsByQuest } from './standardkatalog.mjs';
 import {gapSchoolRatings,gapObserve,gapUndo,gapProjectSource,gapRemember,gapForget,gapUse,gapConsumed} from './lueckenverlauf.mjs';
 import {secureEvidence} from './wissen.mjs';
+import {RANKS,RANK_POLICY,RANK_MIGRATION,higherRank} from './titel.mjs';
 const AB_GAP_STANDARDS=schoolStandardsByQuest();
 
 /* the limits of today's app (index.html: slice(-200) in attempts, EVIDENCE_MAX, DUE_MAX, GAPS, slice(-8) in sheets,
@@ -29,7 +30,7 @@ const AB_GAP_STANDARDS=schoolStandardsByQuest();
 export const DERIVE_LIMITS = { attempts: 200, evidence: 60, due: 40, sheets: 8, jokes: 200, grantlog: 200 };
 export const DERIVE_GAPS = [1, 3, 7];
 export const DERIVE_TREE_AT = [0, 1, 3, 6, 10, 15, 25];
-export const DERIVE_RANKS = ['Explorer', 'Investigator', 'Scientist', 'Professor', 'Legend'];
+export const DERIVE_RANKS = RANKS.map(r=>r[1]);
 
 const abClone = (x) => JSON.parse(JSON.stringify(x));
 const abOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);               // names come from events: never trust them as object keys
@@ -125,8 +126,12 @@ function abApply(st, ctx, e) {
       break;
     }
     case 'practice_day': ctx.days.add(p.day); break;
-    case 'rank_seen': {                                                         // never lower
-      if (DERIVE_RANKS.indexOf(p.rank) > DERIVE_RANKS.indexOf(st.rankSeen)) st.rankSeen = p.rank;   // unknown names are -1 and never win
+    case 'rank_seen': {
+      if (!DERIVE_RANKS.includes(p.rank)) break;
+      // The first conversion was projected before replay; only explicitly
+      // knowledge-earned titles can raise it. A late old client's clock cannot
+      // backdate a star promotion into the already frozen legacy title.
+      if (p.policy === RANK_POLICY || !ctx.rankConverted) st.rankSeen = higherRank(st.rankSeen,p.rank);
       break;
     }
     case 'sheet_created': {                                                     // index.html: buildSheet
@@ -307,6 +312,16 @@ export function derive(events, { now, base } = {}) {
     const upTo = effectiveTime(base.upTo, now);
     if (Number.isNaN(upTo)) throw new Error('derive: base.upTo is not a UTC time');
     list = list.filter((e) => effectiveTime(e.at, now) > upTo);
+  }
+  // Freeze the legacy title actually observed at conversion, never re-read
+  // stars here: a later round from a slower device can sort before this event.
+  // Legacy rank history known to the converting app is already in its payload.
+  const rankEvents=list.filter(e=>e.type==='rank_seen' && DERIVE_RANKS.includes(e.payload.rank));
+  ctx.rankConverted=st.rankPolicy===RANK_POLICY || rankEvents.some(e=>e.payload.policy===RANK_MIGRATION || e.payload.policy===RANK_POLICY);
+  if(ctx.rankConverted && st.rankPolicy!==RANK_POLICY){
+    const conversion=rankEvents.find(e=>e.payload.policy===RANK_MIGRATION);
+    if(conversion)st.rankSeen=higherRank(st.rankSeen,conversion.payload.rank);
+    st.rankPolicy=RANK_POLICY;
   }
   // A received school's rating is applicable by assessment day, even when the
   // other device's event clock is ahead. No timestamps or wire data are changed.
