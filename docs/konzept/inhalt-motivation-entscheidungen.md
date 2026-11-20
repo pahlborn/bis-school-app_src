@@ -67,8 +67,8 @@ Ausgangslage, am Stand von main gemessen: In 107 von 161 Multiple-Choice-Aufgabe
 | in einer Quest, die noch nie sicher war und noch unsicher ist (NA, RS, C) | 1 ⭐ je richtiger Aufgabe |
 | Neuland-Platz in Practise Today, Lücke, fällige Fehlerwiederholung in Practise Today | 1 ⭐ |
 | Herausforderung (Stufe 3), auch in sicheren Quests | 1 ⭐ |
-| leichte oder normale Aufgabe in einer sicheren Quest (M, E), auch bei direkter Wahl nach einem Rückfall | **kein Stern** |
-| erste richtige Neuland-Lösung einer zuvor noch nicht geübten Quest | **+1 Bonusstern**, einmalig; Rückfall ist keine neue Erstentdeckung |
+| leichte oder normale Aufgabe bei M/E sowie bei direkter Wahl nach einem Rückfall | **kein Stern** |
+| erste richtige Lösung in einer Neuland-Quest | **+1 Bonusstern**, einmalig; Rückfall ist keine neue Erstentdeckung |
 
 - **Vorher sichtbar:** Die Quest-Karte einer sicheren Quest zeigt vor dem Start z. B. „⭐ hier nur für Herausforderungen“. Keine überraschende Kürzung nach dem Lösen.
 - **Wiederaufnahme über Practise Today (Peter, 20.11.2026):** Fällt eine bereits sichere Quest unter „sicher“, bringen ihr bestehender Neuland-Platz (schwächste unsichere Quest) und ihre fälligen Fehlerwiederholungen in Practise Today volle Sterne. Die bestehende Auswahlpriorität bleibt: nie Geübtes vor der schwächsten unsicheren Quest, höchstens ein Neuland-Platz; keine zusätzliche Rückfallkarte. Die übrigen Ausnahmen der Tabelle bleiben bestehen.
@@ -76,7 +76,7 @@ Ausgangslage, am Stand von main gemessen: In 107 von 161 Multiple-Choice-Aufgabe
 - Sterne nach Tipp oder Beispiel: **weiter ja** (Wertung „mit Hilfe“ im Hintergrund bleibt).
 - **Sternenregen** nur nach tatsächlich verdienten Sternen (heute ab 6 von 8).
 - Bereits gesammelte Sterne bleiben.
-- **Akzeptanzziel, noch kein Prüfergebnis:** Absichtliche Fehler dürfen keinen Vorteil bringen. Der Test vergleicht bei gleicher Ausgangslage und gleichen Aufgabenmöglichkeiten die Netto-Sterne der gesamten direkten Runde **und des folgenden echten Practise Today**, einschließlich Neuland, fälliger Wiederholungen, Lücken, Herausforderungen und Hilfebrücken. Zusätzliche bezahlte PT-Aufgaben durch Fehler müssen dabei mitgezählt werden.
+- **Direktwahl-Schutz und akzeptierter Nettoeffekt (Peter, 20.11.2026):** Fehler öffnen keine sofortige Sternfarm durch direkte leichte/normale Wiederholung einer früher sicheren Quest. Der vollständige Vergleich aus direkter Runde **und folgendem echten Practise Today** zählt zusätzliche bezahlte Wiederholungen mit. Der belegte Nettoeffekt durch regulär fällige Fehlerwiederholungen ist ausdrücklich akzeptiert: Die feste unabhängige Gegenprobe ergab 0 gegenüber 2 Sternen; eine eigene Variante mit anderem L3-Mix 1 gegenüber 5. Das ist keine allgemeine Obergrenze. Der frühere absolute Anspruch „absichtliche Fehler bringen niemals einen Netto-Vorteil“ ist damit aufgehoben; seine ursprünglichen roten Prüfergebnisse bleiben dokumentiert. Keine neue Budget-, Abzugs-, Zeit- oder Absichtsregel.
 
 ### Lesestoff (Witz, Rätselfrage, Pisolala)
 
