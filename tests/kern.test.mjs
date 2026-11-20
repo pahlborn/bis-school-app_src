@@ -12,6 +12,7 @@ import {
   tresorAusHuelle, ohneTresor, MIN_ZEICHEN, PLATZHALTER
 } from '../werkzeug/kern.mjs';
 import { WURZEL, QUELLEN, ICONS, quellenLesen, oeffentlichPruefen, distBauen, appZusammensetzen } from '../werkzeug/bauen.mjs';
+import { MODUL_JSON } from '../werkzeug/module.mjs';
 import { schuleLesen } from '../werkzeug/schule.mjs';
 import { TEST_PW } from './hilfen.mjs';
 import { versionEinsetzen } from '../werkzeug/version.mjs';
@@ -114,7 +115,7 @@ test('dist: zu kurzes Passwort schreibt nichts', async () => {
 
 test('dist: verbotenes Wort in der Huelle bricht ab und schreibt nichts', async () => {
   const wurzel = await tmp();
-  for (const rel of [QUELLEN.app, QUELLEN.manifest, QUELLEN.salz, QUELLEN.woerter, 'werkzeug/schriften/schriften.json', ...ICONS]) {
+  for (const rel of [QUELLEN.app, QUELLEN.manifest, QUELLEN.salz, QUELLEN.woerter, 'werkzeug/schriften/schriften.json', ...Object.values(MODUL_JSON), ...ICONS]) {
     await fs.mkdir(path.dirname(path.join(wurzel, rel)), { recursive: true });
     await fs.copyFile(path.join(WURZEL, rel), path.join(wurzel, rel));
   }

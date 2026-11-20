@@ -53,7 +53,7 @@ export const KINDDATEN_STELLEN = Object.freeze([
   ['attempts', 'kind'], ['ev', 'kind'], ['due', 'kind'], ['best_', 'kind', 1], ['total', 'kind'], ['badges', 'kind'], ['tried', 'kind'],
   ['treeStage', 'kind'], ['rankSeen', 'kind'], ['rankPolicy', 'kind'], ['name', 'kind'], ['lastName', 'kind'], ['birthday', 'kind'], ['mySchool', 'kind'], ['emoji', 'kind'],
   ['bdayParty', 'kind'], ['sheets', 'kind'], ['sheetNo', 'kind'], ['focusMode', 'kind'], ['focusManual', 'kind'], ['unlocked', 'kind'],
-  ['storyCap', 'kind'], ['greetDay', 'kind'], ['mysteryDone', 'kind'], ['storyRead', 'kind'], ['jokeSeen', 'kind'], ['chk_', 'kind', 1],
+  ['storyCap', 'kind'], ['greetDay', 'kind'], ['mysteryDone', 'kind'], ['storyRead', 'kind'], ['jokeSeen', 'kind'], ['starLedger','kind'], ['contentFeedback','kind'], ['jokeRejected','kind'], ['chk_', 'kind', 1],
   ['advent', 'kind', 1], ['kidLang', 'kind'], ['muted', 'kind'], ['events', 'kind'],
   ['gaps', 'schule'],
   ['grants', 'eltern'], ['grantlog', 'eltern'], ['lastBackup', 'eltern'],

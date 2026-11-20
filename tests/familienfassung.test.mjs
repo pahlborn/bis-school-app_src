@@ -1,3 +1,4 @@
+import { MODUL_JSON } from '../werkzeug/module.mjs';
 // Vorbereitung Stufe 4, Aufgabe "Familienfassung bauen" (05.11.): Bauart "Familie" (werkzeug/familie.mjs, familieBauen
 // in werkzeug/bauen.mjs) - die echte App mit Konto-, GitHub- und Abgleich-Modulen, ohne konten.json, ohne Schuldaten,
 // ohne Testpersonen, verschluesselt mit dem Familienpasswort, Speicher pahlborn/bis-school-app-familie, Eintraege im
@@ -167,6 +168,7 @@ test('Bau bricht ab und schreibt nichts, wenn eine Testperson in index.html steh
   const w = fs.mkdtempSync(path.join(os.tmpdir(), 'bq-fam-wurzel-'));
   try {
     for (const d of ['src/module', 'werkzeug']) fs.cpSync(path.join(WURZEL, d), path.join(w, d), { recursive: true, filter: (q) => !q.includes('node_modules') });
+    for(const file of Object.values(MODUL_JSON)){fs.mkdirSync(path.dirname(path.join(w,file)),{recursive:true});fs.copyFileSync(path.join(WURZEL,file),path.join(w,file));}
     for (const d of ['icon-180.png', 'icon-192.png', 'icon-512.png']) fs.copyFileSync(path.join(WURZEL, d), path.join(w, d));
     fs.writeFileSync(path.join(w, 'index.html'), lies('index.html').replace('</body>', '<!-- Peter Ahlborn --></body>'));
     const ziel = path.join(w, 'ziel');

@@ -2,6 +2,7 @@ import{test}from'node:test';import assert from'node:assert/strict';import{execFi
 import{RANKS,RANK_POLICY,RANK_MIGRATION,knowledgeRankFor,titleKnowledge,titleNext}from'../../src/module/titel.mjs';
 import{derive}from'../../src/module/ableitung.mjs';import{newEvent,checkEvent}from'../../src/module/ereignisse.mjs';
 import{makeSnapshot,stateFrom}from'../../src/module/schnappschuss.mjs';import{evProtokoll,altStand}from'../../src/module/lesen.mjs';
+import{MODUL_JSON}from'../../werkzeug/module.mjs';
 import{appSandbox,stellbareUhr}from'../app-sandbox.mjs';import{committedApp}from'./ep01-rest-fixtures.mjs';
 import{titleApp,titleRows,titlePlain,TITLE_PRE,TITLE_KID,TITLE_DAY}from'./titel-fixtures.mjs';
 const BASE='f7e9ce66ba70ec366b82e1a80ec60d80b63ab79f';
@@ -36,7 +37,7 @@ for(const[total,seen,want]of[[0,null,'Explorer'],[130,null,'Professor'],[130,'Ex
 });
 test('real child writer: knowledge promotes at zero stars, only once; future stars and late old-client titles cannot promote',()=>{
  const S=titleApp({total:0,rankSeen:'Explorer',ev:evFor(['numbers','round','combos'])},{bauart:'test'}),base=altStand({total:0,rankSeen:'Explorer',ev:evFor(['numbers','round','combos'])});
- assert.equal(S.$('#rankName').textContent,'Investigator');assert.equal(S.$('#rankNote').hidden,false);assert.deepEqual(events(S).map(e=>e.payload),[{rank:'Explorer',policy:RANK_MIGRATION},{rank:'Investigator',policy:RANK_POLICY}]);
+ assert.equal(S.$('#rankName').textContent,'Investigator');assert.equal(S.$('#rankNote').hidden,false);assert.deepEqual(events(S).map(e=>[e.type,e.payload]),[['reward_seen',{secure:['numbers','round','combos'],solved:['numbers','round','combos']}],['rank_seen',{rank:'Explorer',policy:RANK_MIGRATION}],['rank_seen',{rank:'Investigator',policy:RANK_POLICY}]],'exact title writes and separate historical reward markers');
  assert.ok(events(S).every(e=>e.author===TITLE_KID.id&&checkEvent(e).length===0));
  for(let i=0;i<40;i++)S.holen('eventHook')('round_done',{day:TITLE_DAY,skill:'numbers',stars:8,count:8});
  S.holen('eventHook')('rank_seen',{rank:'Legend'});S.holen('eventHook')('rank_seen',{rank:'Legend',policy:RANK_MIGRATION});S.holen('renderHome')();
@@ -77,9 +78,22 @@ test('rank policy extends only the existing title payload; old validator rejects
  for(const policy of[RANK_POLICY,RANK_MIGRATION]){const e=event({rank:'Professor',policy});assert.deepEqual(checkEvent(e),[]);assert.deepEqual(old.checkEvent(e),['payload.policy: unknown field']);}
  assert.deepEqual(old.checkEvent(event({rank:'Professor'})),[]);assert.deepEqual(checkEvent(event({rank:'Professor',policy:'unknown'})),['payload.policy: invalid']);
 });
-test('questions, guidance, Today, W1 held/R2, star amounts, treats and tree algorithms remain byte-identical to accepted W1',()=>{
+test('W1 questions, guidance, Today, held/R2 and tree stay exact; approved EP04 reward/joke deltas preserve common status',()=>{
  const S=appSandbox({seed:203}),B=appSandbox({seed:203,anpassen:()=>committedApp(BASE)});
- for(const name of['standOf','yearLevelEv','meetsOf','qId','recordAnswer','observeAttempt','logAttempt','score','showResults','guidance','exampleFor','bridgeFor','buildToday','neulandEntry','gapAct','gapProgress','openGaps','treeSVG','storyFor','jokeFor'])assert.equal(String(S.holen(name)),String(B.holen(name)),name);
+ for(const name of['yearLevelEv','meetsOf','qId','recordAnswer','observeAttempt','logAttempt','guidance','exampleFor','bridgeFor','buildToday','neulandEntry','gapAct','gapProgress','openGaps','treeSVG','storyFor'])assert.equal(String(S.holen(name)),String(B.holen(name)),name);
+ // Only the three approved standOf substitutions: same rules, optional historical evidence.
+ const expectedStand=String(B.holen('standOf')).replace('function standOf(skill){','function standOf(skill,evidence){').replace("const e=(store.get('ev',{})[skill])||[];","const e=evidence===undefined?((store.get('ev',{})[skill])||[]):evidence;").replace('.slice(-20)','.slice(-KNOWLEDGE_YEAR_WINDOW)');
+ assert.equal(String(S.holen('standOf')),expectedStand);assert.equal(S.holen('KNOWLEDGE_YEAR_WINDOW'),20);assert.deepEqual(titlePlain(S.holen('KEY')),titlePlain(B.holen('KEY')));
+ const rows=(n,l=2,ok=1)=>Array.from({length:n},()=>[TITLE_DAY,l,ok,true]);
+ for(const[e,want]of[[rows(5),'NA'],[rows(6),'M'],[rows(4).concat(rows(2,2,0)),'C'],[rows(5).concat(rows(1,2,0)),'M'],[rows(6).concat(rows(3,3)),'M'],[rows(6).concat(rows(4,3)),'E'],[rows(6).concat(rows(2,3),rows(2,3,0)),'M'],[rows(6,2,0),'RS'],[rows(6).concat(rows(20,2,0)),'RS']]){
+  for(const A of[S,B]){A.setzen('bq2_ev',{numbers:e});assert.equal(A.holen('standOf')('numbers'),want,'default shared status');}
+ }
+ assert.equal(S.holen('standOf')('numbers',rows(6)),'M','a real historical prefix can be evaluated');assert.equal(S.holen('standOf')('numbers'),'RS','historical evaluation does not change the current status');
+ // EP04 deliberately changes earned currency/results and permanent joke exclusion.
+ // Bind those exact implementations to the independently checked EP04/F01 freeze.
+ const accepted='d3b391524461687277b0aa96f2a41d721e7cf7a0',approved=committedApp(accepted).replace(/\/\*BQ_JSON:(DAILY_WORD_DATA|DAILY_EXPLAIN_DATA)\*\/null/g,(_,name)=>JSON.stringify(JSON.parse(execFileSync('git',['show',`${accepted}:${MODUL_JSON[name]}`],{encoding:'utf8'}))).replace(/</g,'\\u003c'));
+ const A=appSandbox({seed:203,anpassen:()=>approved});
+ for(const name of['score','showResults','jokeFor'])assert.equal(String(S.holen(name)),String(A.holen(name)),name+' exact approved EP04 delta');
  const quests=S.holen('SUBJECTS').flatMap(s=>s.items).filter(k=>S.holen('WORLDS')[k]);
  for(const k of quests){const a=S.holen('WORLDS')[k].build,b=B.holen('WORLDS')[k].build;assert.equal(String(a),String(b),k);}
 });
@@ -88,6 +102,9 @@ test('actual common statuses reach Legend at zero stars across five subjects; on
  const ev=Object.fromEntries(keys.map((k,i)=>[k,titleRows(i<5?'E':'M')]));
  const S=titleApp({ev,total:0,rankPolicy:RANK_POLICY,rankSeen:'Explorer'},{bauart:'test'});
  assert.deepEqual(titlePlain(S.holen('rankProgress')()),p(18,5,5));assert.equal(S.$('#rankName').textContent,'Legend');assert.equal(S.holen('store').get('total',0),0);assert.equal(S.$('#rankNote').hidden,false);
- assert.deepEqual(events(S).map(e=>e.payload),[{rank:'Legend',policy:RANK_POLICY}]);S.holen('renderHome')();assert.equal(S.$('#rankNote').hidden,true);assert.equal(events(S).length,1);
- const R=titleApp({}, {bauart:'test',speicher:Object.fromEntries(S.ablage)});assert.equal(R.$('#rankName').textContent,'Legend');assert.equal(events(R).length,1);assert.equal(R.$('#rankNote').hidden,true);
+ const active=['numbers','round','combos','wordprob','detective','forces','units','graphs','opinion','sentences','examples','words','anleitung','library','poetry'];
+ const written=events(S);assert.deepEqual(written.map(e=>[e.type,e.payload]),[['reward_seen',{secure:active,solved:active}],['rank_seen',{rank:'Legend',policy:RANK_POLICY}]],'one exact highest-title write plus one exact active-quest reward marker');
+ assert.ok(written.every(e=>e.author===TITLE_KID.id&&checkEvent(e).length===0));
+ S.holen('renderHome')();assert.equal(S.$('#rankNote').hidden,true);assert.deepEqual(events(S),written,'neither title nor reward marker repeats');
+ const R=titleApp({}, {bauart:'test',speicher:Object.fromEntries(S.ablage)});assert.equal(R.$('#rankName').textContent,'Legend');assert.deepEqual(events(R),written,'reload preserves every original event and writes none');assert.equal(R.$('#rankNote').hidden,true);
 });

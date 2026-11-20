@@ -38,14 +38,14 @@ export const BEREICH_ARTEN = Object.freeze(['kind:lern', 'kind:privat', 'schule'
 /* ---------- type -> area (decided by Peter, 03.11.: the teacher sees the name; the child's account holds the
    school data so the app can compute focus and gaps, but never shows them) ---------- */
 const BER_TYP = {
-  answer: 'kind:lern', round_done: 'kind:lern', badge: 'kind:lern', review: 'kind:lern', practice_day: 'kind:lern', rank_seen: 'kind:lern',
+  answer: 'kind:lern', reward_seen: 'kind:lern', discovery_bonus: 'kind:lern', round_reward: 'kind:lern', round_done: 'kind:lern', badge: 'kind:lern', review: 'kind:lern', practice_day: 'kind:lern', rank_seen: 'kind:lern',
   sheet_created: 'kind:lern', sheet_result: 'kind:lern', sheet_discarded: 'kind:lern',
   // task "Name und Geburtsdatum" (Peter, 04.11.): last name and birthday (with the year) go with the name - a teacher with
   // a grant tells children with the same first name apart by them
   // task "Schule und Klasse" (Peter, 05.11.): grade, class and school - a teacher with a grant sees them next to the name
   profile_set: { name: 'kind:lern', lastName: 'kind:lern', birthday: 'kind:lern', mySchool: 'kind:lern', emoji: 'kind:privat', kidLang: 'kind:privat', muted: 'kind:privat' },
   setting_set: 'kind:privat', list_set: 'kind:privat', checklist_set: 'kind:privat', day_flag: 'kind:privat', advent_open: 'kind:privat',
-  joke_seen: 'kind:privat', story_read: 'kind:privat',
+  joke_seen: 'kind:privat', story_read: 'kind:privat', content_vote:'kind:privat',
   school_import: 'schule', school_evaluation: 'schule', gap_state: 'schule', gap_active: 'schule',
   grant_set: 'eltern:allg', grant_revoked: 'eltern:allg', backup_made: 'eltern:allg',
   grant_opened: 'freigabe',

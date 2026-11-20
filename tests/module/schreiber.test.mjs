@@ -134,7 +134,7 @@ test('Was der Schreiber speichert, liest derive wie die App (Antworten, Runde, A
    Ohne Haken erlaubt: lokale Schluessel (speicherstellen.json "lokal") und die abgeleiteten Werte, die derive aus
    den Ereignissen der Nachbarstellen rechnet (der Klick-Vergleich in tests/ableitung-vergleich.test.mjs prueft sie).
    OFFEN: was 3b-1b/3b-1c noch anschliessen - die Liste darf nur kuerzer werden. */
-const ABGELEITET = { rankPolicy:'aus dem versionierten rank_seen (EP03)', ev: 'aus answer und sheet_result', total: 'Summe aus round_done', best_: 'Maximum aus round_done', tried: 'aus dem Abzeichen inquirer', sheetNo: 'aus sheet_created',
+const ABGELEITET = { starLedger:'aus reward_seen/discovery_bonus/round_reward; tatsächlicher App-/Replaybeweis sterne.test', contentFeedback:'aus content_vote, geprüft in inhaltsfeedback.test', jokeRejected:'dauerhafte Vereinigung aus content_vote, geprüft in inhaltsfeedback.test', rankPolicy:'aus dem versionierten rank_seen (EP03)', ev: 'aus answer und sheet_result', total: 'Summe aus round_done', best_: 'Maximum aus round_done', tried: 'aus dem Abzeichen inquirer', sheetNo: 'aus sheet_created',
   grants: 'aus grant_set und grant_revoked (3b-1c; expiredLogged ist eine Geraetenotiz)' };
 /* the writer itself: the child's log and the logs of the persons (3b-1c) - each written at exactly one place */
 const PROTOKOLLE = ['events', 'personEvents'];

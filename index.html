@@ -70,6 +70,7 @@ button{font:inherit;color:inherit}
 
 /* buttons */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:10px 18px;border-radius:16px;border:2px solid var(--line);background:var(--surface);font-family:var(--display);font-size:1.1rem;font-weight:600;cursor:pointer;box-shadow:var(--shadow);transition:transform .08s,box-shadow .08s}
+.word-options{display:grid;gap:8px;margin:12px 0}.word-options .btn{justify-content:flex-start;text-align:left;white-space:normal}.content-feedback{margin-top:12px}.content-feedback .btn{min-width:44px}
 .btn:active{transform:translateY(3px);box-shadow:0 2px 0 rgba(0,0,0,.12)}
 .btn.primary{background:var(--world);border-color:var(--world);color:var(--on-world)}
 .btn.ghost{box-shadow:none;background:transparent}
@@ -558,6 +559,8 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
     <div id="homeNote" class="note-banner" hidden></div>
     <div id="advent" class="advent" hidden></div>
     <div id="subjects" class="subjects"></div>
+    <p class="small" id="todayStarRule"></p>
+    <div id="dailyContent"></div>
     <div class="growrow"><div id="tree" class="tree"></div><div><div class="eyebrow">My learning tree <button type="button" class="info-btn" data-help="tree" aria-label="Help: learning tree">ⓘ</button></div><div id="treeText" class="muted"></div><div id="badges" class="badges"></div></div></div>
     <button class="btn" id="sheetBtn" type="button">📄 Practice sheet (PDF / print)</button>
     <div id="mySheets" class="mysheets" hidden></div>
@@ -699,6 +702,7 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
     <div class="qcard">
       <div id="playNote" class="note-banner" hidden></div>
       <div class="eyebrow" id="qLabel"></div>
+      <p class="small" id="roundStarRule"></p>
       <h2 class="prompt" id="qPrompt"></h2>
       <div class="visual" id="qVisual" hidden></div>
       <div id="qAnswers" class="answers"></div>
@@ -713,7 +717,9 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
     <div class="eyebrow" id="resWorld">Forces Lab</div>
     <div class="resultcard">
       <div class="bigstars" id="bigStars"></div>
+      <p class="small" id="resAccuracyLabel"></p>
       <div class="score"><span id="resScore">0</span><small> / <span id="resCount">8</span></small></div>
+      <p id="resEarned" class="star-earned" role="status"></p>
       <h2 id="resHead">Great job!</h2>
       <p class="muted" id="resMsg"></p>
       <div id="reflect" class="treat" hidden></div>
@@ -1919,12 +1925,12 @@ const evAcc = a => a.length?a.reduce((s,x)=>s+x[2],0)/a.length:null, evDays = a 
    (also used by the gap progress, so bar and rule cannot drift apart) */
 const yearLevelEv = skill => (((store.get('ev',{})[skill])||[]).filter(x=>x[1]===2)).slice(-20);
 const meetsOf = meetsYearLevel;
-function standOf(skill){
-  const e=(store.get('ev',{})[skill])||[];
+function standOf(skill,evidence){
+  const e=evidence===undefined?((store.get('ev',{})[skill])||[]):evidence;
   // too little own practice: start from the school's latest rating of this quest's main standard (Peter, 01.11.)
   if(e.length<KEY.minAnswers){ const sch=schoolStandFor(skill); return sch?sch.st:'NA'; }
   const at=l=>e.filter(x=>x[1]===l), acc=evAcc;
-  const l1=at(1), l2=at(2).slice(-20), l3=at(3).slice(-12);
+  const l1=at(1), l2=at(2).slice(-KNOWLEDGE_YEAR_WINDOW), l3=at(3).slice(-12);
   const meets=meetsOf(l2);
   if(meets && l3.length>=KEY.extN && acc(l3)>=KEY.extAcc) return 'E';
   if(meets) return 'M';
@@ -2476,6 +2482,9 @@ function openRankPath(){
 
 /* ======================= STATE & SCREENS ======================= */
 const state={screen:'home', world:null, round:[], idx:0, stars:0, streak:0, answered:false, typed:'', picked:[], results:[], studio:null, subject:null, back:'home'};
+const starRewards=createStarRewards({store,eventHook,canWrite:()=>rankWritingReady&&!parentAccess&&!adultUser&&(!accountsOn()||!!studentSession()),standOf,eligible:()=>SUBJECTS.flatMap(questsIn),levelOf,evidenceMax:EVIDENCE_MAX});
+const earnedRound=()=>Number(state.earnedStars||0)+Number(state.bonusStars||0);
+function beginStarRound(){state.starRound='r_'+Array.from(crypto.getRandomValues(new Uint8Array(12)),x=>x.toString(16).padStart(2,'0')).join('');state.earnedStars=0;state.bonusStars=0;state.roundCommitted=false;}
 const play=$('#play'), home=$('#home'), results=$('#results'), studioScreen=$('#studioScreen'), subjectScreen=$('#subject'), aboutScreen=$('#about');
 let timerId=null, timerStart=0, timerElapsed=0;
 
@@ -2501,12 +2510,14 @@ function questCard(item, back){
   let right;
   if(isStudio){ const done=(store.get('chk_'+k,[])).filter(Boolean).length; right=done?'Done<b>'+done+' / '+d.checks.length+'</b>':'Open'; }
   else { const best=store.get('best_'+k,null); right=best===null?'New!':'Best<b>'+best+' / 8</b>'; }
+  const starRule=isStudio?'':`<br><span class="sub quest-star-rule">${esc(starRewards.card(k,contentLanguage()))}</span>`;
   const focus=(!isStudio && focusTopics().includes(k))?'<br><span class="focus">Focus</span>':'';
-  b.innerHTML=`<span class="icon">${ICONS[d.icon||k]}</span><span><span class="name">${d.name}</span><br><span class="sub">${d.sub}</span>${focus}</span><span class="best">${right}</span>`;
+  b.innerHTML=`<span class="icon">${ICONS[d.icon||k]}</span><span><span class="name">${d.name}</span><br><span class="sub">${d.sub}</span>${focus}${starRule}</span><span class="best">${right}</span>`;
   b.addEventListener('click',()=>{ state.back=back; if(isStudio) openStudio(k); else startRound(k); });
   return b;
 }
 function renderHome(){
+  starRewards.observe();
   const total=store.get('total',0);
   $('#totalStars').textContent=total; renderRank(total);
   renderTestBar();
@@ -2521,7 +2532,9 @@ function renderHome(){
     b.addEventListener('click',()=>openSubject(s.key)); c.appendChild(b);
   });
   $('#soundBtn').textContent='Sound: '+(isMuted()?'off':'on');
+  $('#todayStarRule').textContent=STAR_TEXT[contentLanguage()].today;
   renderFun(); renderMySheets();
+  $('#dailyContent').innerHTML=dailyUI.wordHTML();dailyUI.bindWord($('#dailyContent'));
 }
 function openSubject(key){
   const s=SUBJECTS.find(x=>x.key===key); state.subject=key; state.back='home';
@@ -2550,10 +2563,11 @@ function goBack(){
 }
 
 function startRound(k){
+  starRewards.observe();
   state.sheet=null;
   const pending=store.get('bridgeNext',[]).filter(q=>q && WORLDS[q.world]);
   const today=k==='today'?todayMixer(pending):null;
-  state.world=k; state.round=today?today.round:k.indexOf('mix_')===0?WORLDS[k].build():adaptRound(k, WORLDS[k].build()); state.idx=0; state.stars=0; state.streak=0;
+  state.world=k; state.round=today?today.round:k.indexOf('mix_')===0?WORLDS[k].build():adaptRound(k, WORLDS[k].build()); state.idx=0; state.stars=0; state.streak=0;beginStarRound();
   state.results=state.round.map(()=>null);
   if(today&&today.bridgesUsed)store.set('bridgeNext',pending.slice(today.bridgesUsed));
   if(!today&&pending.length){
@@ -2581,7 +2595,7 @@ function startSheetRound(id){
     const c=JSON.parse(JSON.stringify(q)); ['challenge','accepted','warmup','bridge','bridgePart','bridgeSource','retry'].forEach(k=>delete c[k]); c.sheetIndex=i; open.push(c); });
   if(!open.length) return;
   state.world='sheet'; state.sheet={id:sh.id, no:sh.no||0, n:sh.items.length};
-  state.round=open; state.idx=0; state.stars=0; state.streak=0; state.results=open.map(()=>null);
+  state.round=open; state.idx=0; state.stars=0; state.streak=0;beginStarRound(); state.results=open.map(()=>null);
   state.noteShown=false; state.noteNow=null; state.pendingNote=null; state.back='home';
   $('#worldChip').textContent=kidSheetName(sh);
   $('#roundStars').textContent='0';
@@ -2599,6 +2613,9 @@ function renderDots(){
 }
 function renderQuestion(){
   const q=state.round[state.idx];
+  if(!state.starRound)beginStarRound();
+  state.starOffer=starRewards.offer(q,state.world==='today');
+  $('#roundStarRule').textContent=(state.starOffer.stars?STAR_TEXT[contentLanguage()].one:STAR_TEXT[contentLanguage()].zero)+(state.starOffer.bonus?' '+STAR_TEXT[contentLanguage()].bonus:'');
   state.answered=false; state.typed=''; state.picked=[];
   state.attempts=0; state.evidenceRecorded=false; state.firstResponse=null; state.locked=[];
   state.rejected=[]; state.hinted=false; state.exampled=false; state.example=null;
@@ -2678,7 +2695,8 @@ function score(ok){
   state.answered=true; state.results[state.idx]=ok;
   if(ok){ state.stars++; state.streak++; } else state.streak=0;
   const q=state.round[state.idx];
-  if(state.sheet) sheetDecide(ok);    // a sheet task: only its sheet result (A9)
+  if(ok){state.earnedStars+=(state.starOffer?.stars||0);state.bonusStars+=starRewards.correct(q,state.starOffer||{},state.starRound);}else starRewards.observe();
+  if(state.sheet){sheetDecide(ok);starRewards.observe();}    // a sheet task: only its sheet result (A9)
   else {
     if(ok && q.dueId && state.attempts===1 && !q.assisted && !state.hinted) advanceDue(q);   // only a success without help moves a review on
     if(!ok) queueBridge(q);
@@ -2686,7 +2704,7 @@ function score(ok){
   }
   if(q.challenge && !state.challengeRewarded){ addBadge('riskTaker'); state.challengeRewarded=true; state.noteNow=maybeNote('brave',1); }
   else if(!ok) state.noteNow=maybeNote('wrong',.4);
-  $('#roundStars').textContent=state.stars;
+  $('#roundStars').textContent=earnedRound();
   beep(ok?'good':'bad'); renderDots();
 }
 /* First response is a learning observation; a later correct guess is not a
@@ -2926,7 +2944,7 @@ function showWorked(){
   }
   if(beforeTry){
     state.answered=true; state.results[state.idx]='seen'; if(!state.sheet) queueBridge(q);
-    $('#roundStars').textContent=state.stars; renderDots();
+    $('#roundStars').textContent=earnedRound(); renderDots();
   } else score(false);
   if(q.kind==='mc') document.querySelectorAll('#qAnswers .opt').forEach(b=>{ b.disabled=true; b.classList.toggle('correct',+b.dataset.i===q.answer); });
   else if(q.kind==='type') document.querySelectorAll('#qAnswers .key').forEach(b=>b.disabled=true);
@@ -3018,41 +3036,33 @@ function next(){
   if(state.idx<state.round.length-1){ state.idx++; renderQuestion(); } else showResults();
 }
 function showResults(){
-  const n=state.round.length, s=state.stars, k=state.world, name=playerName();
-  const total=store.get('total',0)+s; store.set('total',total);
-  const best=store.get('best_'+k,0); if(s>best) store.set('best_'+k,s);
-  eventHook('round_done', {day:dayKey(), skill:k, stars:s, count:n});
+  const n=state.round.length, s=state.stars, k=state.world, name=playerName(),firstPresentation=!state.roundCommitted;
+  const best=store.get('best_'+k,0);
+  if(!state.roundCommitted){if(n)starRewards.finish({day:dayKey(),round:state.starRound,skill:k,correct:s,stars:state.earnedStars||0,count:n});state.roundCommitted=true;}
   $('#resWorld').textContent=state.sheet?$('#worldChip').textContent:WORLDS[k].name;
   $('#againBtn').hidden=!!state.sheet;   // a sheet is entered once
   $('#resScore').textContent=s;
   $('#resCount').textContent=n;
-  $('#bigStars').innerHTML=state.round.map((_,i)=>STAR.replace('<svg', i<s?'<svg class="on"':'<svg')).join('');
-  const who=name?', '+name:'';
-  let head, msg;
-  if(s===n){ head='Great exploring'+who+'!'; msg='You worked through every task. Keep your curiosity!'; }
-  else if(s>=6){ head='Fantastic work'+who+'!'; msg='Nearly perfect. One more round and you will have them all.'; }
-  else if(s>=4){ head='Good job'+who+'!'; msg='You are getting there. Read the explanations and try again.'; }
-  else { head='Nice try'+who+'!'; msg='Every game makes your brain stronger. Have another go!'; }
+  $('#resAccuracyLabel').textContent=STAR_TEXT[contentLanguage()].accuracy;
+  $('#resEarned').textContent=STAR_TEXT[contentLanguage()].earned(earnedRound());
+  $('#bigStars').innerHTML=Array.from({length:Math.max(n,earnedRound())},(_,i)=>STAR.replace('<svg', i<earnedRound()?'<svg class="on"':'<svg')).join('');
+  const T=PRAISE_TEXT[contentLanguage()];
+  const head=T.heading+(name?', '+name:'')+'!';
+  let msg=T.correct(s,n)+' '+T.continue;
   if(state.sheet){ const left=((store.get('sheets',[]).find(x=>x.id===state.sheet.id)||{items:[]}).items).filter(i=>!i.res).length;
-    msg=left?'Well done! The other tasks of this sheet wait under “My sheets”.':'Your whole sheet is in the app. Tricky tasks come back later – that is how your brain grows.'; }
-  else if(s>best && best>0) msg+=' New best score for this quest!';
+    msg=left?T.sheetMore:T.sheetDone; }
+  else if(s>best && best>0) msg+=T.best;
   $('#resHead').textContent=head; $('#resMsg').textContent=msg;
   show('results'); renderAfterRound(k); snapshot();
-  if(s>=6){ beep('win'); confetti(); }
+  if(firstPresentation&&earnedRound()>=6){ beep('win'); confetti(); }
 }
 
 /* ---------- fun: school mottos, tree, badges, challenge, treats, themes, birthday ---------- */
 /* Rewards growth, courage and persistence (school mission: "grow and flourish", "take risks in a supportive culture"), never results or levels.
    No streaks, nothing expires, no leaderboards. Messages appear now and then, at most one per round. */
-const NOTES={
-  start:['Believe. Your brain grows every time you practise.','You choose. Voice and choice!','Inspire someone: show a grown-up what you learned today.'],
-  wrong:['Mistakes help you learn. Try the next one!','Every mistake is a step. Keep going!','Thinkers try again. You can do it!'],
-  brave:['That was brave. Risk-taker!','You took the challenge. Risk-taker!'],
-  tree:['Your tree is growing, and so are you!']
-};
 const BADGES={riskTaker:'Risk-taker', thinker:'Thinker', openMinded:'Open-minded', reflective:'Reflective', principled:'Principled', balanced:'Balanced', inquirer:'Inquirer', knowledgeable:'Knowledgeable'};
 function addBadge(k, skill){ const b=store.get('badges',{}); b[k]=(b[k]||0)+1; store.set('badges',b); eventHook('badge', skill?{day:dayKey(), badge:k, skill}:{day:dayKey(), badge:k}); }
-function maybeNote(kind, chance){ if(state.noteShown || Math.random()>=chance) return null; state.noteShown=true; return pick(NOTES[kind]); }
+function maybeNote(kind, chance){ if(state.noteShown || Math.random()>=chance) return null; state.noteShown=true; return pick(PRAISE_TEXT[contentLanguage()][kind==='brave'&&!state.attempts?'chosen':kind]); }
 
 /* practice days: any day with an answer in the app or an entered practice sheet */
 function practiceDays(){
@@ -3125,17 +3135,25 @@ function mysteryOfDay(d=new Date()){
   const th=themeNow(d), pool=(th && THEME_MYSTERY[th]) ? THEME_MYSTERY[th].concat(MYSTERY) : MYSTERY;
   return pool[dayNo(d)%pool.length];
 }
+/* EP04: content choices are private, voluntary and never a learning score. */
+const contentLanguage=()=>store.get('kidLang','en')==='de'?'de':'en';
+const rejectedJokes=()=>{const v=store.get('jokeRejected',[]);return Array.isArray(v)?v:[];};
+const contentCanVote=()=>!parentAccess&&!adultUser&&(!accountsOn()||!!studentSession());
+const contentParentCanRead=()=>parentAccess&&(!accountsOn()||!!(adultUser&&viewedKid()&&!isTeacher()&&!viewerGrant()));
+const contentUI=createContentFeedbackUI({store,eventHook,canVote:contentCanVote,language:contentLanguage,parentLanguage:()=>PL(),canParentRead:contentParentCanRead,jokes:JOKE_LIST,stories:STORY_LIST,words:DAILY_WORD_DATA.items,escape:esc});
+const contentFeedbackHTML=contentUI.html,bindContentFeedback=contentUI.bind,parentContentFeedbackHTML=contentUI.parentHTML;
+const dailyUI=createDailyContentUI({day:dayKey,language:contentLanguage,parentLanguage:()=>PL(),canParentRead:()=>contentParentCanRead()&&(!adultUser||adultUser.role==='parent'&&!adultUser.admin),feedbackHTML:contentFeedbackHTML,bindFeedback:bindContentFeedback,escape:esc});
 /* A3 (Peter, 02.11.): one joke per round - the same key (a round, the greeting of a day) gives the same joke;
    no joke comes back before all were shown (jokeSeen). Language: storyLang() - English, German only after a Deutsch round. */
 let jokeShown=null, treatRounds=0;
 function jokeFor(key, lang){
-  if(jokeShown && jokeShown.key===key) return jokeShown.joke;
-  const had=store.get('jokeSeen',[]), r=jokeNext(lang, themeNow(), had, rnd), forget=had.filter(id=>!r.seen.includes(id));
+  if(jokeShown && jokeShown.key===key && !rejectedJokes().includes(jokeShown.joke?.id)) return jokeShown.joke;
+  const had=store.get('jokeSeen',[]), r=jokeNext(lang, themeNow(), had, rnd,rejectedJokes()), forget=had.filter(id=>!r.seen.includes(id));
   store.set('jokeSeen', r.seen.slice(-200)); if(r.joke) eventHook('joke_seen', forget.length?{joke:r.joke.id, forget}:{joke:r.joke.id}); jokeShown={key, joke:r.joke};
   return r.joke;
 }
 /* A4: English jokes carry flag and country above the question; a short explanation comes with the answer. */
-const jokeHTML = (j, btn) => `${j.lang==='en'?`<p class="small joke-from">${esc(jokeOrigin(j))}</p>`:''}<div class="story" lang="${j.lang}">${esc(j.q)}</div><button class="btn small" id="${btn}" type="button">Show the answer</button>`;
+const jokeHTML = (j, btn) => !j?`<p>${FEEDBACK_TEXT[contentLanguage()].none}</p>`:`${j.lang==='en'?`<p class="small joke-from">${esc(jokeOrigin(j))}</p>`:''}<div class="story" lang="${j.lang}">${esc(j.q)}</div><button class="btn small" id="${btn}" type="button">Show the answer</button>${contentFeedbackHTML('joke',j.id)}`;
 const jokeAnswerHTML = j => `<div class="story" lang="${j.lang}"><i>${esc(j.a)}</i></div>${j.note?`<p class="small joke-note">💡 ${esc(j.note)}</p>`:''}`;
 
 /* Pisolala stories: module src/module/geschichten.mjs (STORY_LIST, storyNext, storyMarkRead) */
@@ -3163,7 +3181,7 @@ function renderFun(){
     if(bd===0 && store.get('bdayParty','')!==dayKey()){ store.set('bdayParty',dayKey()); eventHook('day_flag',{flag:'bdayParty', day:dayKey()}); setTimeout(confetti,300); }
   }
   const days=practiceDays(), st=treeStage(days);
-  if(st>store.get('treeStage',0)){ store.set('treeStage',st); if(note.hidden){ note.hidden=false; note.textContent='🌱 '+NOTES.tree[0]; } }
+  if(st>store.get('treeStage',0)){ store.set('treeStage',st); if(note.hidden){ note.hidden=false; note.textContent='🌱 '+PRAISE_TEXT[contentLanguage()].tree[0]; } }
   $('#tree').innerHTML=treeSVG(st);
   $('#treeText').textContent=TREE_TEXT[st];
   const b=store.get('badges',{}); b.knowledgeable=Math.floor(days/10);
@@ -3180,13 +3198,13 @@ function renderAdvent(){
 }
 function openDoor(n){
   const key='advent'+new Date().getFullYear(), opened=store.get(key,[]), body=$('#doorBody');
-  const treat=()=>{ const j=jokeForDoor(n); return `<div class="story"><b>Door ${n}</b>\n${j.lang==='en'?`<span class="small joke-from">${esc(jokeOrigin(j))}</span>\n`:''}${esc(j.q)}\n<i>${esc(j.a)}</i>${j.note?`\n<span class="small joke-note">💡 ${esc(j.note)}</span>`:''}</div>`; };
-  if(opened.includes(n)){ body.innerHTML=treat(); return; }
+  const treat=()=>{ const j=jokeForDoor(n,rejectedJokes()); if(!j)return `<p>${FEEDBACK_TEXT[contentLanguage()].none}</p>`;return `<div class="story"><b>Door ${n}</b>\n${j.lang==='en'?`<span class="small joke-from">${esc(jokeOrigin(j))}</span>\n`:''}${esc(j.q)}\n<i>${esc(j.a)}</i>${j.note?`\n<span class="small joke-note">💡 ${esc(j.note)}</span>`:''}</div>${contentFeedbackHTML('joke',j.id)}`; };
+  if(opened.includes(n)){ body.innerHTML=treat();bindContentFeedback(body);return; }
   const pool=THEME_MYSTERY.advent.concat(MYSTERY), m=pool[n%pool.length], opts=shuffle([m[1]].concat(m[2]));
   body.innerHTML=`<p><b>Door ${n}:</b> ${esc(m[0])}</p><div class="row">${opts.map(o=>`<button type="button" class="btn small" data-a="${esc(o)}">${esc(o)}</button>`).join('')}</div>`;
   body.querySelectorAll('button[data-a]').forEach(b=>b.addEventListener('click',()=>{
     const ok=b.dataset.a===m[1]; opened.push(n); store.set(key,opened); eventHook('advent_open',{year:+key.slice(6), door:n}); beep(ok?'good':'bad');
-    renderAdvent(); $('#doorBody').innerHTML=`<p>${ok?'Yes!':'Good try! It is '+esc(m[1])+'.'}</p>`+treat();
+    renderAdvent(); $('#doorBody').innerHTML=`<p>${ok?'Yes!':'Good try! It is '+esc(m[1])+'.'}</p>`+treat();bindContentFeedback($('#doorBody'));
   }));
 }
 /* My profile: first and last name, birthday (day + month, year optional) and an emoji in one dialog.
@@ -3474,7 +3492,6 @@ function renderChallengeOffer(){
 }
 
 /* after a round: reflection (Practise Today), an idea without a screen now and then, and a treat of choice */
-const OFFLINE=['Measure three things at home in cm. Write the unit!','Read one page of a book aloud to someone.','Find 5 things that are heavier than 1 kg.','Explain one thing you learned today to a grown-up.','Go outside: which surfaces would a toy car roll farthest on?'];
 function renderAfterRound(k){
   const r=$('#reflect'); r.hidden=true; r.innerHTML='';
   if(k==='today' && state.round.length){
@@ -3484,36 +3501,57 @@ function renderAfterRound(k){
     r.querySelectorAll('[data-glow]').forEach(b=>b.addEventListener('click',()=>{ addBadge('reflective'); r.innerHTML='<p>🌟 Glow noted. Reflective!</p>'; }));
   } else if(Math.random()<.25){
     r.hidden=false;
-    r.innerHTML=`<p><b>Idea without a screen:</b> ${esc(pick(OFFLINE))}</p><div class="row"><button type="button" class="btn small" id="didIt">I did it!</button></div>`;
+    r.innerHTML=`<p><b>${PRAISE_TEXT[contentLanguage()].offlineHeading}</b> ${esc(pick(PRAISE_TEXT[contentLanguage()].offline))}</p><div class="row"><button type="button" class="btn small" id="didIt">I did it!</button></div>`;
     $('#didIt').addEventListener('click',()=>{ addBadge('balanced'); r.innerHTML='<p>Balanced! 🌿</p>'; });
   }
   const t=$('#treat');
-  const choices=[['joke','😄 Joke'],['mystery','🔍 Mystery Question']].concat(storyNext(STORY_LIST, storyCtx(storyLang()))?[['story','🌙 Pisolala']]:[]);
+  if(!earnedRound()){
+    const T=STAR_TEXT[contentLanguage()],tried=state.round.some((q,i)=>q.challenge&&state.results[i]===false),challengeQuest=readyRewardChallenge();
+    t.innerHTML=`<p>${tried?T.courage+' ':''}${T.empty}</p><div class="row"><button type="button" class="btn small" data-star-next>${T.todayButton}</button>${challengeQuest?`<button type="button" class="btn small" data-star-challenge>${T.challengeButton}</button>`:''}</div>`;
+    t.querySelector('[data-star-next]').addEventListener('click',()=>startRound('today'));t.querySelector('[data-star-challenge]')?.addEventListener('click',()=>startRewardChallenge(challengeQuest));return;
+  }
+  const choices=[['joke','😄 Joke'],['mystery','🔍 Mystery Question'],['word','📖 Word of the Day']].concat(storyNext(STORY_LIST, storyCtx(storyLang()))?[['story','🌙 Pisolala']]:[]);
   t.innerHTML=`<p><b>Choose your treat</b></p><div class="row">${choices.map(c=>`<button type="button" class="btn small" data-treat="${c[0]}">${c[1]}</button>`).join('')}</div><div id="treatBody"></div>`;
   const roundKey='round-'+(++treatRounds);   // a counter, not the clock: two rounds in the same millisecond (or a frozen test clock) stay apart
   t.querySelectorAll('[data-treat]').forEach(b=>b.addEventListener('click',()=>showTreat(b.dataset.treat, roundKey)));
+}
+function readyRewardChallenge(){
+  if(store.get('bridgeNext',[]).length)return null;
+  const eligible=SUBJECTS.flatMap(questsIn),focus=focusTopics();
+  for(const quest of(focus.length?focus:eligible)){if(!eligible.includes(quest)||!['M','E'].includes(standOf(quest)))continue;const question=WORLDS[quest].build().find(q=>levelOf(q)===3);if(question)return{quest,question};}
+  return null;
+}
+function startRewardChallenge(choice){
+  if(!choice||store.get('bridgeNext',[]).length||!['M','E'].includes(standOf(choice.quest))){renderAfterRound(state.world);return;}
+  startRound(choice.quest);const at=state.round.findIndex(q=>levelOf(q)===3);
+  if(at>=0)[state.round[0],state.round[at]]=[state.round[at],state.round[0]];else state.round[0]=choice.question;
+  state.round[0].challenge=true;renderQuestion();
 }
 function showTreat(kind, roundKey){
   const body=$('#treatBody');
   if(kind==='joke'){
     const j=jokeFor(roundKey, storyLang());
     body.innerHTML=jokeHTML(j, 'jokeAnswer');
-    $('#jokeAnswer').addEventListener('click',()=>{ $('#jokeAnswer').outerHTML=jokeAnswerHTML(j); });
+    bindContentFeedback(body);
+    $('#jokeAnswer')?.addEventListener('click',()=>{ $('#jokeAnswer').outerHTML=jokeAnswerHTML(j); });
   } else if(kind==='mystery'){
     const m=mysteryOfDay(), done=store.get('mysteryDone','')===dayKey();
     const opts=shuffle([m[1]].concat(m[2]));
     body.innerHTML=`<div class="story">${esc(m[0])}</div>`+(done?`<p>You solved today’s Mystery Question: <b>${esc(m[1])}</b>. A new one comes tomorrow!</p>`:`<div class="row">${opts.map(o=>`<button type="button" class="btn small" data-m="${esc(o)}">${esc(o)}</button>`).join('')}</div>`);
     body.querySelectorAll('[data-m]').forEach(b=>b.addEventListener('click',()=>{
       const ok=b.dataset.m===m[1]; store.set('mysteryDone',dayKey()); eventHook('day_flag',{flag:'mysteryDone', day:dayKey()}); beep(ok?'good':'bad');
-      body.innerHTML+=`<p>${ok?'Yes! Brilliant thinking.':'Good try! The answer is <b>'+esc(m[1])+'</b>.'} A new Mystery Question comes tomorrow.</p>`;
+      body.innerHTML+=`<p>${ok?'Yes! You chose the right answer.':'Good try! The answer is <b>'+esc(m[1])+'</b>.'} A new Mystery Question comes tomorrow.</p>`;
       body.querySelectorAll('[data-m]').forEach(x=>x.disabled=true);
     }));
+  } else if(kind==='word'){
+    body.innerHTML=dailyUI.wordHTML('treatWord');dailyUI.bindWord(body);
   } else {
     const cap=store.get('storyCap',2), lang=storyLang(), s=storyFor(roundKey, lang);
     if(!s){ body.innerHTML=''; return; }
     body.innerHTML=`<p lang="${lang}"><b>${esc(s.title[lang])}</b></p><div class="row">${Object.keys(s[lang]).map(Number).filter(l=>l<=cap).map(l=>`<button type="button" class="btn small" data-story="${s.id}" data-l="${l}">${EXCITE[l]}</button>`).join('')}</div><div id="storyText"></div>`;
     body.querySelectorAll('[data-story]').forEach(b=>b.addEventListener('click',()=>{
-      $('#storyText').innerHTML=`<div class="story" lang="${lang}">${esc(s[lang][b.dataset.l])}</div>`;
+      $('#storyText').innerHTML=`<div class="story" lang="${lang}">${esc(s[lang][b.dataset.l])}</div>${contentFeedbackHTML('story',s.id)}`;
+      bindContentFeedback($('#storyText'));
       store.set('storyRead', storyMarkRead(store.get('storyRead',[]), s.id)); eventHook('story_read', {story:s.id});
     }));
   }
@@ -3978,7 +4016,7 @@ function parentHomeHTML(){
   const noKid=accountsOn() && !viewedKid() ? myKidsNote() : '';
   if(noKid) return noKid;   // nothing to show: without a logged-in child the data on this device are not the child's
   // concept 5.3 (B4): notes only when something is to do - data move, backup, waiting sheet, "new here?"
-  return `${migrLine()}${backupLine()}${note}${schoolYearLine()}${newHereLine()}${gapOverviewHTML()}${glanceHTML()}<div class="playout"><div class="psubjects">${tiles}</div><aside class="pside"><div class="pcard" id="pSummary">${summaryHTML(all)}</div><div class="pcard">${legendHTML()}</div></aside></div>`;
+  return `${migrLine()}${backupLine()}${note}${schoolYearLine()}${newHereLine()}${gapOverviewHTML()}${glanceHTML()}${parentContentFeedbackHTML()}${dailyUI.explainHTML()}<div class="playout"><div class="psubjects">${tiles}</div><aside class="pside"><div class="pcard" id="pSummary">${summaryHTML(all)}</div><div class="pcard">${legendHTML()}</div></aside></div>`;
 }
 function legendHTML(){
   // One line, dot + common status; evidence quantity is described separately.
@@ -4158,7 +4196,7 @@ function adminInviteHTML(){
    restored after the move to IDs (S11 P2). Which keys belong to a child is fixed in
    werkzeug/speicherstellen.json (checked by tests/stufe1-p1.test.mjs). Never in a backup: passwords,
    sessions, device keys. Recordings are included (the file stays with the family). */
-const BACKUP_KEYS={exact:['grants','grantlog','attempts','ev','due','total','badges','tried','treeStage','rankSeen','rankPolicy','name','lastName','birthday','emoji','mySchool','bdayParty','sheets','sheetNo','focusMode','focusManual','unlocked','gaps','storyCap','greetDay','mysteryDone','kidLang'], prefix:['best_','chk_','advent']};
+const BACKUP_KEYS={exact:['grants','grantlog','attempts','ev','due','total','badges','tried','treeStage','rankSeen','rankPolicy','name','lastName','birthday','emoji','mySchool','bdayParty','sheets','sheetNo','focusMode','focusManual','unlocked','gaps','storyCap','greetDay','mysteryDone','kidLang','starLedger','contentFeedback','jokeRejected'], prefix:['best_','chk_','advent']};
 const isBackupKey = k => BACKUP_KEYS.exact.includes(k) || BACKUP_KEYS.prefix.some(p=>k.startsWith(p));
 function childStoreKeys(){
   const pre=storeKey('x').slice(0,-1), plain=pre==='bq2_', out=[];
@@ -4258,19 +4296,21 @@ async function readRestoreFile(file){
   if(body.child!==kid.id){ msg.textContent=de?'Diese Sicherung gehört zu einem anderen Kind.':'This backup belongs to a different child.'; return; }
   if(await sha256Hex(JSON.stringify({data:body.data, audio:body.audio}))!==body.sha256){ msg.textContent=de?'Die Datei ist beschädigt oder wurde verändert.':'The file is damaged or was changed.'; return; }
   restoreCandidate=body;
-  pv.innerHTML=`<p><b>${de?'Sicherung vom':'Backup from'} ${fmtDay(body.createdAt.slice(0,10))}:</b> ${countsText(backupCounts(body.data, body.audio))}</p><p class="small">${de?'Der jetzige Stand wird ersetzt. Sie können das danach einmal rückgängig machen.':'The current progress is replaced. You can undo this once afterwards.'}</p><p class="row"><button type="button" class="btn small primary" id="pRestoreGo">${de?'Zurückspielen':'Restore'}</button><button type="button" class="btn small" id="pRestoreCancel">${de?'Abbrechen':'Cancel'}</button></p>`;
+  pv.innerHTML=`<p><b>${de?'Sicherung vom':'Backup from'} ${fmtDay(body.createdAt.slice(0,10))}:</b> ${countsText(backupCounts(body.data, body.audio))}</p><p class="small">${de?'Der jetzige Stand wird ersetzt. Sie können das danach einmal rückgängig machen.':'The current progress is replaced. You can undo this once afterwards.'} ${STAR_TEXT[PL()].restoreRetained}</p><p class="row"><button type="button" class="btn small primary" id="pRestoreGo">${de?'Zurückspielen':'Restore'}</button><button type="button" class="btn small" id="pRestoreCancel">${de?'Abbrechen':'Cancel'}</button></p>`;
   $('#pRestoreGo').addEventListener('click',applyRestore);
   $('#pRestoreCancel').addEventListener('click',()=>{ restoreCandidate=null; pv.innerHTML=''; msg.textContent=''; });
 }
 async function applyRestore(){
   const body=restoreCandidate, de=PL()==='de'; if(!body || !canBackup() || EV_LESEN) return;
-  const retainedTitle=shownRank();
+  const retainedTitle=shownRank(),retainedJokeRejections=rejectedJokes(),retainedStars=starRewards.read(),retainedTotal=store.get('total',0);
   const prev={}; for(const k of childStoreKeys()) prev[k]=localStorage.getItem(storeKey(k));
   store.set('vorRueckspielen',{at:new Date().toISOString(), data:prev});
   for(const k of childStoreKeys()) localStorage.removeItem(storeKey(k));
   for(const [k,v] of Object.entries(body.data)) if(isBackupKey(k) && typeof v==='string') localStorage.setItem(storeKey(k), v);
   for(const r of body.audio||[]){ try{ await recPut({id:r.id, created:r.created, durationMs:r.durationMs, mime:r.mime, blob:new Blob([fromB64(r.base64)],{type:r.mime})}); }catch(e){} }
-  restoreTitle(retainedTitle);
+  restoreTitle(retainedTitle);if(retainedJokeRejections.length||rejectedJokes().length)store.set('jokeRejected',uniq(retainedJokeRejections.concat(rejectedJokes())));
+  const mergedStars=mergeStarLedger(retainedStars,starRewards.read());if(Object.values(mergedStars).some(v=>v.length))store.set('starLedger',mergedStars);
+  store.set('total',Math.max(retainedTotal,store.get('total',0)));
   cleanStoredPrivate();
   restoreCandidate=null; backupNote=(de?'Zurückgespielt: ':'Restored: ')+countsText(backupCounts(body.data, body.audio));
   renderHome(); renderSheets();
@@ -4282,10 +4322,12 @@ function restoreTitle(retained){
 }
 function undoRestore(){
   const v=store.get('vorRueckspielen',null), de=PL()==='de'; if(!v || !canBackup() || EV_LESEN) return;
-  const retainedTitle=shownRank();
+  const retainedTitle=shownRank(),retainedJokeRejections=rejectedJokes(),retainedStars=starRewards.read(),retainedTotal=store.get('total',0);
   for(const k of childStoreKeys()) localStorage.removeItem(storeKey(k));
   for(const [k,val] of Object.entries(v.data||{})) localStorage.setItem(storeKey(k), val);
-  restoreTitle(retainedTitle);
+  restoreTitle(retainedTitle);if(retainedJokeRejections.length||rejectedJokes().length)store.set('jokeRejected',uniq(retainedJokeRejections.concat(rejectedJokes())));
+  const mergedStars=mergeStarLedger(retainedStars,starRewards.read());if(Object.values(mergedStars).some(v=>v.length))store.set('starLedger',mergedStars);
+  store.set('total',Math.max(retainedTotal,store.get('total',0)));
   store.del('vorRueckspielen'); cleanStoredPrivate(); backupNote=de?'Der Stand vor dem Zurückspielen ist wiederhergestellt.':'The progress from before the restore is back.';
   renderHome(); renderSheets();
 }
@@ -7044,7 +7086,7 @@ const ABOUT_DE=()=>`
 <p><b>Bei einer falschen Antwort:</b></p>
 <ol class="steps">
 <li><b>Hinweis:</b> eine kurze Frage im Modell der Schule, etwa „Liegt 470 vor oder nach der Mitte 450?“. Die Lösung verrät er nicht. Dann folgt ein zweiter Versuch.</li>
-<li><b>Zweiter Versuch richtig:</b> ein Stern und eine kurze Erklärung.</li>
+<li>${PARENT_REWARD_COPY.de.secondRight}</li>
 <li><b>Zweiter Versuch falsch:</b> der Lösungsweg, Schritt für Schritt.</li>
 <li><b>Brücke</b> beim Runden, beim Stellenwert und bei fehlenden Teilen: zwei leichtere Aufgaben, dann eine ähnliche mit neuen Zahlen. Passt sie nicht mehr in die Runde, geht sie beim nächsten Start weiter.</li>
 </ol>
@@ -7062,7 +7104,7 @@ const ABOUT_DE=()=>`
 <p>Eltern haben Rechnen, Lesen und Schreiben oft anders gelernt; ein zweiter Weg verwirrt das Kind eher, als dass er hilft. Deshalb: erst fragen, wie es in der Klasse gemacht wird, dann genau dort helfen, wo der Weg des Kindes stockt – keinen zweiten Weg danebenstellen. Hilfe der Eltern wirkt vor allem, wenn sie gezielt und gelassen ist (Patall et al. 2008); eigene Mathe-Angst überträgt sich leicht (Maloney et al. 2015).</p>
 <h3>Wie die App einstuft</h3>
 <ul>
-<li><b>Titel, Lernbaum und Abzeichen</b> würdigen Ausdauer und Verhalten, nie Ergebnisse. Nichts davon geht verloren.</li>
+<li>${PARENT_REWARD_COPY.de.titles}</li>
 <li><b>Interner Stand:</b> Für die Aufgabenwahl führt die App je Quest einen Stand nach dem Bewertungsschlüssel der Schule. Das Kind sieht ihn nie.</li>
 <li><b>Startwert:</b> Am Anfang zählt die letzte Einstufung der Schule, ab 6 eigenen Antworten die eigene Übung.</li>
 <li><b>Einschätzung im Elternbereich:</b> derselbe Quest-Stand wie bei der Aufgabenwahl, ohne Tageshürde. Der Belegumfang beschreibt nur die Menge bisheriger Erstversuche.</li>
@@ -7137,7 +7179,7 @@ const ABOUT_EN=()=>`
 <p><b>After a wrong answer:</b></p>
 <ol class="steps">
 <li><b>Hint:</b> a short question in the school’s model, such as “Is 470 before or after the halfway point 450?”. It does not give the answer away. Then comes a second try.</li>
-<li><b>Second try right:</b> a star and a short explanation.</li>
+<li>${PARENT_REWARD_COPY.en.secondRight}</li>
 <li><b>Second try wrong:</b> the worked solution, step by step.</li>
 <li><b>Bridge</b> for rounding, place value and missing parts: two easier tasks, then a similar one with new numbers. If it no longer fits into the round, it continues at the next start.</li>
 </ol>
@@ -7155,7 +7197,7 @@ const ABOUT_EN=()=>`
 <p>Parents often learned math, reading and writing differently; a second method tends to confuse a child more than it helps. So first ask how it is done in class, then help exactly where your child’s own way gets stuck – don’t add a second method. Parents’ help works best when it is targeted and calm (Patall et al. 2008); parents’ own math anxiety is easily passed on (Maloney et al. 2015).</p>
 <h3>How the app judges</h3>
 <ul>
-<li><b>Titles, learning tree and badges</b> recognize persistence and behavior, never results. None of them is ever lost.</li>
+<li>${PARENT_REWARD_COPY.en.titles}</li>
 <li><b>Internal level:</b> to choose tasks, the app keeps a level per quest based on the school’s assessment key. Your child never sees it.</li>
 <li><b>Starting point:</b> at first, the school’s latest rating counts; from 6 own answers, your child’s own practice.</li>
 <li><b>Summary in the grown-ups area:</b> the same quest status used to choose tasks, without a day requirement. Evidence amount only describes the quantity of recorded first tries.</li>
@@ -7435,7 +7477,8 @@ function greetGo(k){
     store.set('greetDay',dayKey()); eventHook('day_flag',{flag:'greetDay', day:dayKey()});
     const j=jokeFor('greet-'+dayKey(), 'en');
     $('#greetJoke').innerHTML=jokeHTML(j, 'greetJokeAnswer');
-    $('#greetJokeAnswer').addEventListener('click',()=>{ $('#greetJokeAnswer').outerHTML=jokeAnswerHTML(j); });
+    bindContentFeedback($('#greetJoke'));
+    $('#greetJokeAnswer')?.addEventListener('click',()=>{ $('#greetJokeAnswer').outerHTML=jokeAnswerHTML(j); });
     $('#greetSkip').textContent='Done ✓';
     return;
   }
@@ -7499,7 +7542,7 @@ function boot(data){
   else if(accountsOn() && store.get('adultSession',null) && !isTestAccount() && adultResume()){ /* grown-up stays logged in */ }
   else show('home');   // with accounts and no login, show() leads to the login screen
   rankWritingReady=true;
-  if(state.screen!=='about' && state.screen!=='login')renderRank();
+  if(state.screen!=='about' && state.screen!=='login'){starRewards.observe();renderRank();}
   if(KONTO_UI) kontoNativeStart();
   setTimeout(checkForUpdate,3000);
 }

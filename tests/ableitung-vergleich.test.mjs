@@ -139,7 +139,14 @@ test('Testbau = Live-Bau (3b-2a): derselbe Verlauf; was der Live-Bau speichert, 
   assert.ok(schluessel.length >= 10, 'der Live-Bau hat gespeichert: ' + schluessel);
   const app = { events: await lies(page, 'events'), evDevice: await lies(page, 'evDevice'), treeStage: await lies(page, 'treeStage') };
   for (const k of schluessel) app[k] = await lies(page, k);
-  for (const k of schluessel) assert.deepEqual(app[k], live[k], 'Testbau aus Ereignissen = Live-Bau gespeichert: ' + k);
+  for (const k of schluessel) {
+    if(k==='starLedger'){
+      // Independent executions have independent cryptographic round IDs. Compare
+      // their meaning here; exact same-run IDs are checked against writer/replay below.
+      for(const ledger of[app[k],live[k]]){assert.equal(new Set(ledger.rounds).size,ledger.rounds.length);assert.ok(ledger.rounds.every(id=>/^r_[a-f0-9]{24}$/.test(id)));}
+      assert.deepEqual({...app[k],rounds:app[k].rounds.length},{...live[k],rounds:live[k].rounds.length},'payment/knowledge metadata and completed-round count agree');
+    }else assert.deepEqual(app[k], live[k], 'Testbau aus Ereignissen = Live-Bau gespeichert: ' + k);
+  }
   assert.equal(app.treeStage, live.treeStage, 'treeStage (Geraetenotiz, in beiden gespeichert)');
   // Independent metadata oracle: the persisted original sheet question keeps
   // its actual level/ID, while an assisted result contributes support evidence.
@@ -182,6 +189,8 @@ test('Testbau = Live-Bau (3b-2a): derselbe Verlauf; was der Live-Bau speichert, 
   for (const k of Object.keys(STANDARD)) assert.deepEqual(mit(inNode, k), mit(app, k), 'Wert ' + k);
   assert.deepEqual(Object.keys(inNode).filter((k) => k.startsWith('best_')).sort(), Object.keys(app).filter((k) => k.startsWith('best_')).sort(), 'best_-Schluessel');
   for (const k of Object.keys(app).filter((k) => k.startsWith('best_'))) assert.equal(inNode[k], app[k], k);
+  assert.deepEqual(inNode.starLedger,app.starLedger,'same execution: all reward metadata and exact round IDs survive full replay');
+  assert.deepEqual(app.starLedger.rounds,[...new Set(ereignisse.filter(e=>e.type==='round_reward').map(e=>e.payload.round))],'every stored completed-round ID comes from its real writer event');
   assert.equal(inNode.rankSeen, app.rankSeen, 'rankSeen');
   assert.equal(inNode.rankPolicy,'knowledge.v1','one-time conversion survives full replay');
   assert.equal(app.rankSeen,await page.evaluate(()=>window.__bqa.titel()),'title follows the shared knowledge projection and retention, not a star minimum');
@@ -189,7 +198,7 @@ test('Testbau = Live-Bau (3b-2a): derselbe Verlauf; was der Live-Bau speichert, 
   assert.ok(app.treeStage >= 2, 'treeStage: ' + app.treeStage);
 
   /* der Verlauf hat alles beruehrt (sonst waere der Vergleich zu schwach) */
-  for (const t of ['answer', 'round_done', 'badge', 'review', 'rank_seen', 'sheet_created', 'sheet_result', 'sheet_discarded']) assert.ok(arten[t] > 0, 'Verlauf hat ' + t + ' erreicht');
+  for (const t of ['answer', 'round_reward', 'reward_seen', 'badge', 'review', 'rank_seen', 'sheet_created', 'sheet_result', 'sheet_discarded']) assert.ok(arten[t] > 0, 'Verlauf hat ' + t + ' erreicht');
   assert.ok(app.attempts.some((a) => a.hintShown) && app.attempts.some((a) => a.solutionShown), 'Tipp und Loesung kamen vor');
   assert.ok(app.attempts.some((a) => a.solutionShown && a.beforeTry && a.attempt === 0), 'Loesung vor dem ersten Versuch (attempt 0)');
   assert.ok(app.attempts.some((a) => a.attempt === 2), 'zweiter Versuch');

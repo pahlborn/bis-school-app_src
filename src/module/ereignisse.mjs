@@ -54,6 +54,8 @@ const evField = {
   evalRevisions: (x) => Array.isArray(x) && x.length >= 2 && new Set(x).size === x.length && x.every(evEvalId),
   evalDocument: evEvalDocument,
   evalTitle: (x) => evStr(x) && x.length <= 160 && x === x.trim() && !/[\x00-\x1f\x7f]/.test(x),
+  roundId: x=>typeof x==='string'&&/^r_[a-f0-9]{24}$/.test(x),
+  quests: x=>Array.isArray(x)&&x.length<=100&&new Set(x).size===x.length&&x.every(k=>typeof k==='string'&&/^[a-z][a-z0-9_]{0,63}$/.test(k)),
   str: evStr, nstr: (x) => x === null || evStr(x), bool: (x) => typeof x === 'boolean', any: (x) => x !== undefined,
   int: (x) => Number.isInteger(x) && x >= 0, pos: (x) => Number.isInteger(x) && x >= 1, lvl: (x) => x === 1 || x === 2 || x === 3,
   arr: Array.isArray, obj: evObj, utc: (x) => !Number.isNaN(evMs(x)),
@@ -77,6 +79,9 @@ const evField = {
    the storage places in werkzeug/speicherstellen.json (concept 7.2) and kept short. */
 const EV_SPEC = {
   answer: ['day:day skill:str level:lvl attempt:int ok:bool qid:str', 'family:nstr response:any help:bool example:bool hintShown:bool exampleShown:bool solutionShown:bool beforeTry:bool sheet:str'],
+  reward_seen: ['secure:quests solved:quests', ''],
+  discovery_bonus: ['quest:str round:roundId', ''],
+  round_reward: ['day:day round:roundId skill:str correct:int stars:int count:pos', ''],
   round_done: ['day:day skill:str stars:int count:pos', ''],
   badge: ['day:day badge:str', 'skill:str'],
   review: ['day:day qid:str box:int', 'dueAt:day question:obj'],
@@ -118,6 +123,7 @@ const EV_SPEC = {
   // jokes shown and stories read (task 3b-1b-4; before only on the device). A joke goes to the end; forget = the ids the
   // app drops when every joke of the moment was shown and the round starts again (witze.mjs jokeNext)
   joke_seen: ['joke:str', 'forget:arr'],
+  content_vote: ['kind:enum(joke|story|word) item:str value:enum(up|down)', ''],
   story_read: ['story:str', ''],                                       // the story moves to the end (geschichten.mjs storyMarkRead)
   // settings of one person (task 3b-1c; area person:<id>, before only on the device): language of the grown-ups' area,
   // sound switch of a grown-up, "How Big Quest works" opened (day). Written by the person itself, into its own area.
@@ -207,6 +213,7 @@ export function checkEvent(e) {
       if (base === revision || ((withdrawn || resolves) && !base)) err.push('payload.base: invalid revision base');
       if (Array.isArray(resolves) && (resolves.includes(revision) || resolves.includes(base))) err.push('payload.resolves: invalid conflict revisions');
     }
+    if(e.type==='round_reward'&&(e.payload.correct>e.payload.count||e.payload.stars>e.payload.correct))err.push('payload: invalid reward counts');
     for (const k of Object.keys(e.payload)) if (!evOwn(req, k) && !evOwn(opt, k)) err.push(`payload.${k}: unknown field`);
   }
   return err;

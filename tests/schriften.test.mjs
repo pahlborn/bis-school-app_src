@@ -16,6 +16,7 @@ import os from 'node:os';
 import path from 'node:path';
 import http from 'node:http';
 import { WURZEL, QUELLEN, ICONS, quellenLesen, distBauen, appZusammensetzen, testinstanzBauen, testinstanzKontext } from '../werkzeug/bauen.mjs';
+import { MODUL_JSON } from '../werkzeug/module.mjs';
 import { SCHRIFT_MARKE, SCHRIFTEN_DATEI, schriftenLesen, schriftenEinsetzen, schriftenPruefen, ohneSchriften } from '../werkzeug/schriften.mjs';
 import { testinstanzPruefen, testinstanzUmwandeln, ersatzLesen } from '../werkzeug/testinstanz.mjs';
 import { entschluesseln, tresorAusHuelle } from '../werkzeug/kern.mjs';
@@ -34,7 +35,7 @@ const ALLE = (app) => appZusammensetzen(app, V, null, null).toString('utf8');
 /** Kopie der Quellen in einen eigenen Ordner, index.html veraendert - fuer Bau-Gegenproben */
 function wurzelMit(indexHtml) {
   const w = tmp('bq-schriften-wurzel-');
-  for (const rel of [QUELLEN.manifest, QUELLEN.salz, QUELLEN.woerter, QUELLEN.vorlage, SCHRIFTEN_DATEI, 'werkzeug/testinstanz-ersatz.json', 'werkzeug/schuldaten.json', ...ICONS]) {
+  for (const rel of [QUELLEN.manifest, QUELLEN.salz, QUELLEN.woerter, QUELLEN.vorlage, SCHRIFTEN_DATEI, 'werkzeug/testinstanz-ersatz.json', 'werkzeug/schuldaten.json', ...Object.values(MODUL_JSON), ...ICONS]) {
     fs.mkdirSync(path.dirname(path.join(w, rel)), { recursive: true });
     fs.copyFileSync(path.join(WURZEL, rel), path.join(w, rel));
   }

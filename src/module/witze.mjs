@@ -91,8 +91,8 @@ export function jokesFor(lang, theme){
 /** The next joke. seen: ids already shown (any language). In a theme time a theme joke comes first while
     there is an unseen one. Once every joke of this moment was shown, it starts again (but not with the
     last one). rnd(n) gives 0..n-1. Returns {joke, seen} - the caller stores seen. */
-export function jokeNext(lang, theme, seen, rnd){
-  const pool=jokesFor(lang, theme), had=Array.isArray(seen)?seen:[];
+export function jokeNext(lang, theme, seen, rnd, rejected=[]){
+  const pool=jokesFor(lang, theme).filter(j=>!rejected.includes(j.id)), had=Array.isArray(seen)?seen:[];
   if(!pool.length) return {joke:null, seen:had};
   let open=pool.filter(j=>!had.includes(j.id)), next=had;
   if(!open.length){
@@ -107,7 +107,7 @@ export function jokeNext(lang, theme, seen, rnd){
 }
 
 /** Advent door n (1-24): always the same joke behind the same door (English). */
-export function jokeForDoor(n){
-  const pool=jokesFor('en','advent'), themed=pool.filter(j=>j.theme==='advent'), list=themed.concat(pool.filter(j=>!j.theme));
-  return list[(n*7)%list.length];
+export function jokeForDoor(n,rejected=[]){
+  const pool=jokesFor('en','advent').filter(j=>!rejected.includes(j.id)), themed=pool.filter(j=>j.theme==='advent'), list=themed.concat(pool.filter(j=>!j.theme));
+  return list.length?list[(n*7)%list.length]:null;
 }

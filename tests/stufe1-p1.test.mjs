@@ -223,7 +223,11 @@ test('Sicherung: nur Eltern des Kindes; Datei vollstaendig ohne Passwoerter; Zur
   await c.page.locator('[data-restoreundo]').click();
   await c.page.waitForFunction(() => /vor dem Zurückspielen/.test(document.querySelector('#pBackupMsg').textContent));
   const zurueck = await kinderSchluessel(c.page);
-  for (const k of Object.keys(vorher)) if (!ABGELEITET.includes(k)) assert.equal(zurueck[k], frisch[k], 'undo ' + k);
+  for (const k of Object.keys(vorher)) {
+    if(k==='total')assert.equal(Number(zurueck[k]),Math.max(Number(nachher[k]||0),Number(frisch[k]||0)),'undo retains collected stars');
+    else if(k==='starLedger')assert.equal(zurueck[k],nachher[k],'undo retains exact first-bonus and paid-round receipts');
+    else if(!ABGELEITET.includes(k))assert.equal(zurueck[k],frisch[k],'undo '+k);
+  }
   assert.deepEqual([...a.fehler, ...c.fehler], []);
   await a.ctx.close(); await c.ctx.close();
 });

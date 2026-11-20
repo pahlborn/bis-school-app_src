@@ -21,6 +21,8 @@
 import { mergeLog, lastWins, lastWinsOrder, effectiveTime, SCHOOL_EVALUATION_TARGETS, schoolEvaluationNeedsPractice } from './ereignisse.mjs';
 import { schoolStandardInfo, schoolStandardsByQuest } from './standardkatalog.mjs';
 import {gapSchoolRatings,gapObserve,gapUndo,gapProjectSource,gapRemember,gapForget,gapUse,gapConsumed} from './lueckenverlauf.mjs';
+import {starProjection} from './sterne.mjs';
+import {contentVoteState} from './inhaltsfeedback.mjs';
 import {secureEvidence} from './wissen.mjs';
 import {RANKS,RANK_POLICY,RANK_MIGRATION,higherRank} from './titel.mjs';
 const AB_GAP_STANDARDS=schoolStandardsByQuest();
@@ -101,6 +103,7 @@ function abApply(st, ctx, e) {
       } else if (p.solutionShown && p.beforeTry) abPushEvidence(st, ctx, p.skill, [p.day,1,0,false],p.level); // answer shown: support level
       break;
     }
+    case 'reward_seen': case 'discovery_bonus': case 'round_reward': Object.assign(st,starProjection(st,e.type,p));break;
     case 'round_done': {                                                        // index.html: showResults
       st.total += p.stars;
       const key = 'best_' + p.skill;
@@ -167,6 +170,9 @@ function abApply(st, ctx, e) {
       const list = (Array.isArray(st.jokeSeen) ? st.jokeSeen : []).filter((id) => id !== p.joke && !forget.includes(id));
       st.jokeSeen = list.concat([p.joke]).slice(-DERIVE_LIMITS.jokes);
       break;
+    }
+    case 'content_vote': {
+      const next=contentVoteState(st.contentFeedback,st.jokeRejected,p);st.contentFeedback=next.votes;st.jokeRejected=next.rejected;break;
     }
     case 'story_read':                                                          // geschichten.mjs storyMarkRead: moves to the end
       st.storyRead = (Array.isArray(st.storyRead) ? st.storyRead : []).filter((id) => id !== p.story).concat([p.story]);
@@ -305,7 +311,7 @@ function abGaps(st, list, now) {
                   it seeds only these title fields, never a raw evidence/time base.
    The result has one extra key, _days (the practice days so far), that a later base needs; it is not a storage key.
    Likewise _focusManual (task 3b-2a): the focus list while the focus is not manual, only when it has entries. */
-export function derive(events, { now, base, retainedTitle } = {}) {
+export function derive(events, { now, base, retainedTitle, retainedJokeRejections } = {}) {
   if (now === undefined || now === null) throw new Error('derive: "now" is missing');
   const st = Object.assign({ attempts: [], ev: {}, due: [], total: 0, badges: {}, tried: [], treeStage: 0, sheets: [], sheetNo: 0, _days: [] }, base ? abClone(base.state) : {});
   // A known snapshot policy must suppress old star titles before replay, even
@@ -314,6 +320,7 @@ export function derive(events, { now, base, retainedTitle } = {}) {
     st.rankPolicy=RANK_POLICY;
     if(DERIVE_RANKS.includes(retainedTitle.rankSeen))st.rankSeen=higherRank(st.rankSeen,retainedTitle.rankSeen);
   }
+  if(Array.isArray(retainedJokeRejections))st.jokeRejected=[...new Set([...(Array.isArray(st.jokeRejected)?st.jokeRejected:[]),...retainedJokeRejections.filter(id=>typeof id==='string')])];
   const ctx = { days: new Set(st._days), gapSchool:{...(st.gaps?.school||{})},gapAsOf:st.gaps?.schoolAsOf||'',gapClosed:{...(st.gaps?.closed||{})},gapHold:{...(st.gaps?.hold||{})} };
   let list = mergeLog([Array.isArray(events) ? events : []], now).events;
   // A pre-fix snapshot may lack the criterion context. Hydrate only from

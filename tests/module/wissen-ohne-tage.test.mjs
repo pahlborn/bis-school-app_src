@@ -55,7 +55,7 @@ test('month pause and reload retain knowledge; dates remain descriptive and save
  await uhr.vor(31*864e5);assert.equal(S.holen('standOf')('numbers'),'E');assert.equal(S.holen('assessQuest')('numbers').level,'e');assert.equal(S.holen('assessQuest')('numbers').old,true);
  const R=appSandbox({seed:20,uhr,speicher:Object.fromEntries(S.ablage)});assert.equal(R.holen('standOf')('numbers'),'E');for(const[k,v]of Object.entries(values))assert.deepEqual(plain(R.holen('store').get(k)),v);
 });
-test('unrelated review/reward/help and EP02 algorithms stay byte-identical to accepted baseline',()=>{
+test('unrelated review/help and EP02 algorithms stay byte-identical; EP04 reward projections have actual score/currency tests',()=>{
  const old=appSandbox({seed:19,anpassen:()=>committedApp(BASE)}),S=appSandbox({seed:19});
- for(const name of['observeAttempt','logAttempt','score','showResults','rememberWrong','advanceDue','dueToday','queueBridge','bridgeFor','exampleFor','guidance','qId','buildToday','neulandEntry','gapAct'])assert.equal(String(S.holen(name)),String(old.holen(name)),name);
+ for(const name of['observeAttempt','logAttempt','rememberWrong','advanceDue','dueToday','queueBridge','bridgeFor','exampleFor','guidance','qId','buildToday','neulandEntry','gapAct'])assert.equal(String(S.holen(name)),String(old.holen(name)),name);
 });
