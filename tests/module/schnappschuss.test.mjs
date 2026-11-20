@@ -242,7 +242,7 @@ test('Reinheit: kein Netz, kein Speicher, keine Uhr, kein Zufall; Importe nur au
   const src = fs.readFileSync(new URL('../../src/module/schnappschuss.mjs', import.meta.url), 'utf8');
   assert.doesNotMatch(src, /\bfetch\s*\(/);
   for (const w of ['XMLHttpRequest', 'localStorage', 'indexedDB', 'Math.random', 'Date.now', 'getRandomValues', 'setTimeout']) assert.equal(src.includes(w), false, w);
-  assert.deepEqual([...src.matchAll(/^import .* from '(.+)';$/gm)].map((m) => m[1]), ['./ereignisse.mjs', './ableitung.mjs']);
+  assert.deepEqual([...src.matchAll(/^import .* from '(.+)';$/gm)].map((m) => m[1]), ['./ereignisse.mjs', './ableitung.mjs', './titel.mjs']);
   for (const m of src.matchAll(/^(?:export\s+)?(?:async\s+)?(?:function\s+([\w$]+)|(?:const|let|class)\s+([\w$]+))/gm)) {
     const name = m[1] || m[2];
     assert.ok(m[0].startsWith('export') || /^(sn|SN_)/.test(name), name);

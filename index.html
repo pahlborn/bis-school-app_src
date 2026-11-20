@@ -884,7 +884,7 @@ function eventHook(type, payload, kid){
       let d=store.get('evDevice',null); if(!d){ d=newDeviceId(); store.set('evDevice',d); }
       const now=()=>Date.now(), mine=()=>(eventWho()||{}).person;
       // the logs keep their list in memory (task 3b-2a: no reading of the whole list per event)
-      eventSink=evSchreiber({read:()=>evKindZielLog(evPre()).liste(), write:l=>evKindZielLog(evPre()).schreiben(l), device:d, who:eventWho, now});
+      eventSink=evSchreiber({read:()=>evKindZielLog(evPre()).liste(), write:l=>evKindZielLog(evPre()).schreiben(l), device:d, who:eventWho, now, titlePolicy:()=>store.get('rankPolicy',null)});
       personSink=evSchreiber({read:()=>evPersonLog(mine()).liste(), write:l=>evPersonLog(mine()).schreiben(l), device:d, who:eventWho, now});
     }
     const r=(own?personSink:eventSink).write(type, payload);

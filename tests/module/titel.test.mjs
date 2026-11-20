@@ -48,7 +48,7 @@ test('converted profile with a missing/lower seen value never reopens the legacy
  for(const seen of[null,'Explorer']){const S=titleApp({rankPolicy:RANK_POLICY,total:1000,...seen?{rankSeen:seen}:{}});assert.equal(S.$('#rankName').textContent,'Explorer');assert.equal(S.$('#rankNote').hidden,true);}
 });
 test('base/full replay/snapshot/late second-device migration retain cutoff and highest earned knowledge title',async()=>{
- const old=event({rank:'Professor'}),cut=event({rank:'Professor',policy:RANK_MIGRATION},10),star=event({day:TITLE_DAY,skill:'numbers',stars:8,count:8},20,'round_done'),late=event({rank:'Legend'},30),conversion=event({rank:'Legend',policy:RANK_MIGRATION},40),earned=event({rank:'Legend',policy:RANK_POLICY},50);
+ const old=event({rank:'Professor'}),cut=event({rank:'Professor',policy:RANK_MIGRATION},10),star=event({day:TITLE_DAY,skill:'numbers',stars:8,count:8},20,'round_done'),late=event({rank:'Legend'},30),conversion=event({rank:'Legend',policy:RANK_MIGRATION,after:cut.id},40),earned=event({rank:'Legend',policy:RANK_POLICY},50);
  const first=[old,cut],remaining=[star,late,conversion],all=[...first,...remaining];
  const full=derive(all,{now:Date.now()});assert.equal(full.rankSeen,'Professor');assert.equal(full.rankPolicy,RANK_POLICY);
  const snap=await makeSnapshot(first,{now:'2026-11-20T07:00:00.015Z',author:'p_adult',device:'d_P1'});const restored=await stateFrom(remaining,snap,{now:Date.now()});assert.equal(restored.weg,'schnappschuss');assert.deepEqual(restored.state,full);
@@ -63,7 +63,7 @@ test('already received conversion ignores future stars and old-client promotions
  for(let i=0;i<4;i++)reader.schreiben([...list,event({day:TITLE_DAY,skill:'numbers',stars:8,count:8},i,'round_done')]);
  reader.schreiben([...list,event({rank:'Legend'},5)]);
  assert.equal(reader.stand().total,32);assert.equal(reader.stand().rankSeen,'Explorer');reader.neuLaden();assert.equal(reader.stand().rankSeen,'Explorer');
- assert.equal(derive([...list,event({rank:'Legend',policy:RANK_MIGRATION},30)],{now:Date.now()}).rankSeen,'Explorer');
+ assert.equal(derive([...list,event({rank:'Legend',policy:RANK_MIGRATION,after:cut.id},30)],{now:Date.now()}).rankSeen,'Explorer');
 });
 test('earned title survives falling knowledge, a month pause and next-goal deficits stay nonnegative',async()=>{
  const uhr=stellbareUhr(Date.now()),S=titleApp({rankPolicy:RANK_POLICY,rankSeen:'Professor',total:1,ev:evFor(['numbers'])},{uhr});

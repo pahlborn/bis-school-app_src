@@ -316,11 +316,13 @@ export function derive(events, { now, base } = {}) {
   // Freeze the legacy title actually observed at conversion, never re-read
   // stars here: a later round from a slower device can sort before this event.
   // Legacy rank history known to the converting app is already in its payload.
+  // An `after` reference marks a later migration attempt, regardless of clocks.
   const rankEvents=list.filter(e=>e.type==='rank_seen' && DERIVE_RANKS.includes(e.payload.rank));
   ctx.rankConverted=st.rankPolicy===RANK_POLICY || rankEvents.some(e=>e.payload.policy===RANK_MIGRATION || e.payload.policy===RANK_POLICY);
-  if(ctx.rankConverted && st.rankPolicy!==RANK_POLICY){
-    const conversion=rankEvents.find(e=>e.payload.policy===RANK_MIGRATION);
-    if(conversion)st.rankSeen=higherRank(st.rankSeen,conversion.payload.rank);
+  if(ctx.rankConverted){
+    // Offline devices may independently protect different genuine old titles.
+    // Merge those roots as a maximum; causally later attempts never add a root.
+    for(const conversion of rankEvents.filter(e=>e.payload.policy===RANK_MIGRATION && !e.payload.after))st.rankSeen=higherRank(st.rankSeen,conversion.payload.rank);
     st.rankPolicy=RANK_POLICY;
   }
   // A received school's rating is applicable by assessment day, even when the

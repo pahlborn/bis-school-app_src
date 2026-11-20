@@ -20,6 +20,7 @@
 
 import { checkEvent, effectiveTime, mergeLog, newEvent, EVENT_FUTURE_MS } from './ereignisse.mjs';
 import { derive } from './ableitung.mjs';
+import {RANK_POLICY,rankIdx,higherRank} from './titel.mjs';
 
 export const SNAPSHOT_EVERY = 5000;
 
@@ -79,6 +80,17 @@ export async function makeSnapshot(events, { now, author, device, rand } = {}) {
   return snap;
 }
 
+/* A trusted snapshot's already retained EP03 title cannot be erased by a
+   full fallback caused by later arrivals from a slower device. Only these two
+   monotone title fields are carried over; raw evidence and path decisions stay. */
+function snRetainedTitle(state,stored){
+  if(stored?.rankPolicy===RANK_POLICY && rankIdx(stored.rankSeen)>=0){
+    state.rankSeen=higherRank(state.rankSeen,stored.rankSeen);
+    state.rankPolicy=RANK_POLICY;
+  }
+  return state;
+}
+
 /* -> { state, weg }: weg "schnappschuss" (snapshot + later events), "voll" (all events, the snapshot does not fit) or
    "nachladen" (state null: the device has a late event but not the old events - load them, then call again).
    Without a snapshot: "voll". The snapshot must be valid (accepted by module annahme before). */
@@ -94,6 +106,6 @@ export async function stateFrom(events, snapshot, { now } = {}) {
   if (clockOk && (inside.length === 0 || (inside.length === p.count && (await snHash(inside)) === p.idsHash))) {
     return { state: derive(known, { now: n, base: { upTo: p.upTo, state: p.state } }), weg: 'schnappschuss' };
   }
-  if (inside.length >= p.count) return { state: derive(known, { now: n }), weg: 'voll' };
+  if (inside.length >= p.count) return { state: snRetainedTitle(derive(known, { now: n }),p.state), weg: 'voll' };
   return { state: null, weg: 'nachladen' };
 }
