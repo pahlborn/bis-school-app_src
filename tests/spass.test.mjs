@@ -79,7 +79,17 @@ test('Pisolala auf Deutsch nur nach einer Runde im Fach Deutsch (Anleitung)', as
   // the next round brings a new joke
   await page.locator('#againBtn').click();
   await rundeSpielen(page);
+  const repeat = await zustand(page);
+  assert.equal(repeat.stars, 8, 'the secure direct repeat is still 8/8 correct');
+  assert.equal(repeat.earnedStars + repeat.bonusStars, 0, 'a secure ordinary repeat earns no treat');
+  assert.equal(await page.locator('#treat [data-treat]').count(), 0);
+  await page.locator('#treat [data-star-next]').click(); // actual Practise Today, no fabricated payment
+  assert.ok((await zustand(page)).round.some(q => q.neuland), 'a genuine discovery supplies a paid path');
+  await rundeSpielen(page);
+  const today = await zustand(page);
+  assert.ok(today.earnedStars + today.bonusStars > 0, 'the following real round earned its treat');
   await page.locator('#treat [data-treat="joke"]').click();
+  assert.equal(await page.getAttribute('#treatBody .story', 'lang'), 'en', 'the mixed PT round is outside Deutsch');
   assert.notEqual(await page.textContent('#treatBody .story'), erster, 'new round, new joke');
   assert.deepEqual(fehler, []);
   await ctx.close();
@@ -121,7 +131,8 @@ test('Lernbaum waechst mit Uebungstagen und meldet sich einmal', async () => {
   await page.evaluate((ev) => localStorage.setItem('bq2_ev', JSON.stringify(ev)), { numbers: [0, 1, 2, 3, 4, 5].map((i) => [tag(i), 2, 1]) });
   await page.reload(); await page.waitForSelector('#home h1');
   assert.equal(await page.textContent('#treeText'), 'A strong young plant.');
-  assert.ok((await page.textContent('#homeNote')).includes('Your tree is growing'));
+  assert.equal(await page.textContent('#homeNote'), '🌱 A new part has grown on your learning tree.');
+  assert.equal(await page.isVisible('#homeNote'), true, 'the growth notification is actually shown');
   await page.reload(); await page.waitForSelector('#home h1');
   assert.equal(await page.isVisible('#homeNote'), false, 'die Meldung kommt nur beim Wachsen');
   await ctx.close();

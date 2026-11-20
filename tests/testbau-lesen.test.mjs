@@ -43,7 +43,7 @@ function runde(S, item, plan = {}) {
 }
 
 test('Testbau: nach Runden kein alter Speicher fuer abzugleichende Werte; die App liest, was derive aus ihren Ereignissen rechnet; fortgeschrieben, nicht neu gerechnet', (t) => {
-  const S = app(t);
+  const S = app(t, { seed: 192054348 }); // original CI seed; fixed original-L3/bridge mixture
   runde(S, 'round', { 1: 'falsch', 3: 'tipp' });
   runde(S, 'numbers', { 0: 'falsch', 5: 'falsch' });
   runde(S, 'round');
@@ -52,7 +52,15 @@ test('Testbau: nach Runden kein alter Speicher fuer abzugleichende Werte; die Ap
   assert.ok(Array.isArray(r.events) && r.events.length > 30, 'Ereignisse: ' + (r.events || []).length);
   const st = derive(r.events, { now: JETZT() });
   for (const k of ['attempts', 'ev', 'due', 'total', 'badges', 'tried', 'rankSeen', 'best_round', 'best_numbers']) assert.deepEqual(wert(S, k), st[k], k);
-  assert.ok(wert(S, 'due').length >= 2 && wert(S, 'total') >= 20 && wert(S, 'attempts').length >= 24, 'echter Stand');
+  // 21 correct answers remain 21: four initially paid answers in the last round reach M,
+  // its following original L3 still pays 1, and its final three ordinary answers pay 0.
+  assert.deepEqual(r.events.filter(e => e.type === 'round_reward').map(e => [e.payload.skill, e.payload.correct, e.payload.stars, e.payload.count]),
+    [['round', 7, 7, 8], ['numbers', 6, 6, 8], ['round', 8, 5, 8]], 'correct answers and actual currency are separate');
+  assert.equal(wert(S, 'total'), 18, '7 + 6 + 5 earned stars, no first-discovery bonus in these direct rounds');
+  assert.equal(wert(S, 'best_round'), 8, '8/8 correctness survives the reduced payment');
+  assert.equal(wert(S, 'best_numbers'), 6);
+  assert.equal(wert(S, 'due').length, 3, 'three actual first-answer errors stay scheduled');
+  assert.equal(wert(S, 'attempts').length, 28, '24 tasks plus four actual subsequent help/solution attempts');
   const z = log(S).zaehler;
   assert.equal(z.voll, 1, 'einmal ganz gerechnet (beim ersten Lesen), danach nur fortgeschrieben: ' + JSON.stringify(z));
   assert.ok(z.weiter >= r.events.length - 1, JSON.stringify(z));
