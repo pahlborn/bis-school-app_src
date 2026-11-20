@@ -11,11 +11,18 @@ import { titleRows } from './module/titel-fixtures.mjs';
 import { RANK_POLICY } from '../src/module/titel.mjs';
 import { appServer, browserStarten, appOeffnen,frageBeantworten,zustand,klick } from './app-hilfen.mjs';
 
-let browser, server, family;
+let browser, server, family, familyAccounts;
+const restoreServers=[];
+const titleHook=h=>h.replace(/\}\)\(\);\s*<\/script>/,()=>`window.__titleTest={start:startRound,home:()=>{show('home');renderHome();},read:k=>store.get(k,0),title:shownRank,render:renderRank,eventReading:EV_LESEN};})();</script>`);
 const CODE={mia:"ABCD-EFGH",papa:"PAPA-2345",frau:"FRAU-2345",chef:"CHEF-2345"};
 const PASSWORD={mia:"Tiger-Lamp-River-4271",papa:"Moon-Glass-Paper-8812",frau:"Teacher-Only-Ready-123",chef:"Admin-Only-Ready-123"};
-before(async () => { server = await appServer(); browser = await browserStarten(); family=await kontenServer({users:[await konto('mia','student',CODE.mia),await konto('papa','parent',CODE.papa,{kinder:['mia']}),await konto('frau','teacher',CODE.frau),await konto('chef','parent',CODE.chef,{admin:true})]},{anpassen:h=>h.replace(/\}\)\(\);\s*<\/script>/,()=>`window.__titleTest={start:startRound,home:()=>{show('home');renderHome();},read:k=>store.get(k,0),title:shownRank,render:renderRank};})();</script>`)}); });
-after(async () => { await browser?.close(); server?.close(); family?.close(); });
+before(async () => {
+  server=await appServer();browser=await browserStarten();
+  familyAccounts={users:[await konto('mia','student',CODE.mia),await konto('papa','parent',CODE.papa,{kinder:['mia']}),await konto('frau','teacher',CODE.frau),await konto('chef','parent',CODE.chef,{admin:true})]};
+  family=await kontenServer(familyAccounts,{anpassen:titleHook}); // other title tests still inherit both runner modes
+});
+after(async () => {await browser?.close();server?.close();family?.close();for(const s of restoreServers)s.close();});
+async function restoreFamily(bauart){const s=await kontenServer(familyAccounts,{bauart,anpassen:titleHook});restoreServers.push(s);return s;}
 
 const TITEL = [[0, '🧭', 'Explorer'], [25, '🔍', 'Investigator'], [60, '🔬', 'Scientist'], [120, '🎓', 'Professor'], [250, '🌟', 'Legend']];
 const VERBOTEN = /\b(grade|score|better|best|Requires|Consolidating|Meeting|Extending)\b/i;
@@ -110,11 +117,16 @@ for (const [sterne, satz] of [[13, 'Next: Investigator · 3 more secure quests']
   });
 }
 
-const familyID=user=>family.konten.users.find(u=>u.user===user).id;
-const familyPrefix=()=>`bq2_${familyID('mia')}__`;
+const familyID=(user,source=family)=>source.konten.users.find(u=>u.user===user).id;
+const familyPrefix=(source=family)=>`bq2_${familyID('mia',source)}__`;
 async function child(page){await anmelden(page,'student','mia',CODE.mia);await passwortSetzen(page,PASSWORD.mia);await page.waitForSelector('#home:not([hidden])');}
 async function grownup(page,user){await page.locator('#adultBtn').click();await anmelden(page,'adult',user,CODE[user]);await passwortSetzen(page,PASSWORD[user]);await page.waitForSelector('#parentClose');}
-const rawTitle=page=>page.evaluate(pre=>Object.fromEntries(['rankSeen','rankPolicy'].map(k=>[k,localStorage.getItem(pre+k)])),familyPrefix());
+const rawTitle=(page,source=family)=>page.evaluate(pre=>Object.fromEntries(['rankSeen','rankPolicy'].map(k=>[k,localStorage.getItem(pre+k)])),familyPrefix(source));
+const rawChild=(page,source)=>page.evaluate(pre=>Object.fromEntries(Object.keys(localStorage).filter(k=>k.startsWith(pre)).sort().map(k=>[k,Storage.prototype.getItem.call(localStorage,k)])),familyPrefix(source));
+function validRestoreFile(source,data){
+ const audio=[],body={format:'bq-sicherung-1',child:familyID('mia',source),user:'mia',createdAt:'2026-11-20T08:00:00.000Z',data,audio};body.sha256=createHash('sha256').update(JSON.stringify({data,audio})).digest('hex');
+ return{name:'synthetic-backup.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(body))};
+}
 
 test('actual family login and real Numbers tasks reach the third M at zero total stars; reload keeps title without another celebration',async()=>{
  const{ctx,page,fehler}=await oeffnen(browser,family,{viewport:{width:768,height:1024},hasTouch:true});await child(page);
@@ -135,12 +147,12 @@ for(const[lang,width,height]of[['de',768,1024],['en',1024,768],['de',320,568]])t
  await page.locator('#rankClose').tap();assert.equal(await page.locator('#rankDlg[open]').count(),0);assert.deepEqual(fehler,[]);await ctx.close();
 });
 test('real parent file restore converts legacy once, preserves a higher earned title, exports checkpoint and blocks new-star promotion after reload',async()=>{
- const{ctx,page,fehler}=await oeffnen(browser,family);await child(page);await grownup(page,'papa');await page.locator('#pSettings').click();
+ const source=await restoreFamily('live');
+ const{ctx,page,fehler}=await oeffnen(browser,source);await child(page);await grownup(page,'papa');assert.equal(await page.evaluate(()=>window.__titleTest.eventReading),false,'this complete file-restore path belongs to the live build');await page.locator('#pSettings').click();await page.waitForSelector('#pSetBack');
  const backup=page.locator('details[data-psec="backup"]');await backup.locator('> summary').click();
  async function restore(data){
-  const audio=[],body={format:'bq-sicherung-1',child:familyID('mia'),user:'mia',createdAt:'2026-11-20T08:00:00.000Z',data,audio};body.sha256=createHash('sha256').update(JSON.stringify({data,audio})).digest('hex');
   const previous=await page.locator('#pBackupMsg').textContent();
-  await page.locator('#pRestoreFile').setInputFiles({name:'synthetic-backup.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(body))});
+  await page.locator('#pRestoreFile').setInputFiles(validRestoreFile(source,data));
   try{await page.waitForFunction(previous=>!!document.querySelector('#pRestoreGo') || (!!document.querySelector('#pBackupMsg')?.textContent && document.querySelector('#pBackupMsg').textContent!==previous),previous);}
   catch(error){const diagnostic=await page.evaluate(()=>({message:document.querySelector('#pBackupMsg')?.textContent,preview:document.querySelector('#pRestorePreview')?.textContent,fileCount:document.querySelector('#pRestoreFile')?.files?.length,route:location.hash}));throw new Error('Restore preview absent: '+JSON.stringify(diagnostic),{cause:error});}
   const diagnostic=await page.evaluate(()=>({message:document.querySelector('#pBackupMsg')?.textContent,preview:!!document.querySelector('#pRestoreGo'),route:location.hash}));
@@ -148,10 +160,17 @@ test('real parent file restore converts legacy once, preserves a higher earned t
   await page.locator('#pRestoreGo').click();
  }
 
- await restore({total:'130',rankSeen:'"Explorer"'});assert.deepEqual(await rawTitle(page),{rankSeen:'"Professor"',rankPolicy:'"knowledge.v1"'});
- await restore({total:'1000',rankSeen:'"Explorer"',rankPolicy:'"knowledge.v1"'});assert.deepEqual(await rawTitle(page),{rankSeen:'"Professor"',rankPolicy:'"knowledge.v1"'});
+ await restore({total:'130',rankSeen:'"Explorer"'});assert.deepEqual(await rawTitle(page,source),{rankSeen:'"Professor"',rankPolicy:'"knowledge.v1"'});
+ await restore({total:'1000',rankSeen:'"Explorer"',rankPolicy:'"knowledge.v1"'});assert.deepEqual(await rawTitle(page,source),{rankSeen:'"Professor"',rankPolicy:'"knowledge.v1"'});
  const[download]=await Promise.all([page.waitForEvent('download'),page.locator('[data-backup]').click()]);const body=JSON.parse(await readFile(await download.path(),'utf8'));assert.equal(body.data.rankPolicy,'"knowledge.v1"');assert.equal(body.data.rankSeen,'"Professor"');
  assert.equal(await feiern(page),0,'no adult celebration');await page.locator('#pSetBack').click();await page.locator('#parentClose').click();await page.reload();await page.waitForSelector('#home:not([hidden])');assert.equal(await page.textContent('#rankName'),'Professor');assert.equal(await page.locator('#rankNote:visible').count(),0);assert.deepEqual(fehler,[]);await ctx.close();
+});
+test('event-reading build deliberately blocks file restore with a valid backup and unchanged child data',async()=>{
+ const source=await restoreFamily('test'),{ctx,page,fehler}=await oeffnen(browser,source);await child(page);await grownup(page,'papa');assert.equal(await page.evaluate(()=>window.__titleTest.eventReading),true,'the event-reading build remains explicitly covered');
+ await page.locator('#pSettings').click();await page.waitForSelector('#pSetBack');await page.locator('details[data-psec="backup"] > summary').click();
+ const before=await rawChild(page,source);await page.locator('#pRestoreFile').setInputFiles(validRestoreFile(source,{total:'130',rankSeen:'"Explorer"'}));
+ await page.waitForFunction(()=>document.querySelector('#pBackupMsg')?.textContent==='In dieser Fassung lässt sich eine Sicherung noch nicht zurückspielen.');
+ assert.equal(await page.locator('#pRestoreGo').count(),0,'the blocked build never offers restore approval');assert.equal(await page.locator('#pRestorePreview').textContent(),'');assert.deepEqual(await rawChild(page,source),before,'selecting a valid backup changes no child storage or event');assert.deepEqual(fehler,[]);await ctx.close();
 });
 for(const user of['papa','frau','chef'])test(`${user}: adult/grant view reads the knowledge title, does not migrate/write a child's title or celebrate`,async()=>{
  const{ctx,page,fehler}=await oeffnen(browser,family);await child(page);
