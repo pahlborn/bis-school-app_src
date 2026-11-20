@@ -137,7 +137,17 @@ for(const[lang,width,height]of[['de',768,1024],['en',1024,768],['de',320,568]])t
 test('real parent file restore converts legacy once, preserves a higher earned title, exports checkpoint and blocks new-star promotion after reload',async()=>{
  const{ctx,page,fehler}=await oeffnen(browser,family);await child(page);await grownup(page,'papa');await page.locator('#pSettings').click();
  const backup=page.locator('details[data-psec="backup"]');await backup.locator('> summary').click();
- async function restore(data){const audio=[],body={format:'bq-sicherung-1',child:familyID('mia'),user:'mia',createdAt:'2026-11-20T08:00:00.000Z',data,audio};body.sha256=createHash('sha256').update(JSON.stringify({data,audio})).digest('hex');await page.locator('#pRestoreFile').setInputFiles({name:'synthetic-backup.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(body))});await page.locator('#pRestoreGo').click();}
+ async function restore(data){
+  const audio=[],body={format:'bq-sicherung-1',child:familyID('mia'),user:'mia',createdAt:'2026-11-20T08:00:00.000Z',data,audio};body.sha256=createHash('sha256').update(JSON.stringify({data,audio})).digest('hex');
+  const previous=await page.locator('#pBackupMsg').textContent();
+  await page.locator('#pRestoreFile').setInputFiles({name:'synthetic-backup.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(body))});
+  try{await page.waitForFunction(previous=>!!document.querySelector('#pRestoreGo') || (!!document.querySelector('#pBackupMsg')?.textContent && document.querySelector('#pBackupMsg').textContent!==previous),previous);}
+  catch(error){const diagnostic=await page.evaluate(()=>({message:document.querySelector('#pBackupMsg')?.textContent,preview:document.querySelector('#pRestorePreview')?.textContent,fileCount:document.querySelector('#pRestoreFile')?.files?.length,route:location.hash}));throw new Error('Restore preview absent: '+JSON.stringify(diagnostic),{cause:error});}
+  const diagnostic=await page.evaluate(()=>({message:document.querySelector('#pBackupMsg')?.textContent,preview:!!document.querySelector('#pRestoreGo'),route:location.hash}));
+  assert.equal(diagnostic.preview,true,'Restore parser rejected the fixture: '+JSON.stringify(diagnostic));
+  await page.locator('#pRestoreGo').click();
+ }
+
  await restore({total:'130',rankSeen:'"Explorer"'});assert.deepEqual(await rawTitle(page),{rankSeen:'"Professor"',rankPolicy:'"knowledge.v1"'});
  await restore({total:'1000',rankSeen:'"Explorer"',rankPolicy:'"knowledge.v1"'});assert.deepEqual(await rawTitle(page),{rankSeen:'"Professor"',rankPolicy:'"knowledge.v1"'});
  const[download]=await Promise.all([page.waitForEvent('download'),page.locator('[data-backup]').click()]);const body=JSON.parse(await readFile(await download.path(),'utf8'));assert.equal(body.data.rankPolicy,'"knowledge.v1"');assert.equal(body.data.rankSeen,'"Professor"');
