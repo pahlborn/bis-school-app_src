@@ -118,6 +118,7 @@ const EV_SPEC = {
   // jokes shown and stories read (task 3b-1b-4; before only on the device). A joke goes to the end; forget = the ids the
   // app drops when every joke of the moment was shown and the round starts again (witze.mjs jokeNext)
   joke_seen: ['joke:str', 'forget:arr'],
+  content_vote: ['kind:enum(joke|story|word) item:str value:enum(up|down)', ''],
   story_read: ['story:str', ''],                                       // the story moves to the end (geschichten.mjs storyMarkRead)
   // settings of one person (task 3b-1c; area person:<id>, before only on the device): language of the grown-ups' area,
   // sound switch of a grown-up, "How Big Quest works" opened (day). Written by the person itself, into its own area.

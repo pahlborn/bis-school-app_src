@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { moduleEinsetzen, modulUmwandeln, modulListe, exportNamen, appLesen, MARKE, MODUL_ORDNER } from '../../werkzeug/module.mjs';
+import { moduleEinsetzen, modulUmwandeln, modulListe, exportNamen, appLesen, MODUL_JSON, MARKE, MODUL_ORDNER } from '../../werkzeug/module.mjs';
 
 function ordner(module, dateien) {
   const o = fs.mkdtempSync(path.join(os.tmpdir(), 'bq-module-'));
@@ -21,7 +21,9 @@ test('die App enthaelt jedes Live-Modul genau einmal und ohne import/export', ()
   const app = appLesen('utf8');
   assert.equal(app.includes(MARKE), false);
   for (const m of modulListe('live')) {
-    const quelle = fs.readFileSync(path.join(MODUL_ORDNER, m.name + '.mjs'), 'utf8');
+    let quelle = fs.readFileSync(path.join(MODUL_ORDNER, m.name + '.mjs'), 'utf8');
+    if(m.name==='tagesinhalte')for(const [name,file]of Object.entries(MODUL_JSON)){const json=JSON.parse(fs.readFileSync(new URL('../../'+file,import.meta.url),'utf8'));assert.equal(json.items.length,365);quelle=quelle.replace('/*BQ_JSON:'+name+'*/null',JSON.stringify(json).replace(/</g,'\\u003c'));}
+
     assert.equal(app.split(`/* ---- Modul ${m.name} `).length - 1, 1, m.name);
     assert.ok(app.includes(modulUmwandeln(m.name, quelle).replace(/\n/g, '\r\n').trim()) || app.includes(modulUmwandeln(m.name, quelle).trim()), m.name + ' unchanged');
     for (const n of exportNamen(quelle)) assert.match(app, new RegExp(`(function|const|let|class) ${n}\\b`), n);

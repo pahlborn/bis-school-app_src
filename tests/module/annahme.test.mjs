@@ -63,6 +63,7 @@ function payloadFor(type, author, device) {
     advent_open: { year: 2026, door: 3 },
     joke_seen: { joke: 'gb-tired' },
     story_read: { story: 'alltag-stern-trampolin' },
+    content_vote: { kind: 'joke', item: 'gb-tired', value: 'down' },
     person_set: { field: 'parentLang', value: 'en' },
     glance_set: { child: 'p_k1', value: { at: DAY, n: 3 } },
     backup_made: { day: DAY },
@@ -89,7 +90,7 @@ const ERWARTET = {
   badge: 'c', review: 'c', sheet_result: 'c',
   profile_set: 'cp', sheet_created: 'cp', gap_state: 'cp', device_added: 'cpta',
   sheet_discarded: 'p', setting_set: 'p', school_import: 'p', school_evaluation: 'p', grant_set: 'p', grant_revoked: 'p',
-  member_added: 'p', member_removed: 'p', device_removed: 'p', key_rotated: 'p', snapshot: 'p', gap_active: 'p', list_set: 'p', advent_open: 'cp', joke_seen: 'cp', story_read: 'cp',
+  member_added: 'p', member_removed: 'p', device_removed: 'p', key_rotated: 'p', snapshot: 'p', gap_active: 'p', list_set: 'p', advent_open: 'cp', joke_seen: 'cp', story_read: 'cp', content_vote: 'c',
   grant_opened: 'ta',
   person_set: 'cpta', glance_set: 'p', backup_made: 'p',          // 3b-1c: everybody his own settings; glance and backup: parents
   anchor_set: 'cp', family_set: 'p', invite_set: 'pa',            // Einladungen: Kind seinen Anker, Eltern Familie, Eltern/Admin ihre Einladungen
@@ -100,7 +101,7 @@ const darf = (role, type) => ERWARTET[type].includes(role[0]);
 test('Annehmen: gueltig unterschriebene Ereignisse je Rolle und erlaubtem Typ zaehlen', async () => {
   let k = 0;
   for (const role of ROLES) for (const type of EVENT_TYPES) if (darf(role, type)) { assert.equal(await reason(await signed(role, type)), 'ok', `${role} ${type}`); k++; }
-  assert.equal(k, 51, 'every allowed pair was tried once');   // cp: profile_set, sheet_created, gap_state, advent_open, joke_seen, story_read; 3b-1c: person_set x4, glance_set, backup_made; Einladungen: anchor_set x2, family_set, invite_set x2
+  assert.equal(k, 52, 'every allowed pair was tried once');   // cp: profile_set, sheet_created, gap_state, advent_open, joke_seen, story_read; 3b-1c: person_set x4, glance_set, backup_made; Einladungen: anchor_set x2, family_set, invite_set x2
   // Einladungen: ein Kind hat einen Anker, keine Familie; ein Elternteil eine Familie, keinen Anker
   const ak = (pid, did, kind) => sg(mk('anchor_set', pid, did, { kind, person: 'p_e1', pub: { ecdh: 'QUJD', ecdsa: 'REVG' } }), KEYS[pid]);
   assert.equal(await reason(await ak('p_k1', 'd_k1', 'family')), 'rolle-darf-nicht', 'child: no family');
@@ -204,9 +205,9 @@ test('canonicalBytes: feste Bytefolge, unabhaengig von der Schluesselreihenfolge
 });
 
 /* ---------- 5 matrix ---------- */
-test('Matrix: alle 35 Typen x 4 Rollen gegen die hier ausgeschriebene Tabelle', async () => {
+test('Matrix: alle 37 Typen x 4 Rollen gegen die hier ausgeschriebene Tabelle', async () => {
   assert.deepEqual(Object.keys(ERWARTET).sort(), EVENT_TYPES.slice().sort(), 'the table covers every type');
-  assert.equal(EVENT_TYPES.length, 36);
+  assert.equal(EVENT_TYPES.length, 37);
   const falsch = [];
   for (const type of EVENT_TYPES) for (const role of ROLES) {
     const got = await reason(await signed(role, type)), want = darf(role, type) ? 'ok' : 'rolle-darf-nicht';

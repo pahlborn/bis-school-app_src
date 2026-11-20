@@ -17,6 +17,11 @@ import { fileURLToPath } from 'node:url';
 const WURZEL = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const MODUL_ORDNER = path.join(WURZEL, 'src', 'module');
 export const MARKE = '/*BQ_MODULE*/';
+// EP04: exactly these canonical daily datasets belong to the one-file build.
+export const MODUL_JSON = Object.freeze({
+  DAILY_WORD_DATA:'docs/inhalte/words-trivia-365.json',
+  DAILY_EXPLAIN_DATA:'docs/inhalte/explain-it-daily-365.json'
+});
 
 /** Modulliste aus module.json; bauart 'live' liefert nur Live-Module, 'test' alle. */
 export function modulListe(bauart = 'live', ordner = MODUL_ORDNER) {
@@ -55,7 +60,13 @@ export function moduleEinsetzen(app, { bauart = 'live', ordner = MODUL_ORDNER } 
   if (n !== 1) throw new Error(`index.html: Marke ${MARKE} ${n}x statt 1x.`);
   const gesehen = new Map(), vorhanden = appNamen(text.replace(/\r\n/g, '\n'));
   const teile = modulListe(bauart, ordner).map((m) => {
-    const quelle = fs.readFileSync(path.join(ordner, m.name + '.mjs'), 'utf8');
+    let quelle = fs.readFileSync(path.join(ordner, m.name + '.mjs'), 'utf8');
+    if(m.name==='tagesinhalte')for(const[name,file]of Object.entries(MODUL_JSON)){
+      const marker=`/*BQ_JSON:${name}*/null`;
+      if(quelle.split(marker).length!==2)throw new Error(`Tagesinhalt ${name}: genau eine Datenmarke erforderlich.`);
+      const data=JSON.parse(fs.readFileSync(path.resolve(ordner,'..','..',file),'utf8'));
+      quelle=quelle.replace(marker,()=>JSON.stringify(data).replace(/</g,'\\u003c'));
+    }
     for (const name of exportNamen(quelle)) {
       if (gesehen.has(name)) throw new Error(`Name ${name} doppelt: Modul ${gesehen.get(name)} und ${m.name}.`);
       if (vorhanden.has(name)) throw new Error(`Name ${name} aus Modul ${m.name} gibt es auch in index.html.`);

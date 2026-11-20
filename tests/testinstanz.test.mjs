@@ -1,3 +1,4 @@
+import { MODUL_JSON } from '../werkzeug/module.mjs';
 // Stufe 3c, Werkzeug-Teil: Bauart "Testinstanz" (werkzeug/testinstanz.mjs, testinstanzBauen in werkzeug/bauen.mjs).
 // Testbau ohne Schuldaten, ohne konten.json, ohne Familienpasswort; Speicher unter bqt_, Token unter bqt_gh. Der Suchlauf
 // (testinstanzPruefen) findet jede Abweichung - hier je Pruefung mit einer absichtlich falschen Fassung belegt.
@@ -204,6 +205,7 @@ test('Bau bricht ab und schreibt nichts, wenn ein verbotenes Wort ohne Ersatz in
   const w = fs.mkdtempSync(path.join(os.tmpdir(), 'bq-ti-wurzel-'));
   try {
     for (const d of ['src/module', 'werkzeug']) fs.cpSync(path.join(WURZEL, d), path.join(w, d), { recursive: true, filter: (q) => !q.includes('node_modules') });
+    for(const file of Object.values(MODUL_JSON)){fs.mkdirSync(path.dirname(path.join(w,file)),{recursive:true});fs.copyFileSync(path.join(WURZEL,file),path.join(w,file));}
     for (const d of ['icon-180.png', 'icon-192.png', 'icon-512.png']) fs.copyFileSync(path.join(WURZEL, d), path.join(w, d));
     fs.writeFileSync(path.join(w, 'index.html'), lies('index.html').replace('</body>', '<!-- Zeckser --></body>'));
     const ziel = path.join(w, 'ziel');

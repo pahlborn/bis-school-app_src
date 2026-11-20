@@ -45,7 +45,7 @@ const BER_TYP = {
   // task "Schule und Klasse" (Peter, 05.11.): grade, class and school - a teacher with a grant sees them next to the name
   profile_set: { name: 'kind:lern', lastName: 'kind:lern', birthday: 'kind:lern', mySchool: 'kind:lern', emoji: 'kind:privat', kidLang: 'kind:privat', muted: 'kind:privat' },
   setting_set: 'kind:privat', list_set: 'kind:privat', checklist_set: 'kind:privat', day_flag: 'kind:privat', advent_open: 'kind:privat',
-  joke_seen: 'kind:privat', story_read: 'kind:privat',
+  joke_seen: 'kind:privat', story_read: 'kind:privat', content_vote:'kind:privat',
   school_import: 'schule', school_evaluation: 'schule', gap_state: 'schule', gap_active: 'schule',
   grant_set: 'eltern:allg', grant_revoked: 'eltern:allg', backup_made: 'eltern:allg',
   grant_opened: 'freigabe',

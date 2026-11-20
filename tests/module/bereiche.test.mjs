@@ -257,7 +257,7 @@ test('Typ und Bereich: jeder Typ hat genau einen Bereich; Ereignis im falschen B
   // ausgeschrieben, nicht aus dem Modul abgeleitet
   const SOLL = {
     'kind:lern': ['answer', 'round_done', 'badge', 'review', 'practice_day', 'rank_seen', 'sheet_created', 'sheet_result', 'sheet_discarded', 'profile_set:name', 'profile_set:lastName', 'profile_set:birthday', 'profile_set:mySchool'],
-    'kind:privat': ['profile_set:emoji', 'profile_set:kidLang', 'profile_set:muted', 'setting_set', 'list_set', 'checklist_set', 'day_flag', 'advent_open', 'joke_seen', 'story_read'],
+    'kind:privat': ['profile_set:emoji', 'profile_set:kidLang', 'profile_set:muted', 'setting_set', 'list_set', 'checklist_set', 'day_flag', 'advent_open', 'joke_seen', 'story_read', 'content_vote'],
     schule: ['school_import', 'school_evaluation', 'gap_state', 'gap_active'],
     'eltern:allg': ['grant_set', 'grant_revoked', 'backup_made'],
     freigabe: ['grant_opened'], person: ['person_set', 'glance_set', 'anchor_set', 'invite_set'], familie: ['family_set'], '*': ['snapshot', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated'],
