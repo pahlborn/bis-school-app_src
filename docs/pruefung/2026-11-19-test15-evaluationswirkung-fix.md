@@ -99,3 +99,25 @@ Auf ausdrücklichen Folgeauftrag von Atlas wird dieser HALT-Stand als lokaler WI
 **D5-Methodikgrenze:** Der heutige isolierte Test ruft die echte produktive Aufgabenwahl im Browser für das im Elternbereich angezeigte Kind auf. Er startet und löst keine Kindrunde über die Oberfläche und wiederholt für diese Quote keinen zusätzlichen Geräteabgleich. Der eigenständige vollständige Formular-/Bestätigungs-/Kindabgleichfall schützt diese Kette gesondert; die D5-Auswahl wird nicht durch einen nachgebildeten Algorithmus ersetzt. Die fünf Rückgaben je Themenlage sind ein begrenzter lokaler Softwaretest, keine iPad-Abnahme.
 
 Unabhängige Abnahme des Kandidaten bleibt offen. Kein Merge, Push, PR, CI-Start, Paket oder Veröffentlichung durch die ausführende Instanz. Keine grüne CI-Aussage ohne Lauflink, kein iPad-PASS; echte Speicherung und Wirkung mit realen Daten sind nicht abgenommen.
+
+## Integrationsnachtrag 20.11.2026 · neue Hauptbasis mit W1
+
+### Anliegen und Umsetzung
+
+Nach der ausdrücklichen Merge-Freigabe zu PR #233 enthält `main` inzwischen PR #231: `f7e9ce66ba70ec366b82e1a80ec60d80b63ab79f`. Die dort bereits angenommene W1-Regel entfernt Tageshürden. Atlas führte diese Hauptbasis konfliktfrei in den Korrekturzweig zusammen; Ausgang dieses begrenzten Nachtrags ist `3a470b61fffdfe606a3ed5bb6a44a7d76d87aa46`. Ausführende Codex-Instanz: `/root/codex_pr233_main_test_compat`.
+
+Nur die veraltete Erwartung im vorhandenen Formular-/Kindabgleichtest wurde angepasst: sechs eigene falsche Antworten an einem Tag ergeben nun ebenfalls RS. Die bisherigen Mengen- und Datumslagen bleiben erhalten; fünf Antworten an einem Tag ergänzen die symmetrische Grenze. Geprüft werden somit 5/1 → C, 5/2 → C, 6/1 → RS und 6/2 → RS. Der Produktfilterfix, Produktionscode, W1-Grenzwerte, native Hülle, Test-Timeouts, Skripte und CI bleiben durch diesen Nachtrag unverändert.
+
+### Einmalige lokale Prüfung
+
+```sh
+CHROMIUM_PATH=/usr/bin/chromium node --test --test-name-pattern='EV4/EV7 manual|EV7 D5' tests/evaluation-eltern-browser.test.mjs
+```
+
+**Lokal bestanden, Exit 0:** 2 Tests, 2 bestanden, 0 fehlgeschlagen, abgebrochen, übersprungen oder Todo; insgesamt 76,199 Sekunden. Formular-/Kindabgleich: 65,862 Sekunden; direkter D5-Fall mit beiden Themenlagen: 9,561 Sekunden. Rohlog: `/tmp/pr233-main-targeted-20261120.log`. Das vorhandene Playwright wurde aufgelöst, keine Installation vorgenommen. Keine weitere Vollsuite oder Wiederholung durch diese Instanz.
+
+Die früheren lokalen Abbrüche und der Vollsuite-Leistungsfehler bleiben oben unverändert als tatsächliche Prüfhistorie erhalten. Für den vorherigen Kopf `b79abe289694c5a9c34109fb5a6df2c6d696da74` stehen die späteren [unabhängigen und vollständigen CI-Nachweise](https://github.com/pahlborn/bis-school-app_src/pull/233#issuecomment-7031693431) getrennt im PR. Diese werden nicht als neue Prüfung der W1-Integration ausgegeben.
+
+### Offener unabhängiger Integrationsbefund und Halten
+
+Atlas meldete während dieses Zweierlaufs einen neuen, noch ungeklärten unabhängigen Befund: `gapSchoolRatings` in `src/module/lueckenverlauf.mjs` schließe weiterhin alle `manual`-Einträge aus. Diese Instanz hat den Befund nicht selbst geprüft oder korrigiert; die zwei bestandenen Browserfälle belegen keine vollständige W1-Verlauf-/Gehaltenwirkung. Auf ausdrücklichen Folgeauftrag von Atlas werden ausschließlich die beauftragte Testerwartung und dieser Nachtrag gesichert, danach wird angehalten. Keine weitere Prüfung, Produktänderung, CI-Auslösung, Merge oder Veröffentlichung durch diese Instanz. Atlas klärt den Befund vor einem Merge; echter iPad-/Browser-Gesamtnachweis und EV-7 bleiben offen.

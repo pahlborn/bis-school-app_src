@@ -596,7 +596,8 @@ test('EV4/EV7 manual: confirmed criteria activate the visible gap, automatic foc
   assert.equal(effect.stand, 'C', 'standOf really starts at C before any own answers');
   // Existing test-build storage adapter prepares only invented practice evidence;
   // assertions call the actual app decision, without reproducing its threshold logic.
-  for (const [answers, days, expected] of [[5, 2, 'C'], [6, 1, 'C'], [6, 2, 'RS']]) {
+  // W1 on main removes day gates: the school base lasts through five answers only.
+  for (const [answers, days, expected] of [[5, 1, 'C'], [5, 2, 'C'], [6, 1, 'RS'], [6, 2, 'RS']]) {
     const actual = await K.page.evaluate(({ answers, days }) => {
       const child = JSON.parse(localStorage.getItem('bq2_session')).id;
       const ev = Array.from({ length: answers }, (_, i) => [new Date(Date.now() - (i % days) * 864e5).toISOString().slice(0, 10), 2, 0]);
