@@ -28,9 +28,9 @@ const appQuelle = await appLesen();
 
 test('version comes from package.json plus git metadata', () => {
   const v = versionErmitteln(WURZEL, new Date('2026-10-30T13:05:00Z'));
-  assert.deepEqual({ major: v.major, minor: v.minor, patch: v.patch, kanal: v.kanal }, { major: 0, minor: 152, patch: 4, kanal: 'beta' });
+  assert.deepEqual({ major: v.major, minor: v.minor, patch: v.patch, kanal: v.kanal }, { major: 0, minor: 152, patch: 5, kanal: 'beta' });
   assert.equal(v.n, Number(git(WURZEL, 'rev-list', '--count', '--first-parent', 'HEAD')));
-  assert.equal(versionRoh(v), '0.152.4-beta');
+  assert.equal(versionRoh(v), '0.152.5-beta');
   assert.equal(v.hash, git(WURZEL, 'rev-parse', 'HEAD').slice(0, 7));
   assert.match(v.hash, /^[0-9a-f]{7}$/);
   assert.equal(v.date, '30.10.2026 14:05');

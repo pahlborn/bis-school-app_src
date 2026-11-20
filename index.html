@@ -6163,7 +6163,10 @@ function schoolEvaluationQuestions(used){
 /* latest rating per standard: [{day, r}] newest first */
 function schoolRatings(d, includeManual=true){
   const per={};
-  (d?d.tasks:[]).filter(t=>!t.pending && !t.manual?.withdrawn && (includeManual || !t.manual)).forEach(t=>Object.entries(t.std).forEach(([s,r])=>{ (per[s]=per[s]||[]).push({day:t.day,r}); }));
+  // Validated criterion evaluations use the regular gap/difficulty rules. Keep
+  // their manual revision metadata; only the old single-standard pilot stays out.
+  (d?d.tasks:[]).filter(t=>includeManual ? !t.pending&&!t.manual?.withdrawn : gapSchoolTask(t))
+    .forEach(t=>Object.entries(t.std).forEach(([s,r])=>{ (per[s]=per[s]||[]).push({day:t.day,r}); }));
   Object.values(per).forEach(l=>l.sort((a,b)=>a.day<b.day?1:-1));
   return per;
 }
