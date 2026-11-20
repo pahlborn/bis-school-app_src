@@ -62,3 +62,10 @@ test('school M/E is observed through the common getter; parent reading never emi
   S.holen('loginDone')(S.holen('APP_ACCOUNTS').users.find(u=>u.user==='papa'));const events=plain(S.holen('evKindZielLog')(TITLE_PRE).liste()),before=JSON.stringify([...S.ablage]);S.holen('starRewards').observe();S.holen('renderHome')();assert.equal(JSON.stringify([...S.ablage]),before);assert.deepEqual(plain(S.holen('evKindZielLog')(TITLE_PRE).liste()),events);
  }
 });
+test('EP04 parent guide copy describes offered help rewards and knowledge titles in DE/US-EN',()=>{
+ const S=titleApp();for(const lang of['de','en']){
+  const html=S.holen(lang==='de'?'ABOUT_DE':'ABOUT_EN')(),copy=S.holen('PARENT_REWARD_COPY')[lang];assert.ok(html.includes(copy.secondRight));assert.ok(html.includes(copy.titles));
+  assert.doesNotMatch(html,/<b>Zweiter Versuch richtig:<\/b> ein Stern|<b>Second try right:<\/b> a star/);assert.doesNotMatch(html,/Titel, Lernbaum und Abzeichen<\/b>.*nie Ergebnisse|Titles, learning tree and badges<\/b>.*never results/);
+  assert.match(copy.secondRight,lang==='de'?/vor der Aufgabe.*auch mit Hilfe/:/shown before the task.*with help/);assert.match(copy.titles,lang==='de'?/sicheren Quests.*unabhängig von Sternen.*Titel bleiben/:/secure quests.*independently of stars.*Earned titles stay/);
+ }
+});

@@ -1,4 +1,8 @@
-// W1: the directly revised parent text collection; no storage or clock.
+// Directly revised parent texts; no storage or clock.
+export const PARENT_REWARD_COPY={
+ de:{secondRight:'<b>Zweiter Versuch richtig:</b> Die vor der Aufgabe angezeigte Sternbelohnung gilt auch mit Hilfe. Dazu gibt es eine kurze Erklärung.',titles:'<b>Titel</b> beruhen auf sicheren Quests, unabhängig von Sternen. Erreichte Titel bleiben erhalten. <b>Lernbaum und Abzeichen</b> würdigen weiter Ausdauer und Verhalten.'},
+ en:{secondRight:'<b>Second try right:</b> The star reward shown before the task also applies with help, followed by a short explanation.',titles:'<b>Titles</b> are based on secure quests, independently of stars. Earned titles stay. <b>The learning tree and badges</b> continue to recognize persistence and behavior.'}
+};
 export const PT={
   de:{home:'🏠 Übersicht',sheets:'📄 Übungsblätter',settings:'👧 Für das Kind',help:'💡 Helfen wie die Schule',
     
