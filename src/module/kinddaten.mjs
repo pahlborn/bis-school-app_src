@@ -51,7 +51,7 @@ export const KINDDATEN_FORMAT = 'bq-kinddaten';
    not in the export), person (a grown-up's own settings - not the child's data). praefix: the key is a family of keys. */
 export const KINDDATEN_STELLEN = Object.freeze([
   ['attempts', 'kind'], ['ev', 'kind'], ['due', 'kind'], ['best_', 'kind', 1], ['total', 'kind'], ['badges', 'kind'], ['tried', 'kind'],
-  ['treeStage', 'kind'], ['rankSeen', 'kind'], ['name', 'kind'], ['lastName', 'kind'], ['birthday', 'kind'], ['mySchool', 'kind'], ['emoji', 'kind'],
+  ['treeStage', 'kind'], ['rankSeen', 'kind'], ['rankPolicy', 'kind'], ['name', 'kind'], ['lastName', 'kind'], ['birthday', 'kind'], ['mySchool', 'kind'], ['emoji', 'kind'],
   ['bdayParty', 'kind'], ['sheets', 'kind'], ['sheetNo', 'kind'], ['focusMode', 'kind'], ['focusManual', 'kind'], ['unlocked', 'kind'],
   ['storyCap', 'kind'], ['greetDay', 'kind'], ['mysteryDone', 'kind'], ['storyRead', 'kind'], ['jokeSeen', 'kind'], ['chk_', 'kind', 1],
   ['advent', 'kind', 1], ['kidLang', 'kind'], ['muted', 'kind'], ['events', 'kind'],

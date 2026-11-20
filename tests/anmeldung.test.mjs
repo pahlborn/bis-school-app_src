@@ -266,7 +266,7 @@ test('test account: own data apart from the child, "+1 Tag" with ⓘ, reset clea
   page.once('dialog', (d) => d.accept());
   await page.locator('#testReset').click();
   const nachher = await page.evaluate((ns) => Object.keys(localStorage).filter((k) => k.startsWith(ns)), NS('probe'));
-  assert.deepEqual(nachher.filter((k) => k !== NS('probe') + 'rankSeen' && k !== NS('probe') + 'kidLang'), []);
+  assert.deepEqual(nachher.filter((k) => k !== NS('probe') + 'rankSeen' && k !== NS('probe')+'rankPolicy' && k !== NS('probe') + 'kidLang'), []);
   assert.equal(await page.evaluate((ns) => localStorage.getItem(ns + 'total'), NS('mia')), '7', 'child data still untouched');
   assert.ok(await page.evaluate((k) => localStorage.getItem(k), 'bq2_pw_' + ID('probe')), 'own password survives the reset');
   assert.deepEqual(fehler, []);

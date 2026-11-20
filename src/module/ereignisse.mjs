@@ -50,6 +50,7 @@ const evMs = (s) => {      // strict UTC time "YYYY-MM-DDTHH:MM:SS[.mmm]Z" -> mi
 const evField = {
   day: evDayOk,
   evalId: evEvalId,
+  rankRef: x=>x==='base' || typeof x==='string' && /^e_[0-9a-f]{24}$/.test(x),
   evalRevisions: (x) => Array.isArray(x) && x.length >= 2 && new Set(x).size === x.length && x.every(evEvalId),
   evalDocument: evEvalDocument,
   evalTitle: (x) => evStr(x) && x.length <= 160 && x === x.trim() && !/[\x00-\x1f\x7f]/.test(x),
@@ -81,7 +82,7 @@ const EV_SPEC = {
   review: ['day:day qid:str box:int', 'dueAt:day question:obj'],
   practice_day: ['day:day', ''],
   profile_set: ['field:enum(name|lastName|birthday|emoji|kidLang|muted|mySchool) value:any', ''],   // muted: the child's sound switch (3b-1b-4); lastName: task "Name und Geburtsdatum" (04.11.); mySchool {grade, cls?, school?, year}: task "Schule und Klasse" (05.11.)
-  rank_seen: ['rank:str', ''],
+  rank_seen: ['rank:str', 'policy:enum(legacy.v1|knowledge.v1) after:rankRef'],
   sheet_created: ['sheet:str day:day no:pos writing:enum(de|en) items:arr', ''],
   sheet_result: ['sheet:str index:int res:enum(ok|no|help) day:day qid:str', ''],
   sheet_discarded: ['sheet:str', ''],
@@ -180,6 +181,7 @@ export function checkEvent(e) {
     const { req, opt } = EV_PARSED[e.type];
     for (const [f, ok] of Object.entries(req)) { if (!evHas(e.payload, f)) err.push(`payload.${f}: missing`); else if (!ok(e.payload[f])) err.push(`payload.${f}: invalid`); }
     for (const [f, ok] of Object.entries(opt)) if (evHas(e.payload, f) && !ok(e.payload[f])) err.push(`payload.${f}: invalid`);
+    if(e.type==='rank_seen' && evHas(e.payload,'after') && (e.payload.policy!=='legacy.v1' || e.payload.after===e.id))err.push('payload.after: requires a preceding title policy');
     if (e.type === 'school_evaluation') {
       const { standard, focus, rating, revision, base, withdrawn, resolves, assessment, standardOverrides } = e.payload;
       const mapped = evCriterionStandards(assessment);

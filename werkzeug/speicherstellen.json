@@ -13,6 +13,7 @@
     { "key": "badges", "bereich": "kind", "abgleich": "protokoll", "sicherung": true },
     { "key": "tried", "bereich": "kind", "abgleich": "abgeleitet", "sicherung": true },
     { "key": "treeStage", "bereich": "kind", "abgleich": "lokal", "sicherung": true, "hinweis": "Geraetenotiz (3b-2a): der Hinweis \"Baum gewachsen\" kommt einmal je Geraet; der Baum selbst folgt den Uebungstagen aus den Ereignissen" },
+    { "key": "rankPolicy", "bereich": "kind", "abgleich": "abgeleitet", "sicherung": true, "hinweis": "EP03: einmalige Titelumstellung aus rank_seen.policy; danach nur Wissen" },
     { "key": "rankSeen", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true },
     { "key": "name", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true },
     { "key": "lastName", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true, "hinweis": "Nachname (Aufgabe Name und Geburtsdatum, 04.11.): Kind im Profil oder Eltern; Bereich kind:lern" },

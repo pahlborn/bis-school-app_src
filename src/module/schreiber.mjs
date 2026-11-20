@@ -21,6 +21,7 @@
 
 import { newEvent, checkEvent } from './ereignisse.mjs';
 import { roleMayWrite } from './annahme.mjs';
+import {RANK_POLICY,RANK_MIGRATION,rankIdx} from './titel.mjs';
 
 export const SCHREIBER_GRUENDE = ['wer-unbekannt', 'format', 'rolle-darf-nicht'];
 
@@ -33,8 +34,8 @@ export function newDeviceId(rand = swRandom) {
   return 'd_' + Array.from(rand(20), (b) => SW_ALPHA[b & 31]).join('');
 }
 
-export function evSchreiber({ read, write, device, who, now, rand = swRandom } = {}) {
-  for (const [n, f] of [['read', read], ['write', write], ['who', who], ['now', now]]) if (typeof f !== 'function') throw new Error('schreiber: ' + n + ' fehlt.');
+export function evSchreiber({ read, write, device, who, now, rand = swRandom, titlePolicy = () => null } = {}) {
+  for (const [n, f] of [['read', read], ['write', write], ['who', who], ['now', now], ['titlePolicy',titlePolicy]]) if (typeof f !== 'function') throw new Error('schreiber: ' + n + ' fehlt.');
   const problems = [];
   const refuse = (type, grund, fehler) => {
     const p = fehler ? { type, grund, fehler } : { type, grund };
@@ -48,6 +49,14 @@ export function evSchreiber({ read, write, device, who, now, rand = swRandom } =
     for (const x of list) if (x && x.device === device) { const t = Date.parse(x.at); if (t > last) last = t; }
     const t = Math.max(Math.floor(now()), last + 1);
     if (typeof w.person !== 'string' || typeof w.role !== 'string') return refuse(type, 'wer-unbekannt');
+    // EP03 only: a migration written after an already observed cutover is
+    // causally later even when this device's clock sorts it before that cutover.
+    if(type==='rank_seen' && payload?.policy===RANK_MIGRATION){
+      const prior=list.find(x=>checkEvent(x).length===0 && (x.type==='rank_seen' && rankIdx(x.payload.rank)>=0 && [RANK_MIGRATION,RANK_POLICY].includes(x.payload.policy)
+        || x.type==='snapshot' && x.payload.state?.rankPolicy===RANK_POLICY));
+      const after=prior?.id || (titlePolicy()===RANK_POLICY?'base':null);
+      if(after)payload={...payload,after};
+    }
     const e = newEvent({ type, author: w.person, device, payload, at: new Date(t).toISOString() }, { rand });
     const fehler = checkEvent(e);
     if (fehler.length) return refuse(type, 'format', fehler);

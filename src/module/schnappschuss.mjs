@@ -94,6 +94,6 @@ export async function stateFrom(events, snapshot, { now } = {}) {
   if (clockOk && (inside.length === 0 || (inside.length === p.count && (await snHash(inside)) === p.idsHash))) {
     return { state: derive(known, { now: n, base: { upTo: p.upTo, state: p.state } }), weg: 'schnappschuss' };
   }
-  if (inside.length >= p.count) return { state: derive(known, { now: n }), weg: 'voll' };
+  if (inside.length >= p.count) return { state: derive(known, { now: n, retainedTitle:{rankPolicy:p.state.rankPolicy,rankSeen:p.state.rankSeen} }), weg: 'voll' };
   return { state: null, weg: 'nachladen' };
 }

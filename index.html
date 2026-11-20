@@ -272,9 +272,9 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 .chipstat.rank-chip{cursor:pointer;gap:6px;background:var(--rk-bg,var(--surface));color:var(--rk-fg,var(--ink));border-color:var(--rk-fg,var(--line));font-size:1rem}
 .note-banner.rank-note{border-left-color:var(--rk-fg,var(--sun));background:var(--rk-bg,var(--soft));color:var(--rk-fg,var(--ink))}
 .rank-path{list-style:none;margin:12px 0;padding:0;display:flex;flex-direction:column;gap:6px}
-.rank-path li{display:flex;align-items:center;gap:10px;min-height:44px;padding:6px 12px;border-radius:14px;border:2px solid var(--line);font-family:var(--display);font-weight:600}
+.rank-path li{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-height:44px;padding:6px 12px;border-radius:14px;border:2px solid var(--line);font-family:var(--display);font-weight:600}
 .rank-path li .ico{font-size:1.3rem}
-.rank-path li .need{margin-left:auto;font-size:.88rem;color:var(--muted);white-space:nowrap}
+.rank-path li .need{margin-left:auto;font-size:.88rem;color:var(--muted);white-space:normal;text-align:right;flex:1 1 120px}
 .rank-path li.now{background:var(--rk-bg);color:var(--rk-fg);border-color:var(--rk-fg)}
 .rank-path li.now .need{color:inherit}
 .chipstat{display:flex;align-items:center;gap:6px;background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:6px 12px;font-family:var(--display);font-weight:600;white-space:nowrap;min-height:44px;font-variant-numeric:tabular-nums}
@@ -601,11 +601,12 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
     </form>
   </dialog>
 
-  <!-- EXPLORER PATH: the five titles; they only grow with stars, never go down, no comparison -->
+  <!-- EXPLORER PATH: the five knowledge titles; earned titles stay -->
   <dialog id="rankDlg" class="profile-dlg" aria-labelledby="rankTitle">
     <h2 id="rankTitle">Your explorer path</h2>
     <ol id="rankPath" class="rank-path"></ol>
     <p id="rankNext"></p>
+    <p id="rankRule" class="small"></p>
     <div class="row"><button class="btn" id="rankClose" type="button">Close</button></div>
   </dialog>
 
@@ -883,7 +884,7 @@ function eventHook(type, payload, kid){
       let d=store.get('evDevice',null); if(!d){ d=newDeviceId(); store.set('evDevice',d); }
       const now=()=>Date.now(), mine=()=>(eventWho()||{}).person;
       // the logs keep their list in memory (task 3b-2a: no reading of the whole list per event)
-      eventSink=evSchreiber({read:()=>evKindZielLog(evPre()).liste(), write:l=>evKindZielLog(evPre()).schreiben(l), device:d, who:eventWho, now});
+      eventSink=evSchreiber({read:()=>evKindZielLog(evPre()).liste(), write:l=>evKindZielLog(evPre()).schreiben(l), device:d, who:eventWho, now, titlePolicy:()=>store.get('rankPolicy',null)});
       personSink=evSchreiber({read:()=>evPersonLog(mine()).liste(), write:l=>evPersonLog(mine()).schreiben(l), device:d, who:eventWho, now});
     }
     const r=(own?personSink:eventSink).write(type, payload);
@@ -2430,37 +2431,47 @@ const STUDIOS={
     extra:['Learn your lines, songs and dances.','Come to every rehearsal ready to work.','Listen to the directors and help your cast mates.'],
     tips:['Sing along with the recording first, then without it.','Practise the hard line five times in a row.','Record yourself and listen back, just like the Leseaufnahme!']}
 };
-const RANKS=[[0,'Explorer'],[25,'Investigator'],[60,'Scientist'],[120,'Professor'],[250,'Legend']];
-const rankFor = s => RANKS.filter(r=>s>=r[0]).pop()[1];
-/* Titles grow with stars only: own symbol and colour, one small celebration per new title
-   (remembered in bq2_rankSeen), never lower, never compared, never tied to the learning stand.
-   Colours: dark text on a light tint, contrast above 4.5:1. */
-const RANK_META={Explorer:{icon:'🧭',bg:'#D5F5EF',fg:'#0A5C52'},Investigator:{icon:'🔍',bg:'#DDE6FF',fg:'#1E3A9E'},
-  Scientist:{icon:'🔬',bg:'#ECDFFF',fg:'#55259F'},Professor:{icon:'🎓',bg:'#FFE3CC',fg:'#833700'},Legend:{icon:'🌟',bg:'#FFF1B8',fg:'#634700'}};
-const rankIdx = n => RANKS.findIndex(r=>r[1]===n);
-function shownRank(total){ const r=rankFor(total), seen=store.get('rankSeen',null); return rankIdx(seen)>rankIdx(r)?seen:r; }
-function renderRank(total){
-  const r=rankFor(total), seen=store.get('rankSeen',null), note=$('#rankNote');
-  note.hidden=true;
-  if(rankIdx(seen)<0){ store.set('rankSeen',r); eventHook('rank_seen',{rank:r}); }   // first start: remember quietly
-  else if(rankIdx(r)>rankIdx(seen)){                                   // new title: celebrate once
-    store.set('rankSeen',r); eventHook('rank_seen',{rank:r});
-    note.textContent='New title: '+RANK_META[r].icon+' '+r+'!'; note.hidden=false;
-    setTimeout(confetti,300);
+/* EP03: titles use the common status; the legacy star ladder is read once.
+   Adults only read this projection: they never migrate, write or celebrate. */
+let rankWritingReady=false; // boot first restores the actual child/adult route
+const rankProgress = () => titleKnowledge(SUBJECTS,standOf,k=>!!WORLDS[k]);
+const rankFor = () => knowledgeRankFor(rankProgress());
+const rankLanguage = () => store.get('kidLang','en')==='de'?'de':'en';
+function shownRank(){
+  const seen=store.get('rankSeen',null);
+  const retained=store.get('rankPolicy',null)===RANK_POLICY?seen:higherRank(seen,legacyRankFor(store.get('total',0)));
+  return higherRank(retained,rankFor());
+}
+function rememberRank(rank,policy){
+  store.set('rankPolicy',RANK_POLICY);
+  store.set('rankSeen',higherRank(store.get('rankSeen',null),rank));
+  eventHook('rank_seen',{rank,policy});
+}
+function renderRank(){
+  const note=$('#rankNote'),T=TITLE_TEXT[rankLanguage()];note.hidden=true;
+  const writable=rankWritingReady && !parentAccess && !adultUser && (!accountsOn()||!!studentSession());
+  if(writable){
+    if(store.get('rankPolicy',null)!==RANK_POLICY)rememberRank(higherRank(store.get('rankSeen',null),legacyRankFor(store.get('total',0))),RANK_MIGRATION);
+    if(rankIdx(store.get('rankSeen',null))<0)rememberRank('Explorer',RANK_POLICY);
+    const r=rankFor();
+    if(rankIdx(r)>rankIdx(store.get('rankSeen',null))){
+      rememberRank(r,RANK_POLICY);note.textContent=T.new(r);note.hidden=false;
+      setTimeout(()=>{if(!parentAccess && state.screen==='home')confetti();},300);
+    }
   }
-  const show=shownRank(total), m=RANK_META[show], chip=$('#rank');
-  $('#rankIcon').textContent=m.icon; $('#rankName').textContent=show;
-  [chip,note].forEach(el=>{ el.style.setProperty('--rk-bg',m.bg); el.style.setProperty('--rk-fg',m.fg); });
-  chip.setAttribute('aria-label','Your title: '+show+'. Show your explorer path.');
+  const show=shownRank(),m=RANK_META[show],chip=$('#rank');
+  $('#rankIcon').textContent=m.icon;$('#rankName').textContent=show;
+  [chip,note].forEach(el=>{el.style.setProperty('--rk-bg',m.bg);el.style.setProperty('--rk-fg',m.fg);});
+  chip.setAttribute('aria-label',T.chip(show));
 }
 function openRankPath(){
-  const total=store.get('total',0), show=shownRank(total), i=rankIdx(show), dlg=$('#rankDlg');
-  dlg.style.setProperty('--rk-bg',RANK_META[show].bg); dlg.style.setProperty('--rk-fg',RANK_META[show].fg);
-  $('#rankPath').innerHTML=RANKS.map((r,k)=>`<li class="${k<i?'done':k===i?'now':''}"><span class="ico" aria-hidden="true">${RANK_META[r[1]].icon}</span><span>${r[1]}</span><span class="need">${k<=i?'✓':r[0]+' ⭐'}</span></li>`).join('');
-  const next=RANKS[i+1], need=next?next[0]-total:0;
-  $('#rankNext').textContent=next?`${need} more star${need===1?'':'s'} to ${next[1]}`:'You are a Legend! Keep exploring.';
-  if(dlg.showModal) dlg.showModal(); else dlg.setAttribute('open','');
-  $('#rankClose').focus();
+  const show=shownRank(),i=rankIdx(show),dlg=$('#rankDlg'),lang=rankLanguage(),T=TITLE_TEXT[lang];
+  dlg.style.setProperty('--rk-bg',RANK_META[show].bg);dlg.style.setProperty('--rk-fg',RANK_META[show].fg);
+  $('#rankTitle').textContent=T.path;$('#rankClose').textContent=T.close;
+  $('#rankPath').innerHTML=RANKS.map((r,k)=>`<li class="${k<i?'done':k===i?'now':''}"><span class="ico" aria-hidden="true">${RANK_META[r[1]].icon}</span><span>${r[1]}</span><span class="need">${k<=i?'✓':titleRequirement(r[1],lang)}</span></li>`).join('');
+  $('#rankNext').textContent=titleNext(show,rankProgress(),lang);
+  $('#rankRule').textContent=T.rule;
+  if(dlg.showModal)dlg.showModal();else dlg.setAttribute('open','');$('#rankClose').focus();
 }
 
 /* ======================= STATE & SCREENS ======================= */
@@ -3940,6 +3951,7 @@ function glanceHTML(){
       for(const s of cl) p.push(`${de?'Lücke geschlossen':'Gap closed'} ✓ ${std(s)}`);
       rows.push(`🌱 <b>${de?'Seit Ihrem letzten Besuch':'Since your last visit'}:</b> ${p.join(', ')}`); }
   }
+  rows.push(`${RANK_META[now.rank].icon} <b>${de?'Titel':'Title'}: ${now.rank}</b> · ${esc(titleNext(now.rank,rankProgress(),PL()))}`);
   // ⭐ what works: up to 2 quests practiced last with secure or beyond
   const all=SUBJECTS.flatMap(questsIn).map(assessQuest);
   const good=all.filter(a=>(a.level==='m'||a.level==='e') && a.last).sort((x,y)=>x.last<y.last?1:x.last>y.last?-1:y.n-x.n).slice(0,2);
@@ -4146,7 +4158,7 @@ function adminInviteHTML(){
    restored after the move to IDs (S11 P2). Which keys belong to a child is fixed in
    werkzeug/speicherstellen.json (checked by tests/stufe1-p1.test.mjs). Never in a backup: passwords,
    sessions, device keys. Recordings are included (the file stays with the family). */
-const BACKUP_KEYS={exact:['grants','grantlog','attempts','ev','due','total','badges','tried','treeStage','rankSeen','name','lastName','birthday','emoji','mySchool','bdayParty','sheets','sheetNo','focusMode','focusManual','unlocked','gaps','storyCap','greetDay','mysteryDone','kidLang'], prefix:['best_','chk_','advent']};
+const BACKUP_KEYS={exact:['grants','grantlog','attempts','ev','due','total','badges','tried','treeStage','rankSeen','rankPolicy','name','lastName','birthday','emoji','mySchool','bdayParty','sheets','sheetNo','focusMode','focusManual','unlocked','gaps','storyCap','greetDay','mysteryDone','kidLang'], prefix:['best_','chk_','advent']};
 const isBackupKey = k => BACKUP_KEYS.exact.includes(k) || BACKUP_KEYS.prefix.some(p=>k.startsWith(p));
 function childStoreKeys(){
   const pre=storeKey('x').slice(0,-1), plain=pre==='bq2_', out=[];
@@ -4252,19 +4264,28 @@ async function readRestoreFile(file){
 }
 async function applyRestore(){
   const body=restoreCandidate, de=PL()==='de'; if(!body || !canBackup() || EV_LESEN) return;
+  const retainedTitle=shownRank();
   const prev={}; for(const k of childStoreKeys()) prev[k]=localStorage.getItem(storeKey(k));
   store.set('vorRueckspielen',{at:new Date().toISOString(), data:prev});
   for(const k of childStoreKeys()) localStorage.removeItem(storeKey(k));
   for(const [k,v] of Object.entries(body.data)) if(isBackupKey(k) && typeof v==='string') localStorage.setItem(storeKey(k), v);
   for(const r of body.audio||[]){ try{ await recPut({id:r.id, created:r.created, durationMs:r.durationMs, mime:r.mime, blob:new Blob([fromB64(r.base64)],{type:r.mime})}); }catch(e){} }
+  restoreTitle(retainedTitle);
   cleanStoredPrivate();
   restoreCandidate=null; backupNote=(de?'Zurückgespielt: ':'Restored: ')+countsText(backupCounts(body.data, body.audio));
   renderHome(); renderSheets();
 }
+/* Legacy files have no checkpoint; convert their old title once while restoring.
+   Existing earned titles also survive restoring/undoing an older file. */
+function restoreTitle(retained){
+  rememberRank(higherRank(retained,shownRank()),RANK_POLICY);
+}
 function undoRestore(){
   const v=store.get('vorRueckspielen',null), de=PL()==='de'; if(!v || !canBackup() || EV_LESEN) return;
+  const retainedTitle=shownRank();
   for(const k of childStoreKeys()) localStorage.removeItem(storeKey(k));
   for(const [k,val] of Object.entries(v.data||{})) localStorage.setItem(storeKey(k), val);
+  restoreTitle(retainedTitle);
   store.del('vorRueckspielen'); cleanStoredPrivate(); backupNote=de?'Der Stand vor dem Zurückspielen ist wiederhergestellt.':'The progress from before the restore is back.';
   renderHome(); renderSheets();
 }
@@ -7061,7 +7082,7 @@ const ABOUT_DE=()=>`
 <p>Bestätigt sicher heißt: sicher bei den Antworten in der App. Wer geantwortet hat und mit welchen Hilfsmitteln, weiß die App nicht; ob die Aufgaben den Standard so abdecken, wie die Schule ihn prüft, ist je Thema verschieden.</p>
 <details class="about-sub"><summary>Genaue Schwellen</summary>
 <ul>
-<li><b>Titel des Kindes (Explorer …):</b> nach allen gesammelten Sternen. Explorer ab 0, Investigator ab 25, Scientist ab 60, Professor ab 120, Legend ab 250 Sternen. Einen Stern gibt es für jede richtig gelöste Aufgabe in der App, auch mit Tipp oder Beispiel; nach „Zeig mir die Lösung“ gibt es keinen. Ein Titel geht nie verloren. Beim Antippen des Titels sieht das Kind den Weg und wie viele Sterne der nächste braucht.</li>
+<li>${TITLE_ABOUT.de}</li>
 <li><b>Lernbaum:</b> wächst mit den Übungstagen (Tage mit mindestens einer Antwort in der App oder einem eingetragenen Übungsblatt): neue Stufen nach 1, 3, 6, 10, 15 und 25 Tagen. Er welkt nie, Pausen schaden nicht.</li>
 <li><b>Abzeichen:</b> zählen Verhalten, nicht Ergebnisse – Risk-taker (eine Challenge angenommen), Thinker (eine Herausforderungsaufgabe gelöst), Open-minded (eine Kombinationsaufgabe auf Herausforderungsniveau gelöst), Reflective (ein „Glow“ gewählt), Balanced (eine Idee ohne Bildschirm umgesetzt), Inquirer (ein Thema zum ersten Mal ausprobiert), Principled (ein Übungsblatt bis zum Ende bearbeitet), Knowledgeable (eins für je 10 Übungstage). Silber ab 5-mal, Gold ab 15-mal.</li>
 <li><b>Interner Stand je Quest</b> (nur zur Aufgabenwahl, das Kind sieht ihn nie): Grundlage sind die letzten 60 ersten Versuche dieser Quest, je mit Tag, Stufe (1 Grundlage, 2 Klassenniveau, 3 Herausforderung) und richtig/falsch. Mit Tipp, Beispiel oder Brücke gelöste Aufgaben zählen auf Stufe 1. Noch nicht einschätzbar: weniger als 6 eigene Antworten (dann gilt eine vorhandene Schulbeurteilung). Sicher: unter den letzten 20 Antworten auf Klassenniveau mindestens 6, davon mindestens 80 % richtig. Darüber hinaus: zusätzlich unter den letzten 12 Herausforderungs-Antworten mindestens 4, davon mindestens 70 % richtig. Wird sicherer: Klassenniveau mindestens 50 % richtig (ohne Klassenniveau: Grundlage mindestens 80 %). Sonst: braucht Unterstützung. Danach richtet sich die nächste Runde: bei „braucht Unterstützung“ keine Herausforderungen und mindestens zwei Grundlage-Aufgaben, bei „wird sicherer“ höchstens eine Herausforderung, bei „sicher“ zwei bis drei, darüber hinaus drei bis vier.</li>
@@ -7154,7 +7175,7 @@ const ABOUT_EN=()=>`
 <p>Confirmed secure means: secure in the answers in the app. The app does not know who answered or with what help; whether the tasks cover the standard the way the school tests it differs from topic to topic.</p>
 <details class="about-sub"><summary>Exact thresholds</summary>
 <ul>
-<li><b>The child’s title (Explorer …):</b> based on all stars collected. Explorer from 0, Investigator from 25, Scientist from 60, Professor from 120, Legend from 250 stars. A star is given for every task solved correctly in the app, also with a tip or an example; there is none after “Show me the answer”. A title is never lost. Tapping the title shows the child the path and how many stars the next one needs.</li>
+<li>${TITLE_ABOUT.en}</li>
 <li><b>Learning tree:</b> grows with practice days (days with at least one answer in the app or an entered practice sheet): new stages after 1, 3, 6, 10, 15 and 25 days. It never wilts; breaks do no harm.</li>
 <li><b>Badges:</b> count behavior, not results – Risk-taker (took a challenge), Thinker (solved a challenge-level task), Open-minded (solved a challenge-level combination task), Reflective (chose a “Glow”), Balanced (did an idea without a screen), Inquirer (tried a topic for the first time), Principled (finished a practice sheet to the end), Knowledgeable (one for every 10 practice days). Silver from 5 times, gold from 15 times.</li>
 <li><b>Internal level per quest</b> (only for choosing tasks, never shown to the child): based on the last 60 first tries of this quest, each with day, level (1 support, 2 grade level, 3 challenge) and right/wrong. Tasks solved with a tip, an example or a bridge count at level 1. Not yet possible to judge: fewer than 6 own answers (then an available school rating applies). Secure: among the last 20 grade-level answers at least 6, at least 80 % right. Going beyond: in addition, among the last 12 challenge answers at least 4, at least 70 % right. Getting there: grade level at least 50 % right (without grade-level answers: support level at least 80 %). Otherwise: needs support. The next round follows from this: with “needs support” no challenges and at least two support tasks, with “getting there” at most one challenge, with “secure” two to three, going beyond three to four.</li>
@@ -7478,6 +7499,8 @@ function boot(data){
   else if(parentRoute()) applyParentRoute();
   else if(accountsOn() && store.get('adultSession',null) && !isTestAccount() && adultResume()){ /* grown-up stays logged in */ }
   else show('home');   // with accounts and no login, show() leads to the login screen
+  rankWritingReady=true;
+  if(state.screen!=='about' && state.screen!=='login')renderRank();
   if(KONTO_UI) kontoNativeStart();
   setTimeout(checkForUpdate,3000);
 }

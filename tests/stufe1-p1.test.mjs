@@ -127,7 +127,7 @@ test('Startlink fuellt die Anmeldung einmal aus und entfernt den Code aus der Ad
 // ---------------------------------------------------------------- Sicherung (K6)
 
 // derived celebration markers (title, tree stage): the app recomputes them whenever the start page is drawn
-const ABGELEITET = ['rankSeen', 'treeStage'];
+const ABGELEITET = ['rankSeen', 'rankPolicy', 'treeStage'];
 // the logged-in child's storage area (since S11 P2: bq2_<id>__)
 const KIND = () => { const s = JSON.parse(localStorage.getItem('bq2_session')); return { pre: 'bq2_' + s.id + '__', audio: 'bq2_audio__' + s.id }; };
 const KEINE_TEILEN_FUNKTION = () => { Object.defineProperty(navigator, 'canShare', { value: undefined, configurable: true }); };

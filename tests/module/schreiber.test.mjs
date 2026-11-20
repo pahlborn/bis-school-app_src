@@ -134,7 +134,7 @@ test('Was der Schreiber speichert, liest derive wie die App (Antworten, Runde, A
    Ohne Haken erlaubt: lokale Schluessel (speicherstellen.json "lokal") und die abgeleiteten Werte, die derive aus
    den Ereignissen der Nachbarstellen rechnet (der Klick-Vergleich in tests/ableitung-vergleich.test.mjs prueft sie).
    OFFEN: was 3b-1b/3b-1c noch anschliessen - die Liste darf nur kuerzer werden. */
-const ABGELEITET = { ev: 'aus answer und sheet_result', total: 'Summe aus round_done', best_: 'Maximum aus round_done', tried: 'aus dem Abzeichen inquirer', sheetNo: 'aus sheet_created',
+const ABGELEITET = { rankPolicy:'aus dem versionierten rank_seen (EP03)', ev: 'aus answer und sheet_result', total: 'Summe aus round_done', best_: 'Maximum aus round_done', tried: 'aus dem Abzeichen inquirer', sheetNo: 'aus sheet_created',
   grants: 'aus grant_set und grant_revoked (3b-1c; expiredLogged ist eine Geraetenotiz)' };
 /* the writer itself: the child's log and the logs of the persons (3b-1c) - each written at exactly one place */
 const PROTOKOLLE = ['events', 'personEvents'];
@@ -213,6 +213,7 @@ test('Waechter: jeder Schluessel aus "abgeleitet" und "offen" steht so im Verzei
   a.w.write('grant_set', { grant: 'g1', grantee: 'p_l1', scope: ['learning'], from: DAY, until: DAY });
   assert.deepEqual(derive(a.list, { now: T0 }).grants.map((g) => g.id), ['g1'], 'derive: grants');
   assert.equal('grants' in s, false, 'no grant event: no key');
+  const child=app();child.w.write('rank_seen',{rank:'Explorer',policy:'legacy.v1'});assert.equal(derive(child.list,{now:T0}).rankPolicy,'knowledge.v1','rankPolicy is genuinely derived from its existing title event');
 });
 
 test('3b-1c: Freigaben, Personen-Einstellungen, Blick und Sicherung - was der Schreiber speichert, liest derive wie die App', () => {
