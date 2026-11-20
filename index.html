@@ -2482,7 +2482,7 @@ function openRankPath(){
 
 /* ======================= STATE & SCREENS ======================= */
 const state={screen:'home', world:null, round:[], idx:0, stars:0, streak:0, answered:false, typed:'', picked:[], results:[], studio:null, subject:null, back:'home'};
-const starRewards=createStarRewards({store,eventHook,canWrite:()=>!parentAccess&&!adultUser&&(!accountsOn()||!!studentSession()),standOf,eligible:()=>SUBJECTS.flatMap(questsIn),levelOf,evidenceMax:EVIDENCE_MAX});
+const starRewards=createStarRewards({store,eventHook,canWrite:()=>rankWritingReady&&!parentAccess&&!adultUser&&(!accountsOn()||!!studentSession()),standOf,eligible:()=>SUBJECTS.flatMap(questsIn),levelOf,evidenceMax:EVIDENCE_MAX});
 const earnedRound=()=>Number(state.earnedStars||0)+Number(state.bonusStars||0);
 function beginStarRound(){state.starRound='r_'+Array.from(crypto.getRandomValues(new Uint8Array(12)),x=>x.toString(16).padStart(2,'0')).join('');state.earnedStars=0;state.bonusStars=0;state.roundCommitted=false;}
 const play=$('#play'), home=$('#home'), results=$('#results'), studioScreen=$('#studioScreen'), subjectScreen=$('#subject'), aboutScreen=$('#about');
@@ -7542,7 +7542,7 @@ function boot(data){
   else if(accountsOn() && store.get('adultSession',null) && !isTestAccount() && adultResume()){ /* grown-up stays logged in */ }
   else show('home');   // with accounts and no login, show() leads to the login screen
   rankWritingReady=true;
-  if(state.screen!=='about' && state.screen!=='login')renderRank();
+  if(state.screen!=='about' && state.screen!=='login'){starRewards.observe();renderRank();}
   if(KONTO_UI) kontoNativeStart();
   setTimeout(checkForUpdate,3000);
 }

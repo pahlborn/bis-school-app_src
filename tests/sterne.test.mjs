@@ -61,3 +61,47 @@ test('DE/US-EN modified star cards/question/result routes work at320/768/1024 to
   }finally{await ctx.close();}
  }
 });
+
+// F01: valid old-format profiles intentionally lack new reward metadata/events.
+// Raw fixture preparation is not presented as an application prune/restore path.
+const F01_CODE={mia:'ABCD-EFGH',parent:'PAPA-2345',teacher:'TEAC-HER2',admin:'ADMI-N234'};
+const F01_PASSWORD={mia:'Tiger-Lamp-River-4271',parent:'Moon-Glass-Paper-8812',teacher:'Teacher-Lamp-Paper-123',admin:'Admin-Glass-River-123'};
+const F01_REWARD_TYPES=['reward_seen','discovery_bonus','round_reward'];
+const f01Hook=h=>hook(h).replace('window.__stars={','window.__stars={meta:()=>({parentAccess,adult:adultUser?.user||null,writer:typeof evSchreiber,ready:rankWritingReady}),');
+async function f01Family(bauart,data){
+ const users=[await konto('mia','student',F01_CODE.mia),await konto('parent','parent',F01_CODE.parent,{kinder:['mia']}),await konto('teacher','teacher',F01_CODE.teacher),await konto('admin','parent',F01_CODE.admin,{admin:true})],server=await kontenServer({users},{bauart,anpassen:f01Hook});servers.push(server);
+ const a=await oeffnen(browser,server,{viewport:{width:768,height:1024},hasTouch:true,isMobile:true,reducedMotion:'reduce'}),{page}=a;await page.clock.setFixedTime(new Date(DAY+'T12:00:00Z'));
+ const id=user=>server.konten.users.find(u=>u.user===user).id,pre='bq2_'+id('mia')+'__';
+ const grants=['teacher','admin'].map((user,i)=>({id:'f01-grant-'+i,by:id('parent'),grantee:id(user),scope:['learning','school'],from:'2026-11-01',until:'2026-12-01'}));
+ await page.evaluate(({pre,data,grants,day})=>{for(const[k,v]of Object.entries({rankPolicy:'knowledge.v1',rankSeen:'Scientist',greetDay:day,treeStage:1,grants,...data}))Storage.prototype.setItem.call(localStorage,pre+k,JSON.stringify(v));},{pre,data,grants,day:DAY});
+ await anmelden(page,'student','mia',F01_CODE.mia);await passwortSetzen(page,F01_PASSWORD.mia);await page.waitForSelector('#home:not([hidden])');
+ return{...a,id,pre};
+}
+async function f01LegacyWithoutMarkers(page,pre){
+ await page.evaluate(({pre,types})=>{
+  localStorage.removeItem(pre+'starLedger');const text=Storage.prototype.getItem.call(localStorage,pre+'events');
+  if(text){const old=JSON.parse(text).filter(e=>!types.includes(e.type));if(old.length)Storage.prototype.setItem.call(localStorage,pre+'events',JSON.stringify(old));else localStorage.removeItem(pre+'events');}
+ },{pre,types:F01_REWARD_TYPES});
+ const raw=await f01ChildBytes(page,pre);assert.equal(raw[pre+'starLedger'],undefined);assert.ok(!JSON.parse(raw[pre+'events']||'[]').some(e=>F01_REWARD_TYPES.includes(e.type)));
+ return raw;
+}
+const f01ChildBytes=(page,pre)=>page.evaluate(pre=>Object.fromEntries(Object.keys(localStorage).filter(k=>k.startsWith(pre)).sort().map(k=>[k,Storage.prototype.getItem.call(localStorage,k)])),pre);
+for(const bauart of['live','test'])for(const role of['parent','teacher','admin'])test(`F01 ${bauart} ${role}: legacy missing-marker reload/navigation preserves the entire child namespace`,async()=>{
+ const{ctx,page,fehler,pre}=await f01Family(bauart,{total:43,ev:Object.fromEntries(eligible.map(k=>[k,good()]))});try{
+  await page.locator('#adultBtn').tap();await anmelden(page,'adult',role,F01_CODE[role]);await passwortSetzen(page,F01_PASSWORD[role]);await page.waitForSelector('#parentClose');
+  const before=await f01LegacyWithoutMarkers(page,pre),meta=await page.evaluate(()=>window.__stars.meta());assert.equal(meta.parentAccess,true);assert.equal(meta.adult,role);if(bauart==='live'){assert.equal(meta.writer,'undefined');assert.equal(before[pre+'events'],undefined);}
+  await page.reload();await page.waitForSelector('#parentClose');assert.deepEqual(await page.evaluate(()=>window.__stars.meta()),meta);assert.deepEqual(await f01ChildBytes(page,pre),before,'authenticated adult reload may not initialize missing markers or any child value');
+  await page.locator('.phdr [data-plang="en"]').tap();await page.locator('.phdr [data-plang="de"]').tap();await page.locator('[data-psubj="maths"]').tap();await page.locator('#pBack').tap();await page.reload();await page.waitForSelector('#parentClose');
+  assert.deepEqual(await f01ChildBytes(page,pre),before,'adult language/view/reload remains child-read-only');assert.equal(await page.evaluate(()=>window.__stars.read('total')),43);assert.deepEqual(fehler,[]);
+ }finally{await ctx.close();}
+});
+for(const bauart of['live','test'])test(`F01 ${bauart} child: restored role initializes legacy markers before interaction, shows past-M fallback card and preserves safe8/8 at zero currency`,async()=>{
+ const data={total:43,ev:Object.fromEntries(eligible.map(k=>[k,k==='combos'?good().concat([[DAY,2,0,false],[DAY,2,0,false]]):good()]))};
+ const{ctx,page,fehler,pre,id}=await f01Family(bauart,data);try{
+  await f01LegacyWithoutMarkers(page,pre);await page.reload();await page.waitForSelector('#home:not([hidden])');
+  const meta=await page.evaluate(()=>window.__stars.meta()),ledger=await page.evaluate(()=>window.__stars.ledger());assert.equal(meta.ready,true);assert.equal(meta.parentAccess,false);assert.equal(meta.adult,null);assert.ok(ledger.secure.includes('combos'));assert.ok(ledger.secure.includes('numbers'));assert.equal(await page.evaluate(()=>window.__stars.stand('combos')),'C');
+  const raw=await f01ChildBytes(page,pre);if(bauart==='live')assert.ok(raw[pre+'starLedger']);else{const markers=JSON.parse(raw[pre+'events']||'[]').filter(e=>e.type==='reward_seen');assert.equal(markers.length,1);assert.equal(markers[0].author,id('mia'));}
+  await page.locator('#subjects .subject').first().tap();assert.equal(await page.locator('[data-item="combos"] .quest-star-rule').innerText(),'⭐ in Practise Today');await page.locator('[data-item="numbers"]').tap();assert.match(await page.locator('#roundStarRule').innerText(),/0 here/);await finish(page);
+  assert.equal(await page.locator('#resScore').innerText(),'8');assert.equal(await page.locator('#resEarned').innerText(),'0 stars earned');assert.equal(await page.evaluate(()=>window.__stars.read('best_numbers')),8);assert.equal(await page.evaluate(()=>window.__stars.read('total')),43);assert.deepEqual(await page.evaluate(()=>window.__stars.errors()),[]);assert.deepEqual(fehler,[]);
+ }finally{await ctx.close();}
+});
