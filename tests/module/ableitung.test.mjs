@@ -4,6 +4,7 @@
 //   node --test tests/module/ableitung.test.mjs
 
 import { test } from 'node:test';
+import {gapProjectSource,gapSchoolRatings,gapUse} from '../../src/module/lueckenverlauf.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -529,15 +530,16 @@ test('3b-0 gaps: Namen aus Ereignissen sind keine Objekt-Eigenschaften; unguelti
    must equal what index.html stored. */
 function appGaps() {
   const html = fs.readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
-  const a = html.indexOf("const GAP_WEAK=['RS','C'];"), b = html.indexOf('/* progress towards "confirmed secure"');
+  const a = html.indexOf("const GAP_WEAK=['RS','C'];"), b = html.indexOf('/* Progress toward the SAME M/E stand');
   assert.ok(a > 0 && b > a, 'the gap code of index.html was found (markers GAP_WEAK ... "progress towards")');
-  const ctx = vm.createContext({ T: { mem: {}, ratings: {}, confirmed: new Set(), day: D1, hooks: [] } });
+  const ctx = vm.createContext({gapProjectSource,gapSchoolRatings,gapUse, T: { mem: {}, ratings: {}, confirmed: new Set(), day: D1, hooks: [] } });
   vm.runInContext(`
     const STANDARDS = { q1:['X','Y'], q2:['X'], q3:['Y'], q4:['Z'], q5:['Z','X'], q6:['W'] };
     const SUBJECTS = ['math','english'], questsIn = k => k === 'math' ? ['q1','q2','q3','q4'] : ['q5','q6'];
     const uniq = a => a.filter((v,i)=>a.indexOf(v)===i), cleanFocus = a => a;
     const store = { get: (k, d) => (k in T.mem ? JSON.parse(T.mem[k]) : d), set: (k, v) => { T.mem[k] = JSON.stringify(v); } };
     const dayKey = () => T.day, schoolData = () => ({}), schoolRatings = () => T.ratings;
+    const gapHeldQuest = (journeys,s,day,quests) => quests.find(k=>T.confirmed.has(k)); // boundary stub: held proof, tested separately
     const assessQuest = k => T.confirmed.has(k) ? { level:'m', sure:'confirmed', n:20, days:5 } : { level:'c', sure:'provisional', n:3, days:1 };
     const classTopics = () => [], focusNeed = () => [], accountsOn = () => false, adultUser = null;
     var parentAccess = true;

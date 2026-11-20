@@ -50,7 +50,7 @@ test('T15 at a glance: counted since the last visit of each grown-up; sentence w
   assert.match(t, /Auf einen Blick · mia/);
   assert.ok(!t.includes('🌱'), 'first visit: no first line');
   assert.match(t, /⭐ Das gelingt: Forces/);
-  assert.match(t, /🎯 Daran arbeiten wir: Time & Numbers[\s\S]*noch etwa 14 Aufgaben/);
+  assert.match(t, /🎯 Daran arbeiten wir: Time & Numbers[\s\S]*noch 6 Aufgaben auf Klassenniveau richtig/);
   assert.equal(await page.locator('#pGlance .pgapbar').count(), 1, 'the active gap with its bar');
   const idee1 = idee(t); assert.ok(idee1.length > 20, 'an idea for home');
   for (const w of ['fällig', 'Rückstand', 'verpasst', 'Tage bis']) assert.ok(!t.includes(w), 'no time words: ' + w);
