@@ -301,11 +301,19 @@ function abGaps(st, list, now) {
    now:    milliseconds / Date / UTC text - needed for the clock rule (a time more than 24 h ahead counts as "now").
    base:   optional { upTo, state } - a state (a result of derive, e.g. from a snapshot) as of the time upTo;
            only events after upTo are replayed on top of it.
+   retainedTitle: optional known snapshot title/policy context for full fallback;
+                  it seeds only these title fields, never a raw evidence/time base.
    The result has one extra key, _days (the practice days so far), that a later base needs; it is not a storage key.
    Likewise _focusManual (task 3b-2a): the focus list while the focus is not manual, only when it has entries. */
-export function derive(events, { now, base } = {}) {
+export function derive(events, { now, base, retainedTitle } = {}) {
   if (now === undefined || now === null) throw new Error('derive: "now" is missing');
   const st = Object.assign({ attempts: [], ev: {}, due: [], total: 0, badges: {}, tried: [], treeStage: 0, sheets: [], sheetNo: 0, _days: [] }, base ? abClone(base.state) : {});
+  // A known snapshot policy must suppress old star titles before replay, even
+  // when its remembered title is missing/unknown. No evidence or time filtering.
+  if(retainedTitle?.rankPolicy===RANK_POLICY){
+    st.rankPolicy=RANK_POLICY;
+    if(DERIVE_RANKS.includes(retainedTitle.rankSeen))st.rankSeen=higherRank(st.rankSeen,retainedTitle.rankSeen);
+  }
   const ctx = { days: new Set(st._days), gapSchool:{...(st.gaps?.school||{})},gapAsOf:st.gaps?.schoolAsOf||'',gapClosed:{...(st.gaps?.closed||{})},gapHold:{...(st.gaps?.hold||{})} };
   let list = mergeLog([Array.isArray(events) ? events : []], now).events;
   if (base) {

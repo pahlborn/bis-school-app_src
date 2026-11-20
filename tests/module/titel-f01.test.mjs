@@ -1,13 +1,14 @@
 // EP03-QA-F01: preserve the independently supplied real arrival/write sequence.
 import{test}from'node:test';import assert from'node:assert/strict';
-import{titleApp,titlePlain,TITLE_PRE,TITLE_KID,TITLE_DAY}from'./titel-fixtures.mjs';import{stellbareUhr}from'../app-sandbox.mjs';
+import{titleApp,titlePlain,TITLE_PRE,TITLE_KID,TITLE_DAY,TITLE_ACCOUNTS}from'./titel-fixtures.mjs';import{stellbareUhr}from'../app-sandbox.mjs';
 import{evSchreiber}from'../../src/module/schreiber.mjs';import{derive}from'../../src/module/ableitung.mjs';
 import{newEvent,checkEvent}from'../../src/module/ereignisse.mjs';import{evProtokoll,altStand}from'../../src/module/lesen.mjs';
-import{makeSnapshot,stateFrom}from'../../src/module/schnappschuss.mjs';import{TITLE_TEXT}from'../../src/module/titel.mjs';
+import{makeSnapshot,stateFrom}from'../../src/module/schnappschuss.mjs';import{newPersonKeys,publicKeysOf}from'../../src/module/krypto.mjs';import{signEvent,acceptAll}from'../../src/module/annahme.mjs';
+import{TITLE_TEXT}from'../../src/module/titel.mjs';
 const AT=Date.parse('2026-11-20T12:00:00Z'),NOW=AT+1000;
 function boot(total=0,offset=0){const S=titleApp({total},{bauart:'test',uhr:stellbareUhr(AT+offset)});return titlePlain(S.holen('evKindZielLog')(TITLE_PRE).liste());}
-function later(initial,titlePolicy){let list=initial.slice();const writer=evSchreiber({read:()=>list,write:l=>list=l,device:'d_QA2',who:()=>({person:TITLE_KID.id,role:'child'}),now:()=>AT-100,...titlePolicy?{titlePolicy}:{} });
- for(const[type,payload]of[['round_done',{day:TITLE_DAY,skill:'numbers',stars:8,count:8}],['rank_seen',{rank:'Legend'}],['rank_seen',{rank:'Legend',policy:'legacy.v1'}]])assert.equal(writer.write(type,payload).ok,true);
+function later(initial,titlePolicy,secondMigration=true){let list=initial.slice();const writer=evSchreiber({read:()=>list,write:l=>list=l,device:'d_QA2',who:()=>({person:TITLE_KID.id,role:'child'}),now:()=>AT-100,...titlePolicy?{titlePolicy}:{} });
+ for(const[type,payload]of[['round_done',{day:TITLE_DAY,skill:'numbers',stars:8,count:8}],['rank_seen',{rank:'Legend'}],...secondMigration?[['rank_seen',{rank:'Legend',policy:'legacy.v1'}]]:[]])assert.equal(writer.write(type,payload).ok,true);
  return list;
 }
 test('F01 original actual boot + current writer: known cut, -100ms, 8 stars, unmarked Legend, second conversion; cold replay stays Explorer',async()=>{
@@ -17,12 +18,24 @@ test('F01 original actual boot + current writer: known cut, -100ms, 8 stars, unm
  let local=initial;const reader=evProtokoll({laden:()=>local,speichern:x=>local=x,now:()=>NOW});assert.equal(reader.stand().rankSeen,'Explorer');for(const e of all.slice(1)){reader.schreiben([...local,e]);assert.equal(reader.stand().rankSeen,'Explorer');}reader.neuLaden();assert.equal(reader.stand().rankSeen,'Explorer');
  const snap=await makeSnapshot(initial,{now:NOW,author:'p_parent',device:'d_parent'}),restored=await stateFrom(all,snap,{now:NOW+1000});assert.equal(restored.state.rankSeen,'Explorer');assert.equal(restored.state.total,8,'late events remain raw learning data');
 });
-test('F01 writer started from an already existing snapshot preserves Professor after slower arrivals and cold restore',async()=>{
- const initial=boot(130);assert.equal(initial[0].payload.rank,'Professor');const snapshot=await makeSnapshot(initial,{now:NOW,author:'p_parent',device:'d_parent'});
- const all=later([snapshot]);assert.equal(all.at(-1).payload.after,snapshot.id);for(const e of all)assert.deepEqual(checkEvent(e),[]);
- const restored=await stateFrom(all,snapshot,{now:NOW+1000});assert.equal(restored.state.rankSeen,'Professor','a trusted already retained title cannot fall during late-event fallback');assert.equal(restored.state.rankPolicy,'knowledge.v1');assert.equal(restored.state.total,8);
- const earned=newEvent({type:'rank_seen',author:TITLE_KID.id,device:'d_QA2',at:new Date(NOW+10).toISOString(),payload:{rank:'Legend',policy:'knowledge.v1'}});
- const upgraded=await stateFrom([...all,earned],snapshot,{now:NOW+1000});assert.equal(upgraded.state.rankSeen,'Legend','legitimate knowledge promotions remain a maximum');
+test('F01/F02 signed snapshot-only current writer: known policy acts before projection, with/without another migration and with legitimate knowledge upgrades',async()=>{
+ const initial=boot(130);assert.equal(initial[0].payload.rank,'Professor');const parent=TITLE_ACCOUNTS.users.find(u=>u.user==='papa').id;
+ const snapshot=await makeSnapshot(initial,{now:NOW,author:parent,device:'d_parent'}),keys=await newPersonKeys(),admission={area:'kind:lern:'+TITLE_KID.id,members:{[parent]:{role:'parent',pub:await publicKeysOf(keys),devices:['d_parent']}}};
+ const accepted=await acceptAll([await signEvent(snapshot,admission.area,keys)],admission);assert.equal(accepted.angenommen.length,1);assert.equal(accepted.verworfen.length,0);
+ const raw=s=>{const copy={...s};delete copy.rankSeen;delete copy.rankPolicy;return copy;};
+ for(const secondMigration of[false,true]){
+  const all=later([snapshot],null,secondMigration);if(secondMigration)assert.equal(all.at(-1).payload.after,snapshot.id);for(const e of all)assert.deepEqual(checkEvent(e),[]);
+  const restored=await stateFrom(all,snapshot,{now:NOW+1000});assert.equal(restored.weg,'voll');assert.equal(restored.state.rankSeen,'Professor','known snapshot policy suppresses unmarked star titles without needing another migration');assert.equal(restored.state.rankPolicy,'knowledge.v1');assert.equal(restored.state.total,8);assert.deepEqual(raw(restored.state),raw(derive(all,{now:NOW+1000})),'raw fields and the full path stay unchanged');
+  const earned=newEvent({type:'rank_seen',author:TITLE_KID.id,device:'d_QA2',at:new Date(NOW+10).toISOString(),payload:{rank:'Legend',policy:'knowledge.v1'}});
+  assert.equal((await stateFrom([...all,earned],snapshot,{now:NOW+1000})).state.rankSeen,'Legend','legitimate knowledge promotions remain a maximum');
+ }
+ // The valid policy alone is a cutover even when the remembered title is lost,
+ // lower, or unknown. Do not use an unknown title as a valid retained title.
+ for(const seen of[undefined,'Explorer','NotARealTitle']){
+  const state={...snapshot.payload.state};if(seen===undefined)delete state.rankSeen;else state.rankSeen=seen;
+  const partial=newEvent({...snapshot,payload:{...snapshot.payload,state}}),accepted=await acceptAll([await signEvent(partial,admission.area,keys)],admission);assert.equal(accepted.angenommen.length,1);
+  const all=later([partial],null,false),result=await stateFrom(all,partial,{now:NOW+1000});assert.equal(result.weg,'voll');assert.equal(result.state.total,8);assert.equal(result.state.rankPolicy,'knowledge.v1');assert.equal(result.state.rankSeen,seen==='Explorer'?'Explorer':undefined);assert.deepEqual(raw(result.state),raw(derive(all,{now:NOW+1000})));
+ }
 });
 test('F01 actual app writer with legacy persisted converted base uses that existing policy, without a fabricated event ID',()=>{
  const S=titleApp({rankPolicy:'knowledge.v1',rankSeen:'Professor',total:130},{bauart:'test',uhr:stellbareUhr(AT)});assert.equal(S.holen('evKindZielLog')(TITLE_PRE).liste().length,0);
