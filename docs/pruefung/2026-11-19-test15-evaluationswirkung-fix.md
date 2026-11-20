@@ -1,6 +1,8 @@
 # TEST15-WIRKUNG-FIX-01-v1 · lokaler Korrektur- und Prüfstand
 
-**Aktueller Stand 20.11.2026: ANGEHALTEN, kein Gesamt-PASS.** Die direkte D5-Prüfung (1/1), die gezielte Formular-/Legacy-/Revisionsgruppe (5/5) und der zusätzliche Upgrade-Browsertest (1/1) sind lokal bestanden, jeweils ohne Fehler, Abbruch oder Skip. Das anschließend **einmalig** ausgeführte `npm test` endete mit Exit 1: **1091 Tests, 1090 bestanden, 1 fehlgeschlagen, 0 abgebrochen, 0 übersprungen**. Der bestehende Leistungstest `tests/module/lesen.test.mjs:179` misst 68,2 ms Median statt der geforderten weniger als 50 ms. Keine Wiederholung, Schwellenänderung oder Reparatur wurde begonnen. Der frühere D5-Timeout vom 19.11. ist unten ausdrücklich als frühere Prüfphase erhalten.
+**Aktueller Stand 20.11.2026: Kriterien-/Gehalten-Anschluss lokal bestanden, unabhängige Endprüfung und Gesamt-CI offen.** Die ausdrücklich freigegebene Fortsetzung schließt den unabhängigen W1-Quellbefund fachlich an; lokale Nachweise stehen im letzten Abschnitt. Unabhängige Endprüfung, vollständige CI und echte Geräteabnahme werden daraus nicht vorweggenommen. Sämtliche früheren Fehler und Abbrüche bleiben als getrennte Historie erhalten.
+
+**Historischer lokaler Stand vor der unten dokumentierten Fortsetzung: ANGEHALTEN, kein Gesamt-PASS.** Die direkte D5-Prüfung (1/1), die gezielte Formular-/Legacy-/Revisionsgruppe (5/5) und der zusätzliche Upgrade-Browsertest (1/1) sind lokal bestanden, jeweils ohne Fehler, Abbruch oder Skip. Das anschließend **einmalig** ausgeführte `npm test` endete mit Exit 1: **1091 Tests, 1090 bestanden, 1 fehlgeschlagen, 0 abgebrochen, 0 übersprungen**. Der bestehende Leistungstest `tests/module/lesen.test.mjs:179` misst 68,2 ms Median statt der geforderten weniger als 50 ms. Keine Wiederholung, Schwellenänderung oder Reparatur wurde begonnen. Der frühere D5-Timeout vom 19.11. ist unten ausdrücklich als frühere Prüfphase erhalten.
 
 ## Anliegen
 
@@ -121,3 +123,66 @@ Die früheren lokalen Abbrüche und der Vollsuite-Leistungsfehler bleiben oben u
 ### Offener unabhängiger Integrationsbefund und Halten
 
 Atlas meldete während dieses Zweierlaufs einen neuen, noch ungeklärten unabhängigen Befund: `gapSchoolRatings` in `src/module/lueckenverlauf.mjs` schließe weiterhin alle `manual`-Einträge aus. Diese Instanz hat den Befund nicht selbst geprüft oder korrigiert; die zwei bestandenen Browserfälle belegen keine vollständige W1-Verlauf-/Gehaltenwirkung. Auf ausdrücklichen Folgeauftrag von Atlas werden ausschließlich die beauftragte Testerwartung und dieser Nachtrag gesichert, danach wird angehalten. Keine weitere Prüfung, Produktänderung, CI-Auslösung, Merge oder Veröffentlichung durch diese Instanz. Atlas klärt den Befund vor einem Merge; echter iPad-/Browser-Gesamtnachweis und EV-7 bleiben offen.
+
+
+## Freigegebener Kriterien-/Gehalten-Anschluss · 20.11.2026
+
+### Anliegen und Ausgangspunkt
+
+[Auftrag PR233-CRITERIA-HELD-V1](https://github.com/pahlborn/bis-school-app_src/pull/233#issuecomment-7037798037), ausdrücklich freigegebener Codex-Entwickler `/root/codex_pr233_criteria_held`. Peter erlaubt erforderlichenfalls mehr als eine Stunde. Atlas integrierte main `04323435adc92253397d0ef56f278d1d964fde69` einschließlich der angenommenen W1- und Titelregeln; sauberer Startkopf `89ec48a8a06bd61491286596fa6ad2154f8b9928` im bestehenden Produkt-Worktree. Die alte Zweitagesregel wird durch die angenommene W1-Regel übersteuert.
+
+Der [unabhängige Blocker](https://github.com/pahlborn/bis-school-app_src/pull/233#issuecomment-7034476215) war richtig: `gapSchoolRatings` schloss Kriterienzeilen mit manuellen Revisionsmetadaten aus, und `derive` bezog seine W1-Schulquelle ausschließlich aus `school_import`. Dadurch fehlte neuen Kriterienbewertungen der Verlauf bis gehalten, obwohl der frühere Fix Lücke/Fokus/Start/D5 bereits aktivierte. Die bestandenen zwei früheren Wirkungsfälle prüften diesen Abschluss nicht.
+
+### Umsetzung innerhalb des bestehenden Pfads
+
+- `gapSchoolTask` ist die gemeinsame Auswahl für reguläre Schulzeilen in Anzeige/Startwert und W1-Projektion: gültige Kriterienbewertungen zählen mit, alte Einzelstandard-Pilotzeilen, vorgemerkte und zurückgenommene Zeilen bleiben ausgeschlossen.
+- Die bestehende Revisions-/Konfliktauswahl wird von `deriveSchool` und dem W1-Schulkontext gemeinsam verwendet. Neu bestätigte Kriterien, Korrekturen und Rücknahmen wirken damit auf denselben aktuellen Quellenstand.
+- Der vorhandene abgeleitete `gaps`-Kontext hält kompakt Import-Ratings und Revisionsverknüpfungen mit Standard-Ratings für Fortschreibung und Snapshots. Quelltexte werden nicht kopiert. Dies ist ein berechneter Cache desselben Ereigniswegs, kein zweiter Schul-Speicherweg und kein neues Ereignisformat.
+- W1 bleibt unverändert: sechs eigene Antworten ohne Tage für den Wissensstand; die M-erreichende Antwort ist nicht Teil der folgenden Sechsergruppe; mindestens fünf unabhängige Erstlösungen; nach einer nicht bestandenen Gruppe die nächsten getrennten sechs. Keine rollenden Fenster, Hilfegrenzen-/Stern-/Titeländerung, neue Oberfläche oder native Änderung.
+
+### Tatsächliche lokale Prüfung dieser Fortsetzung
+
+Ausschließlich erfundene Evaluationen, Konten und Antworten. Node24, vorhandenes Playwright und `/usr/bin/chromium`; keine Abhängigkeiten installiert und keine Tests, Schwellen, Zeitlimits oder CI gelockert.
+
+| Lauf | Ergebnis und Grenze |
+|---|---|
+| Erste angelegte Rotkontrolle | **Ungültiger Setup-Gegenbeleg**, Exit1, 1 Test/0 bestanden: Im neuen Fixture fehlte das vorgeschriebene synthetische Erwachsenenkonto. Keine Produktassertion erreicht. Nach Meldung erlaubte Atlas ausschließlich die notwendige Fixturekorrektur. Log `/tmp/pr233-criteria-held-red-20261120.log`. |
+| Korrigierte Vorfix-Gegenprobe | **Bewusst erwartetes Produkt-FAIL**, Exit1, 1 Test/0 bestanden, 0 Abbrüche/Skips. Gültiger Kriterienevent und sechs echte Erstantworten erreicht; dann fehlt `reached` im W1-Verlauf. Log `/tmp/pr233-criteria-held-red-valid-20261120.log`. Assertions danach nicht abgeschwächt. |
+| Neue Modulgruppe | **4/4 bestanden**, Exit0, 0 Fehler/Abbrüche/Skips/TODO; 0,604s. Log `/tmp/pr233-criteria-held-module-20261120.log`. |
+| Bestehende W1-/EV2-/Ableitungs-/Snapshot-Gruppe | **94/94 bestanden**, Exit0, 0 Fehler/Abbrüche/Skips/TODO; 15,006s. Log `/tmp/pr233-criteria-held-regression-20261120.log`. |
+| Erster neuer echter Browserfall | **FAIL der neu angelegten Auditannahme**, Exit1, 1 Test/0 bestanden. Formularbestätigung, 18 Antwortklicks und die Gehalten-Grenzen waren erreicht; danach erwartete der neue Audit fälschlich 18 statt21 `answer`-Datensätzen. Die drei angeklickten Hilfen erzeugen zusätzlich bestehende Hinweisdatensätze, keine zusätzlichen bearbeiteten Aufgaben. Log `/tmp/pr233-criteria-held-browser-20261120.log`. Kein Produktfehler daraus abgeleitet. |
+| Korrigierter neuer Browserfall | **1/1 bestanden**, Exit0, 0 Fehler/Abbrüche/Skips/TODO; 15,268s. Prüft 18 echte Erstversuche plus drei separate Hinweise; Formular→Kindantworten→Abschluss, Snapshot, Kind-Reload und Elternabgleich. Log `/tmp/pr233-criteria-held-browser-corrected-20261120.log`. |
+| Gezielte Browserregression vor Alt-Prefix-Hydration | **5/5 bestanden**, Exit0, 0 Fehler/Abbrüche/Skips/TODO; 283,849s. Legacykorrektur/-rücknahme, vollständiger Formular-/Kindabgleich, D5, neuer Gehaltenfall einschließlich genau18 Aufgabenplätzen sowie Dokumentrevision/Konfliktauflösung/Rücknahme. Log `/tmp/pr233-criteria-held-browser-regression-20261120.log`. |
+| Geplante Alt-Prefix-Gegenprobe | **Bewusst erwartetes FAIL**, Exit1, 1 Test/0 bestanden: Ein tatsächlich vom Vorfix04323435 erstellter Snapshot verliert bei `stateFrom` trotz vorhandener Wurzel die Kriterienquelle vor dem Antwortcut. Log `/tmp/pr233-criteria-held-prefix-red-20261120.log`. |
+| Finale Modulgruppe nach Hydration | **100/100 bestanden** (6 neue +94 vorhandene), Exit0, 0 Fehler/Abbrüche/Skips/TODO; 10,952s. Log `/tmp/pr233-criteria-held-final-module-20261120.log`. |
+| Finaler realer Browserfall nach Hydration | **1/1 bestanden**, Exit0, 0 Fehler/Abbrüche/Skips/TODO; 14,570s. Log `/tmp/pr233-criteria-held-final-browser-20261120.log`. |
+
+Befehle:
+
+```sh
+node --test --test-name-pattern='criteria held: twelve' tests/module/evaluation-gehalten.test.mjs
+node --test tests/module/evaluation-gehalten.test.mjs
+node --test tests/module/luecken-gehalten.test.mjs tests/module/evaluation-kriterien.test.mjs tests/module/school-evaluation.test.mjs tests/module/ableitung.test.mjs tests/module/schnappschuss.test.mjs
+node --test --test-name-pattern="actual pre-fix snapshots" tests/module/evaluation-gehalten.test.mjs
+node --test tests/module/evaluation-gehalten.test.mjs tests/module/luecken-gehalten.test.mjs tests/module/evaluation-kriterien.test.mjs tests/module/school-evaluation.test.mjs tests/module/ableitung.test.mjs tests/module/schnappschuss.test.mjs
+CHROMIUM_PATH=/usr/bin/chromium node --test --test-name-pattern='EV7 criteria held' tests/evaluation-eltern-browser.test.mjs
+CHROMIUM_PATH=/usr/bin/chromium node --test --test-name-pattern='EV4/EV7 manual|EV7 D5|EV7 criteria held|legacy correction drafts|EV4 revisions' tests/evaluation-eltern-browser.test.mjs
+```
+
+Die neue Modulgruppe vergleicht echte Live-Aufzeichnungen und Replay, hält nach vier unabhängigen Erstlösungen von sechs offen und erreicht gehalten mit fünf in der nächsten getrennten Gruppe. Revision, Rücknahme und ersetzender Import ergeben an jedem geprüften Snapshot-Schnitt denselben aktuellen Quellen- und Verlaufsstand wie vollständiges Ableiten. Alter Pilot, vorgemerkte und zurückgenommene Zeilen bleiben separat.
+
+Der neue Browserfall bestätigt die Evaluation über das echte angemeldete Elternformular. Nur die Auswahl existierender Jahrgangsstufen-Multiple-Choice-Fragen für die Prüfungsrunde wird deterministisch vorbereitet; Antwortschaltflächen, Hilfe, Bewertung, Erstantwortschreiber, Ereignisse, Abschluss und Geräteabgleich sind produktiv. Die normale Aufgabenauswahl/D5 wird separat erhalten geprüft. Nach sechs Antworten ist M erreicht und die Lücke noch offen. Vier unabhängige Erfolge der folgenden sechs reichen nicht; fünf in der nächsten getrennten Gruppe schließen automatisch. Drei Hinweisdatensätze belegen keine zusätzlichen Aufgabenplätze. Kind-Reload und tatsächlicher Eltern-Geräteabgleich erhalten die Schließung; ein tatsächlicher Snapshot des Ereignisverlaufs liefert denselben Stand wie Vollableitung.
+
+### Alt-Prefix-Hydration und Informationsgrenze
+
+Ein alter Snapshot kann noch keinen Kriterien-Quellkontext enthalten. `stateFrom` reicht bei bekanntem, passendem Altbestand die gültigen ursprünglichen Ereignisse trotzdem mit: Die ergänzte kleine Hydration merkt deshalb nur tatsächlich verfügbare Schulereignisse **vor** dem Snapshot-Antwortcut. Antworten werden weiterhin ausschließlich **nach** dem Cut abgespielt. Kein neuer Speicherweg, keine Migration, keine ausgedachte Wurzel und keine doppelt gezählte Antwort.
+
+Die positive Regression verwendet eine echte `makeSnapshot`-Erstellung aus dem akzeptierten, unveränderten Commit `04323435adc92253397d0ef56f278d1d964fde69`, einschließlich dessen eigenem `derive`. Sie bestätigt den fehlenden Neukontext vor der Umstellung und prüft eine spätere Kriterienkorrektur sowie Rücknahme über den produktiven `stateFrom`-Weg. Ergebnis: dieselbe Quelle und derselbe Verlauf wie Vollableitung, zwölf statt doppelt gezählter alter Antworten, und eine gespeicherte historische Elternschließung bleibt erhalten.
+
+Die negative Regression gibt nur einen solchen Alt-Prefix plus eine verwaiste Korrektur ohne ursprüngliche Wurzel weiter: keine erfundene Schulquelle und kein rückwirkendes Gehalten. Ein später tatsächlich verfügbarer Wurzeleintrag kann die vorhandenen realen Daten wieder erschließen. **Snapshot-only ohne verfügbare Wurzel ist damit ausdrücklich kein pauschal gelöster Informationsmangel.** Es wird kein Erfolg ohne Quellbeleg behauptet.
+
+`git diff --check` und Syntaxprüfung von Ableitung/Browsertest: Exit0. Die Produktdateien wurden nach dem finalen 100er-Modul- und echten Browserlauf nicht weiter geändert.
+
+### Grenzen und Übergabe
+
+Kein eigener Gesamt-`npm test`, kein Push, Merge, Veröffentlichen, CI- oder echter iPad-PASS durch diese Instanz. Atlas übernimmt den sauberen Commit zur unabhängigen Prüfung und vollständigen Standard-CI. Die frühere lokale Leistungstestabweichung und alle Abbrüche bleiben oben erhalten; sie werden nicht in Erfolge umgedeutet. Ziel1 und EV7 sind erst nach den getrennten echten Geräte-/Browserabnahmen angenommen.

@@ -7,9 +7,12 @@ export const GAP_CHECKS=6;
 const GJ_RULE='independent-first.v1';
 export const gapIndependentCount=answers=>(answers||[]).filter(a=>a.independent===true).length;
 export const gapIsHeld=p=>!!p?.held&&p.held.rule===GJ_RULE&&p.checks?.length===GAP_CHECKS&&gapIndependentCount(p.checks)>=5;
+// Criteria revisions belong to the regular school path; the old pilot does not.
+export const gapSchoolTask=t=>!t.pending&&!t.manual?.withdrawn
+  &&(!t.manual||t.assessment?.criteria?.some(c=>Object.hasOwn(c,'standard')));
 export function gapSchoolRatings(data){
   const out={};
-  for(const t of data?.tasks||[])if(!t.pending&&!t.manual)for(const [s,value]of Object.entries(t.std||{})){
+  for(const t of data?.tasks||[])if(gapSchoolTask(t))for(const [s,value]of Object.entries(t.std||{})){
     const st=value==='N'?'RS':value;
     if(!out[s]||t.day>=out[s].day)out[s]={st,day:t.day};
   }

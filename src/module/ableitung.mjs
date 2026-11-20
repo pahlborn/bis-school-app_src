@@ -316,6 +316,9 @@ export function derive(events, { now, base, retainedTitle } = {}) {
   }
   const ctx = { days: new Set(st._days), gapSchool:{...(st.gaps?.school||{})},gapAsOf:st.gaps?.schoolAsOf||'',gapClosed:{...(st.gaps?.closed||{})},gapHold:{...(st.gaps?.hold||{})} };
   let list = mergeLog([Array.isArray(events) ? events : []], now).events;
+  // A pre-fix snapshot may lack the criterion context. Hydrate only from
+  // genuinely available school events, including roots before its answer cut.
+  const schoolEvents=list.filter(e=>e.type==='school_import'||e.type==='school_evaluation');
   if (base) {
     const upTo = effectiveTime(base.upTo, now);
     if (Number.isNaN(upTo)) throw new Error('derive: base.upTo is not a UTC time');
@@ -335,7 +338,7 @@ export function derive(events, { now, base, retainedTitle } = {}) {
   }
   // A received school's rating is applicable by assessment day, even when the
   // other device's event clock is ahead. No timestamps or wire data are changed.
-  for(const e of list)if(e.type==='school_import'&&e.payload.data.asOf===e.payload.asOf&&Array.isArray(e.payload.data.tasks)&&e.payload.asOf>=ctx.gapAsOf){ctx.gapAsOf=e.payload.asOf;ctx.gapSchool=gapSchoolRatings(e.payload.data);}
+  abGapSchool(st,ctx,schoolEvents);
   if(ctx.gapAsOf){st.gaps ||= {closed:{},active:null,hold:{}};st.gaps.school=ctx.gapSchool;st.gaps.schoolAsOf=ctx.gapAsOf;gapProjectSource(st.gaps,ctx.gapSchool);}
   for (const e of list) abApply(st, ctx, e);
   for (const e of Object.values(lastWins(list, now))) abApplyWinner(st, e);
@@ -381,7 +384,7 @@ export function schoolEvaluationStandards(criteria, { ratingOrder = ['RS', 'C', 
   return Object.fromEntries([...ratings].map(([code, rating]) => [code, abOwn(standardOverrides, code) ? standardOverrides[code] : rating]));
 }
 
-function abSchoolManual(revisions) {
+function abSchoolSelection(revisions) {
   const root = [...revisions.values()].find(p => !p.base);
   if (!root) return null;
   const children = new Map();
@@ -402,6 +405,13 @@ function abSchoolManual(revisions) {
     active = contenders[0];
     contenders = [];
   }
+  return {active,history,contenders};
+}
+
+function abSchoolManual(revisions) {
+  const selection=abSchoolSelection(revisions);
+  if(!selection)return null;
+  const {active,history,contenders}=selection;
   const { evaluation, revision, standard, focus, withdrawn } = active;
   const criteria = active.assessment?.criteria;
   const criterionFormat = criteria?.some(c => abOwn(c, 'standard'));
@@ -420,6 +430,40 @@ function abSchoolManual(revisions) {
       ...(active.standardOverrides ? { standardOverrides: abClone(active.standardOverrides) } : {}), withdrawn: !!withdrawn, history: abClone(history),
       conflicts: contenders.map(p => p.revision) },
   };
+}
+
+// Cache only the school inputs needed by the existing gap projection. This is
+// derived snapshot/reader context, never another event or a school write path.
+// Keep revision links so a later correction/withdrawal has the same meaning in
+// a snapshot continuation as in a full deriveSchool replay.
+function abGapSchool(st,ctx,list){
+  if(!st.gaps?.schoolSource&&!list.some(e=>e.type==='school_evaluation')){
+    for(const e of list)if(e.type==='school_import'&&e.payload.data.asOf===e.payload.asOf&&Array.isArray(e.payload.data.tasks)&&e.payload.asOf>=ctx.gapAsOf){ctx.gapAsOf=e.payload.asOf;ctx.gapSchool=gapSchoolRatings(e.payload.data);}
+    return;
+  }
+  st.gaps ||= {closed:{},active:null,hold:{}};
+  const source=st.gaps.schoolSource ||= {asOf:ctx.gapAsOf,imported:abClone(ctx.gapSchool),evaluations:{}};
+  for(const e of list){
+    const p=e.payload;
+    if(e.type==='school_import'&&p.data.asOf===p.asOf&&Array.isArray(p.data.tasks)&&p.asOf>=source.asOf){
+      source.asOf=p.asOf;source.imported=gapSchoolRatings(p.data);
+    }else if(e.type==='school_evaluation'){
+      const key=p.child+':'+p.evaluation,revisions=source.evaluations[key] ||= {};
+      if(abOwn(revisions,p.revision))continue;
+      const criteria=p.assessment?.criteria,criterion=!!criteria?.some(c=>abOwn(c,'standard'));
+      revisions[p.revision]={revision:p.revision,day:p.day,criterion,
+        ...(p.base?{base:p.base}:{}),...(p.resolves?{resolves:p.resolves.slice()}:{}),...(p.withdrawn?{withdrawn:true}:{}),
+        std:criterion?schoolEvaluationStandards(criteria,{standardOverrides:p.standardOverrides}):{}};
+    }
+  }
+  const tasks=Object.entries(source.imported).map(([s,r])=>({day:r.day,std:{[s]:r.st}}));
+  ctx.gapAsOf=source.asOf;
+  for(const revisions of Object.values(source.evaluations)){
+    for(const p of Object.values(revisions))if(p.day>ctx.gapAsOf)ctx.gapAsOf=p.day;
+    const selected=abSchoolSelection(new Map(Object.entries(revisions)));
+    if(selected?.active.criterion&&!selected.active.withdrawn)tasks.push({day:selected.active.day,std:selected.active.std});
+  }
+  ctx.gapSchool=gapSchoolRatings({tasks});
 }
 
 /* deriveSchool(events, { now }): the school ratings of a child from its log (task "Schulbewertungen uebernehmen",
