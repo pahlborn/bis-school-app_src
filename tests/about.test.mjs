@@ -85,7 +85,7 @@ test('the concept explains how titles, tree, badges and levels are worked out (P
   await page.locator('#tabDe').click();
   const d = await aboutAbschnitt(page, 'Wie die App einstuft');
   const t = await d.textContent();
-  for (const w of ['Explorer ab 0', 'Investigator ab 25', 'Scientist ab 60', 'Professor ab 120', 'Legend ab 250', '1, 3, 6, 10, 15 und 25 Tagen', 'Silber ab 5-mal', 'mindestens 80 %', '15 Prozentpunkte']) assert.ok(t.includes(w), w);
+  for (const w of ['Explorer ist der Start', 'Investigator: 3 sichere Quests', 'Scientist: 6 aus mindestens 2 Fächern', 'Professor: 12 aus 4 Fächern, davon 2 auf E', 'Legend: 18 aus 5 Fächern, davon 5 auf E', 'Sterne entscheiden keinen Titel mehr', '1, 3, 6, 10, 15 und 25 Tagen', 'Silber ab 5-mal', 'mindestens 80 %', '15 Prozentpunkte']) assert.ok(t.includes(w), w);
   assert.match(t,/derselbe Quest-Stand, ohne zusätzliche Mengen- oder Tageshürde/);
   assert.match(t,/Bei weniger als 6 eigenen Antworten[\s\S]*letzte vorhandene Schuleinstufung/,'school fallback remains part of the common stand');
   assert.match(t,/ab 8 „erste Belege“, ab 20 „breitere Belege“/,'8/20 describe evidence quantity');

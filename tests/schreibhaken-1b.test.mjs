@@ -254,8 +254,8 @@ test('3b-1b-3 Luecken: Eltern waehlen, schliessen, halten; die App schliesst (El
     await page.waitForSelector('[data-gapact="go"][data-gapstd="M-N1"]');
     let r = await vergleich(page, mia);
     assert.equal(r.app.gaps.active, 'M-N2');
-    // the start page behind the login stores bq2_rankSeen outside any child's area: no event, noted (not refused)
-    assert.deepEqual([...new Set(await page.evaluate(() => window.__bqh.ohneKind()))], ['rank_seen']);
+    // EP03: the login page does not migrate or write a child's title.
+    assert.deepEqual([...new Set(await page.evaluate(() => window.__bqh.ohneKind()))], []);
     await page.locator('[data-gapact="close"][data-gapstd="M-N2"]').click();
     await page.waitForFunction(() => /von Ihnen geschlossen/.test(document.querySelector('#pSchool .pgaps')?.innerText || ''));
     r = await vergleich(page, mia);
