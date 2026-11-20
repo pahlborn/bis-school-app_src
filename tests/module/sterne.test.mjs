@@ -66,6 +66,6 @@ test('EP04 parent guide copy describes offered help rewards and knowledge titles
  const S=titleApp();for(const lang of['de','en']){
   const html=S.holen(lang==='de'?'ABOUT_DE':'ABOUT_EN')(),copy=S.holen('PARENT_REWARD_COPY')[lang];assert.ok(html.includes(copy.secondRight));assert.ok(html.includes(copy.titles));
   assert.doesNotMatch(html,/<b>Zweiter Versuch richtig:<\/b> ein Stern|<b>Second try right:<\/b> a star/);assert.doesNotMatch(html,/Titel, Lernbaum und Abzeichen<\/b>.*nie Ergebnisse|Titles, learning tree and badges<\/b>.*never results/);
-  assert.match(copy.secondRight,lang==='de'?/vor der Aufgabe.*auch mit Hilfe/:/shown before the task.*with help/);assert.match(copy.titles,lang==='de'?/sicheren Quests.*unabhängig von Sternen.*Titel bleiben/:/secure quests.*independently of stars.*Earned titles stay/);
+  assert.match(copy.secondRight,lang==='de'?/vor der Aufgabe.*auch mit Hilfe/:/shown before the task.*with help/);assert.match(copy.titles,lang==='de'?/neuen Titeln.*sicheren Quests.*nicht nach Sternen.*Titel bleiben.*neuen Anforderungen/:/New title promotions.*secure quests.*not stars.*Earned titles stay.*requirements are not met/);
  }
 });
