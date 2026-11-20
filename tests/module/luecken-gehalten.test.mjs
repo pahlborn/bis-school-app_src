@@ -38,7 +38,7 @@ test('four correct of the next six stay open without a date or pause gate',async
 test('original L1 and assisted first answers count; hints/examples/retries add no task',()=>{
  const v=events();for(let i=0;i<6;i++)v.answer();v.answer(false,{attempt:0,hintShown:true,help:true});v.answer(false,{attempt:0,exampleShown:true,help:true});
  for(let i=0;i<6;i++){v.answer(true,{level:i%2?2:1,help:i%2===1});v.answer(true,{attempt:2,help:true});}
- const p=derive(v.list,{now:NOW+1e4}).gaps.journey['M-N1'].quests.numbers;assert.equal(p.total,12);assert.equal(p.checks.length,6);assert.ok(p.held);assert.equal(p.checks.filter(x=>x.help).length,3);
+ const p=derive(v.list,{now:NOW+1e4}).gaps.journey['M-N1'].quests.numbers;assert.equal(p.total,12);assert.equal(p.checks.length,6);assert.equal(p.held,undefined,'assisted correctness is not an independent held success');assert.equal(p.checks.filter(x=>x.independent).length,3);assert.equal(p.checks.filter(x=>x.help).length,3);
 });
 test('legacy three/four-field evidence does not invent reaching time or held proof',()=>{
  for(const fields of[3,4]){const S=fixture();S.setzen(S.holen('storeKey')('ev'),{numbers:Array.from({length:60},()=>[DAY,2,1,...fields===4?[true]:[]])});
@@ -150,4 +150,70 @@ test('a newer weak assessment cannot reuse the old closed block; six genuinely n
  assert.equal(A.holen('openGaps')().length,0);assert.equal(B.holen('openGaps')().length,0);
  const all=plain(B.holen('evKindLog')(B.holen('evPre')()).liste()),full=derive(all,{now:NOW+1000});
  const partial=derive(all.filter(e=>e.at>cut),{now:NOW+1000,base:{upTo:cut,state:early}});assert.deepEqual(partial,full);assert.deepEqual(proof(B),full.gaps.journey['M-N1'].quests.numbers);
+});
+
+// Genuine task/help functions plus the existing child writer, with synthetic accounts.
+function first(S,mode='self'){
+ let q=S.holen('missingPartQuestion')('numbers',mode==='l1'?1:2,{total:80,parts:[30]});
+ if(mode==='bridge')q=S.holen('bridgeFor')(q)[0];
+ const state=S.holen('state');Object.assign(state,{world:'numbers',round:[q],idx:0,attempts:0,evidenceRecorded:false,hinted:false,exampled:false,answered:false,results:[null],sheet:null,example:null});
+ if(['tip','example','solution'].includes(mode))S.holen('showHint')();
+ if(mode==='example'){assert.ok(state.example);S.holen('showExample')();}
+ if(mode==='solution'){S.holen('showWorked')();return;}
+ if(mode==='retry')S.holen('observeAttempt')(q,false,'synthetic wrong first response');
+ const ok=mode!=='wrong';S.holen('observeAttempt')(q,ok,ok?S.holen('qAns')(q):'synthetic wrong response');S.holen('score')(ok);
+}
+function writerPair(){const L=fixture(),R=fixture({bauart:'test'}),v=events();R.setzen(R.holen('evPre')()+'events',v.list);return{L,R,step:mode=>{first(L,mode);first(R,mode);assert.deepEqual(proof(L),proof(R));}};}
+test('independent-first/R2 actual writer: failed 4 + tip + wrong, then separate 5 + tip, with stars/raw/snapshot intact',async()=>{
+ const{L,R,step}=writerPair();for(let i=0;i<6;i++)step('self');assert.equal(proof(L).checks.length,0);
+ for(const mode of['self','self','self','self','tip','wrong'])step(mode);
+ assert.equal(proof(L).held,undefined);assert.equal(proof(L).checks.filter(x=>x.ok).length,5);assert.equal(proof(L).checks.filter(x=>x.independent).length,4);assert.equal(R.holen('state').stars,11);
+ const before=plain(R.holen('evKindLog')(R.holen('evPre')()).liste());
+ for(const mode of['self','self','self','self','self','tip'])step(mode);
+ const p=proof(L);assert.ok(p.held);assert.equal(p.groups.length,1);assert.equal(p.groups[0].length,6);assert.equal(p.groups[0].filter(x=>x.independent).length,4);assert.equal(p.checks.filter(x=>x.independent).length,5);
+ assert.equal(R.holen('state').stars,17,'both helped correct answers still earn stars');assert.equal(R.holen('store').get('ev',{}).numbers.length,18);
+ const all=plain(R.holen('evKindLog')(R.holen('evPre')()).liste());assert.ok(all.every(e=>!checkEvent(e).length));
+ const snap=await makeSnapshot(before,{now:NOW+500,author:'p_papa',device:'d_parent',rand:n=>new Uint8Array(n).fill(82)}),out=await stateFrom(all,snap,{now:NOW+1000});assert.deepEqual(out.state,derive(all,{now:NOW+1000}));
+});
+for(const mode of['tip','example','bridge','retry','solution'])test(`independent-first: ${mode} occupies one slot, positive 5/6 and negative 4/6 through real help paths`,()=>{
+ for(const selfCount of[4,5]){const{L,R,step}=writerPair();for(let i=0;i<6;i++)step('self');for(let i=0;i<selfCount;i++)step('self');step(mode);if(selfCount===4)step('wrong');
+  const p=proof(L);assert.equal(p.checks.length,6);assert.equal(p.checks.filter(x=>x.independent).length,selfCount);assert.equal(!!p.held,selfCount===5);assert.equal(p.total,12);assert.equal(R.holen('store').get('ev',{}).numbers.length,12,'no help action or retry creates another task');
+ }
+});
+test('R2 starts below current M without a new M/date gate and never uses a rolling six',()=>{
+ const{L,step}=writerPair();for(let i=0;i<6;i++)step('self');for(let i=0;i<6;i++)step('wrong');assert.equal(L.holen('standOf')('numbers'),'C');
+ step('self');assert.equal(proof(L).checks.length,1);assert.equal(proof(L).groups.length,1);assert.equal(proof(L).held,undefined);
+ for(const mode of['self','self','self','self','tip'])step(mode);assert.ok(proof(L).held);assert.equal(L.holen('standOf')('numbers'),'C','held is separate from the unchanged knowledge window');
+ const S=fixture();for(let i=0;i<6;i++)first(S);for(const mode of['wrong','wrong','self','self','self','self'])first(S,mode);first(S);
+ assert.equal(proof(S).checks.length,1);assert.equal(proof(S).held,undefined,'a rolling last six would already have five successes here');assert.equal(proof(S).groups[0].length,6);
+ for(const mode of['wrong','self','self','self','self'])first(S,mode);assert.ok(proof(S).held);
+});
+test('independent L1 succeeds; absent legacy independence never becomes a held success',()=>{
+ const S=fixture();for(let i=0;i<6;i++)first(S);for(let i=0;i<5;i++)first(S,'l1');first(S,'wrong');assert.ok(proof(S).held,'no new L2-only rule');
+ const v=events();for(let i=0;i<6;i++)v.answer();for(let i=0;i<6;i++){const e=v.answer();delete e.payload.help;assert.deepEqual(checkEvent(e),[]);}
+ const p=derive(v.list,{now:NOW+1000}).gaps.journey['M-N1'].quests.numbers;assert.equal(p.checks.filter(x=>x.ok).length,6);assert.ok(p.checks.every(x=>x.independent===null));assert.equal(p.held,undefined);
+});
+test('historical closed data stays closed; old open proof is rederived only from explicit retained rows',()=>{
+ const oldSource=committedApp('25d41498643d59491f2f79d665beaf9488771325'),html=schuleEinsetzen(kontenEinsetzen(oldSource,accounts),{version:1,kinder:{mia:school()}},accounts).toString('utf8');
+ const old=appSandbox({seed:19,uhr:stellbareUhr(NOW),anpassen:()=>html});old.holen('store').set('session',{user:'mia',id:accounts.users.find(u=>u.user==='mia').id});
+ for(let i=0;i<6;i++)answer(old);for(let i=0;i<4;i++)answer(old);answer(old,true,{assisted:true});answer(old,false);
+ assert.ok(proof(old).held);const raw=plain(old.holen('store').get('ev',{})),history=plain(old.holen('gapData')().history);
+ const open=fixture({speicher:Object.fromEntries(old.ablage)});assert.equal(open.holen('openGaps')().length,1);assert.equal(proof(open).held,undefined);assert.deepEqual(plain(open.holen('store').get('ev',{})),raw);assert.deepEqual(plain(open.holen('gapData')().history),history);
+ old.holen('openGaps')();const closed=plain(old.holen('gapData')().closed),prior=proof(old),R=fixture({speicher:Object.fromEntries(old.ablage)});assert.equal(R.holen('openGaps')().length,0);assert.deepEqual(plain(R.holen('gapData')().closed),closed);assert.deepEqual(proof(R),prior);
+});
+
+test('R2 sheet correction retains the original group slot, never moving a later success into the failed block',()=>{
+ const v=events();for(let i=0;i<10;i++)v.answer();
+ const q={world:'numbers',kind:'type',prompt:'Synthetic corrected sheet item',answer:'4',level:2};
+ v.add('sheet_created',{sheet:'r2-sheet',day:DAY,no:1,items:[{q}],writing:'en'});
+ v.add('sheet_result',{sheet:'r2-sheet',index:0,res:'help',day:DAY,qid:'r2-sheet-q'});v.answer(false);v.answer(true);
+ const before=derive(v.list,{now:NOW+1e4}),cut=v.list.at(-1).at,p0=before.gaps.journey['M-N1'].quests.numbers;
+ assert.equal(p0.groups[0].filter(x=>x.independent).length,4);assert.equal(p0.checks.length,1);assert.equal(p0.held,undefined);
+ v.add('sheet_result',{sheet:'r2-sheet',index:0,res:'no',day:DAY,qid:'r2-sheet-q'});
+ const full=derive(v.list,{now:NOW+1e4}),p=full.gaps.journey['M-N1'].quests.numbers;
+ assert.equal(p.held,undefined,'a still-unsuccessful old task cannot manufacture a held group');assert.equal(p.groups[0].filter(x=>x.independent).length,4);assert.equal(p.checks.length,1);assert.equal(p.total,13);assert.equal(full.ev.numbers.length,13);
+ assert.deepEqual(derive(v.list.filter(e=>e.at>cut),{now:NOW+1e4,base:{upTo:cut,state:before}}),full);
+ v.add('sheet_result',{sheet:'r2-sheet',index:0,res:'ok',day:DAY,qid:'r2-sheet-q'});
+ const corrected=derive(v.list,{now:NOW+1e4}).gaps.journey['M-N1'].quests.numbers;
+ assert.ok(corrected.held);assert.equal(corrected.groups.length,0);assert.equal(corrected.checks.length,6);assert.equal(corrected.checks.filter(a=>a.independent).length,5);assert.equal(corrected.total,13,'same task corrected, no extra slot');
 });

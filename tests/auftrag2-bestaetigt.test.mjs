@@ -13,7 +13,10 @@ const SCHULE = { version: 1, kinder: { mia: { asOf: tag(-1), tasks: [
   { day: tag(-20), area: 'math', title: 'Check B', std: { 'M-N1': 'RS' }, quests: ['numbers'], focusNext: [], good: txt('b', 'b'), next: txt('', '') },
   { day: tag(-5), area: 'science', title: 'Forces', std: { 'S-F1': 'M' }, quests: ['forces'], focusNext: ['forces'], good: txt('c', 'c'), next: txt('Begründen.', 'Explain.') }
 ] } } };
-const HAKEN = (app) => app.replace(/\}\)\(\);\s*<\/script>/, 'window.__g={assessQuest,openGaps,standOf,questProgress,recordAnswer,gapData};})();</script>');
+const HAKEN = (app) => app.replace(/\}\)\(\);\s*<\/script>/, `window.__g={assessQuest,openGaps,standOf,questProgress,recordAnswer,gapData,
+  prepareSyntheticM(){for(let i=0;i<6;i++){const q=missingPartQuestion('numbers',2,{total:80+i*10,parts:[30]});recordAnswer(q,true);logAttempt({day:dayKey(),skill:'numbers',level:2,attempt:1,ok:true,qid:qId(q),help:false});}},
+  actualQuestionRound(){const batch=(this.batch||0)+1;this.batch=batch;state.sheet=null;state.world='numbers';state.back='home';state.round=Array.from({length:8},(_,i)=>missingPartQuestion('numbers',2,{total:200+batch*100+i*10,parts:[30]}));state.idx=0;state.stars=0;state.streak=0;state.results=state.round.map(()=>null);state.noteShown=true;state.noteNow=null;show('play');renderQuestion();}
+};})();</script>`);
 
 let browser, server, meetingServer;
 before(async () => {
@@ -106,7 +109,7 @@ test('W1 real touch journey separates reached M and held, permits help, survives
   await page.locator('#parentClose').tap();await page.waitForSelector('#home:not([hidden])');await openNumbers();
   for(let i=0;i<8;i++){const s=await zustand(page),q=s.round[s.idx];if(i===0){if(await page.locator('#takeChallenge').isVisible())await page.locator('#takeChallenge').tap();await page.locator('#helpBtn').tap();}await tapRight(page,q);await page.locator('#nextBtn').tap();}
   await home();await enterParent();t=await mathe(page);assert.match(t,/Lücke geschlossen/);assert.equal(await journey.locator('[data-stage="4"].done').count(),1);
-  assert.match(await journey.innerText(),/Gehalten · 6 von 6 richtig/);assert.ok(await page.evaluate(()=>window.__g.gapData().journey['M-N1'].quests.numbers.checks.some(x=>x.help)),'real help-first answer still confirms');
+  assert.match(await journey.innerText(),/Gehalten · 5 von 6 selbst im ersten Versuch richtig/);assert.ok(await page.evaluate(()=>window.__g.gapData().journey['M-N1'].quests.numbers.checks.some(x=>x.help)),'help occupies a slot; the other five independent answers confirm');
   for(const lang of['de','en']){await mathe(page,lang);for(const viewport of[{width:768,height:1024},{width:1024,height:768}]){
    await page.setViewportSize(viewport);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
    assert.equal(await journey.locator('.gjstations>li').count(),4);
@@ -148,4 +151,49 @@ test('W1 affected explanatory text removes knowledge-day demands while descripti
  for(const old of['6 Antworten an 2 Tagen','6 answers on 2 days','KEY.minDays','KEY.meetsDays','KEY.extDays','CONF.days','8 Aufgaben an 3 Tagen','8 tasks on 3 days','20 Aufgaben an 5 Übungstagen','20 tasks on 5 practice days','fewer than 6 answers or fewer than 2 days'])assert.ok(!html.includes(old),old);
  assert.ok(html.includes('Belegumfang')&&html.includes('Evidence amount'));assert.ok(html.includes('in den letzten 14 Tagen')&&html.includes('in the last 14 days'));
  assert.ok(html.includes('nach 1, 3, 6, 10, 15 und 25 Tagen')&&html.includes('after 1, 3, 6, 10, 15 and 25 days'),'tree remains for later EP05');
+});
+
+test('W1 independent-first touch: tip/example/solution preserve stars and raw correctness; separate failed groups stay visible',async()=>{
+ const{ctx,page,fehler}=await oeffnen(browser,server,{viewport:{width:768,height:1024},hasTouch:true});
+ try{
+  await anmelden(page,'student','mia',C.mia);await passwortSetzen(page,'Tiger-Lamp-River-4271');await page.waitForSelector('#home:not([hidden])');
+  await page.evaluate(()=>window.__g.prepareSyntheticM());assert.equal(await page.evaluate(()=>window.__g.standOf('numbers')),'M');assert.equal(await page.evaluate(()=>window.__g.gapData().journey['M-N1'].quests.numbers.checks.length),0);
+  const plans=[['self','self','self','self','tip','wrong','self','self'],['example','solution','self','self','self','self','self','self'],Array(8).fill('self')],ledger=[];
+  for(let r=0;r<plans.length;r++){
+   await page.evaluate(()=>window.__g.actualQuestionRound());
+   for(const mode of plans[r]){
+    const z=await zustand(page),q=z.round[z.idx];assert.equal(q.coach.family,'missing-part');
+    ledger.push({mode,bridge:!!q.bridge,assisted:!!q.assisted,independent:mode==='self'&&!q.bridge&&!q.assisted,ok:mode!=='wrong'&&mode!=='solution'});
+    if(['tip','example','solution'].includes(mode))await page.locator('#helpBtn').tap();
+    if(mode==='example'){assert.match(await page.locator('#helpBtn').innerText(),/example/);await page.locator('#helpBtn').tap();assert.ok(await page.locator('.worked').isVisible());}
+    if(mode==='solution')await page.locator('#answerBtn').tap();
+    else{
+     // Independent numeric oracle for this genuine generated task.
+     const n=q.coach.total-q.coach.parts.reduce((a,b)=>a+b,0)+(mode==='wrong'?1:0);
+     for(const digit of String(n))await page.locator('#qAnswers .key[aria-label="'+digit+'"]').tap();await page.locator('#qAnswers .key.go').tap();
+     if(mode==='wrong')await page.locator('#answerBtn').tap();else assert.ok(await page.locator('#feedback.good').isVisible());
+    }
+    await page.locator('#nextBtn').tap();
+   }
+   assert.equal(await page.locator('#resScore').textContent(),String(r<2?7:8),'helped successes keep stars; revealed solution and wrong first task do not');
+   const p=await page.evaluate(()=>window.__g.gapData().journey['M-N1'].quests.numbers);
+   const chunks=Array.from({length:Math.ceil(ledger.length/6)},(_,i)=>ledger.slice(i*6,i*6+6));
+   const passed=chunks.findIndex(group=>group.length===6&&group.filter(x=>x.independent).length>=5),current=passed>=0?passed:Math.floor((ledger.length-1)/6);
+   console.log('Synthetic touch ledger after round '+(r+1)+': '+JSON.stringify(ledger));
+   assert.equal(!!p.held,passed>=0);assert.equal(p.groups.length,current);
+   for(let i=0;i<current;i++){assert.deepEqual(p.groups[i].map(a=>a.independent),chunks[i].map(a=>a.independent));assert.deepEqual(p.groups[i].map(a=>a.ok),chunks[i].map(a=>a.ok));}
+   assert.deepEqual(p.checks.map(a=>a.independent),chunks[current].map(a=>a.independent));
+   if(r===0){assert.equal(p.held,undefined);assert.equal(p.groups[0].filter(a=>a.independent).length,4,'actually completed negative group');}
+   if(r===2){assert.ok(p.held);assert.equal(p.groups.length,2);assert.equal(p.checks.filter(a=>a.independent).length,5,'actually completed later positive group, after real bridges');}
+   await page.locator('#homeBtn').tap();
+  }
+  assert.deepEqual(ledger.map((q,i)=>q.bridge?i:-1).filter(i=>i>=0),[6,7,10,11,12],'actual queueBridge cards were worked through and never counted independent');
+  await page.locator('#adultBtn').tap();await anmelden(page,'adult','papa',C.papa);await passwortSetzen(page,'Moon-Glass-Paper-8812');await page.waitForSelector('#parentClose');
+  for(const lang of['de','en']){
+   await mathe(page,lang);const j=page.locator('[data-journey="M-N1"]');const text=await j.innerText();
+   assert.match(text,lang==='de'?/Gruppe 3/:/Group 3/);assert.match(text,lang==='de'?/Gruppe 1: 4 von 6/:/Group 1: 4 of 6/);assert.match(text,lang==='de'?/Gruppe 2: 0 von 6/:/Group 2: 0 of 6/);assert.match(text,lang==='de'?/selbst im ersten Versuch/:/independently on the first try/);
+   for(const viewport of[{width:768,height:1024},{width:1024,height:768}]){await page.setViewportSize(viewport);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));}
+  }
+  assert.deepEqual(fehler,[]);
+ }finally{await ctx.close();}
 });

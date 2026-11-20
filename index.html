@@ -2267,26 +2267,28 @@ function gapProgress(g){
 }
 function gapProgressHTML(g){
   const de=PL()==='de',T=GAP_TEXT[PL()],p=gapProgress(g),j=gapData().journey?.[g.s],v=j?.schoolDay===g.day?gapJourneyBest(j):null;
-  if(v?.reached)return `<span class="small">${T.stages[2]} · ${T.checking(v.checks.length,v.checks.filter(x=>x.ok).length)} · ${T.open}</span>`;
+  if(v?.reached)return `<span class="small">${T.stages[2]} · ${T.checking(v.checks.length,gapIndependentCount(v.checks))} · ${T.open}</span>`;
   const txt=p.right>0 ? (de?`noch ${p.right} ${p.right===1?'Aufgabe':'Aufgaben'} auf Klassenniveau richtig`:`${p.right} more grade-level ${p.right===1?'task':'tasks'} right`) : T.stages[2];
   return `<span class="pgapbar" role="img" aria-label="${txt}"><i style="width:${Math.floor(p.frac*100+1e-9)}%"></i></span> <span class="small">${txt}${p.right===0?' · '+T.open:''}</span>`;
 }
 function gapJourneyHTML(s,r,c){
   const T=GAP_TEXT[PL()],d=gapData(),trace=d.journey?.[s],same=trace?.schoolDay===r.day;
   const v=gapJourneyBest(same?trace:c?trace:null),schoolClosed=['M','E'].includes(r.st),closed=schoolClosed||!!(c&&c.schoolDay>=r.day);
-  const source=c?.by==='parents'?T.parentClosed:schoolClosed?T.schoolClosed:v?.held?'':T.oldClosed;
+  const source=c?.by==='parents'?T.parentClosed:schoolClosed?T.schoolClosed:gapIsHeld(v)?'':T.oldClosed;
   const count=a=>T.right(a.filter(x=>x.ok).length,a.length);
   const selected=v?.k||gapQuests(s)[0],currentSecure=selected&&['M','E'].includes(standOf(selected));
   const recent=(store.get('attempts',[])||[]).filter(a=>a.skill===selected&&a.day>=r.day&&a.attempt===1&&!a.hintShown&&!a.exampleShown&&!a.solutionShown).slice(-6);
   const practice=v?`${v.complete?T.before:T.missing+'<br>'+T.observed}<br><b>${count(v.first)}</b><br>${T.now}: <b>${count(v.recent)}</b>`:recent.length?`${T.missing}<br>${T.now}: <b>${count(recent)}</b>`:T.noPractice;
   const reach=v?.reached?`${v.reached.kind==='observed'?T.legacy:T.reached+' '+fmtDay(v.reached.day)}`:currentSecure?T.currentSecure:T.notReached;
-  const checks=v?.checks||[],held=v?.held&&!v.uncertain;
-  const proof=(closed&&source?source+'<br>':'')+(held?T.held(checks.filter(x=>x.ok).length):!closed?T.checking(checks.length,checks.filter(x=>x.ok).length)+'<br>'+T.target:'');
+  const checks=v?.checks||[],held=gapIsHeld(v)&&!v.uncertain;
+  const proof=(closed&&source?source+'<br>':'')+(held?T.held(gapIndependentCount(checks)):!closed?T.checking(checks.length,gapIndependentCount(checks))+'<br>'+T.target:'');
+  const prior=(v?.groups||[]).map((group,i)=>T.previous(i+1,gapIndependentCount(group),group.some(x=>typeof x.independent!=='boolean'))).join('<br>');
+  const block=v?.reached?T.group((v.groups||[]).length+1)+'<br>':'';
   const done=[true,!!v||!!recent.length,!!v?.reached||currentSecure,!!held];
-  const content=[`${esc(PSTAND[PL()][SL[r.st]]||r.st)} (${esc(r.st)}) · ${fmtDay(r.day)}<br>${T.source}`,practice,reach,proof];
-  const dots=Array.from({length:6},(_,i)=>`<span class="gjdot ${checks[i]?(checks[i].ok?'yes':'no'):''}" aria-label="${i+1}: ${checks[i]?(checks[i].ok?'✓':'×'):'○'}">${checks[i]?(checks[i].ok?'✓':'×'):'○'}</span>`).join('');
+  const content=[`${esc(PSTAND[PL()][SL[r.st]]||r.st)} (${esc(r.st)}) · ${fmtDay(r.day)}<br>${T.source}`,practice,reach,block+proof+(prior?'<br>'+prior:'')];
+  const dots=Array.from({length:6},(_,i)=>{const a=checks[i],mark=!a?'○':typeof a.independent!=='boolean'?'?':a.independent?'✓':'×';return `<span class="gjdot ${a?(a.independent===true?'yes':'no'):''}" aria-label="${i+1}: ${mark}">${mark}</span>`;}).join('');
   const shaky=closed&&(v?.later||[]).some(x=>!x.ok);
-  return `<section class="pgapjourney" data-journey="${esc(s)}" aria-label="${T.title}"><h5>${T.title}${selected?` · ${esc(WORLDS[selected]?.name||selected)}`:''}</h5><p class="gjstate">${closed?T.closed:T.open}${d.hold[s]?.schoolDay>=r.day?' · '+(PL()==='de'?'von Ihnen offen gehalten':'kept open by you'):''}</p><ol class="gjstations">${T.stages.map((title,i)=>`<li class="${done[i]?'done':''}" data-stage="${i+1}"><b><span class="gjnumber">${done[i]?'✓':i+1}</span> ${title}</b><p>${content[i]}</p>${i===3?`<div class="gjchecks">${dots}</div>`:''}</li>`).join('')}</ol><p class="small">${T.sample}</p>${v?.uncertain?`<p class="small">${T.uncertain}</p>`:''}${shaky?`<p class="gjshaky">${T.shaky}</p>`:''}</section>`;
+  return `<section class="pgapjourney" data-journey="${esc(s)}" aria-label="${T.title}"><h5>${T.title}${selected?` · ${esc(WORLDS[selected]?.name||selected)}`:''}</h5><p class="gjstate">${closed?T.closed:T.open}${d.hold[s]?.schoolDay>=r.day?' · '+(PL()==='de'?'von Ihnen offen gehalten':'kept open by you'):''}</p><ol class="gjstations">${T.stages.map((title,i)=>`<li class="${done[i]?'done':''}" data-stage="${i+1}"><b><span class="gjnumber">${done[i]?'✓':i+1}</span> ${title}</b><p>${content[i]}</p>${i===3?`<div class="gjchecks">${dots}</div><p class="small">${T.legend}</p>`:''}</li>`).join('')}</ol><p class="small">${T.sample}</p>${v?.uncertain?`<p class="small">${T.uncertain}</p>`:''}${shaky?`<p class="gjshaky">${T.shaky}</p>`:''}</section>`;
 }
 /* A grant renders the same proven closure without persisting it or moving the
    stored active gap. Parent actions continue to use gapData, never this copy. */
@@ -2305,7 +2307,7 @@ function gapOverviewHTML(){
   let held=0,other=0;
   for(const s of standards){const r=stdRating(s);if(!r)continue;const c=closed[s],j=d.journey?.[s];
     if(['M','E'].includes(r.st)){if(c||j)other++;}
-    else if(c?.schoolDay>=r.day){if(c.by==='app'&&gapJourneyBest(j)?.held)held++;else other++;}
+    else if(c?.schoolDay>=r.day){if(c.by==='app'&&gapIsHeld(gapJourneyBest(j)))held++;else other++;}
   }
   const n=open.length+held+other;if(!n)return '';
   return `<p class="phow" id="gapOverview"><b>${n} ${T.gaps}:</b> ${held} ${T.heldN} · ${open.length} ${T.work}${other?' · '+other+' '+T.otherClosed:''}</p>`;
