@@ -33,7 +33,7 @@ test('nach einer Runde: Leckerli waehlen – Witz mit Aufloesung, Mystery Questi
   assert.ok(await page.isVisible('#results'));
   const knoepfe = await page.$$eval('#treat [data-treat]', (b) => b.map((x) => x.dataset.treat));
   // Pisolala-Knopf nur, wenn eine Geschichte freigegeben ist (approved:true); Spannung bis zur Obergrenze (Voreinstellung 2)
-  assert.deepEqual(knoepfe, ['joke', 'mystery', 'story']);
+  assert.deepEqual(knoepfe, ['joke', 'mystery', 'word', 'story']);
   await klick(page, '#treat [data-treat="story"]');
   assert.deepEqual(await page.$$eval('#treatBody [data-story]', (b) => b.map((x) => x.dataset.l)), ['1', '2'], 'up to the limit (default 2)');
   await klick(page, '#treatBody [data-story][data-l="2"]');

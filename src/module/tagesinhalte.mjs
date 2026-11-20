@@ -12,7 +12,7 @@ export const DAILY_TEXT={
  de:{word:'Word of the Day',open:'Das heutige Wort entdecken',close:'Schließen',prompt:'Was bedeutet dieses Wort?',correct:'Ja!',try:'Das bedeutet es:',example:'In einem Satz',invitation:'Ein kleines Wort zum Entdecken.',explain:'Explain it · eine Frage zum Gespräch',conversation:'Fragen Sie Ihr Kind und erkunden Sie die Idee gemeinsam.'}
 };
 export function createDailyContentUI({day,language,parentLanguage,canParentRead,feedbackHTML,bindFeedback,escape:esc}){
- function wordHTML(){const T=DAILY_TEXT[language()];return `<section class="pcard" id="dailyWord"><h2>${T.word}</h2><p class="small">${T.invitation}</p><button type="button" class="btn small" data-open-word>${T.open}</button><div data-word-body hidden></div></section>`;}
+ function wordHTML(id='dailyWord'){const T=DAILY_TEXT[language()];return `<section class="pcard" id="${id}"><h2>${T.word}</h2><p class="small">${T.invitation}</p><button type="button" class="btn small" data-open-word>${T.open}</button><div data-word-body hidden></div></section>`;}
  function bindWord(root){
   root.querySelectorAll('[data-open-word]').forEach(button=>button.addEventListener('click',()=>{
    const lang=language(),T=DAILY_TEXT[lang],w=dailyContent(DAILY_WORD_DATA.items,day()),box=button.parentElement.querySelector('[data-word-body]');

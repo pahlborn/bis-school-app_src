@@ -24,9 +24,12 @@ const rand0 = bytesOf(seeded(20261102));
 const ev = (type, payload, { at = iso(NOW - HOUR), author = 'p_k1', device = 'd_a1', rand = rand0 } = {}) => newEvent({ type, author, device, payload, at }, { rand });
 const answer = (device, i, ms, rand) => ev('answer', { day: iso(ms).slice(0, 10), skill: 'round', level: 2, attempt: 1, ok: i % 3 !== 0, qid: 'q' + i }, { at: iso(ms), device, rand });
 const name = (value, ms, device, rand = rand0) => ev('profile_set', { field: 'name', value }, { at: iso(ms), device, rand });
-const KONZEPT_TYPEN = ['answer', 'round_done', 'badge', 'review', 'practice_day', 'profile_set', 'rank_seen', 'sheet_created', 'sheet_result', 'sheet_discarded', 'setting_set', 'checklist_set', 'day_flag', 'school_import', 'school_evaluation', 'grant_set', 'grant_revoked', 'grant_opened', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated', 'snapshot', 'gap_state', 'gap_active', 'list_set', 'advent_open', 'joke_seen', 'content_vote', 'story_read', 'person_set', 'glance_set', 'backup_made', 'anchor_set', 'family_set', 'invite_set'];
+const KONZEPT_TYPEN = ['answer', 'reward_seen', 'discovery_bonus', 'round_reward', 'round_done', 'badge', 'review', 'practice_day', 'profile_set', 'rank_seen', 'sheet_created', 'sheet_result', 'sheet_discarded', 'setting_set', 'checklist_set', 'day_flag', 'school_import', 'school_evaluation', 'grant_set', 'grant_revoked', 'grant_opened', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated', 'snapshot', 'gap_state', 'gap_active', 'list_set', 'advent_open', 'joke_seen', 'content_vote', 'story_read', 'person_set', 'glance_set', 'backup_made', 'anchor_set', 'family_set', 'invite_set'];
 const SAMPLE = {
   answer: { day: DAY, skill: 'round', family: null, level: 2, attempt: 1, ok: true, response: '3', qid: 'q|v|o|a', help: false, example: false },
+  reward_seen: { secure: ['numbers'], solved: ['numbers'] },
+  discovery_bonus: { quest: 'numbers', round: 'r_'+'a'.repeat(24) },
+  round_reward: { day: DAY, round: 'r_'+'a'.repeat(24), skill: 'numbers', correct:8, stars:0, count:8 },
   round_done: { day: DAY, skill: 'round', stars: 7, count: 8 },
   badge: { day: DAY, badge: 'inquirer', skill: 'round' },
   review: { day: DAY, qid: 'q1', box: 1, dueAt: '2026-11-05', question: { prompt: 'x' } },
@@ -68,10 +71,10 @@ const gut = ev('answer', SAMPLE.answer);
 const mitGrund = (e, re, wo = '') => { const f = checkEvent(e); assert.ok(f.some((x) => re.test(x)), `${wo}: expected ${re}, got ${JSON.stringify(f)}`); };
 
 /* ---------- US7.1: format ---------- */
-test('US7.1: 37 Typen wie im Konzept 9.1 (23 + 2 fuer Luecken, 3b-0, + 2 fuer Listen und Advent, 3b-1b-2, + 2 fuer Witze und Geschichten, 3b-1b-4, + 3 fuer Person, Blick und Sicherung, 3b-1c, + 3 fuer Anker, Familie und Einladung, Einladungen; Schulevaluation und freiwillige Inhaltsdaumen); je Typ ein gueltiges Ereignis', () => {
+test('US7.1: 40 Typen wie im Konzept 9.1 (23 + 2 fuer Luecken, 3b-0, + 2 fuer Listen und Advent, 3b-1b-2, + 2 fuer Witze und Geschichten, 3b-1b-4, + 3 fuer Person, Blick und Sicherung, 3b-1c, + 3 fuer Anker, Familie und Einladung, Einladungen; Schulevaluation und freiwillige Inhaltsdaumen); je Typ ein gueltiges Ereignis', () => {
   assert.equal(EVENT_VERSION, 1);
   assert.deepEqual(EVENT_TYPES, KONZEPT_TYPEN);
-  assert.equal(EVENT_TYPES.length, 37);
+  assert.equal(EVENT_TYPES.length, 40);
   assert.deepEqual(Object.keys(SAMPLE), EVENT_TYPES);
   for (const type of EVENT_TYPES) {
     const e = ev(type, SAMPLE[type]);

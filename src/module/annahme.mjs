@@ -47,7 +47,7 @@ export const ANNAHME_GRUENDE = ['format', 'autor-unbekannt', 'nicht-mitglied', '
             family (anchor_set), the invitations it gave out (invite_set, own area) and the members of the family whose
             keys it checked (family_set) */
 const ANN_RIGHTS = {
-  child: ['answer', 'round_done', 'badge', 'review', 'practice_day', 'profile_set', 'rank_seen', 'sheet_created', 'sheet_result', 'checklist_set', 'day_flag', 'device_added', 'gap_state', 'advent_open', 'joke_seen', 'story_read', 'content_vote', 'person_set', 'anchor_set'],
+  child: ['answer', 'reward_seen', 'discovery_bonus', 'round_reward', 'round_done', 'badge', 'review', 'practice_day', 'profile_set', 'rank_seen', 'sheet_created', 'sheet_result', 'checklist_set', 'day_flag', 'device_added', 'gap_state', 'advent_open', 'joke_seen', 'story_read', 'content_vote', 'person_set', 'anchor_set'],
   parent: ['profile_set', 'sheet_created', 'sheet_discarded', 'setting_set', 'school_import', 'school_evaluation', 'grant_set', 'grant_revoked', 'member_added', 'member_removed', 'device_added', 'device_removed', 'key_rotated', 'snapshot', 'gap_state', 'gap_active', 'list_set', 'advent_open', 'joke_seen', 'story_read', 'person_set', 'glance_set', 'backup_made', 'anchor_set', 'family_set', 'invite_set'],
   teacher: ['grant_opened', 'device_added', 'person_set', 'member_added', 'key_rotated', 'device_removed'],
   admin: ['grant_opened', 'device_added', 'person_set', 'member_added', 'key_rotated', 'device_removed', 'invite_set'],

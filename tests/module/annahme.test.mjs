@@ -34,6 +34,9 @@ const DAY = '2026-11-02';
 function payloadFor(type, author, device) {
   return {
     answer: { day: DAY, skill: 'round', level: 2, attempt: 1, ok: true, qid: 'q1' },
+    reward_seen: { secure: ['numbers'], solved: ['numbers'] },
+    discovery_bonus: { quest: 'numbers', round: 'r_'+'a'.repeat(24) },
+    round_reward: { day: DAY, round: 'r_'+'a'.repeat(24), skill: 'numbers', correct:8, stars:0, count:8 },
     round_done: { day: DAY, skill: 'round', stars: 7, count: 8 },
     badge: { day: DAY, badge: 'principled' },
     review: { day: DAY, qid: 'q1', box: 1 },
@@ -86,7 +89,7 @@ const reason = async (item, z = zOf(item)) => { const r = await acceptEvent(item
    sheet_result (and the review and badge it causes) belongs to the child; parents write no learning data at all.
    Gaps (3b-0): gap_state 'cp' with the sample "closed by app" - the child may ONLY write that one (test below). */
 const ERWARTET = {
-  answer: 'c', round_done: 'c', practice_day: 'c', rank_seen: 'c', checklist_set: 'c', day_flag: 'c',
+  answer: 'c', reward_seen: 'c', discovery_bonus: 'c', round_reward: 'c', round_done: 'c', practice_day: 'c', rank_seen: 'c', checklist_set: 'c', day_flag: 'c',
   badge: 'c', review: 'c', sheet_result: 'c',
   profile_set: 'cp', sheet_created: 'cp', gap_state: 'cp', device_added: 'cpta',
   sheet_discarded: 'p', setting_set: 'p', school_import: 'p', school_evaluation: 'p', grant_set: 'p', grant_revoked: 'p',
@@ -101,7 +104,7 @@ const darf = (role, type) => ERWARTET[type].includes(role[0]);
 test('Annehmen: gueltig unterschriebene Ereignisse je Rolle und erlaubtem Typ zaehlen', async () => {
   let k = 0;
   for (const role of ROLES) for (const type of EVENT_TYPES) if (darf(role, type)) { assert.equal(await reason(await signed(role, type)), 'ok', `${role} ${type}`); k++; }
-  assert.equal(k, 52, 'every allowed pair was tried once');   // cp: profile_set, sheet_created, gap_state, advent_open, joke_seen, story_read; 3b-1c: person_set x4, glance_set, backup_made; Einladungen: anchor_set x2, family_set, invite_set x2
+  assert.equal(k, 55, 'every allowed pair was tried once');   // cp: profile_set, sheet_created, gap_state, advent_open, joke_seen, story_read; 3b-1c: person_set x4, glance_set, backup_made; Einladungen: anchor_set x2, family_set, invite_set x2
   // Einladungen: ein Kind hat einen Anker, keine Familie; ein Elternteil eine Familie, keinen Anker
   const ak = (pid, did, kind) => sg(mk('anchor_set', pid, did, { kind, person: 'p_e1', pub: { ecdh: 'QUJD', ecdsa: 'REVG' } }), KEYS[pid]);
   assert.equal(await reason(await ak('p_k1', 'd_k1', 'family')), 'rolle-darf-nicht', 'child: no family');
@@ -205,9 +208,9 @@ test('canonicalBytes: feste Bytefolge, unabhaengig von der Schluesselreihenfolge
 });
 
 /* ---------- 5 matrix ---------- */
-test('Matrix: alle 37 Typen x 4 Rollen gegen die hier ausgeschriebene Tabelle', async () => {
+test('Matrix: alle 40 Typen x 4 Rollen gegen die hier ausgeschriebene Tabelle', async () => {
   assert.deepEqual(Object.keys(ERWARTET).sort(), EVENT_TYPES.slice().sort(), 'the table covers every type');
-  assert.equal(EVENT_TYPES.length, 37);
+  assert.equal(EVENT_TYPES.length, 40);
   const falsch = [];
   for (const type of EVENT_TYPES) for (const role of ROLES) {
     const got = await reason(await signed(role, type)), want = darf(role, type) ? 'ok' : 'rolle-darf-nicht';

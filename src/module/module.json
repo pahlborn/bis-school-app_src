@@ -4,6 +4,7 @@
     { "name": "standardkatalog", "bau": "live", "browserTests": ["schulimport", "schulische-einstufungen", "evaluation-eltern-browser", "elternbereich-c1", "elternbereich-d1"] },
     { "name": "rechte", "bau": "live", "browserTests": ["stufe1-p4", "stufe1-p3", "stufe1-ist", "anmeldung", "schule"] },
     { "name": "passwort", "bau": "live", "browserTests": ["stufe1-p3", "anmeldung", "hilfe-rollen"] },
+    { "name": "sterne", "bau": "live", "browserTests": ["sterne"] },
     { "name": "inhaltsfeedback", "bau": "live", "browserTests": ["inhalte"] },
     { "name": "motivationsworte", "bau": "live", "browserTests": ["inhalte"] },
     { "name": "tagesinhalte", "bau": "live", "browserTests": ["inhalte"] },

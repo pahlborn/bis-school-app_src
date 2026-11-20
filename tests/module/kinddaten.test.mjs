@@ -123,6 +123,12 @@ async function leer(W, area) {
 }
 
 /* ---------- Export ---------- */
+test('EP04 export retains received reward receipts, first bonus and private voluntary feedback without changing knowledge',async()=>{
+ const W=WELTEN.Simulation(),{P1,K}=await welt(W),kid=K.konto.kennung,round='r_'+'b'.repeat(24);
+ K.schreibt(kid,'round_reward',{day:HEUTE,round,skill:'numbers',correct:0,stars:0,count:8});K.schreibt(kid,'discovery_bonus',{quest:'numbers',round});K.schreibt(kid,'content_vote',{kind:'joke',item:'gb-bored-goat',value:'down'});
+ await K.sync();await P1.sync();const x=await kindDatenExport({ablage:P1.a,konto:P1.konto,kind:kid,now:weiter(W),heute:HEUTE}),data=JSON.parse(x.json).daten;
+ assert.ok(data.starLedger.rounds.includes(round));assert.deepEqual(data.starLedger.bonuses,['numbers']);assert.equal(data.contentFeedback['joke:gb-bored-goat'].value,'down');assert.deepEqual(data.jokeRejected,['gb-bored-goat']);assert.equal(data.attempts.length,3,'reward/feedback events add no learning attempts');
+});
 jedeWelt('Export: jede Speicherstelle aus 7.2 kommt vor, mit Wert oder Grund; JSON und lesbare Seite; beide Eltern bekommen dieselben Daten', async (W) => {
   const { P1, P2, K, B } = await welt(W);
   const kk = K.konto.kennung;

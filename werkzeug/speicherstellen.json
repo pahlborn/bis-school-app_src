@@ -30,6 +30,7 @@
     { "key": "greetDay", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true },
     { "key": "mysteryDone", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true },
     { "key": "storyRead", "bereich": "kind", "abgleich": "protokoll", "sicherung": false, "hinweis": "A5: gelesene Pisolala-Geschichten (aelteste zuerst); ab 3b-1b-4 Ereignis story_read (Kind privat)" },
+    { "key": "starLedger", "bereich": "kind", "abgleich": "abgeleitet", "sicherung": true, "hinweis": "Sternmetadaten: beobachtetes frueheres M/E, geloeste Erstaufgaben, Bonusclaims und abgerechnete Runden; kein Lernstand" },
     { "key": "contentFeedback", "bereich": "kind", "abgleich": "abgeleitet", "sicherung": true, "hinweis": "Freiwillige Inhaltsdaumen aus content_vote; keine Lernbelege" },
     { "key": "jokeRejected", "bereich": "kind", "abgleich": "abgeleitet", "sicherung": true, "hinweis": "Dauerhaft abgelehnte Witze; additive Menge, nie aus Seenrotation loeschen" },
     { "key": "jokeSeen", "bereich": "kind", "abgleich": "protokoll", "sicherung": false, "hinweis": "A3: schon gezeigte Witze (keine Wiederholung, bis alle dran waren); ab 3b-1b-4 Ereignis joke_seen (Kind privat)" },

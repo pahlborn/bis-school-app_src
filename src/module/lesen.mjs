@@ -25,7 +25,7 @@ import { effectiveTime } from './ereignisse.mjs';
    "the tree grew" is shown once per device - the tree itself follows the practice days), events. */
 export const LESEN_KIND = Object.freeze(['attempts', 'ev', 'due', 'total', 'badges', 'tried', 'rankSeen', 'rankPolicy', 'name', 'lastName', 'birthday', 'mySchool', 'emoji',
   'bdayParty', 'sheets', 'sheetNo', 'focusMode', 'focusManual', 'unlocked', 'storyCap', 'greetDay', 'mysteryDone', 'storyRead',
-  'jokeSeen', 'contentFeedback', 'jokeRejected', 'kidLang', 'gaps', 'grants', 'grantlog', 'lastBackup']);
+  'starLedger', 'jokeSeen', 'contentFeedback', 'jokeRejected', 'kidLang', 'gaps', 'grants', 'grantlog', 'lastBackup']);
 export const LESEN_KIND_PRAEFIX = Object.freeze(['best_', 'chk_', 'advent']);
 /* a person's own values (area person:<id>); muted of a child is in the child's log (profile_set) */
 export const LESEN_PERSON = Object.freeze(['parentLang', 'muted', 'conceptSeen', 'glance']);

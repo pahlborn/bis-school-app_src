@@ -38,7 +38,7 @@ export const BEREICH_ARTEN = Object.freeze(['kind:lern', 'kind:privat', 'schule'
 /* ---------- type -> area (decided by Peter, 03.11.: the teacher sees the name; the child's account holds the
    school data so the app can compute focus and gaps, but never shows them) ---------- */
 const BER_TYP = {
-  answer: 'kind:lern', round_done: 'kind:lern', badge: 'kind:lern', review: 'kind:lern', practice_day: 'kind:lern', rank_seen: 'kind:lern',
+  answer: 'kind:lern', reward_seen: 'kind:lern', discovery_bonus: 'kind:lern', round_reward: 'kind:lern', round_done: 'kind:lern', badge: 'kind:lern', review: 'kind:lern', practice_day: 'kind:lern', rank_seen: 'kind:lern',
   sheet_created: 'kind:lern', sheet_result: 'kind:lern', sheet_discarded: 'kind:lern',
   // task "Name und Geburtsdatum" (Peter, 04.11.): last name and birthday (with the year) go with the name - a teacher with
   // a grant tells children with the same first name apart by them
