@@ -78,7 +78,7 @@ test('T5/T12/T17 final pass over all grown-ups texts (DE/EN); "what works" once;
     assert.ok(infos.length >= 8, `${lang}: ⓘ texts collected (${infos.length})`);
     // T17
     const z = alles.match(ZEIT); assert.equal(z, null, `${lang}: time word: ${z && z[0]}`);
-    assert.match(alles, lang === 'de' ? /noch etwa \d+ Aufgaben/ : /about \d+ more tasks/, `${lang}: gap progress in tasks`);
+    assert.match(alles, lang === 'de' ? /noch \d+ Aufgaben? auf Klassenniveau richtig/ : /\d+ more grade-level tasks? right/, `${lang}: gap progress in tasks`);
     // T12
     for (const w of STREICHEN) assert.ok(!alles.includes(w), `${lang}: struck out: ${w}`);
     for (const w of NUR_DATENSCHUTZ) assert.ok(!alles.includes(w), `${lang}: only in privacy: ${w}`);

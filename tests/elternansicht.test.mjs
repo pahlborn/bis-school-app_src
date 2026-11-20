@@ -20,13 +20,13 @@ async function mitDaten(page, serien) {
   await page.evaluate(([a, e]) => { localStorage.setItem('bq2_attempts', JSON.stringify(a)); localStorage.setItem('bq2_ev', JSON.stringify(e)); }, [attempts, ev]);
 }
 const SERIEN = {
-  // 25 first tries over 16 days on 6 days, all right → secure and confirmed
+  // 25 first tries, all right → secure with a broader descriptive evidence sample
   round: serie('round', Array.from({ length: 25 }, (_, i) => [[16, 13, 10, 7, 4, 1][i % 6], true])),
-  // 10 first tries on 3 days, mostly wrong → needs support, provisional
+  // 10 first tries, mostly wrong → needs support with initial evidence
   units: serie('units', Array.from({ length: 10 }, (_, i) => [[5, 3, 1][i % 3], i % 5 === 0])),
   // only 4 tries → not yet possible to judge
   graphs: serie('graphs', [[2, true], [2, false], [1, true], [1, true]]),
-  // 7 tries on 2 days: the internal key would already judge, the grown-ups view waits (≥8 on ≥3 days)
+  // 7 correct L2 tries: common secure status, still a small descriptive evidence sample
   sentences: serie('sentences', Array.from({ length: 7 }, (_, i) => [[3, 2][i % 2], true])),
   // practised long ago → older evidence
   combos: serie('combos', Array.from({ length: 9 }, (_, i) => [[40, 35, 30][i % 3], true]))
@@ -59,12 +59,12 @@ test('subject page: status with school term, how sure, basis, trend, recency, ti
   await elternOeffnen(page);
   await page.locator('[data-psubj="science"]').click();
   const units = await page.locator('.pquest', { hasText: 'Units & Measuring' }).textContent();
-  assert.match(units, /Braucht Unterstützung \(Requires support\)/); assert.match(units, /vorläufig/);
+  assert.match(units, /Braucht Unterstützung \(Requires support\)/); assert.match(units,/erste Belege/);
   assert.match(units, /10 Aufgaben · 2 selbst gelöst/);   // E1: level 2
   await page.locator('.pquest', { hasText: 'Units & Measuring' }).locator('details.pbasis > summary').click();
   assert.match(await page.locator('.pquest', { hasText: 'Units & Measuring' }).locator('details.pbasis table').innerText(), /10 Aufgaben an 3 Tagen[\s\S]*selbst gelöst\s+2/);
   assert.match(units, /noch keine verlässliche Tendenz/);
-  assert.match(units, /Belastbar ab etwa 20 Aufgaben/);
+  assert.match(units,/Breitere Belege ab etwa 20 ersten Versuchen; der Quest-Stand gilt schon vorher/);
   assert.match(units, /So helfen Sie/);
   const graphs = await page.locator('.pquest', { hasText: 'Bar Graphs' }).textContent();
   assert.match(graphs, /Noch nicht einschätzbar/);
@@ -72,12 +72,13 @@ test('subject page: status with school term, how sure, basis, trend, recency, ti
   await page.locator('#pBack').click();
   await page.locator('[data-psubj="maths"]').click();
   const round = await page.locator('.pquest', { hasText: 'Rounding Road' }).textContent();
-  assert.match(round, /Sicher \(Meeting expectations\)/); assert.match(round, /bestätigt/);
-  assert.ok(!/Belastbar ab/.test(round), 'confirmed: no "reliable from" hint');
+  assert.match(round, /Sicher \(Meeting expectations\)/); assert.match(round,/breitere Belege/);
+  assert.doesNotMatch(round,/Breitere Belege ab etwa 20/,'already a broader sample: no early-sample note');
   await page.locator('#pBack').click();
   await page.locator('[data-psubj="english"]').click();
   const sent = await page.locator('.pquest', { hasText: 'Capital Letters' }).textContent();
-  assert.match(sent, /Noch nicht einschätzbar/, 'careful: 7 tasks on 2 days are not enough');
+  assert.match(sent,/Sicher \(Meeting expectations\)/,'seven correct L2 answers meet the common stand without a day veto');
+  assert.match(sent,/wenig Belege/,'fewer than eight describes quantity separately');
   await page.locator('#pBack').click();
   await page.locator('[data-psubj="maths"]').click();
   const combos = await page.locator('.pquest', { hasText: 'Number Combinations' }).textContent();

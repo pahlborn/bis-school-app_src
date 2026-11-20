@@ -144,9 +144,14 @@ test('observation overview uses the school words only behind PIN and labels shar
   await page.locator('[data-psubj="maths"]').click();
   const text=await page.textContent('#aboutBody');
   assert.ok(text.includes('Meeting expectations'));
-  assert.ok(text.includes('vorläufig'),'10 tasks on 3 days: only provisional');
+  const card=page.locator('.pquest').filter({has:page.locator('[data-pfocus="round"]')});
+  assert.match(await card.locator('.pqchips .pst').first().innerText(),/Sicher/,'the same ten correct L2 answers already meet the common status');
+  assert.equal(await card.locator('.psure').innerText(),'erste Belege','quantity describes the sample, never vetoes M');
   assert.ok(text.includes('Worauf beruht das?'));
   assert.ok(text.includes('keine schulische Beurteilung'));
+  await page.locator('.phdr [data-plang="en"]').click();
+  assert.match(await card.locator('.pqchips .pst').first().innerText(),/Secure/);
+  assert.equal(await card.locator('.psure').innerText(),'initial evidence');
   await zurStart(page);
   assert.ok(!(await page.evaluate(()=>document.body.innerText)).includes('Meeting expectations'));
   await ctx.close();

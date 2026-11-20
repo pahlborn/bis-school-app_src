@@ -19,7 +19,10 @@
 // Names: helpers start with "ab"/"AB" because all modules and index.html share one scope in the app.
 
 import { mergeLog, lastWins, lastWinsOrder, effectiveTime, SCHOOL_EVALUATION_TARGETS, schoolEvaluationNeedsPractice } from './ereignisse.mjs';
-import { schoolStandardInfo } from './standardkatalog.mjs';
+import { schoolStandardInfo, schoolStandardsByQuest } from './standardkatalog.mjs';
+import {gapSchoolRatings,gapObserve,gapUndo,gapProjectSource,gapRemember,gapForget,gapUse,gapConsumed} from './lueckenverlauf.mjs';
+import {secureEvidence} from './wissen.mjs';
+const AB_GAP_STANDARDS=schoolStandardsByQuest();
 
 /* the limits of today's app (index.html: slice(-200) in attempts, EVIDENCE_MAX, DUE_MAX, GAPS, slice(-8) in sheets,
    TREE_AT, RANKS); the browser test compares them with the app */
@@ -36,10 +39,23 @@ const abLevel = (q) => q.level || 2;                                           /
 const abStage = (days) => DERIVE_TREE_AT.filter((x) => days >= x).length - 1;  // index.html: treeStage
 
 /* ev: per skill the last answers as [day, level, ok] (index.html: recordAnswer); every row is a practice day */
-function abPushEvidence(st, ctx, skill, row) {
+function abPushEvidence(st, ctx, skill, row, originalLevel=row[1],sheet) {
   if (skill === '__proto__') return;
   const list = abOwn(st.ev, skill) ? st.ev[skill] : [];
+  const standard=AB_GAP_STANDARDS[skill]?.[0], rating=ctx.gapSchool[standard];
+  const before=secureEvidence(list), complete=!list.some(r=>rating&&r[0]>=rating.day);
+  const previous=list.slice();
   list.push(row);
+  let seq;
+  if(standard){
+    st.gaps ||= {closed:{},active:null,hold:{}};
+    seq=gapRemember(st.gaps,skill,previous,row,originalLevel,sheet,ctx.gapClosed[standard]?.schoolDay>=rating?.day);
+  }
+  if(rating&&seq>gapConsumed(st.gaps,standard,skill,rating)){
+    st.gaps ||= {closed:{},active:null,hold:{}};
+    st.gaps.journey ||= {};
+    gapObserve(st.gaps.journey,{standard,quest:skill,rating,row,originalLevel,secureBefore:before,secureAfter:secureEvidence(list),complete,previous,sheet,seq,used:st.gaps.used?.[standard],closed:ctx.gapClosed[standard]?.schoolDay>=rating.day});
+  }
   st.ev[skill] = list.slice(-DERIVE_LIMITS.evidence);
   ctx.days.add(row[0]);
 }
@@ -57,20 +73,31 @@ function abUndoSheetResult(st, it) {
   for (let i = list.length - 1; i >= 0; i--) if (abSameRow(list[i], r.ev)) { list.splice(i, 1); break; }
   st.ev[it.q.world] = list;
   st.attempts = st.attempts.filter((a) => a.sheet !== r.key);
+  if(st.gaps)gapForget(st.gaps,it.q.world,r.key);
+  gapUndo(st.gaps?.journey,AB_GAP_STANDARDS[it.q.world]?.[0],it.q.world,r.key);
   return true;                                                                  // (the caller sets the new result and record)
 }
 
 function abApply(st, ctx, e) {
   const p = e.payload;
   switch (e.type) {
-    case 'answer': {                                                            // index.html: observeAttempt, showHint, showExample, showWorked
+    case 'gap_state': {
+      const s=p.standard;if(s==='__proto__')break;
+      if(p.state==='closed'){
+        if(p.by==='app'&&ctx.gapHold[s]?.schoolDay>=p.schoolDay)break;
+        st.gaps ||= {closed:{},active:null,hold:{}};gapUse(st.gaps,s,p.schoolDay);if(p.schoolDay<ctx.gapSchool[s]?.day)gapProjectSource(st.gaps,ctx.gapSchool);
+        ctx.gapClosed[s]={schoolDay:p.schoolDay};if(p.by==='parents')delete ctx.gapHold[s];
+      }else{delete ctx.gapClosed[s];if(p.state==='hold')ctx.gapHold[s]={schoolDay:p.schoolDay};else delete ctx.gapHold[s];}
+      break;
+    }
+    case 'answer' : {                                                            // index.html: observeAttempt, showHint, showExample, showWorked
       abPushAttempt(st, abClone(p));                                            // the event IS the stored attempt
       const shown = p.hintShown || p.exampleShown || p.solutionShown;
       if (!shown && p.attempt === 1) {
         const row=[p.day,p.help?1:p.level,p.ok?1:0];
         if(typeof p.help==='boolean')row.push(p.ok===true&&p.help===false&&!p.example);
-        abPushEvidence(st,ctx,p.skill,row);
-      } else if (p.solutionShown && p.beforeTry) abPushEvidence(st, ctx, p.skill, [p.day,1,0,false]); // answer shown: support level
+        abPushEvidence(st,ctx,p.skill,row,p.level);
+      } else if (p.solutionShown && p.beforeTry) abPushEvidence(st, ctx, p.skill, [p.day,1,0,false],p.level); // answer shown: support level
       break;
     }
     case 'round_done': {                                                        // index.html: showResults
@@ -115,7 +142,7 @@ function abApply(st, ctx, e) {
       if (it.res && !abUndoSheetResult(st, it)) break;
       const q = it.q, key = p.sheet + ':' + p.index;
       const row = [p.day, p.res === 'help' ? 1 : (q.assisted ? 1 : abLevel(q)), p.res === 'no' ? 0 : 1, p.res === 'ok' && !q.assisted];
-      if (q.world) abPushEvidence(st, ctx, q.world, row);
+      if (q.world) abPushEvidence(st, ctx, q.world, row,abLevel(q),key);
       it.rec = { ev: q.world ? abClone(row) : null, key, due: p.res === 'no' ? p.qid : null };
       abPushAttempt(st, { day: p.day, skill: q.world, level: abLevel(q), attempt: 1, ok: p.res !== 'no', help: p.res === 'help', sheet: key });
       it.res = p.res;
@@ -242,7 +269,7 @@ function abGaps(st, list, now) {
   if (!order.length) return;
   const b = st.gaps && typeof st.gaps === 'object' ? st.gaps : {};
   const copy = (o) => Object.fromEntries(Object.entries(o && typeof o === 'object' ? o : {}));   // own keys only, safe for any name
-  const g = { closed: copy(b.closed), active: b.active === undefined ? null : b.active, hold: copy(b.hold) };
+  const g = { ...b, closed: copy(b.closed), active: b.active === undefined ? null : b.active, hold: copy(b.hold) };
   for (const e of order) {
     const p = e.payload, s = p.standard;
     if (e.type === 'gap_active') { g.active = s; continue; }
@@ -274,18 +301,23 @@ function abGaps(st, list, now) {
 export function derive(events, { now, base } = {}) {
   if (now === undefined || now === null) throw new Error('derive: "now" is missing');
   const st = Object.assign({ attempts: [], ev: {}, due: [], total: 0, badges: {}, tried: [], treeStage: 0, sheets: [], sheetNo: 0, _days: [] }, base ? abClone(base.state) : {});
-  const ctx = { days: new Set(st._days) };
+  const ctx = { days: new Set(st._days), gapSchool:{...(st.gaps?.school||{})},gapAsOf:st.gaps?.schoolAsOf||'',gapClosed:{...(st.gaps?.closed||{})},gapHold:{...(st.gaps?.hold||{})} };
   let list = mergeLog([Array.isArray(events) ? events : []], now).events;
   if (base) {
     const upTo = effectiveTime(base.upTo, now);
     if (Number.isNaN(upTo)) throw new Error('derive: base.upTo is not a UTC time');
     list = list.filter((e) => effectiveTime(e.at, now) > upTo);
   }
+  // A received school's rating is applicable by assessment day, even when the
+  // other device's event clock is ahead. No timestamps or wire data are changed.
+  for(const e of list)if(e.type==='school_import'&&e.payload.data.asOf===e.payload.asOf&&Array.isArray(e.payload.data.tasks)&&e.payload.asOf>=ctx.gapAsOf){ctx.gapAsOf=e.payload.asOf;ctx.gapSchool=gapSchoolRatings(e.payload.data);}
+  if(ctx.gapAsOf){st.gaps ||= {closed:{},active:null,hold:{}};st.gaps.school=ctx.gapSchool;st.gaps.schoolAsOf=ctx.gapAsOf;gapProjectSource(st.gaps,ctx.gapSchool);}
   for (const e of list) abApply(st, ctx, e);
   for (const e of Object.values(lastWins(list, now))) abApplyWinner(st, e);
   abChecklistSize(st, list);
   abLists(st, list, now);
   abGaps(st, list, now);
+  if(ctx.gapAsOf&&st.gaps)gapProjectSource(st.gaps,ctx.gapSchool);
   st.treeStage = Math.max(st.treeStage || 0, abStage(ctx.days.size));         // the tree only grows (index.html keeps the highest stage)
   st._days = [...ctx.days].sort();
   return st;

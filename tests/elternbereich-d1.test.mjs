@@ -28,7 +28,7 @@ const SCHULE = { version: 1, kinder: { mia: { asOf: tag(-1), tasks: [
   { day: tag(-20), area: 'math', title: 'Check B', std: { 'M-N1': 'RS', 'M-N3': 'M' }, quests: ['numbers', 'round'], focusNext: [], good: txt('b', 'b'), next: txt('', '') },
   { day: tag(-5), area: 'science', title: 'Forces', std: { 'S-F1': 'M' }, quests: ['forces'], focusNext: ['forces'], good: txt('c', 'c'), next: txt('Begründen.', 'Explain.') }
 ] } } };
-const HAKEN = (app) => app.replace(/\}\)\(\);\s*<\/script>/, 'window.__g={openGaps,activeGap,focusAuto,focusTopics,setFocusMode,assessQuest};})();</script>');
+const HAKEN = (app) => app.replace(/\}\)\(\);\s*<\/script>/, 'window.__g={openGaps,activeGap,focusAuto,focusTopics,setFocusMode,assessQuest,recordAnswer};})();</script>');
 
 let browser, server;
 before(async () => {
@@ -48,7 +48,7 @@ const setze = (page, daten) => page.evaluate(([ns, d]) => { for (const [k, v] of
 const lies = (page, k) => page.evaluate(([ns, key]) => JSON.parse(localStorage.getItem(ns + key) || 'null'), [NS(), k]);
 const lage = (page) => page.evaluate(() => { const G = window.__g, a = G.activeGap(); return { offen: G.openGaps().map((g) => g.s + ':' + g.st + ':' + g.quests.join('+')), aktiv: a && a.s, fokus: G.focusAuto() }; });
 
-test('T14 gaps: which quests, one active, order, focus, closing only when confirmed, closed stays closed, reopening, chosen by parents, manual untouched', async () => {
+test('T14 gaps: which quests, one active, order, focus, reaching secure before the following six close, closed stays closed, reopening, chosen by parents, manual untouched', async () => {
   const { ctx, page, fehler } = await oeffnen(browser, server);
   await anmelden(page, 'student', 'mia', C.mia); await passwortSetzen(page, 'Tiger-Lamp-River-4271');
   await page.waitForSelector('#home:not([hidden])');
@@ -58,14 +58,16 @@ test('T14 gaps: which quests, one active, order, focus, closing only when confir
   assert.equal(l.aktiv, 'M-N1');
   assert.ok(l.fokus.includes('numbers') && l.fokus.includes('forces'), 'active gap and the teacher\'s next step in the focus');
   assert.ok(!l.fokus.includes('detective') && !l.fokus.includes('combos'), 'waiting gaps are not in the focus');
-  // provisionally secure: does not close
-  await setze(page, uebung('numbers', 10, [1, 2, 3]));
-  assert.equal((await page.evaluate(() => window.__g.assessQuest('numbers'))).sure, 'provisional');
-  assert.equal((await lage(page)).offen.length, 3, 'provisional "secure" is not enough');
-  // confirmed secure: closed by the app, the next gap becomes active
-  await setze(page, uebung('numbers', 24, [1, 3, 5, 8, 12, 16]));
+  // Five own answers: the weak school fallback still applies, so the gap stays open
+  await setze(page, uebung('numbers', 5, [0]));
+  assert.equal((await page.evaluate(() => window.__g.assessQuest('numbers'))).sure, 'few');
+  assert.equal((await lage(page)).offen.length, 3, 'fewer than six answers retain the weak school status');
+  // Six same-day L2 successes reach M; six following responses are still required
+  await setze(page, uebung('numbers', 6, [0]));
   const a = await page.evaluate(() => window.__g.assessQuest('numbers'));
-  assert.equal(a.sure, 'confirmed'); assert.ok(['m', 'e'].includes(a.level));
+  assert.equal(a.sure, 'few'); assert.ok(['m', 'e'].includes(a.level));
+  assert.equal((await lage(page)).offen.length,3,'M alone leaves the gap open');
+  await page.evaluate(()=>{for(let i=0;i<6;i++)window.__g.recordAnswer({world:'numbers',level:2},true);});
   l = await lage(page);
   assert.deepEqual(l.offen, ['M-N2:C:detective', 'M-N4:C:combos+wordprob']); assert.equal(l.aktiv, 'M-N2');
   assert.ok(l.fokus.includes('detective'));
@@ -80,6 +82,7 @@ test('T14 gaps: which quests, one active, order, focus, closing only when confir
   assert.equal(l.aktiv, 'M-N4'); assert.ok(l.fokus.includes('combos') && l.fokus.includes('wordprob'), 'both quests of the active gap in the focus');
   assert.ok(!l.fokus.includes('detective'), 'the other gap waits');
   await setze(page, uebung('wordprob', 24, [1, 3, 5, 8, 12, 16]));
+  await page.evaluate(()=>{for(let i=0;i<6;i++)window.__g.recordAnswer({world:'wordprob',level:2},true);});
   l = await lage(page);
   assert.deepEqual(l.offen, ['M-N2:C:detective'], 'one confirmed quest closed the gap of its standard');
   assert.equal((await lies(page, 'gaps')).closed['M-N4'].quest, 'wordprob');
@@ -106,15 +109,17 @@ test('T14 a teacher looking through a grant writes nothing; parents see the gap 
   // numbers would be closed by the app (confirmed secure), nothing stored yet
   await setze(page, { ...uebung('numbers', 24, [1, 3, 5, 8, 12, 16]), gaps: null,
     grants: [{ id: 'g1', grantee: ID('frau'), scope: ['learning', 'school'], from: tag(0), until: tag(10), by: ID('papa') }] });
+  await page.evaluate(()=>{for(let i=0;i<6;i++)window.__g.recordAnswer({world:'numbers',level:2},true);});
+  const beforeGrant=await lies(page,'gaps');
   await page.locator('#adultBtn').click();
   await anmelden(page, 'adult', 'frau', C.frau); await passwortSetzen(page, 'Moon-Glass-Paper-8812');
   await page.waitForSelector('#parentClose');
   await page.locator('[data-psubj="maths"]').click(); await page.waitForSelector('#pBack');
-  assert.equal(await lies(page, 'gaps'), null, 'teacher: nothing written');
+  assert.deepEqual(await lies(page, 'gaps'),beforeGrant,'teacher: render does not persist computed closure or move the gap');
   assert.ok(!(await page.locator('.pquest', { has: page.locator('.pqn', { hasText: 'Time & Numbers' }) }).innerText()).includes('Lücke'), 'teacher view: numbers is (computed) closed already');
   await page.locator('#parentClose').click(); await page.waitForSelector('#home:not([hidden])');
   // parents (no new confirmed answers): nothing was stored by the teacher, so numbers is an open gap; tags at the quests
-  await setze(page, { attempts: [], ev: {} });
+  await setze(page, { attempts: [], ev: {},gaps:null });
   await page.locator('#adultBtn').click();
   await anmelden(page, 'adult', 'papa', C.papa); await passwortSetzen(page, 'Moon-Glass-Paper-8812');
   await page.waitForSelector('#parentClose');
