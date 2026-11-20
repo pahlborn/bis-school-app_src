@@ -25,6 +25,10 @@ export const RELEASE_NOTES = {
       {
         de: 'Nach dem Upgrade werden zuvor übersprungene Schulbewertungen beim Abgleich nachgeholt.',
         en: 'After an upgrade, sync recovers previously skipped school evaluations.'
+      },
+      {
+        de: 'Unter „Weiteres Gerät verbinden“ lässt sich der Verbindungslink mit „Link kopieren“ übernehmen.',
+        en: 'Under “Connect another device”, the connection link can be copied with “Copy link”.'
       }
     ]
   },

@@ -112,6 +112,40 @@ test('Browser: Kind anlegen -> Start-QR-Code -> Kind startet sofort; Schluessel 
   // ⚙ "Meine Geraete" -> Zugang neu absichern: Felder fuer den Passwortspeicher
   await P.page.locator('details.psec[data-psec="devices"] > summary').click();
   assert.match(await P.page.locator('details.psec[data-psec="devices"]').textContent(), /Meine Geräte[\s\S]*\(dieses Gerät\)[\s\S]*Zugang neu absichern[\s\S]*anderen Geräten melden Sie sich danach mit dem neuen Passwort neu an/);
+  // Device handoff shows a copyable link AND the same exact URL inside its QR graphic.
+  // This works for another browser/WebView on the same tablet, not only a second screen.
+  await P.page.locator('#kVerbindenQr').click();
+  await P.page.locator('#kVerbQr svg').waitFor();
+  // On a tablet the copy action must appear before the large QR, without requiring
+  // the parent to discover content hidden below the QR image.
+  assert.equal(await P.page.locator('#kVerbLink').count(), 1, 'PR194: device connection link control exists');
+  assert.equal(await P.page.locator('#kVerbLink').evaluate(e => e.readOnly), true);
+  assert.equal(await P.page.locator('#kVerbCopyStatus').getAttribute('role'), 'status');
+  const linkBox = await P.page.locator('#kVerbLink').boundingBox();
+  const qrBox = await P.page.locator('#kVerbQr').boundingBox();
+  assert.ok(linkBox && qrBox && linkBox.y < qrBox.y, 'device link appears above QR');
+  const deviceLink = await P.page.locator('#kVerbLink').inputValue();
+  assert.ok(deviceLink === anmEinladungslink(server.url, { zugang: TOKEN }), 'device link uses the existing invitation URL');
+  assert.ok(new URL(deviceLink).hash.startsWith('#zugang='), 'device link has the existing access fragment');
+  const qrPath = await P.page.locator('#kVerbQr path').getAttribute('d');
+  assert.equal(qrPath, /<path fill="#000" d="([^"]*)"/.exec(qrSvg(deviceLink, { ecc: 'M', rand: 4 }))[1]);
+  // Deterministic Clipboard API probes: no real clipboard permission is assumed.
+  for (const mode of ['success', 'missing', 'rejected']) {
+    await P.page.evaluate(mode => {
+      window.__pr194Copied = null;
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: mode === 'missing' ? undefined : {
+        writeText: text => mode === 'rejected' ? Promise.reject(new Error('synthetic clipboard refusal')) : (window.__pr194Copied = text, Promise.resolve())
+      } });
+      document.querySelector('#kVerbCopyStatus').textContent = '';
+    }, mode);
+    await P.page.locator('#kVerbCopy').click();
+    const expected = mode === 'success' ? 'Link kopiert.' : 'Link ist markiert: Kopieren wählen.';
+    await P.page.waitForFunction(expected => document.querySelector('#kVerbCopyStatus')?.textContent === expected, expected);
+    assert.equal(await P.page.locator('#kVerbLink').evaluate(e => document.activeElement === e && e.selectionStart === 0 && e.selectionEnd === e.value.length), true, 'copy action selects the full link');
+    if (mode === 'success') assert.equal(await P.page.evaluate(() => window.__pr194Copied === document.querySelector('#kVerbLink').value), true, 'Clipboard API receives the visible link');
+  }
+  await P.page.locator('#kBack').click();
+
   await P.page.locator('#kErneuern').click();
   await P.page.waitForSelector('#kErnForm');
   assert.match(await P.page.locator('#aboutBody').textContent(), /Zugang neu absichern[\s\S]*Wiederherstellungscode[\s\S]*anderen Geräten melden Sie sich danach mit dem neuen Passwort neu an/);

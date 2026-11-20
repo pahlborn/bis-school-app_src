@@ -5772,7 +5772,7 @@ function kontoBlattHTML(){
   if(b.art==='verbinden'){
     const z=anmZugangscode(KONTO_SPEICHER, localStorage); if(!z) return back;
     const link=anmEinladungslink(location.href, {zugang:z});
-    return back+`<h2 class="psubjtitle">📲 ${de?'Weiteres Gerät verbinden':'Connect another device'}</h2><p class="small">${de?'Auf dem anderen Gerät Big Quest öffnen und „📷 QR-Code scannen“ tippen – auch in der App auf dem Home-Bildschirm. Danach melden Sie sich dort mit Ihrem Namen und Passwort an. Der Code verbindet nur das Gerät; er ist nicht Ihr Passwort. Nur persönlich zeigen.':'On the other device, open Big Quest and tap “📷 Scan QR code” – in the Home Screen app, too. Then log in there with your name and password. The code only connects the device; it is not your password. Show it in person only.'}</p><div class="kqr" id="kVerbQr">${anmQr(link, de?'Gerät verbinden':'Connect device')}</div>`;
+    return back+`<h2 class="psubjtitle">📲 ${de?'Weiteres Gerät verbinden':'Connect another device'}</h2><p class="small">${de?'Auf dem anderen Gerät Big Quest öffnen und „📷 QR-Code scannen“ tippen – auch in der App auf dem Home-Bildschirm. Danach melden Sie sich dort mit Ihrem Namen und Passwort an. Der Code verbindet nur das Gerät; er ist nicht Ihr Passwort. Nur persönlich zeigen.':'On the other device, open Big Quest and tap “📷 Scan QR code” – in the Home Screen app, too. Then log in there with your name and password. The code only connects the device; it is not your password. Show it in person only.'}</p><p class="small">${de?'Auf demselben Gerät: Link kopieren und in Big Quest einfügen.':'On the same device: copy the link and paste it into Big Quest.'}</p><div class="field"><label for="kVerbLink">${de?'Verbindungslink':'Device connection link'}</label><input id="kVerbLink" readonly value="${esc(link)}" autocomplete="off"></div><p><button type="button" class="btn small" id="kVerbCopy">${de?'Link kopieren':'Copy link'}</button></p><p id="kVerbCopyStatus" class="small" role="status"></p><div class="kqr" id="kVerbQr">${anmQr(link, de?'Gerät verbinden':'Connect device')}</div>`;
   }
   if(b.art==='wegkind') return back+`<h2 class="psubjtitle">${de?'Gerät entfernen':'Remove device'}</h2><p>${de?`„${esc(b.gname)}“ von ${esc(b.name)} entfernen? Was dieses Gerät danach schickt, zählt nicht mehr.`:`Remove “${esc(b.gname)}” of ${esc(b.name)}? Whatever this device sends afterwards no longer counts.`}</p><p><button type="button" class="btn primary" id="kWegJa">${de?'Entfernen':'Remove'}</button></p>${msg}`;
   if(b.art==='frageneu') return `<h2 class="psubjtitle">${de?`Jetzt neues Passwort für ${esc(b.name)}?`:`New password for ${esc(b.name)} now?`}</h2><p>${de?`Das Gerät ist entfernt. Bis ${esc(b.name)} ein neues Passwort hat, kann es noch lesen, was es schon hatte. Mit dem neuen Passwort ist auch das vorbei; der Lernstand bleibt erhalten.`:`The device is removed. Until ${esc(b.name)} has a new password, it can still read what it already had. A new password ends that; the progress stays.`}</p><p><button type="button" class="btn primary" id="kNeuJa">${de?'Ja, Start-QR-Code zeigen':'Yes, show start QR code'}</button> <button type="button" class="btn" id="kNeuSpaeter">${de?'Später':'Later'}</button></p>${msg}`;
@@ -5925,6 +5925,15 @@ function kontoBinden(body){
   an('#kAdminElternEinladen',()=>kontoBlattZeigen({art:'adminEltern'}));
   an('#kErneuern',()=>kontoBlattZeigen({art:'erneuern'}));
   an('#kVerbindenQr',()=>kontoBlattZeigen({art:'verbinden'}));
+  an('#kVerbCopy',()=>{
+    const input=body.querySelector('#kVerbLink'), status=body.querySelector('#kVerbCopyStatus');
+    if(!input) return;
+    input.focus(); input.select();
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(input.value).then(()=>{ if(status) status.textContent=PL()==='de'?'Link kopiert.':'Link copied.'; },
+        ()=>{ if(status) status.textContent=PL()==='de'?'Link ist markiert: Kopieren wählen.':'Link selected: choose Copy.'; });
+    } else if(status) status.textContent=PL()==='de'?'Link ist markiert: Kopieren wählen.':'Link selected: choose Copy.';
+  });
   body.querySelectorAll('[data-kneu]').forEach(b=>b.addEventListener('click',()=>{ if(parentAccess) kontoKindNeuStarten(b.dataset.kneu); }));
   body.querySelectorAll('[data-kzurueck]').forEach(b=>b.addEventListener('click',()=>{ if(!parentAccess) return; const id=b.dataset.kzurueck; kontoSchritt(null, async()=>{ const z=kontoZugang(); await anmZurueckziehen({zugang:z, ablage:localStorage, konto:kontoIch(), id, now:Date.now()}); await kontoAbgleich(); renderSheets(); }); }));
   body.querySelectorAll('[data-kweg]').forEach(b=>b.addEventListener('click',()=>{
@@ -6286,7 +6295,7 @@ function schoolEvaluationTarget(){
 let schoolEvaluationCapture=null;
 function schoolDocumentNew(){ return {area:'',goal:'',instructions:'',feedback:'',criteria:[{criterion:'',rating:'',evidence:'',standard:'none'}]}; }
 function schoolEvaluationNew(target){
-  return {child:target.id,author:target.author,title:'',day:'',assessment:schoolDocumentNew(),standardOverrides:{},
+  return {child:target.id,author:target.author,title:'',day:'',assessment:schoolDocumentNew(),standardOverrides:{},touched:[false],
     evaluation:crypto.randomUUID(),revision:crypto.randomUUID(),preview:false};
 }
 function schoolEvaluationPayload(d){
@@ -6300,6 +6309,24 @@ function schoolEvaluationPayload(d){
 function schoolDocumentAreaText(code,de){
   const info=schoolStandardInfo(code);
   return info?info.text[de?'de':'en']+(info.quests.length?'':' · '+schoolStandardNoQuest(de)):(de?'Kein passender Bereich':'No matching area');
+}
+function schoolNativeBridge(){ return window.webkit?.messageHandlers?.bigQuestEvaluation||null; }
+function schoolCatalogPayload(){
+  return Object.entries(SCHOOL_STANDARD_CATALOG).map(([code,entry])=>({code,subject:entry.subject,de:entry.text.de,en:entry.text.en,quest:entry.quests.length>0}));
+}
+/* A captured source may only enter the untouched-by-AI new document draft of this very parent/child. */
+function schoolDraftAcceptsSource(d,target){
+  return !!d && d.child===target.id && d.author===target.author && !!d.assessment && !d.preview && !d.busy && !d.extracted && !d.withdrawn && !d.base && !d.resolves;
+}
+/* The native shell alone supplies the wording of its import button (window.bigQuestNativeImport.label = {de,en}); a plain browser has none. */
+function schoolNativeImportLabel(de){
+  const label=window.bigQuestNativeImport?.label, text=label && typeof label==='object' ? label[de?'de':'en'] : '';
+  return typeof text==='string' && text.length>0 && text.length<=40 ? text : '';
+}
+function schoolNativeImportControl(d,de){
+  const label=schoolNativeImportLabel(de);
+  if(!label || !schoolNativeBridge() || !d.assessment || d.preview || d.busy || d.extracted || d.withdrawn || d.base || d.resolves) return '';
+  return `<p><button type="button" class="btn small" data-eval-action="import">${esc(label)}</button></p>`;
 }
 function schoolDocumentHTML(d,target){
   const de=PL()==='de', lang=de?'de':'en', doc=d.assessment, area=schoolArea(doc.area,schoolTexts(de));
@@ -6355,6 +6382,7 @@ function schoolDocumentHTML(d,target){
     <button class="btn small" type="button" data-eval-action="edit">${de?'Bearbeiten':'Edit'}</button>`;
   return `<div id="pSchoolEvaluation"><form class="login-form pseval-document"><h3>${de?'Evaluation übernehmen':'Bring in an evaluation'}</h3><p class="pseval-child"><b>${de?'Kind':'Child'}: ${esc(target.name)}</b></p>
     ${d.preview?preview:`${d.source?`<details${d.extracted?'':' open'}><summary>${de?'Erfasster Evaluationstext':'Captured evaluation text'}</summary><p>${de?'Prüfen Sie den Text vor dem Senden an Claude. Entfernen Sie Namen und andere persönliche Angaben.':'Check the text before sending it to Claude. Remove names and other personal details.'}</p><label>${de?'Quelltext':'Source text'}<textarea name="source"${d.busy||d.extracted?' readonly':''}>${esc(d.source)}</textarea></label></details><button class="btn" type="button" data-eval-action="ai"${d.busy||d.extracted?' disabled':''}>${d.busy?(de?'Claude verarbeitet …':'Claude is processing …'):(de?'Mit Claude ins Formular übertragen':'Fill the form with Claude')}</button>`:''}
+    ${schoolNativeImportControl(d,de)}
     <fieldset class="pseval-fields"${d.busy?' disabled':''}><legend class="sr-only">${de?'Angaben der Evaluation':'Evaluation details'}</legend>
     ${field('title',de?'Titel der Evaluation':'Evaluation title',d.title)}${field('day',de?'Bewertungsdatum':'Assessment date',d.day,'date')}
     <label>${de?'Fach':'Subject'}<select name="doc-area" aria-label="${de?'Fach':'Subject'}" required><option value="">${de?'Bitte auswählen':'Please select'}</option>${SUBJECTS.map(s=>`<option value="${s.key}"${doc.area===s.key||doc.area==='math'&&s.key==='maths'?' selected':''}>${esc(schoolArea(s.key,schoolTexts(de)))}</option>`).join('')}</select></label>
@@ -6363,25 +6391,40 @@ function schoolDocumentHTML(d,target){
     <button class="btn" type="submit">${de?'Vorschau anzeigen':'Show preview'}</button></fieldset>`}
     <button class="btn small" type="button" data-eval-action="cancel">${de?'Abbrechen':'Cancel'}</button>${d.error?`<p role="alert">${esc(d.error)}</p>`:''}</form></div>`;
 }
-/* The native shell already calls context()/source(). Only the shared draft is filled;
+/* The native shell calls context()/source() (the web form starts the native source reader). Only the shared draft is filled;
    no storage and no native URL, frame, origin or credential policy changes. */
 Object.defineProperty(window,'bigQuestEvaluationForm',{value:Object.freeze({
   context(){
-    const target=schoolEvaluationTarget();
-    if(!target || schoolEvaluationDraft) return null;
-    const token=crypto.randomUUID(); schoolEvaluationCapture={...target,token}; return token;
+    const target=schoolEvaluationTarget(), draft=schoolEvaluationDraft;
+    if(!target || draft && !schoolDraftAcceptsSource(draft,target)) return null;
+    const token=crypto.randomUUID(); schoolEvaluationCapture={...target,token,draft:draft||null}; return token;
   },
   source(context,transfer,source){
-    const target=schoolEvaluationTarget(), capture=schoolEvaluationCapture;
-    if(!target || !capture || capture.token!==context || capture.id!==target.id || capture.author!==target.author) return 'invalid';
-    if(schoolEvaluationDraft) return 'busy';
+    const target=schoolEvaluationTarget(), capture=schoolEvaluationCapture, draft=schoolEvaluationDraft;
+    if(!target || !capture || typeof context!=='string' || capture.token!==context || capture.id!==target.id || capture.author!==target.author) return 'invalid';
     if(typeof transfer!=='string' || !transfer || typeof source!=='string' || !source.trim() || new TextEncoder().encode(source).length>48000) return 'invalid';
+    if(capture.draft){
+      /* Bound to the exact draft that existed when the capture began; nothing is stored here. */
+      if(draft!==capture.draft || !schoolDraftAcceptsSource(draft,target)) return 'invalid';
+      schoolEvaluationCapture=null; draft.source=source; draft.error='';
+      state.psubj=null; state.pview=null; state.popen=uniq([...(state.popen||[]),'school']); renderSheets();
+      $('#pSchoolEvaluation [name="source"]')?.focus(); return 'opened';
+    }
+    if(draft) return 'busy';
     schoolEvaluationCapture=null;
     schoolEvaluationDraft={...schoolEvaluationNew(target),source};
     state.psubj=null; state.pview=null; state.popen=uniq([...(state.popen||[]),'school']); renderSheets();
     $('#pSchoolEvaluation [name="source"]')?.focus(); return 'opened';
   }
 })});
+/* EV6: calm notice when stored criteria without an area now have a proposal; computed on read, nothing stored. */
+function schoolEvaluationRemapHTML(target,de){
+  const list=evUebRemapCandidates(schoolFromAccount(target.id)?.tasks||[]);
+  if(!list.length) return '';
+  return `<section data-eval-remap role="status"><h4>${de?'Neue Zuordnungen möglich':'New mappings available'}</h4>
+    <p class="small">${de?'Für diese Evaluationen passen jetzt Bereiche zu bisher nicht zugeordneten Kriterien. Sie sehen zuerst eine Vorschau; gespeichert wird erst nach Ihrer Bestätigung.':'Learning areas now fit criteria that had none. You see a preview first; nothing is saved until you confirm.'}</p>
+    <ul>${list.map(c=>`<li>${esc(c.title)} · ${fmtDay(c.day)} <button type="button" class="btn small" data-eval-action="remap" data-eval-id="${esc(c.evaluation)}">${de?'Zuordnungen prüfen':'Review mappings'}</button></li>`).join('')}</ul></section>`;
+}
 function schoolEvaluationHTML(){
   const target=schoolEvaluationTarget();
   if(!target) return '';
@@ -6393,7 +6436,7 @@ function schoolEvaluationHTML(){
     ? `<p role="status">${schoolEvaluationSyncHTML(schoolEvaluationNotice.revision,anmSchuleAbgeglicheneRevisionen(localStorage, target.id),de)}</p>` : '';
   const criteria=de?STANDARD_TEXT:STANDARD_TEXT_EN;
   const start=`<button type="button" class="btn small" data-eval-action="open">${de?'Evaluation hinzufügen':'Add assessment'}</button>`;
-  if(!d) return `<div id="pSchoolEvaluation">${start}${status}</div>`;
+  if(!d) return `<div id="pSchoolEvaluation">${start}${status}${schoolEvaluationRemapHTML(target,de)}</div>`;
   const cancel=`<button type="button" class="btn small" data-eval-action="cancel">${de?'Abbrechen':'Cancel'}</button>`;
   const child=`<p><b>${de?'Kind':'Child'}</b> · ${esc(target.name)}</p>`;
   const error=d.error?`<p role="alert">${esc(d.error)}</p>`:'';
@@ -6448,18 +6491,39 @@ function bindSchoolEvaluation(body){
     const remove=e.target.closest('[data-doc-remove]');
     if(remove && current()?.assessment && !current().preview && !current().busy){
       const d=current(), i=Number(remove.dataset.docRemove);
-      if(d.assessment.criteria.length>1) d.assessment.criteria.splice(i,1);
+      if(d.assessment.criteria.length>1){ d.assessment.criteria.splice(i,1); if(Array.isArray(d.touched)) d.touched.splice(i,1); }
       d.standardOverrides={}; redraw(); body.querySelector('[data-eval-action="add-criterion"]')?.focus(); return;
     }
     const action=e.target.closest('[data-eval-action]')?.dataset.evalAction, t=schoolEvaluationTarget();
     if(!action || !t) return;
+    if(action==='remap'){
+      // Same revision draft as an ordinary correction: same evaluation id, base = active revision, preview only.
+      if(schoolEvaluationDraft) return;
+      const id=e.target.closest('[data-eval-action]').dataset.evalId;
+      const tasks=schoolFromAccount(t.id)?.tasks||[], cand=evUebRemapCandidates(tasks).find(c=>c.evaluation===id);
+      const m=cand && tasks.find(x=>x.manual?.evaluation===id)?.manual, p=m && m.history.find(x=>x.revision===m.revision);
+      if(!p?.assessment) return;
+      schoolEvaluationNotice=null;
+      schoolEvaluationDraft={child:t.id,author:t.author,evaluation:m.evaluation,revision:crypto.randomUUID(),
+        base:m.revision,resolves:null,title:p.title,day:p.day,standard:p.standard,rating:p.rating,focus:false,preview:true,withdrawn:false,
+        assessment:evUebApplyCandidate(p.assessment,cand.rows),
+        ...(p.standardOverrides?{standardOverrides:{...p.standardOverrides}}:{})};
+      redraw(); body.querySelector('#pSchoolEvaluation button[type="submit"]')?.focus(); return;
+    }
+    if(action==='import'){
+      const d=current(), bridge=schoolNativeBridge();
+      if(!d || !bridge || !schoolNativeImportLabel(PL()==='de') || !schoolDraftAcceptsSource(d,t)) return;
+      try { await bridge.postMessage({action:'import'}); }
+      catch(error){ if(current()===d){ d.error=error?.message||String(error); redraw(); } }
+      return;
+    }
     if(action==='open'){
       schoolEvaluationNotice=null;
       schoolEvaluationCapture=null; schoolEvaluationDraft=schoolEvaluationNew(t);
     } else if(action==='add-criterion' && current()?.assessment && !current().preview && !current().busy){
       const criteria=current().assessment.criteria, criterion=schoolDocumentNew().criteria[0];
       if(!criteria.some(c=>Object.hasOwn(c,'standard'))) delete criterion.standard;
-      if(criteria.length<SCHOOL_EVALUATION_CRITERIA_MAX) criteria.push(criterion);
+      if(criteria.length<SCHOOL_EVALUATION_CRITERIA_MAX){ const d=current(); d.touched=criteria.map((_,k)=>evUebTouched(d.touched,k)); criteria.push(criterion); d.touched.push(false); }
     } else if(action==='map-criteria' && current()?.assessment && !current().preview && !current().busy){
       const d=current(); d.assessment.criteria.forEach(c=>c.standard='none');
       if(d.assessment.area==='math') d.assessment.area='maths';
@@ -6471,11 +6535,15 @@ function bindSchoolEvaluation(body){
       try {
         const bridge=window.webkit?.messageHandlers?.bigQuestEvaluation;
         if(!bridge) throw new Error(PL()==='de'?'KI-Übernahme ist in der iPad-Test-App verfügbar. Die manuelle Eingabe funktioniert hier.':'AI entry is available in the iPad test app. Manual entry works here.');
+        Promise.resolve(bridge.postMessage({action:'catalog',catalog:schoolCatalogPayload()})).catch(()=>{});
         const result=await bridge.postMessage({source:submitted});
         if(current()!==d || d.source!==submitted) return;
         if(!result || ['title','date','goal','instructions','feedback'].some(key=>typeof result[key]!=='string') || !Array.isArray(result.criteria) || !result.criteria.length || result.criteria.length>SCHOOL_EVALUATION_CRITERIA_MAX || result.criteria.some(c=>!c || typeof c.criterion!=='string' || !c.criterion.trim() || c.criterion.length>2000 || !['','RS','C','M','E'].includes(c.rating) || typeof c.evidence!=='string' || c.evidence.length>4000)) throw new Error(PL()==='de'?'Ungültiger KI-Entwurf.':'Invalid AI draft.');
+        if(result.criteria.some(c=>Object.hasOwn(c,'standard') && (typeof c.standard!=='string' || c.standard!=='none' && !Object.hasOwn(SCHOOL_STANDARD_CATALOG,c.standard)))) throw new Error(PL()==='de'?'Ungültiger KI-Entwurf.':'Invalid AI draft.');
         d.title=result.title||'';d.day=result.date||'';
-        d.assessment={area:d.assessment.area,goal:result.goal||'',instructions:result.instructions||'',feedback:result.feedback||'',criteria:result.criteria.map(c=>({criterion:c.criterion,rating:c.rating,evidence:c.evidence,standard:schoolStandardInfo(c.standard)?c.standard:'none'}))};
+        const nativeRows=evUebApplyNative(d.assessment.criteria,d.touched,result.criteria,{parsed:evUebParseStandards(submitted),knownMappings:evUebKnownMappings(schoolFromAccount(d.child)?.tasks)});
+        d.assessment={area:d.assessment.area,goal:result.goal||'',instructions:result.instructions||'',feedback:result.feedback||'',criteria:nativeRows.criteria};
+        d.touched=nativeRows.touched;
         d.extracted=true;
         d.standardOverrides={};
         d.error=PL()==='de'?'Bitte Fach, Angaben und Einstufungen prüfen. Fehlende Einstufungen bleiben offen.':'Check the subject, details and ratings. Missing ratings stay empty.';
@@ -6494,12 +6562,21 @@ function bindSchoolEvaluation(body){
       if(e.target.dataset.docStandard!==undefined){
         d.assessment.criteria.forEach(c=>{if(!Object.hasOwn(c,'standard')) c.standard='none';});
         d.assessment.criteria[Number(e.target.dataset.docStandard)].standard=e.target.value; d.standardOverrides={};
+        const k=Number(e.target.dataset.docStandard);
+        d.touched=d.assessment.criteria.map((_,j)=>j===k||evUebTouched(d.touched,j));
         const description=box.querySelector(`[data-doc-area-info="${e.target.dataset.docStandard}"]`);
         if(description) description.textContent=schoolDocumentAreaText(e.target.value,PL()==='de');
       }
       if(e.target.dataset.docCriterion!==undefined){
         const row=d.assessment.criteria[Number(e.target.dataset.docCriterion)];
         row.criterion=e.target.value; row.evidence='';
+        const k=Number(e.target.dataset.docCriterion);
+        if(Object.hasOwn(row,'standard') && !evUebTouched(d.touched,k)){
+          const code=evUebSuggestFor(schoolFromAccount(d.child)?.tasks,row.criterion);
+          if(code!==row.standard){ row.standard=code; d.standardOverrides={}; }
+          const select=box.querySelector(`[data-doc-standard="${k}"]`); if(select) select.value=code;
+          const info=box.querySelector(`[data-doc-area-info="${k}"]`); if(info) info.textContent=schoolDocumentAreaText(code,PL()==='de');
+        }
         e.target.closest('fieldset')?.querySelector('details')?.remove();
       }
       if(e.target.dataset.docRating!==undefined){

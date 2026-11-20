@@ -148,9 +148,14 @@ enum ClaudeKey {
 enum BigQuestBridgePolicy {
     private static func pageScope(_ address: URL?) -> String? {
         guard let address, address.scheme == "https", address.host == "big-quest-test.github.io",
-              address.port == nil || address.port == 443 else { return nil }
+              address.port == nil || address.port == 443,
+              address.user == nil, address.password == nil else { return nil }
+        guard let path = URLComponents(url: address, resolvingAgainstBaseURL: false)?.percentEncodedPath else { return nil }
+        // The complete app root reuses the device-credential scope of the first full-app probe
+        // (same origin, same stored device access). Exact root paths only, no query/fragment.
+        if address.query == nil, address.fragment == nil, ["/", "/index.html"].contains(path) { return "probe-evaluation-form" }
         for scope in ["probe-evaluation-form", "probe-evaluation-local"] {
-            if ["/" + scope, "/" + scope + "/", "/" + scope + "/index.html"].contains(address.path) { return scope }
+            if ["/" + scope, "/" + scope + "/", "/" + scope + "/index.html"].contains(path) { return scope }
         }
         return nil
     }
@@ -162,6 +167,33 @@ enum BigQuestBridgePolicy {
               originPort == 0 || originPort == 443,
               let scope = pageScope(frame), scope == pageScope(active) else { return nil }
         return scope
+    }
+}
+
+// Approved learning-area catalog. The web module is the single source; native only validates and forwards it.
+struct StandardCatalogEntry: Equatable {
+    let code: String
+    let subject: String
+    let de: String
+    let en: String
+    let hasQuest: Bool
+}
+
+enum StandardCatalog {
+    static let maxEntries = 64
+    static func parse(_ raw: Any?) -> [StandardCatalogEntry]? {
+        guard let list = raw as? [[String: Any]], (1...maxEntries).contains(list.count) else { return nil }
+        var seen = Set<String>()
+        var entries: [StandardCatalogEntry] = []
+        for item in list {
+            guard let code = item["code"] as? String, let subject = item["subject"] as? String,
+                  let de = item["de"] as? String, let en = item["en"] as? String, let quest = item["quest"] as? Bool,
+                  code != "none", code.range(of: "^[A-Za-z0-9][A-Za-z0-9_-]{0,15}$", options: .regularExpression) != nil,
+                  (1...40).contains(subject.count), (1...300).contains(de.count), (1...300).contains(en.count),
+                  seen.insert(code).inserted else { return nil }
+            entries.append(StandardCatalogEntry(code: code, subject: subject, de: de, en: en, hasQuest: quest))
+        }
+        return entries
     }
 }
 
@@ -235,6 +267,7 @@ enum ClaudeClient {
             var criterion: String
             var rating: String
             var evidence: String
+            var standard: String?
         }
         var title: String
         var date: String
@@ -245,11 +278,21 @@ enum ClaudeClient {
         var missing: [String]
     }
 
-    static func extractEvaluation(source: String, key: String) async throws -> Evaluation {
-        guard !source.isEmpty, source.utf8.count <= 48000 else {
+    static func extractEvaluation(source: String, key: String, catalog: [StandardCatalogEntry]) async throws -> Evaluation {
+        guard !source.isEmpty, source.utf8.count <= 48000, !catalog.isEmpty else {
             throw MVPError.message("Bitte den erfassten Evaluationstext prüfen.")
         }
+        let raw = try await respond(source, key: key, schema: evaluationSchema(catalog: catalog), catalog: catalog)
+        return try validateEvaluation(raw: raw, source: source, catalog: catalog)
+    }
+
+    // Pure schema builder so the existing swiftc test can inspect the enum without a provider call.
+    static func evaluationSchema(catalog: [StandardCatalogEntry]?) -> [String: Any] {
         let string: [String: Any] = ["type": "string"]
+        let codes = (catalog ?? []).map(\.code) + ["none"]
+        let standardProperty: [String: Any] = catalog == nil ? [:] : ["standard": ["type": "string", "enum": codes]]
+        let itemRequired: [String] = ["criterion", "rating", "evidence"] + (catalog == nil ? [] : ["standard"])
+        let itemProperties: [String: Any] = ["criterion": string, "rating": string, "evidence": string].merging(standardProperty) { _, new in new }
         let schema: [String: Any] = [
             "type": "object", "additionalProperties": false,
             "required": ["title", "date", "goal", "instructions", "feedback", "criteria", "missing"],
@@ -257,27 +300,43 @@ enum ClaudeClient {
                 "title": string, "date": string, "goal": string, "instructions": string, "feedback": string,
                 "criteria": ["type": "array", "items": [
                     "type": "object", "additionalProperties": false,
-                    "required": ["criterion", "rating", "evidence"],
-                    "properties": ["criterion": string, "rating": string, "evidence": string]
+                    "required": itemRequired,
+                    "properties": itemProperties
                 ]],
                 "missing": ["type": "array", "items": string]
             ]
         ]
-        let raw = try await respond(source, key: key, schema: schema)
-        return try validateEvaluation(raw: raw, source: source)
+        return schema
     }
 
     // Deterministic validation, also exercised by the existing Swift CI without a provider.
-    static func validateEvaluation(raw: String, source: String) throws -> Evaluation {
+    static func validateEvaluation(raw: String, source: String, catalog: [StandardCatalogEntry]? = nil) throws -> Evaluation {
         guard var result = try? JSONDecoder().decode(Evaluation.self, from: Data(raw.utf8)),
               result.criteria.count <= 60, result.missing.count <= 20 else {
             throw MVPError.message("Claude lieferte kein gültiges Evaluationsformular.")
+        }
+        if let catalog {
+            // Check the raw model answer first: a rubric replacement below must not hide an invalid code.
+            let allowed = Set(catalog.map(\.code) + ["none"])
+            guard result.criteria.allSatisfy({ $0.standard.map(allowed.contains) == true }) else {
+                throw MVPError.message("Claude lieferte einen Bereich außerhalb des freigegebenen Katalogs.")
+            }
+        }
+        // Exact-criterion assignment hints only; positional model codes are never carried over.
+        var hints: [String: String] = [:]
+        var hintConflicts = Set<String>()
+        for row in result.criteria {
+            guard let code = row.standard else { continue }
+            let key = squash(row.criterion)
+            if let previous = hints[key], previous != code { hintConflicts.insert(key) }
+            hints[key] = code
         }
         let rubric = ToddleRubric.extract(source)
         if let rubric = rubric {
             // Replace ambiguous model ratings with evidence-backed original grading.
             result.criteria = rubric.rows.map {
-                Evaluation.Criterion(criterion: $0.criterion, rating: $0.rating, evidence: $0.evidence)
+                Evaluation.Criterion(criterion: $0.criterion, rating: $0.rating, evidence: $0.evidence,
+                                     standard: hintConflicts.contains($0.criterion) ? nil : hints[$0.criterion])
             }
             if rubric.complete {
                 result.missing.removeAll { warning in
@@ -308,16 +367,29 @@ enum ClaudeClient {
                 }
             }
         }
+        if catalog == nil {
+            // Legacy responses never carry an unvalidated assignment.
+            for index in result.criteria.indices { result.criteria[index].standard = nil }
+        }
         return result
     }
 
-    private static func respond(_ source: String, key: String, schema: [String: Any]) async throws -> String {
+    private static func squash(_ text: String) -> String {
+        text.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.joined(separator: " ")
+    }
+
+    static func catalogPrompt(_ catalog: [StandardCatalogEntry]) -> String {
+        "\nFor every criterion set standard to exactly one code from the approved list below, or none if no area clearly fits. standard is only an assignment hint; it never changes criterion, rating or evidence.\nApproved codes:\n"
+            + catalog.map { "- \($0.code): \($0.en) (\($0.subject))" }.joined(separator: "\n")
+    }
+
+    private static func respond(_ source: String, key: String, schema: [String: Any], catalog: [StandardCatalogEntry]) async throws -> String {
         var request = URLRequest(url: URL(string: "https://api.anthropic.com/v1/messages")!)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(key, forHTTPHeaderField: "x-api-key")
         request.setValue("2026-10-21", forHTTPHeaderField: "anthropic-version")
-        let payload: [String: Any] = [
+        var payload: [String: Any] = [
             "model": "claude-haiku-5-5", "max_tokens": 8000,
             "thinking": ["type": "disabled"],
             "system": """
@@ -337,6 +409,7 @@ enum ClaudeClient {
             "messages": [["role": "user", "content": source]],
             "output_config": ["format": ["type": "json_schema", "schema": schema]]
         ]
+        payload["system"] = ((payload["system"] as? String) ?? "") + catalogPrompt(catalog)
         request.httpBody = try JSONSerialization.data(withJSONObject: payload)
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = 60

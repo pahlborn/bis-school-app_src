@@ -23,6 +23,8 @@
     { "name": "krypto", "bau": "test", "browserTests": ["testbau"] },
     { "name": "ereignisse", "bau": "test", "browserTests": ["testbau"] },
     { "name": "ableitung", "bau": "test", "browserTests": ["ableitung-vergleich"] },
+    { "name": "evaluation-zuordnung", "bau": "test", "browserTests": ["evaluation-eltern-browser"] },
+    { "name": "evaluation-uebernahme", "bau": "test", "browserTests": ["evaluation-eltern-browser"] },
     { "name": "bereiche", "bau": "test", "browserTests": ["testbau", "lehrkraft-schueler"] },
     { "name": "annahme", "bau": "test", "browserTests": ["testbau"] },
     { "name": "schnappschuss", "bau": "test", "browserTests": ["testbau"] },
