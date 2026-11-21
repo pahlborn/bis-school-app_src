@@ -147,7 +147,7 @@ test('Testbau = Live-Bau (3b-2a): derselbe Verlauf; was der Live-Bau speichert, 
       assert.deepEqual({...app[k],rounds:app[k].rounds.length},{...live[k],rounds:live[k].rounds.length},'payment/knowledge metadata and completed-round count agree');
     }else assert.deepEqual(app[k], live[k], 'Testbau aus Ereignissen = Live-Bau gespeichert: ' + k);
   }
-  assert.equal(app.treeStage, live.treeStage, 'treeStage (Geraetenotiz, in beiden gespeichert)');
+  assert.equal(app.treeStage??null,live.treeStage??null,'EP05 preserves only an existing legacy stage; no new practice-day stage is persisted');
   // Independent metadata oracle: the persisted original sheet question keeps
   // its actual level/ID, while an assisted result contributes support evidence.
   const helpedSheets=app.sheets.flatMap(s=>s.items).filter(it=>it.res==='help'&&app.gaps.history[it.q.world]);
@@ -186,7 +186,7 @@ test('Testbau = Live-Bau (3b-2a): derselbe Verlauf; was der Live-Bau speichert, 
 
   /* ... und derselbe Stand wie in der App */
   const mit = (o, k) => (k in o ? o[k] : STANDARD[k]);
-  for (const k of Object.keys(STANDARD)) assert.deepEqual(mit(inNode, k), mit(app, k), 'Wert ' + k);
+  for (const k of Object.keys(STANDARD).filter(k=>k!=='treeStage')) assert.deepEqual(mit(inNode, k), mit(app, k), 'Wert ' + k);
   assert.deepEqual(Object.keys(inNode).filter((k) => k.startsWith('best_')).sort(), Object.keys(app).filter((k) => k.startsWith('best_')).sort(), 'best_-Schluessel');
   for (const k of Object.keys(app).filter((k) => k.startsWith('best_'))) assert.equal(inNode[k], app[k], k);
   assert.deepEqual(inNode.starLedger,app.starLedger,'same execution: all reward metadata and exact round IDs survive full replay');
@@ -195,7 +195,7 @@ test('Testbau = Live-Bau (3b-2a): derselbe Verlauf; was der Live-Bau speichert, 
   assert.equal(inNode.rankPolicy,'knowledge.v1','one-time conversion survives full replay');
   assert.equal(app.rankSeen,await page.evaluate(()=>window.__bqa.titel()),'title follows the shared knowledge projection and retention, not a star minimum');
   assert.ok(Object.keys(app.ev).length >= 3 && app.due.length >= 1 && app.sheets.length === 1, 'der Stand ist nicht leer');
-  assert.ok(app.treeStage >= 2, 'treeStage: ' + app.treeStage);
+  assert.deepEqual(inNode.treeLedger,app.treeLedger,'EP05: exact persisted knowledge/baseline/surprises survive replay; days no longer drive UI');
 
   /* der Verlauf hat alles beruehrt (sonst waere der Vergleich zu schwach) */
   for (const t of ['answer', 'round_reward', 'reward_seen', 'badge', 'review', 'rank_seen', 'sheet_created', 'sheet_result', 'sheet_discarded']) assert.ok(arten[t] > 0, 'Verlauf hat ' + t + ' erreicht');

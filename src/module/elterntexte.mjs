@@ -1,7 +1,7 @@
 // Directly revised parent texts; no storage or clock.
 export const PARENT_REWARD_COPY={
- de:{secondRight:'<b>Zweiter Versuch richtig:</b> Die vor der Aufgabe angezeigte Sternbelohnung gilt auch mit Hilfe. Dazu gibt es eine kurze Erklärung.',titles:'<b>Beförderungen zu neuen Titeln</b> richten sich nach sicheren Quests, nicht nach Sternen. Bereits erreichte Titel bleiben erhalten, auch wenn die neuen Anforderungen noch nicht erfüllt sind. <b>Lernbaum und Abzeichen</b> würdigen weiter Ausdauer und Verhalten.'},
- en:{secondRight:'<b>Second try right:</b> The star reward shown before the task also applies with help, followed by a short explanation.',titles:'<b>New title promotions</b> depend on secure quests, not stars. Earned titles stay, even if the new requirements are not met. <b>The learning tree and badges</b> continue to recognize persistence and behavior.'}
+ de:{secondRight:'<b>Zweiter Versuch richtig:</b> Die vor der Aufgabe angezeigte Sternbelohnung gilt auch mit Hilfe. Dazu gibt es eine kurze Erklärung.',titles:'<b>Beförderungen zu neuen Titeln</b> richten sich nach sicheren Quests, nicht nach Sternen. Bereits erreichte Titel bleiben erhalten, auch wenn die neuen Anforderungen noch nicht erfüllt sind. <b>Der Wissensbaum</b> zeigt sichere Quests und gelöstes Neuland; <b>Abzeichen</b> würdigen Verhalten.'},
+ en:{secondRight:'<b>Second try right:</b> The star reward shown before the task also applies with help, followed by a short explanation.',titles:'<b>New title promotions</b> depend on secure quests, not stars. Earned titles stay, even if the new requirements are not met. <b>The knowledge tree</b> shows secure quests and solved discoveries; <b>badges</b> recognize behavior.'}
 };
 export const PT={
   de:{home:'🏠 Übersicht',sheets:'📄 Übungsblätter',settings:'👧 Für das Kind',help:'💡 Helfen wie die Schule',

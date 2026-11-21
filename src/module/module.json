@@ -5,6 +5,7 @@
     { "name": "rechte", "bau": "live", "browserTests": ["stufe1-p4", "stufe1-p3", "stufe1-ist", "anmeldung", "schule"] },
     { "name": "passwort", "bau": "live", "browserTests": ["stufe1-p3", "anmeldung", "hilfe-rollen"] },
     { "name": "sterne", "bau": "live", "browserTests": ["sterne"] },
+    { "name": "wissensbaum", "bau": "live", "browserTests": ["wissensbaum"] },
     { "name": "inhaltsfeedback", "bau": "live", "browserTests": ["inhalte"] },
     { "name": "motivationsworte", "bau": "live", "browserTests": ["inhalte"] },
     { "name": "tagesinhalte", "bau": "live", "browserTests": ["inhalte"] },

@@ -12,6 +12,7 @@
     { "key": "total", "bereich": "kind", "abgleich": "abgeleitet", "sicherung": true },
     { "key": "badges", "bereich": "kind", "abgleich": "protokoll", "sicherung": true },
     { "key": "tried", "bereich": "kind", "abgleich": "abgeleitet", "sicherung": true },
+    { "key":"treeLedger", "bereich":"kind", "abgleich":"abgeleitet", "sicherung":true, "hinweis":"EP05: belegtes Wissen, Bestandsübernahme und einmalige Wachstumsüberraschungen aus tree_record/tree_open" },
     { "key": "treeStage", "bereich": "kind", "abgleich": "lokal", "sicherung": true, "hinweis": "Geraetenotiz (3b-2a): der Hinweis \"Baum gewachsen\" kommt einmal je Geraet; der Baum selbst folgt den Uebungstagen aus den Ereignissen" },
     { "key": "rankPolicy", "bereich": "kind", "abgleich": "abgeleitet", "sicherung": true, "hinweis": "EP03: einmalige Titelumstellung aus rank_seen.policy; danach nur Wissen" },
     { "key": "rankSeen", "bereich": "kind", "abgleich": "letzte-gilt", "sicherung": true },

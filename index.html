@@ -452,7 +452,7 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
 .motto{font-family:var(--display);font-size:.85rem;color:var(--muted);letter-spacing:.04em}
 .note-banner{background:var(--soft);border-left:5px solid var(--sun);border-radius:14px;padding:10px 14px;font-family:var(--display);font-weight:600}
 .growrow{display:grid;grid-template-columns:84px 1fr;gap:12px;align-items:center;background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:10px 12px}
-.tree svg{width:84px;height:84px}
+.tree svg{width:116px;height:100px}.growrow{grid-template-columns:116px 1fr}.tree-open{padding:0;border:0;background:transparent;cursor:pointer;border-radius:12px;min-height:100px}.tree-open .small{display:block;font-size:.75rem}.tree-heading{font-family:var(--display);font-weight:600}.tree-summary{font-size:.85rem}.tree-legacy{border:1px solid var(--line);border-radius:12px;padding:8px;margin-top:8px}.tree-legacy svg{width:84px;height:84px;flex:none}.tree-legacy .row{align-items:center}.tree-dlg{width:min(740px,calc(100% - 20px));max-height:calc(100dvh - 24px);padding:16px;border:2px solid var(--line);border-radius:20px;background:var(--surface);color:var(--ink);overflow:auto}.tree-dlg::backdrop{background:#17203399}.tree-dlg header{display:flex;justify-content:space-between;align-items:center;gap:10px}.tree-canvas{position:relative;max-width:620px;margin:auto}.tree-canvas>svg{display:block;width:100%;height:auto}.tree-sign{position:absolute;min-height:44px;padding:5px 9px;border:2px solid #59432d;border-radius:12px;background:#fff4da;color:#172033;font-family:var(--display);font-size:clamp(.68rem,2.3vw,1rem);font-weight:600;cursor:pointer;max-width:44%;line-height:1.1}.tree-sign:nth-of-type(1){left:2%;top:27%}.tree-sign:nth-of-type(2){right:2%;top:27%}.tree-sign:nth-of-type(3){left:2%;top:62%}.tree-sign:nth-of-type(4){right:2%;top:62%}.tree-sign:nth-of-type(5){right:1%;top:84%}.tree-sign[aria-pressed="true"]{outline:3px solid var(--accent);outline-offset:2px}.tree-legend{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px;border-radius:12px;background:var(--soft);font-size:.85rem}.tree-detail{min-height:48px;margin-block:10px}.tree-surprise{margin-top:12px}.tree-surprise .story{margin-block:8px}.tree-surprise h3{margin-top:10px}@media(max-width:360px){.tree-dlg{padding:10px}.tree-legend{grid-template-columns:1fr}.tree-sign{font-size:.7rem;padding:4px}.growrow{gap:8px;padding:8px}}
 .badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .badge-chip{font-family:var(--display);font-size:.78rem;font-weight:600;border-radius:999px;padding:2px 10px;background:var(--soft);color:var(--ink);border:2px solid var(--line)}
 .badge-chip.silver{border-color:#9aa5b1}.badge-chip.gold{border-color:var(--sun)}
@@ -561,7 +561,7 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
     <div id="subjects" class="subjects"></div>
     <p class="small" id="todayStarRule"></p>
     <div id="dailyContent"></div>
-    <div class="growrow"><div id="tree" class="tree"></div><div><div class="eyebrow">My learning tree <button type="button" class="info-btn" data-help="tree" aria-label="Help: learning tree">ⓘ</button></div><div id="treeText" class="muted"></div><div id="badges" class="badges"></div></div></div>
+    <div class="growrow"><button type="button" id="treeOpen" class="tree-open" aria-haspopup="dialog"><span id="tree" class="tree"></span><span id="treeOpenText" class="small"></span></button><div><div class="tree-heading"><span id="treeHeading"></span> <button type="button" class="info-btn" data-help="tree" aria-label="Help: knowledge tree">ⓘ</button></div><div id="treeText" class="muted tree-summary"></div><div id="treeHomeSurprise" class="small"></div><div id="treeHomeLegacy"></div><div id="badges" class="badges"></div></div></div>
     <button class="btn" id="sheetBtn" type="button">📄 Practice sheet (PDF / print)</button>
     <div id="mySheets" class="mysheets" hidden></div>
     <div class="foot">
@@ -629,6 +629,14 @@ ol.steps{padding-left:1.3em;display:flex;flex-direction:column;gap:8px}
     <p class="greet-q">What would you like to do today?</p>
     <div class="greet-offers" id="greetOffers"></div>
     <div id="greetJoke"></div>
+  </dialog>
+
+  <dialog id="treeDlg" class="tree-dlg" aria-labelledby="treeTitle">
+    <header><h2 id="treeTitle"></h2><button type="button" id="treeClose" class="btn small"></button></header>
+    <p id="treeRule" class="small"></p><div id="treeWhole" class="tree-canvas"></div>
+    <p id="treeDetail" class="tree-detail" role="status"></p><div id="treeLegend" class="tree-legend"></div>
+    <p id="treeStock" class="small"></p><div id="treeLegacy" class="tree-legacy" hidden></div>
+    <div id="treeSurprises" class="tree-surprise"></div><div id="treeSurpriseBody" class="tree-surprise"></div>
   </dialog>
 
   <!-- PRACTICE SHEET: PDF first (on the go, no printer), print where the browser supports it -->
@@ -2484,6 +2492,7 @@ function openRankPath(){
 const state={screen:'home', world:null, round:[], idx:0, stars:0, streak:0, answered:false, typed:'', picked:[], results:[], studio:null, subject:null, back:'home'};
 const starRewards=createStarRewards({store,eventHook,canWrite:()=>rankWritingReady&&!parentAccess&&!adultUser&&(!accountsOn()||!!studentSession()),standOf,eligible:()=>SUBJECTS.flatMap(questsIn),levelOf,evidenceMax:EVIDENCE_MAX});
 const earnedRound=()=>Number(state.earnedStars||0)+Number(state.bonusStars||0);
+const knowledgeTree=createKnowledgeTree({store,eventHook,canWrite:()=>rankWritingReady&&!parentAccess&&!adultUser&&(!accountsOn()||!!studentSession()),standOf,eligible:()=>SUBJECTS.flatMap(questsIn),starHistory:()=>starRewards.read(),evidenceMax:EVIDENCE_MAX,legacyStage:()=>Math.max(store.get('treeStage',0),treeStage(practiceDays()))});
 function beginStarRound(){state.starRound='r_'+Array.from(crypto.getRandomValues(new Uint8Array(12)),x=>x.toString(16).padStart(2,'0')).join('');state.earnedStars=0;state.bonusStars=0;state.roundCommitted=false;}
 const play=$('#play'), home=$('#home'), results=$('#results'), studioScreen=$('#studioScreen'), subjectScreen=$('#subject'), aboutScreen=$('#about');
 let timerId=null, timerStart=0, timerElapsed=0;
@@ -2695,6 +2704,7 @@ function score(ok){
   state.answered=true; state.results[state.idx]=ok;
   if(ok){ state.stars++; state.streak++; } else state.streak=0;
   const q=state.round[state.idx];
+  const firstTreeSolution=!starRewards.read().solved.includes(q.world);
   if(ok){state.earnedStars+=(state.starOffer?.stars||0);state.bonusStars+=starRewards.correct(q,state.starOffer||{},state.starRound);}else starRewards.observe();
   if(state.sheet){sheetDecide(ok);starRewards.observe();}    // a sheet task: only its sheet result (A9)
   else {
@@ -2702,6 +2712,7 @@ function score(ok){
     if(!ok) queueBridge(q);
     if(ok && levelOf(q)===3){ addBadge('thinker'); if(q.world==='combos') addBadge('openMinded'); }
   }
+  if(ok)knowledgeTree.correct(q,firstTreeSolution);else knowledgeTree.observe();
   if(q.challenge && !state.challengeRewarded){ addBadge('riskTaker'); state.challengeRewarded=true; state.noteNow=maybeNote('brave',1); }
   else if(!ok) state.noteNow=maybeNote('wrong',.4);
   $('#roundStars').textContent=earnedRound();
@@ -2967,7 +2978,8 @@ function answerMC(i){
     state.rejected.push(i);
     const selected=$(`#qAnswers .opt[data-i="${i}"]`); selected.disabled=true; selected.classList.add('wrong');
     let brave=null;
-    if(q.challenge && !state.challengeRewarded){ addBadge('riskTaker'); state.challengeRewarded=true; brave=maybeNote('brave',1); }
+    if(ok)knowledgeTree.correct(q,firstTreeSolution);else knowledgeTree.observe();
+  if(q.challenge && !state.challengeRewarded){ addBadge('riskTaker'); state.challengeRewarded=true; brave=maybeNote('brave',1); }
     hintFeedback(q,q.options[i]);
     if(brave) $('#feedback').insertAdjacentHTML('beforeend',`<p>${esc(brave)}</p>`);
     return;
@@ -3073,7 +3085,7 @@ function practiceDays(){
 }
 const TREE_AT=[0,1,3,6,10,15,25];
 const treeStage = d => TREE_AT.filter(x=>d>=x).length-1;
-function treeSVG(st){
+function legacyTreeSVG(st){
   const leaf=(x,y,r)=>`<ellipse cx="${x}" cy="${y}" rx="${r}" ry="${r*.62}" fill="var(--good)"/>`;
   let s=`<rect x="34" y="70" width="28" height="18" rx="4" fill="var(--w-trip)"/><rect x="30" y="66" width="36" height="7" rx="3" fill="var(--w-trip)"/>`;
   if(st===0) return `<svg viewBox="0 0 96 96" role="img" aria-label="A seed in a pot">${s}<ellipse cx="48" cy="64" rx="5" ry="3.5" fill="#8a5a2b"/></svg>`;
@@ -3086,7 +3098,7 @@ function treeSVG(st){
   if(st>=6) s+=`<circle cx="36" cy="${66-h*.6}" r="4.5" fill="#e5484d"/><circle cx="62" cy="${66-h-6}" r="4.5" fill="#e5484d"/><circle cx="50" cy="${66-h-16}" r="4.5" fill="#e5484d"/>`;
   return `<svg viewBox="0 0 96 96" role="img" aria-label="My learning tree">${s}</svg>`;
 }
-const TREE_TEXT=['A seed is waiting. Practise to help it grow!','A tiny sprout!','It is growing leaves.','A strong young plant.','Look, flowers!','A real little tree.','Your tree has fruit!'];
+
 
 /* themes and birthday */
 const md = (d=new Date()) => pad(d.getMonth()+1)+'-'+pad(d.getDate());
@@ -3180,13 +3192,46 @@ function renderFun(){
     note.textContent=bd===0?`🎂 Happy birthday${store.get('name','')?', '+store.get('name',''):''}! Believe. Inspire. Succeed.`:`🎂 Your birthday is coming in ${bd} day${bd>1?'s':''}!`;
     if(bd===0 && store.get('bdayParty','')!==dayKey()){ store.set('bdayParty',dayKey()); eventHook('day_flag',{flag:'bdayParty', day:dayKey()}); setTimeout(confetti,300); }
   }
-  const days=practiceDays(), st=treeStage(days);
-  if(st>store.get('treeStage',0)){ store.set('treeStage',st); if(note.hidden){ note.hidden=false; note.textContent='🌱 '+PRAISE_TEXT[contentLanguage()].tree[0]; } }
-  $('#tree').innerHTML=treeSVG(st);
-  $('#treeText').textContent=TREE_TEXT[st];
+  knowledgeTree.observe(); renderKnowledgeTree();
+  const days=practiceDays();
   const b=store.get('badges',{}); b.knowledgeable=Math.floor(days/10);
   $('#badges').innerHTML=Object.keys(BADGES).filter(k=>b[k]>0).map(k=>`<span class="badge-chip ${b[k]>=15?'gold':b[k]>=5?'silver':''}">${BADGES[k]}${b[k]>1?' ×'+b[k]:''}</span>`).join('');
   renderAdvent();
+}
+function treeLegacyHTML(v,T){return `<b>${T.legacy}</b><div class="row">${legacyTreeSVG(v.legacyStage)}<p class="small">${T.legacyRule}</p></div>`;}
+function renderKnowledgeTree(){
+  const v=knowledgeTree.view(),lang=contentLanguage(),T=TREE_TEXT[lang];
+  $('#tree').innerHTML=knowledgeTreeSVG(v,lang);$('#treeHeading').textContent=T.title;$('#treeOpenText').textContent=T.open;$('#treeOpen').setAttribute('aria-label',T.open+'. '+treeSummary(v,lang));
+  $('#treeText').textContent=treeSummary(v,lang);const pending=knowledgeTree.pending();
+  $('#treeHomeSurprise').textContent=pending.length?`🎁 ${T.surprise} (${pending.length})`:'';
+  $('#treeHomeLegacy').innerHTML=treeLegacyVisible(v)?`<div class="tree-legacy">${treeLegacyHTML(v,T)}</div>`:'';
+}
+let treeReturnFocus=null;
+function openKnowledgeTree(){
+  const dlg=$('#treeDlg');knowledgeTree.observe();const v=knowledgeTree.view(),lang=contentLanguage(),T=TREE_TEXT[lang],model=treeModel(v);
+  treeReturnFocus=document.activeElement;$('#treeTitle').textContent=T.title;$('#treeRule').textContent=T.rule;$('#treeClose').textContent=T.close;
+  $('#treeWhole').innerHTML=knowledgeTreeSVG(v,lang)+model.map(s=>`<button class="tree-sign" type="button" data-tree-subject="${s.key}" aria-pressed="false">${s.name==='Library & Reading'?'Library &amp; Reading':s.name}</button>`).join('');
+  $('#treeWhole').querySelectorAll('[data-tree-subject]').forEach(b=>b.addEventListener('click',()=>{const subject=model.find(s=>s.key===b.dataset.treeSubject);$('#treeDetail').textContent=T.subject(subject)+(subject.secure.length?' · '+subject.secure.map(k=>WORLDS[k]?.name||k).join(', '):'');$('#treeWhole').querySelectorAll('[data-tree-subject]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));}));
+  $('#treeDetail').textContent=model.some(s=>s.branch||s.flowers)?treeSummary(v,lang):T.empty;
+  $('#treeLegend').innerHTML=[['🌿',T.branch],['🍃',T.leaf],['🍊',T.fruit],['🌸',T.flower]].map(([icon,text])=>`<span>${icon} ${text}</span>`).join('');
+  const initial=treeModel({...v,...v.baseline}),stock=initial.reduce((n,s)=>n+Number(s.branch)+s.leaves+s.fruits+s.flowers,0);
+  const total=model.reduce((n,s)=>n+Number(s.branch)+s.leaves+s.fruits+s.flowers,0);
+  $('#treeStock').textContent=`${T.stock}: ${stock} · ${T.newGrowth}: ${Math.max(0,total-stock)}`;
+  $('#treeLegacy').hidden=!treeLegacyVisible(v);$('#treeLegacy').innerHTML=treeLegacyVisible(v)?treeLegacyHTML(v,T):'';
+  $('#treeSurpriseBody').innerHTML='';renderTreeSurprises();if(!dlg.open){if(dlg.showModal)dlg.showModal();else dlg.setAttribute('open','');}$('#treeClose').focus();
+}
+function closeKnowledgeTree(){const dlg=$('#treeDlg');if(dlg.close)dlg.close();else dlg.removeAttribute('open');}
+function renderTreeSurprises(){
+  const T=TREE_TEXT[contentLanguage()],next=knowledgeTree.pending()[0];
+  $('#treeSurprises').innerHTML=next?`<h3>🎁 ${T.surprise}</h3><button type="button" class="btn small" id="treeSurpriseOpen">${T.next} ${next}</button>`:`<p class="small">${T.allOpened}</p>`;
+  if(next)$('#treeSurpriseOpen').addEventListener('click',()=>openTreeSurprise(next));
+}
+function openTreeSurprise(ordinal){
+  const lang=contentLanguage(),T=TREE_TEXT[lang],gift=treeSurprise(ordinal,{lang,stories:STORY_LIST,jokes:JOKE_LIST,rejected:rejectedJokes(),cap:store.get('storyCap',2)});
+  if(!gift||!knowledgeTree.open(ordinal))return;const item=gift.item,body=$('#treeSurpriseBody');
+  body.innerHTML=`<h3>${T.ordinal(ordinal)}</h3>`+(gift.kind==='story'?`<p><b>${esc(item.title[lang])}</b></p><div class="story" lang="${lang}">${esc(item[lang][Math.min(2,Math.max(1,store.get('storyCap',2)))])}</div>${contentFeedbackHTML('story',item.id)}`:`${item.lang==='en'?`<p class="small joke-from">${esc(jokeOrigin(item))}</p>`:''}<div class="story" lang="${lang}">${esc(item.q)}
+${esc(item.a)}</div>${contentFeedbackHTML('joke',item.id)}`);
+  bindContentFeedback(body);renderTreeSurprises();renderKnowledgeTree();const next=$('#treeSurpriseOpen');if(next)next.focus();else $('#treeClose').focus();
 }
 function renderAdvent(){
   const box=$('#advent'), d=new Date(), th=themeNow(d);
@@ -4196,7 +4241,7 @@ function adminInviteHTML(){
    restored after the move to IDs (S11 P2). Which keys belong to a child is fixed in
    werkzeug/speicherstellen.json (checked by tests/stufe1-p1.test.mjs). Never in a backup: passwords,
    sessions, device keys. Recordings are included (the file stays with the family). */
-const BACKUP_KEYS={exact:['grants','grantlog','attempts','ev','due','total','badges','tried','treeStage','rankSeen','rankPolicy','name','lastName','birthday','emoji','mySchool','bdayParty','sheets','sheetNo','focusMode','focusManual','unlocked','gaps','storyCap','greetDay','mysteryDone','kidLang','starLedger','contentFeedback','jokeRejected'], prefix:['best_','chk_','advent']};
+const BACKUP_KEYS={exact:['grants','grantlog','attempts','ev','due','total','badges','tried','treeLedger','treeStage','rankSeen','rankPolicy','name','lastName','birthday','emoji','mySchool','bdayParty','sheets','sheetNo','focusMode','focusManual','unlocked','gaps','storyCap','greetDay','mysteryDone','kidLang','starLedger','contentFeedback','jokeRejected'], prefix:['best_','chk_','advent']};
 const isBackupKey = k => BACKUP_KEYS.exact.includes(k) || BACKUP_KEYS.prefix.some(p=>k.startsWith(p));
 function childStoreKeys(){
   const pre=storeKey('x').slice(0,-1), plain=pre==='bq2_', out=[];
@@ -4302,7 +4347,7 @@ async function readRestoreFile(file){
 }
 async function applyRestore(){
   const body=restoreCandidate, de=PL()==='de'; if(!body || !canBackup() || EV_LESEN) return;
-  const retainedTitle=shownRank(),retainedJokeRejections=rejectedJokes(),retainedStars=starRewards.read(),retainedTotal=store.get('total',0);
+  const retainedTitle=shownRank(),retainedJokeRejections=rejectedJokes(),retainedStars=starRewards.read(),retainedTree=knowledgeTree.read(),retainedTotal=store.get('total',0);
   const prev={}; for(const k of childStoreKeys()) prev[k]=localStorage.getItem(storeKey(k));
   store.set('vorRueckspielen',{at:new Date().toISOString(), data:prev});
   for(const k of childStoreKeys()) localStorage.removeItem(storeKey(k));
@@ -4310,6 +4355,7 @@ async function applyRestore(){
   for(const r of body.audio||[]){ try{ await recPut({id:r.id, created:r.created, durationMs:r.durationMs, mime:r.mime, blob:new Blob([fromB64(r.base64)],{type:r.mime})}); }catch(e){} }
   restoreTitle(retainedTitle);if(retainedJokeRejections.length||rejectedJokes().length)store.set('jokeRejected',uniq(retainedJokeRejections.concat(rejectedJokes())));
   const mergedStars=mergeStarLedger(retainedStars,starRewards.read());if(Object.values(mergedStars).some(v=>v.length))store.set('starLedger',mergedStars);
+  store.set('treeLedger',mergeTreeLedger(retainedTree,knowledgeTree.read()));
   store.set('total',Math.max(retainedTotal,store.get('total',0)));
   cleanStoredPrivate();
   restoreCandidate=null; backupNote=(de?'Zurückgespielt: ':'Restored: ')+countsText(backupCounts(body.data, body.audio));
@@ -4322,11 +4368,12 @@ function restoreTitle(retained){
 }
 function undoRestore(){
   const v=store.get('vorRueckspielen',null), de=PL()==='de'; if(!v || !canBackup() || EV_LESEN) return;
-  const retainedTitle=shownRank(),retainedJokeRejections=rejectedJokes(),retainedStars=starRewards.read(),retainedTotal=store.get('total',0);
+  const retainedTitle=shownRank(),retainedJokeRejections=rejectedJokes(),retainedStars=starRewards.read(),retainedTree=knowledgeTree.read(),retainedTotal=store.get('total',0);
   for(const k of childStoreKeys()) localStorage.removeItem(storeKey(k));
   for(const [k,val] of Object.entries(v.data||{})) localStorage.setItem(storeKey(k), val);
   restoreTitle(retainedTitle);if(retainedJokeRejections.length||rejectedJokes().length)store.set('jokeRejected',uniq(retainedJokeRejections.concat(rejectedJokes())));
   const mergedStars=mergeStarLedger(retainedStars,starRewards.read());if(Object.values(mergedStars).some(v=>v.length))store.set('starLedger',mergedStars);
+  store.set('treeLedger',mergeTreeLedger(retainedTree,knowledgeTree.read()));
   store.set('total',Math.max(retainedTotal,store.get('total',0)));
   store.del('vorRueckspielen'); cleanStoredPrivate(); backupNote=de?'Der Stand vor dem Zurückspielen ist wiederhergestellt.':'The progress from before the restore is back.';
   renderHome(); renderSheets();
@@ -4720,7 +4767,7 @@ function startFromHash(beimStart){
    because leaving it logs the grown-up out). */
 const HELP={
   play:{kid:true,title:'How a question works',text:'<p>Choose or type your answer. Not right yet? You get a tip and can try again. After two tries you see how it works.</p><p>“Show me how” gives you a tip – that is always OK, it is not a mistake. Still stuck? Sometimes there is an easier example to look at first. “Show me the answer” shows the solution, and the question comes back later so you can practise it.</p>'},
-  tree:{kid:true,title:'Your learning tree',text:'<p>Your tree grows on every day you practise – in the app or on a practice sheet. It never wilts, even if you take a break.</p><p>Your badges show how you learn: trying a challenge, thinking hard, finishing a sheet.</p>'},
+  tree:{kid:true,title:'Your learning tree',text:'<p>Your knowledge tree grows from secure quests: a first branch, more leaves, and fruit for E. A flower means a solved discovery, not secure knowledge. Nothing shrinks or wilts, even after a break. Tap the tree to see every subject and your growth surprises.</p><p>Your badges show how you learn: trying a challenge, thinking hard, finishing a sheet.</p>'},
   record:{kid:true,title:'Recording yourself',text:'<p>Tap “● Aufnahme starten”, read aloud, tap “■ Stopp”. Then listen to yourself!</p><p>The last three recordings stay on this iPad. To hand one in, tap “Teilen / Sichern” together with a grown-up.</p>'},
   sheet:{kid:true,title:'Practice sheet',text:'<p>A sheet with 6 tasks and a writing task, plus an answer page for grown-ups.</p><p>Share it as a PDF (by mail, message or into Files) or print it. When you are done on paper, tap your sheet under “My sheets” and type in your answers.</p>'},
   gaps:GAP_TEXT.de.help,
@@ -4733,7 +4780,7 @@ const HELP={
   profile:{title:'Profilangaben',text:'<p>Vorname, Nachname, Geburtstag (Jahr freiwillig) und Emoji. Das Kind trägt sie unter „My profile“ ein, Sie können Name und Geburtstag hier ergänzen oder ändern. Name und Geburtsdatum sieht eine Lehrkraft nur mit Ihrer Freigabe – so kann sie Kinder mit gleichem Vornamen unterscheiden. Die Angaben liegen nur auf diesem Gerät. Löschen entfernt nur diese Angaben, keine Lerndaten.</p>'},
   version:{title:'App-Version',text:'<p>Zeigt den Stand der App auf diesem Gerät. Betafassungen tragen sichtbar „(Betaversion)“. Finale Freigaben erscheinen später als „V 1.0.0“. Die App aktualisiert sich beim Start und beim Zurückkehren selbst. „Nach neuer Version suchen“ vergleicht mit der veröffentlichten Seite.</p>'},
     sheets:{title:'Übungsblätter',text:'<p>Ihr Kind trägt seine Antworten vom Papier selbst ein: Startseite → „My sheets“. Die App prüft wie gewohnt, mit Tipp und zweitem Versuch.</p><p>Hier sehen Sie je Aufgabe „Richtig“, „Mit Hilfe“ oder „Noch nicht“. „Mit Hilfe“ und „Noch nicht“ sind gut so: Die App bietet dann leichtere Schritte an und wiederholt die Aufgabe später. Ein Blatt, das nicht eingetragen wird, zählt einfach nicht.</p>'},
-  testday:{noGuide:true,title:'Testkonto: +1 Tag',text:'<p><b>+1 Tag</b> stellt die Uhr der App nur für dieses Testkonto einen Tag vor. So sehen Sie sofort, was sonst erst morgen passiert:</p><ul><li>Fehler kommen als Wiederholung zurück.</li><li>Der Lernbaum wächst.</li><li>Im Elternbereich bleibt sichtbar, wann geübt wurde.</li></ul><p>Die Daten des Kindes bleiben unberührt. <b>Testdaten löschen</b> setzt das Testkonto ganz zurück (auch den Tag).</p>'},
+  testday:{noGuide:true,title:'Testkonto: +1 Tag',text:'<p><b>+1 Tag</b> stellt die Uhr der App nur für dieses Testkonto einen Tag vor. So sehen Sie sofort, was sonst erst morgen passiert:</p><ul><li>Fehler kommen als Wiederholung zurück.</li><li>Im Elternbereich bleibt sichtbar, wann geübt wurde.</li></ul><p>Die Daten des Kindes bleiben unberührt. <b>Testdaten löschen</b> setzt das Testkonto ganz zurück (auch den Tag).</p>'},
   guidance:{title:'So unterstützen Sie Ihr Kind',text:'<p>Ein Vorschlag, wie oft geübt wird, und die wichtigsten Regeln. Konkretes zu jedem Thema steht bei jeder Quest unter „💡 So helfen Sie“.</p>'},
   abgleich:{noGuide:true,title:'Abgleich',text:'<p>Die App gleicht von selbst ab – Sie müssen nichts tippen: beim Öffnen, beim Zurückkehren, alle 30 Sekunden, solange sie offen ist, und kurz nach neuen Einträgen. Beim Wechsel in eine andere App schickt sie noch, was offen ist.</p><ul><li><b>Kein Netz:</b> Alles bleibt auf dem Gerät und wird später nachgeholt. Es geht nichts verloren.</li><li><b>Mitten in einer Runde</b> ändert sich beim Kind nichts; Neues erscheint nach der Runde.</li><li><b>Nicht übernommen:</b> Einträge, die die App abgelehnt hat, weil sie gefälscht waren oder ohne Berechtigung kamen – etwa von einem entfernten Gerät. Harmloses aus der Reihenfolge der Geräte zählt nicht mit. Ihre Daten bleiben davon unberührt. Steigt die Zahl unerwartet, bitte den Admin fragen.</li></ul><p>Das Kind sieht vom Abgleich nichts.</p>'}
 };
@@ -4749,7 +4796,7 @@ const HELP_EN={
   profile:{title:'Profile details',text:'<p>First name, last name, birthday (year optional) and emoji. Your child enters them under “My profile”; you can add or change the name and birthday here. A teacher sees the name and date of birth only with your grant – so she can tell children with the same first name apart. Stored only on this device. Deleting removes only these details, no learning data.</p>'},
   version:{title:'App version',text:'<p>Shows the version on this device. Beta releases visibly carry “(Beta version)”. Final releases later appear as “V 1.0.0”. The app updates itself when it starts and when you come back to it. “Check for a new version” compares it with the published page.</p>'},
     sheets:{title:'Practice sheets',text:'<p>Your child types in the answers from the paper: start page → “My sheets”. The app checks them as usual, with a tip and a second try.</p><p>Here you see “Correct”, “With help” or “Not yet” for each task. “With help” and “Not yet” are fine: the app then offers easier steps and brings the task back later. A sheet that isn’t entered simply doesn’t count.</p>'},
-  testday:{title:'Test account: +1 day',text:'<p><b>+1 day</b> moves the app’s clock one day ahead, for this test account only. You see right away what would otherwise happen tomorrow:</p><ul><li>Mistakes come back as reviews.</li><li>The learning tree grows.</li><li>The grown-ups area still shows when practice took place.</li></ul><p>Your child’s data is not touched. <b>Delete test data</b> resets the test account completely (including the day).</p>'},
+  testday:{title:'Test account: +1 day',text:'<p><b>+1 day</b> moves the app’s clock one day ahead, for this test account only. You see right away what would otherwise happen tomorrow:</p><ul><li>Mistakes come back as reviews.</li><li>The grown-ups area still shows when practice took place.</li></ul><p>Your child’s data is not touched. <b>Delete test data</b> resets the test account completely (including the day).</p>'},
   guidance:{title:'How to support your child',text:'<p>A suggestion for how often to practice, and the key rules. Concrete help for each topic is at every quest under “💡 How you can help”.</p>'},
   abgleich:{title:'Sync',text:'<p>The app syncs by itself – you don’t need to tap anything: when it opens, when you come back, every 30 seconds while it is open, and shortly after new entries. When you switch to another app, it sends whatever is still open.</p><ul><li><b>No connection:</b> everything stays on the device and is caught up later. Nothing gets lost.</li><li><b>In the middle of a round</b> nothing changes for your child; new things appear after the round.</li><li><b>Not taken over:</b> entries the app refused because they were forged or came without permission – for example from a removed device. Harmless things from the order of the devices do not count. Your data is not affected. If the number grows unexpectedly, please ask the admin.</li></ul><p>Your child sees nothing of the sync.</p>'}
 };
@@ -4866,7 +4913,7 @@ function renderSetPassword(u, renew){
 function renderWelcome(u){
   const kid=u.role==='student', de=store.get('parentLang','de')!=='en';
   $('#loginBody').innerHTML=kid
-    ? `<h2>Welcome to Big Quest! 🎉</h2><ul class="welcome"><li>🎯 <b>Practise Today</b> gives you 8 questions. Or pick a subject.</li><li>💡 <b>A mistake?</b> You get a tip and try again. “Show me how” gives you a tip any time.</li><li>⭐ Every solved task gives a star. Your <b>learning tree</b> grows on every practice day.</li><li>❓ <b>Help</b> is at the bottom of the start page. ⓘ explains things.</li><li>🔒 You stay logged in on this iPad. Tap <b>Log out</b> if someone else wants to use it.</li></ul><button class="btn primary" id="welcomeGo" type="button">Let’s go!</button>`
+    ? `<h2>Welcome to Big Quest! 🎉</h2><ul class="welcome"><li>🎯 <b>Practise Today</b> gives you 8 questions. Or pick a subject.</li><li>💡 <b>A mistake?</b> You get a tip and try again. “Show me how” gives you a tip any time.</li><li>⭐ Every solved task gives a star. Your <b>knowledge tree</b> grows through knowledge; a flower marks a solved discovery.</li><li>❓ <b>Help</b> is at the bottom of the start page. ⓘ explains things.</li><li>🔒 You stay logged in on this iPad. Tap <b>Log out</b> if someone else wants to use it.</li></ul><button class="btn primary" id="welcomeGo" type="button">Let’s go!</button>`
     : de
     ? `<h2>Willkommen, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 ${KONTO_UI?'<b>Auf allen Ihren Geräten:</b> Der Lernstand Ihrer Kinder kommt nach dem Abgleich auf jedes Gerät, auf dem Sie angemeldet sind.'+(u.role==='parent' && !u.admin?' Kinder legen Sie unter <b>⚙️ → „👪 Familie“</b> an.':''):'<b>Daten nur auf diesem Gerät:</b> Den Lernstand des Kindes sehen Sie auf dem Gerät, auf dem es übt.'}</li><li>🔑 ${KONTO_UI?'Ihr Passwort gilt auf allen Ihren Geräten: dort mit Benutzername und Passwort anmelden. Passwort vergessen? Dann hilft Ihr Wiederherstellungscode.':'Ihr Passwort gilt nur auf diesem Gerät. Auf einem weiteren Gerät einmal mit dem Startcode anmelden.'}</li><li>🚪 Sie bleiben angemeldet, bis Sie <b>Abmelden</b> tippen. Auf dem Gerät des Kindes nach dem Nachsehen bitte abmelden.</li><li>📖 Die Hilfe finden Sie oben unter <b>?</b>, Sicherung und Freigaben unter <b>⚙️</b>. ⓘ erklärt einzelne Abschnitte.</li></ul><button class="btn primary" id="welcomeGo" type="button">Los geht’s</button>`
     : `<h2>Welcome, ${esc(u.user)}!</h2><ul class="welcome"><li>📱 ${KONTO_UI?'<b>On all your devices:</b> after the sync your children’s progress is on every device where you are logged in.'+(u.role==='parent' && !u.admin?' Add children under <b>⚙️ → “👪 Family”</b>.':''):'<b>Data only on this device:</b> you see your child’s progress on the device where they practice.'}</li><li>🔑 ${KONTO_UI?'Your password works on all your devices: log in there with your user name and password. Forgot it? Your recovery code helps.':'Your password works only on this device. On another device, log in once with the start code.'}</li><li>🚪 You stay logged in until you tap <b>Log out</b>. On your child’s device, please log out when you are done.</li><li>📖 Help is at the top under <b>?</b>, backup and grants under <b>⚙️</b>. ⓘ explains each section.</li></ul><button class="btn primary" id="welcomeGo" type="button">Let’s go</button>`;
@@ -6985,7 +7032,7 @@ const GUIDE_KID=kontoTexte(`<div class="quick"><b>Quick guide</b><ol>
 <li><b>The very first time:</b> your grown-up gives you a start code – sometimes as a link or a QR code to scan. Then you choose your own password. Take the idea with three words and a number, like <i>Tiger-Lamp-River-4271</i>. Let the iPad remember it – then Face ID fills it in for you. A short password does not work: a strong one keeps your things safe.</li>
 <li><b>Practise Today:</b> 8 questions from your focus topics. Or tap a subject and choose a quest.</li>
 <li><b>Oops, a mistake?</b> No problem! You get a tip and try again. Tap “Show me how” whenever you want – that is not a mistake. Still stuck? “Show me the answer” shows the solution.</li>
-<li><b>Stars and titles:</b> every solved task gives a star. With more stars you reach a new title – tap your title to see your explorer path. Your learning tree grows on every day you practise.</li>
+<li><b>Stars and titles:</b> every solved task gives a star. With more stars you reach a new title – tap your title to see your explorer path. Your knowledge tree grows through secure quests; a flower marks a solved discovery. Tap it to see the whole tree.</li>
 <li><b>After a round:</b> choose a joke, the Mystery Question or a Pisolala story.</li>
 <li><b>Lese-Studio:</b> read aloud, record yourself and listen. Your grown-up can help you share the best recording with your class.</li>
 <li><b>Practice sheet:</b> make a sheet with a grown-up and work on paper. Then tap your sheet under “My sheets” and type in your answers – just like Practise Today.</li>
@@ -7124,7 +7171,7 @@ const ABOUT_DE=()=>`
 <details class="about-sub"><summary>Genaue Schwellen</summary>
 <ul>
 <li>${TITLE_ABOUT.de}</li>
-<li><b>Lernbaum:</b> wächst mit den Übungstagen (Tage mit mindestens einer Antwort in der App oder einem eingetragenen Übungsblatt): neue Stufen nach 1, 3, 6, 10, 15 und 25 Tagen. Er welkt nie, Pausen schaden nicht.</li>
+<li><b>Wissensbaum:</b> Ein Ast je Fach entsteht durch die erste sichere Quest, jede weitere gibt ein Blatt. E gibt eine Frucht; gelöstes Neuland eine Blüte (kein Könnensnachweis). Gewachsenes bleibt, auch nach Rückfall oder Pause. Der frühere Tagesbaum bleibt als historischer Bestand erhalten, bis der Wissensbaum größer ist. Jedes neue Blatt, jede Blüte und Frucht bringt die nächste Wachstumsüberraschung.</li>
 <li><b>Abzeichen:</b> zählen Verhalten, nicht Ergebnisse – Risk-taker (eine Challenge angenommen), Thinker (eine Herausforderungsaufgabe gelöst), Open-minded (eine Kombinationsaufgabe auf Herausforderungsniveau gelöst), Reflective (ein „Glow“ gewählt), Balanced (eine Idee ohne Bildschirm umgesetzt), Inquirer (ein Thema zum ersten Mal ausprobiert), Principled (ein Übungsblatt bis zum Ende bearbeitet), Knowledgeable (eins für je 10 Übungstage). Silber ab 5-mal, Gold ab 15-mal.</li>
 <li><b>Interner Stand je Quest</b> (nur zur Aufgabenwahl, das Kind sieht ihn nie): Grundlage sind die letzten 60 ersten Versuche dieser Quest, je mit Tag, Stufe (1 Grundlage, 2 Klassenniveau, 3 Herausforderung) und richtig/falsch. Mit Tipp, Beispiel oder Brücke gelöste Aufgaben zählen auf Stufe 1. Noch nicht einschätzbar: weniger als 6 eigene Antworten (dann gilt eine vorhandene Schulbeurteilung). Sicher: unter den letzten 20 Antworten auf Klassenniveau mindestens 6, davon mindestens 80 % richtig. Darüber hinaus: zusätzlich unter den letzten 12 Herausforderungs-Antworten mindestens 4, davon mindestens 70 % richtig. Wird sicherer: Klassenniveau mindestens 50 % richtig (ohne Klassenniveau: Grundlage mindestens 80 %). Sonst: braucht Unterstützung. Danach richtet sich die nächste Runde: bei „braucht Unterstützung“ keine Herausforderungen und mindestens zwei Grundlage-Aufgaben, bei „wird sicherer“ höchstens eine Herausforderung, bei „sicher“ zwei bis drei, darüber hinaus drei bis vier.</li>
 <li><b>Startwert aus der Schule:</b> Bei weniger als 6 eigenen Antworten für eine Quest nutzt der gemeinsame Quest-Stand die letzte vorhandene Schuleinstufung zum Hauptstandard. Das gilt auch im Elternbereich.</li>
@@ -7217,7 +7264,7 @@ const ABOUT_EN=()=>`
 <details class="about-sub"><summary>Exact thresholds</summary>
 <ul>
 <li>${TITLE_ABOUT.en}</li>
-<li><b>Learning tree:</b> grows with practice days (days with at least one answer in the app or an entered practice sheet): new stages after 1, 3, 6, 10, 15 and 25 days. It never wilts; breaks do no harm.</li>
+<li><b>Knowledge tree:</b> The first secure quest in a subject grows a branch; further secure quests add leaves. E adds fruit; a solved discovery adds a flower (not proof of secure knowledge). Nothing is lost after a setback or break. The earlier practice-day tree stays as historical growth until the knowledge tree is larger. Every new leaf, flower and fruit brings the next growth surprise.</li>
 <li><b>Badges:</b> count behavior, not results – Risk-taker (took a challenge), Thinker (solved a challenge-level task), Open-minded (solved a challenge-level combination task), Reflective (chose a “Glow”), Balanced (did an idea without a screen), Inquirer (tried a topic for the first time), Principled (finished a practice sheet to the end), Knowledgeable (one for every 10 practice days). Silver from 5 times, gold from 15 times.</li>
 <li><b>Internal level per quest</b> (only for choosing tasks, never shown to the child): based on the last 60 first tries of this quest, each with day, level (1 support, 2 grade level, 3 challenge) and right/wrong. Tasks solved with a tip, an example or a bridge count at level 1. Not yet possible to judge: fewer than 6 own answers (then an available school rating applies). Secure: among the last 20 grade-level answers at least 6, at least 80 % right. Going beyond: in addition, among the last 12 challenge answers at least 4, at least 70 % right. Getting there: grade level at least 50 % right (without grade-level answers: support level at least 80 %). Otherwise: needs support. The next round follows from this: with “needs support” no challenges and at least two support tasks, with “getting there” at most one challenge, with “secure” two to three, going beyond three to four.</li>
 <li><b>Starting point from school:</b> with fewer than 6 own answers for a quest, the common quest status uses the latest school rating of its main standard, including in the grown-ups area.</li>
@@ -7497,6 +7544,9 @@ $('#helpBtn').addEventListener('click',()=>{ if(state.answered) return; if(!stat
 $('#answerBtn').addEventListener('click',showWorked);
 $('#againBtn').addEventListener('click',()=>startRound(state.world));
 $('#homeBtn').addEventListener('click',goBack);
+$('#treeOpen').addEventListener('click',openKnowledgeTree);
+$('#treeClose').addEventListener('click',closeKnowledgeTree);
+$('#treeDlg').addEventListener('close',()=>{const target=treeReturnFocus;treeReturnFocus=null;if(target?.isConnected)target.focus();});
 $('#sheetBtn').addEventListener('click',printSheet);
 $('#sheetPdf').addEventListener('click',sharePdf);
 $('#sheetPrint').addEventListener('click',()=>{ closeSheetDlg(); setTimeout(()=>window.print(),50); });
@@ -7542,7 +7592,7 @@ function boot(data){
   else if(accountsOn() && store.get('adultSession',null) && !isTestAccount() && adultResume()){ /* grown-up stays logged in */ }
   else show('home');   // with accounts and no login, show() leads to the login screen
   rankWritingReady=true;
-  if(state.screen!=='about' && state.screen!=='login'){starRewards.observe();renderRank();}
+  if(state.screen!=='about' && state.screen!=='login'){starRewards.observe();knowledgeTree.observe();renderRank();renderFun();}
   if(KONTO_UI) kontoNativeStart();
   setTimeout(checkForUpdate,3000);
 }
