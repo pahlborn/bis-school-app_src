@@ -11,6 +11,44 @@ export const RELEASE_NOTES = {
   current: {
     epics: [
       {
+        de: 'Die möglichen Sterne werden vor jeder Aufgabe angezeigt. Leichte und normale Aufgaben aus schon einmal sicheren Quests bringen bei direkter Wahl keine weiteren Sterne.',
+        en: 'Each task shows its possible stars in advance. Easy and normal tasks from quests that were secure before give no further stars when chosen directly.'
+      },
+      {
+        de: 'Der vergrößerbare Wissensbaum wächst mit sicheren Quests, Stufe E und erstmals gelösten Neuland-Aufgaben.',
+        en: 'The knowledge tree can be enlarged and grows with secure quests, level E and first solved discovery tasks.'
+      }
+    ],
+    stories: [
+      {
+        de: 'Neue Blätter, Blüten und Früchte schalten verlässlich eine Geschichte oder einen besonderen Witz frei.',
+        en: 'New leaves, flowers and fruit reliably unlock a story or a special joke.'
+      },
+      {
+        de: 'Ein Tageswort ergänzt den Kinderbereich; Eltern erhalten eine tägliche Gesprächsfrage. Witze, Pisolala und Tageswort lassen sich freiwillig mit 👍 oder 👎 bewerten.',
+        en: 'A daily word joins the child area; parents get a daily conversation question. Jokes, Pisolala and the daily word have optional thumbs-up/down feedback.'
+      },
+      {
+        de: 'Beim Update bleiben erreichte Titel, gesammelte Sterne und gewachsene Baumzeichen erhalten.',
+        en: 'The update preserves earned titles, collected stars and existing tree growth.'
+      }
+    ],
+    bugfixes: [
+      {
+        de: 'Neue Schulbewertungen aktualisieren nach dem Abgleich auch den automatischen Übungsfokus.',
+        en: 'New school evaluations also refresh the automatic practice focus after sync.'
+      },
+      {
+        de: 'Specific Examples vermeidet auch bei seltenen Auswahlkombinationen doppelte Aufgaben.',
+        en: 'Specific Examples avoids duplicate tasks even in rare selection combinations.'
+      }
+    ]
+  },
+  history: [{
+    version: 'V 0.152.5 (Betaversion)',
+    date: '20.11.2026 12:29',
+    epics: [
+      {
         de: 'Auf der Testinstanz können Eltern Schulevaluationen erfassen, korrigieren und zurücknehmen.',
         en: 'On the test instance, parents can add, correct and withdraw school evaluations.'
       }
@@ -35,8 +73,7 @@ export const RELEASE_NOTES = {
         en: 'Under “Connect another device”, the connection link can be copied with “Copy link”.'
       }
     ]
-  },
-  history: [{
+  }, {
     version: 'V 0.152 (Betaversion)',
     epics: [
       {
