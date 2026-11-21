@@ -78,7 +78,7 @@ export const SPECIFIC_NEAR=[null,null,null,
  ["When we play outside, most of us usually work better afterwards.","I often feel ready to work again after a good long break outdoors."]
 ];
 
-export function createLanguageQuestions({rnd,pick,shuffle,uniq,mc,two,bankMC,quote,itemCard,stripP,FOR,WRD,LIB,TRIP,SEN,ANL,OREO_MC,OPFACT,INFER,SPECIFIC,SPECIFIC_EXPLAIN}){
+export function createLanguageQuestions({rnd,pick,shuffle,uniq,mc,two,bankMC,quote,itemCard,stripP,FOR,WRD,LIB,TRIP,SEN,ANL,OREO_MC,OPFACT,INFER,SPECIFIC,SPECIFIC_EXPLAIN,HYPO,EXA,retag}){
 function varCtrlQ(){
   const r=pick(VARCTRL),options=['Variable','Control','Result','Prediction'];
   return two("In the Friction Roll experiment, is this a variable or a control, a measured result or a prediction?",options,r[1]==='Variable'?0:1,
@@ -140,12 +140,14 @@ function endMarkQ(){
     explain:(r[1]==='?'?"It asks a question, so it needs a question mark.":r[1]==='!'?"It is exciting or a command, so it needs an exclamation mark.":"It is a plain statement, so it ends with a full stop.")}, SEN);
 }
 
-function specificExampleQ(){
-  const r=pick(SPECIFIC), swap=rnd(2)===0, level=r[3]||2;
+function specificExampleQ(r=pick(SPECIFIC)){
+  const swap=rnd(2)===0, level=r[3]||2;
   if(level>1)return mc("Which example is more <b>specific and personal</b>? "+(level===3?'Choose one particular event.':'Look for a person, an activity and concrete details.'),r[1],[r[2],...SPECIFIC_NEAR[SPECIFIC.indexOf(r)]],SPECIFIC_EXPLAIN[level],Object.assign({visual:quote("Reason: "+r[0]),level:level},SEN));
   return two("Which example is more <b>specific and personal</b>?", swap?[r[2],r[1]]:[r[1],r[2]], swap?1:0,
     SPECIFIC_EXPLAIN[level], Object.assign({visual:quote("Reason: "+r[0]), level:level}, SEN));
 }
+
+function exampleFallbackPool(){return retag(SPECIFIC.map(r=>specificExampleQ(r)).concat(HYPO.map(bankMC(HYPO,SEN))),EXA);}
 
 function trennbarQ(){ const r=pick(TRENNBAR); return mc("Welcher Satz verwendet das trennbare Verb <b>"+r[0]+"</b> richtig?", r[1], r[2], "Bei trennbaren Verben wandert die Vorsilbe ans Satzende: Man schneidet … aus.", ANL); }
 
@@ -154,5 +156,5 @@ function zusammenQ(){
   const wrongs=uniq([r[1]+r[0].toLowerCase(), r[0]+" "+r[1], r[0]+"-"+r[1].toLowerCase()+"e"]).filter(x=>x!==r[2]).concat(others).slice(0,3);
   return mc("<b>"+r[0]+"</b> + <b>"+r[1]+"</b> = ? Bilde das zusammengesetzte Wort.", r[2], wrongs, r[0]+" + "+r[1]+" = "+r[2]+". Das letzte Wort bestimmt den Artikel: die Kurbel → die Drehkurbel.", Object.assign({grid:true}, ANL));
 }
-return {varCtrlQ,oreoMC,opinionFact,sentenceType,affixQ,inferenceQ,sourceQ,packQ,capitalFixQ,properNounQ,endMarkQ,specificExampleQ,trennbarQ,zusammenQ};
+return {varCtrlQ,oreoMC,opinionFact,sentenceType,affixQ,inferenceQ,sourceQ,packQ,capitalFixQ,properNounQ,endMarkQ,specificExampleQ,exampleFallbackPool,trennbarQ,zusammenQ};
 }

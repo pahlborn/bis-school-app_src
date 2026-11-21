@@ -1764,7 +1764,7 @@ function buildMass(){ return shuffle([massUnitQ(), massUnitQ(), massUnitQ(), kgQ
 
 let {clockRead,clockPick,ampm,numberLine,placeValue,expandedZeroQ,oddEven,mental,unitPickQ,convertQ,rulerQ,barData,barReadQ,barMissingQ,tableConclusionQ,scaleStepQ,lineGraphQ,massRecordQ,combosQ,anotherWayQ,reasonableQ,frictionTableQ,travelData,travelTableQ,estimateTotalQ,betweenHundredsQ,splitQ,compareQ,stickerComboQ,roundTenAddQ,wpSetup,findTotalQ,operationQ,calcCheckQ,arrayQ,shadedQ,unitCompareQ,areaWhichQ,laterQ,massUnitQ,kitchenScaleQ}=createNumberQuestions({Math,rnd,pick,shuffle,uniq,fmt,round10,round100,mc,two,typed,fill3,pad,timeWords,clockSVG,numberLineSVG,quote,itemCard,tableHTML,barChartSVG,rulerSVG,scaleSVG,lineSVG,arraySVG,fracSVG,randNotMid,takeFrom,NUM,UNT,GRA,EXP,CHA,DET,STK,WPR,TIM,FRA,ARE,ELA,MAS,NAMES,THINGS});
 
-let {varCtrlQ,oreoMC,opinionFact,sentenceType,affixQ,inferenceQ,sourceQ,packQ,capitalFixQ,properNounQ,endMarkQ,specificExampleQ,trennbarQ,zusammenQ}=createLanguageQuestions({rnd,pick,shuffle,uniq,mc,two,bankMC,quote,itemCard,stripP,FOR,WRD,LIB,TRIP,SEN,ANL,OREO_MC,OPFACT,INFER,SPECIFIC,SPECIFIC_EXPLAIN});
+let {varCtrlQ,oreoMC,opinionFact,sentenceType,affixQ,inferenceQ,sourceQ,packQ,capitalFixQ,properNounQ,endMarkQ,specificExampleQ,exampleFallbackPool,trennbarQ,zusammenQ}=createLanguageQuestions({rnd,pick,shuffle,uniq,mc,two,bankMC,quote,itemCard,stripP,FOR,WRD,LIB,TRIP,SEN,ANL,OREO_MC,OPFACT,INFER,SPECIFIC,SPECIFIC_EXPLAIN,HYPO,EXA,retag});
 
 /* ======================= MIXES ======================= */
 /* Round-robin over the given quests: one question from each in turn, 8 in total. Every question keeps its own quest colour. */
@@ -2395,7 +2395,7 @@ let focusMemo={key:null,val:[]};
 function focusTopics(){
   const raw=k=>{ try{ return localStorage.getItem(storeKey(k))||''; }catch(e){ return ''; } };
   // computed once per change of the data (the start page asks for it many times)
-  const key=[storeKey('x'),raw('attempts').length,raw('ev').length,raw('focusMode'),raw('focusManual'),raw('unlocked'),raw('gaps'),dayKey(),evVersion()].join('|');   // test build: the values come from the log (3b-2a)
+  const key=[storeKey('x'),raw('attempts').length,raw('ev').length,raw('focusMode'),raw('focusManual'),raw('unlocked'),raw('gaps'),dayKey(),evVersion(),schoolLogVersion()].join('|');   // test build: the values come from the log (3b-2a)
   if(focusMemo.key!==key) focusMemo={key, val:cleanFocus(focusManualMode()?store.get('focusManual',[]):focusAuto())};
   return focusMemo.val.slice();
 }
@@ -2423,6 +2423,9 @@ SUBJECTS.forEach(s=>{ if(questsIn(s).length>1) WORLDS['mix_'+s.key]={name:s.name
 /* No task twice in one round (Peter 03.11.; module runde): every quest and mix replaces a repeated task by another
    one of the same level from a new round of the same quest. Practise Today checks its whole round (buildToday). */
 for(const [k,w] of Object.entries(WORLDS)) if(k!=='today' && typeof w.build==='function'){ const b=w.build; w.build=()=>ohneDoppelte(b(), b, {id:qId, level:levelOf}); }
+// Specific Examples alone may exhaust its random refills; reuse its complete existing catalogue.
+const examplesRandomRound=WORLDS.examples.build;
+WORLDS.examples.build=()=>ohneDoppelte(examplesRandomRound(),()=>[],{id:qId,level:levelOf,tries:0,fallback:exampleFallbackPool});
 const STUDIOS={
   grow:{name:'My Work Checklist', sub:'Tick what you did in your work this week', color:'var(--w-grow)', icon:'grow',
     intro:'The teachers asked for these habits. Tick each one when you did it in your work this week. Start with one.',
@@ -6197,6 +6200,7 @@ const schoolKid = () => { const n=viewedKid(), a=n && APP_ACCOUNTS.users.find(u=
 /* With accounts in the storage (family build, test instance; KONTO_UI) there is no SCHOOL_DATA: the ratings are in the
    child's account (area schule, school_import - werkzeug/schulbewertungen-uebernehmen.mjs) and come with the sync into
    its log. Computed from that log (module anmeldung: anmSchule), anew only when the log changed. */
+function schoolLogVersion(){const id=schoolKid();return KONTO_UI&&id?evKindLog('bq2_'+id+'__').version():'';}
 let schoolCache=null;
 function schoolFromAccount(id){
   if(!id || typeof anmSchule!=='function') return null;

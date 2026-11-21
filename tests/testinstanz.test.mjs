@@ -163,6 +163,12 @@ test('Gegenproben Umwandlung: geaenderte Stellen in index.html und Namensgleichh
   const testbau = appLesen('utf8', { bauart: 'test' });
   assert.throws(() => testinstanzUmwandeln(testbau.replace('const GLOBAL_KEYS=/^(', 'const GLOBAL_KEYS = /^('), ERSATZ), /GLOBAL_KEYS 0x statt 1x/);
   assert.throws(() => testinstanzUmwandeln(testbau.replace(/<title>/, '<title>A</title><title>'), ERSATZ), /<title> 2x/);
+  assert.throws(() => testinstanzUmwandeln(testbau.replace(/<title>[^<]*<\/title>/, ''), ERSATZ), /<title> 0x/);
+  assert.throws(() => testinstanzUmwandeln(testbau.replace('<head>', '<head></head><head>'), ERSATZ), /<title> 0x/);
+  const svg='<svg role="img"><title>Preserved SVG label</title></svg>';
+  const withSVG=testinstanzUmwandeln(testbau.replace('<body>', '<body>'+svg), ERSATZ);
+  assert.ok(withSVG.includes(svg),'body SVG title remains untouched');
+  assert.match(withSVG, /<head>[\s\S]*?<title>Grade 3 – Big Quest \(Test\)<\/title>[\s\S]*?<\/head>/,'exact document title still receives the test suffix');
   assert.throws(() => testinstanzUmwandeln(testbau.replace('<meta name="apple-mobile-web-app-title"', '<meta name="x"'), ERSATZ), /apple-mobile-web-app-title 0x/);
   assert.throws(() => testinstanzUmwandeln(testbau.replace("localStorage.getItem('bq_schluessel')", "localStorage.getItem('bq_key')"), ERSATZ), /publishedVersion \(mit Schluessel\) 0x/);
   assert.throws(() => testinstanzUmwandeln(testbau.replace(SPEICHER_MARKE, 'null'), ERSATZ), /Marke \/\*BQ_SPEICHER\*\/null 0x statt 1x/);

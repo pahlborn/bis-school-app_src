@@ -97,7 +97,7 @@ test('W1 questions, guidance, Today, held/R2 and tree stay exact; approved EP04 
  const A=appSandbox({seed:203,anpassen:()=>approved});
  for(const name of['score','showResults','jokeFor']){let actual=String(S.holen(name));if(name==='score')actual=actual.replace("  const firstTreeSolution=!starRewards.read().solved.includes(q.world);\n",'').replace("  if(ok)knowledgeTree.correct(q,firstTreeSolution);else knowledgeTree.observe();\n",'');assert.equal(actual,String(A.holen(name)),name+' exact EP04 behavior with only approved EP05 observation');}
  const quests=S.holen('SUBJECTS').flatMap(s=>s.items).filter(k=>S.holen('WORLDS')[k]);
- for(const k of quests){const a=S.holen('WORLDS')[k].build,b=B.holen('WORLDS')[k].build;assert.equal(String(a),String(b),k);}
+ for(const k of quests){const a=S.holen('WORLDS')[k].build,b=B.holen('WORLDS')[k].build;if(k==='examples'){assert.equal(String(S.holen('examplesRandomRound')),String(b),'unchanged original examples random wrapper');assert.equal(String(S.holen('buildExamples')),String(B.holen('buildExamples')),'unchanged examples sampling and difficulty distribution');assert.equal(String(a),'()=>ohneDoppelte(examplesRandomRound(),()=>[],{id:qId,level:levelOf,tries:0,fallback:exampleFallbackPool})','only approved bounded catalogue fallback');}else assert.equal(String(a),String(b),k);}
 });
 test('actual common statuses reach Legend at zero stars across five subjects; one highest-title write and no repeated celebration',()=>{
  const keys=['numbers','round','combos','wordprob','detective','times','fractions','area','forces','units','graphs','opinion','sentences','examples','words','anleitung','library','poetry'];

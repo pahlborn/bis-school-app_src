@@ -147,7 +147,7 @@ async function evaluationFamily(t, options = {}) {
   const admin = await ersteAnmeldung({ zugang: access, code: adminCode.code, passwort: 'Werkzeug-Admin-Passwort-1', now: Date.now() });
   const parentCode = await startcodeAusstellen({ zugang: access, aussteller: admin, anmeldename: 'mira.sonnenweg', art: 'parent', now: Date.now() });
   const config = JSON.stringify({ art: 'github', repo: REPO, wurzel: '', basis: storage.basis });
-  const server = await appServer({ bauart: 'test', anpassen: (h) => h.replace('/*BQ_SPEICHER*/null', () => config).replace(/\}\)\(\);\s*<\/script>/, 'window.__evaluationIntegration={eventHook,schoolEvaluationTarget,schoolFromAccount,renderSheets,openGaps,activeGap,focusTopics,classTopics,schoolStandFor,standOf,buildToday,gapData,kontoAbgleich,beginYearRound(){const questions=[];for(let i=0;i<8&&questions.length<8;i++)questions.push(...WORLDS.numbers.build().filter(q=>q.kind==="mc"&&levelOf(q)===2&&!q.assisted));if(questions.length<8)throw new Error("Missing real year-level questions");startRound("numbers");state.round=questions.slice(0,8);state.results=state.round.map(()=>null);renderQuestion();},currentAnswer:()=>state.round[state.idx].answer,schoolSectionOpen:()=>state.popen?.includes("school"),openLegacy(){const t=schoolEvaluationTarget();schoolEvaluationDraft={child:t.id,author:t.author,title:"",day:"",standard:"",rating:"",evaluation:crypto.randomUUID(),revision:crypto.randomUUID(),preview:false,focus:false};renderSheets();},draft:()=>schoolEvaluationDraft,adult:()=>adultUser&&{user:adultUser.user,role:adultUser.role},viewedKid,viewerGrant:()=>{const g=viewerGrant();return g&&{scope:[...g.scope]};},async loginAs(name,password){show("login");renderLogin("adult",{name});await kontoLoginAbsenden("adult",name,password);return adultUser&&adultUser.user;}};})();</script>') });
+  const server = await appServer({ bauart: 'test', anpassen: (h) => h.replace('/*BQ_SPEICHER*/null', () => config).replace(/\}\)\(\);\s*<\/script>/, 'window.__evaluationIntegration={eventHook,evVersion,schoolLogVersion,schoolEvaluationTarget,schoolFromAccount,renderSheets,openGaps,activeGap,focusTopics,classTopics,schoolStandFor,standOf,buildToday,gapData,kontoAbgleich,beginYearRound(){const questions=[];for(let i=0;i<8&&questions.length<8;i++)questions.push(...WORLDS.numbers.build().filter(q=>q.kind==="mc"&&levelOf(q)===2&&!q.assisted));if(questions.length<8)throw new Error("Missing real year-level questions");startRound("numbers");state.round=questions.slice(0,8);state.results=state.round.map(()=>null);renderQuestion();},currentAnswer:()=>state.round[state.idx].answer,schoolSectionOpen:()=>state.popen?.includes("school"),openLegacy(){const t=schoolEvaluationTarget();schoolEvaluationDraft={child:t.id,author:t.author,title:"",day:"",standard:"",rating:"",evaluation:crypto.randomUUID(),revision:crypto.randomUUID(),preview:false,focus:false};renderSheets();},draft:()=>schoolEvaluationDraft,adult:()=>adultUser&&{user:adultUser.user,role:adultUser.role},viewedKid,viewerGrant:()=>{const g=viewerGrant();return g&&{scope:[...g.scope]};},async loginAs(name,password){show("login");renderLogin("adult",{name});await kontoLoginAbsenden("adult",name,password);return adultUser&&adultUser.user;}};})();</script>') });
   t.after(() => server.close());
   const browser = await browserStarten();
   t.after(() => browser.close());
@@ -588,12 +588,15 @@ test('EV4/EV7 manual: confirmed criteria activate the visible gap, automatic foc
   await waitForRevision(K.page, events[0].payload.revision);
   const effect = await K.page.evaluate(() => {
     const app = window.__evaluationIntegration;
-    return { gaps: app.openGaps().map(g => g.s), active: app.activeGap()?.s, focus: app.focusTopics(),
+    return { gaps: app.openGaps().map(g => g.s), active: app.activeGap()?.s, focus: app.focusTopics(), learningVersion:app.evVersion(),schoolVersion:app.schoolLogVersion(),
       school: app.schoolStandFor('numbers'), stand: app.standOf('numbers') };
   });
   assert.deepEqual(effect.gaps, ['M-N1']);
   assert.equal(effect.active, 'M-N1');
+  t.diagnostic('Received confirmed school source: '+JSON.stringify({learningVersion:effect.learningVersion,schoolVersion:effect.schoolVersion,focus:effect.focus}));
   assert.ok(effect.focus.includes('numbers'), 'the actual automatic focus contains Time & Numbers');
+  const actualRound=await K.page.evaluate(()=>window.__evaluationIntegration.buildToday());
+  assert.ok(actualRound.some(q=>q.world==='numbers'&&q.gap),'the real Practise Today contains the received active gap');
   assert.deepEqual(effect.school, { st: 'C', day: events[0].payload.day });
   assert.equal(effect.stand, 'C', 'standOf really starts at C before any own answers');
   // Existing test-build storage adapter prepares only invented practice evidence;

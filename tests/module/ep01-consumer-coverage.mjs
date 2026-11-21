@@ -10,7 +10,8 @@ import{createLanguageQuestions}from'../../src/module/sprachfragen.mjs';
 export const protectedRounding=['roundWordQ','roundThousandQ','roundTenQ','distanceExplainQ','estimateQ','threeAddendsQ','tenVsHundredQ'];
 export const foundationConsumers=['nearestHundredQ','benchmarkQ','baseQ','numbersBaseQ','combosBaseQ','wordprobBaseQ','unitsBaseQ','graphsBaseQ','neulandFoundation'];
 export const sharedConstructors=['mc','two','takeFrom'];
-export const poolConsumers=['buildRounding','buildWords','buildLibrary','buildTrip','buildMusic','buildGraphs','buildFinish','buildExamples','buildChampion','buildOpinion','buildTeam','buildStickers','buildWordProb','buildAnleitung','buildPoetry','buildSchool'];
+// exampleFallbackPool reuses all 21 existing rows; complete supply/identity tested in examples-ci.test.
+export const poolConsumers=['exampleFallbackPool','buildRounding','buildWords','buildLibrary','buildTrip','buildMusic','buildGraphs','buildFinish','buildExamples','buildChampion','buildOpinion','buildTeam','buildStickers','buildWordProb','buildAnleitung','buildPoetry','buildSchool'];
 export function uncoveredConsumers(source,result){
   const covered=new Set([...result.consumers,...protectedRounding,...foundationConsumers,...sharedConstructors,...poolConsumers]);
   const factoryConsumers=[...Object.keys(createNumberQuestions({})).filter(n=>!['barData','travelData','wpSetup'].includes(n)),...Object.keys(createLanguageQuestions({}))];

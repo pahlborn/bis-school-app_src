@@ -171,7 +171,12 @@ test('Testbau = Live-Bau (3b-2a): derselbe Verlauf; was der Live-Bau speichert, 
   const wer = {}; for (const e of ereignisse) wer[e.author] = (wer[e.author] || 0) + 1;
   assert.deepEqual(Object.keys(wer).sort(), ['p_eltern', 'p_kind'], 'Kind und (beim Verwerfen) Eltern: ' + JSON.stringify(wer));
   assert.deepEqual(ereignisse.filter((e) => e.author === 'p_eltern').map((e) => e.type), ['sheet_discarded'], 'die Eltern haben nur das Blatt verworfen');
-  assert.deepEqual([ereignisse[0].type, ereignisse[0].payload], ['rank_seen', { rank: DERIVE_RANKS[0],policy:'legacy.v1' }], 'erster Start: der erste Titel wird still gemerkt - auch als Ereignis');
+  const initialTitle=ereignisse.find(e=>e.type==='rank_seen');
+  assert.deepEqual(initialTitle.payload,{rank:DERIVE_RANKS[0],policy:'legacy.v1'},'first actual title initialization remains exact');
+  const treeStarts=ereignisse.filter(e=>e.type==='tree_record'&&e.payload.baseline);
+  assert.equal(treeStarts.length,1,'exactly one separate EP05 bootstrap');
+  assert.equal(treeStarts[0].author,'p_kind');
+  assert.deepEqual(treeStarts[0].payload,{secure:[],extending:[],discovered:[],baseline:true,legacy:0,tokens:[]});
   for (let i = 1; i < ereignisse.length; i++) assert.ok(Date.parse(ereignisse[i].at) > Date.parse(ereignisse[i - 1].at), 'Zeiten steigen: ' + i);
 
   /* die Ereignisse sind gueltig und der Verlauf hat alles beruehrt */

@@ -120,7 +120,8 @@ function umwandeln(app, ersatz, speicher) {
 
   t = t.replace(/bq2_/g, TESTINSTANZ.praefix).replace(/\bbq_/g, TESTINSTANZ.praefix).replace(/\bbqUpdateTo\b/g, TESTINSTANZ.sitzungPraefix + 'UpdateTo');
 
-  t = einmal(t, /<title>([^<]*)<\/title>/, (_, x) => `<title>${x} (Test)</title>`, '<title>');
+  // Only the document head owns the app title; SVG titles in body/scripts stay intact.
+  t = einmal(t, /^<!doctype html>\s*<html[^>]*>\s*<head>[\s\S]*?<\/head>/, head => einmal(head, /<title>([^<]*)<\/title>/, (_, x) => `<title>${x} (Test)</title>`, '<title>'), 'document head');
   t = einmal(t, /<meta name="apple-mobile-web-app-title" content="[^"]*">/, () => `<meta name="apple-mobile-web-app-title" content="${TESTINSTANZ.name}">`, 'apple-mobile-web-app-title');
   return t;
 }
