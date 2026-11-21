@@ -53,3 +53,11 @@ test('nur uebergebener Nachschub, kein Zufall im Modul', async () => {
   const src = fs.readFileSync(new URL('../../src/module/runde.mjs', import.meta.url), 'utf8').replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
   for (const w of ['Math.random', 'localStorage', 'document', 'fetch', 'Date']) assert.ok(!src.includes(w), w);
 });
+
+test('finite catalogue fallback runs once only after normal exhaustion, preserves levels/keep/order and inputs',()=>{
+ const round=[q('a',1),q('b',2),q('a',1,{due:true}),q('b',2)],candidate=[q('c',1),q('d',2)],saved=structuredClone({round,candidate});let refills=0,fallbacks=0;
+ const out=ohneDoppelte(round,()=>{refills++;return[q('a',1),q('b',2)];},{...how,keep:x=>!!x.due,tries:12,fallback:()=>{assert.equal(refills,12);fallbacks++;return candidate;}});
+ assert.deepEqual(ids(out),['c','b','a','d']);assert.deepEqual(out.map(x=>x.level),round.map(x=>x.level));assert.equal(out[2],round[2]);assert.equal(fallbacks,1);assert.deepEqual({round,candidate},saved);
+ let unused=0;ohneDoppelte([q('a'),q('a')],()=>[q('c')],{...how,fallback:()=>{unused++;return[];}});assert.equal(unused,0);
+ const exhausted=ohneDoppelte([q('a'),q('a'),q('a')],()=>[],{...how,tries:0,fallback:()=>[q('b')]});assert.deepEqual(ids(exhausted),['a','b','a'],'a finite insufficient supplied pool cannot loop or shorten the round');
+});

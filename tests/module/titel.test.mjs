@@ -8,7 +8,8 @@ import{titleApp,titleRows,titlePlain,TITLE_PRE,TITLE_KID,TITLE_DAY}from'./titel-
 const BASE='f7e9ce66ba70ec366b82e1a80ec60d80b63ab79f';
 const p=(secure,subjects=0,extending=0)=>({secure,subjects,extending});
 const evFor=keys=>Object.fromEntries(keys.map(k=>[k,titleRows()]));
-const events=S=>titlePlain(S.holen('evKindZielLog')(TITLE_PRE).liste());
+// EP05 adds only these two independently checked tree events; all title/reward assertions stay exact.
+const events=S=>titlePlain(S.holen('evKindZielLog')(TITLE_PRE).liste()).filter(e=>!['tree_record','tree_open'].includes(e.type));
 const event=(payload,ms=0,type='rank_seen')=>newEvent({type,payload,author:TITLE_KID.id,device:'d_test',at:new Date(Date.parse('2026-11-20T07:00:00Z')+ms).toISOString()});
 
 test('fixed title boundaries, subject breadth and E counts are all required',()=>{
@@ -80,7 +81,8 @@ test('rank policy extends only the existing title payload; old validator rejects
 });
 test('W1 questions, guidance, Today, held/R2 and tree stay exact; approved EP04 reward/joke deltas preserve common status',()=>{
  const S=appSandbox({seed:203}),B=appSandbox({seed:203,anpassen:()=>committedApp(BASE)});
- for(const name of['yearLevelEv','meetsOf','qId','recordAnswer','observeAttempt','logAttempt','guidance','exampleFor','bridgeFor','buildToday','neulandEntry','gapAct','gapProgress','openGaps','treeSVG','storyFor'])assert.equal(String(S.holen(name)),String(B.holen(name)),name);
+ for(const name of['yearLevelEv','meetsOf','qId','recordAnswer','observeAttempt','logAttempt','guidance','exampleFor','bridgeFor','buildToday','neulandEntry','gapAct','gapProgress','openGaps','storyFor'])assert.equal(String(S.holen(name)),String(B.holen(name)),name);
+ assert.equal(String(S.holen('legacyTreeSVG')).replace('legacyTreeSVG','treeSVG'),String(B.holen('treeSVG')),'exact historical tree drawing retained by EP05');
  // Only the three approved standOf substitutions: same rules, optional historical evidence.
  const expectedStand=String(B.holen('standOf')).replace('function standOf(skill){','function standOf(skill,evidence){').replace("const e=(store.get('ev',{})[skill])||[];","const e=evidence===undefined?((store.get('ev',{})[skill])||[]):evidence;").replace('.slice(-20)','.slice(-KNOWLEDGE_YEAR_WINDOW)');
  assert.equal(String(S.holen('standOf')),expectedStand);assert.equal(S.holen('KNOWLEDGE_YEAR_WINDOW'),20);assert.deepEqual(titlePlain(S.holen('KEY')),titlePlain(B.holen('KEY')));
@@ -93,9 +95,9 @@ test('W1 questions, guidance, Today, held/R2 and tree stay exact; approved EP04 
  // Bind those exact implementations to the independently checked EP04/F01 freeze.
  const accepted='d3b391524461687277b0aa96f2a41d721e7cf7a0',approved=committedApp(accepted).replace(/\/\*BQ_JSON:(DAILY_WORD_DATA|DAILY_EXPLAIN_DATA)\*\/null/g,(_,name)=>JSON.stringify(JSON.parse(execFileSync('git',['show',`${accepted}:${MODUL_JSON[name]}`],{encoding:'utf8'}))).replace(/</g,'\\u003c'));
  const A=appSandbox({seed:203,anpassen:()=>approved});
- for(const name of['score','showResults','jokeFor'])assert.equal(String(S.holen(name)),String(A.holen(name)),name+' exact approved EP04 delta');
+ for(const name of['score','showResults','jokeFor']){let actual=String(S.holen(name));if(name==='score')actual=actual.replace("  const firstTreeSolution=!starRewards.read().solved.includes(q.world);\n",'').replace("  if(ok)knowledgeTree.correct(q,firstTreeSolution);else knowledgeTree.observe();\n",'');assert.equal(actual,String(A.holen(name)),name+' exact EP04 behavior with only approved EP05 observation');}
  const quests=S.holen('SUBJECTS').flatMap(s=>s.items).filter(k=>S.holen('WORLDS')[k]);
- for(const k of quests){const a=S.holen('WORLDS')[k].build,b=B.holen('WORLDS')[k].build;assert.equal(String(a),String(b),k);}
+ for(const k of quests){const a=S.holen('WORLDS')[k].build,b=B.holen('WORLDS')[k].build;if(k==='examples'){assert.equal(String(S.holen('examplesRandomRound')),String(b),'unchanged original examples random wrapper');assert.equal(String(S.holen('buildExamples')),String(B.holen('buildExamples')),'unchanged examples sampling and difficulty distribution');assert.equal(String(a),'()=>ohneDoppelte(examplesRandomRound(),()=>[],{id:qId,level:levelOf,tries:0,fallback:exampleFallbackPool})','only approved bounded catalogue fallback');}else assert.equal(String(a),String(b),k);}
 });
 test('actual common statuses reach Legend at zero stars across five subjects; one highest-title write and no repeated celebration',()=>{
  const keys=['numbers','round','combos','wordprob','detective','times','fractions','area','forces','units','graphs','opinion','sentences','examples','words','anleitung','library','poetry'];

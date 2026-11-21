@@ -120,7 +120,14 @@ function umwandeln(app, ersatz, speicher) {
 
   t = t.replace(/bq2_/g, TESTINSTANZ.praefix).replace(/\bbq_/g, TESTINSTANZ.praefix).replace(/\bbqUpdateTo\b/g, TESTINSTANZ.sitzungPraefix + 'UpdateTo');
 
-  t = einmal(t, /<title>([^<]*)<\/title>/, (_, x) => `<title>${x} (Test)</title>`, '<title>');
+  // Check the whole real prolog, including a second head after the first closing
+  // tag. Embedded documents and SVG/script titles after body stay untouched.
+  t = einmal(t, /^<!doctype html>[\s\S]*?(?=<body(?:\s[^>]*)?>)/, prolog => {
+    einmal(prolog, /<head\b[^>]*>/i, match => match, '<head>');
+    einmal(prolog, /<\/head\s*>/i, match => match, '</head>');
+    einmal(prolog, /<title\b[^>]*>[\s\S]*?<\/title\s*>/i, match => match, '<title>');
+    return einmal(prolog, /<head>[\s\S]*?<\/head>/, head => einmal(head, /<title>([^<]*)<\/title>/, (_, x) => `<title>${x} (Test)</title>`, '<title>'), '<head>');
+  }, 'document prolog');
   t = einmal(t, /<meta name="apple-mobile-web-app-title" content="[^"]*">/, () => `<meta name="apple-mobile-web-app-title" content="${TESTINSTANZ.name}">`, 'apple-mobile-web-app-title');
   return t;
 }

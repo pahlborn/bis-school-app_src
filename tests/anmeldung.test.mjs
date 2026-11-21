@@ -266,7 +266,10 @@ test('test account: own data apart from the child, "+1 Tag" with ⓘ, reset clea
   page.once('dialog', (d) => d.accept());
   await page.locator('#testReset').click();
   const nachher = await page.evaluate((ns) => Object.keys(localStorage).filter((k) => k.startsWith(ns)), NS('probe'));
-  assert.deepEqual(nachher.filter((k) => k !== NS('probe') + 'rankSeen' && k !== NS('probe')+'rankPolicy' && k !== NS('probe') + 'kidLang'), []);
+  assert.ok(await page.locator('#home:not([hidden]) #testBar:not([hidden])').isVisible(),'the actual test child home renders again after reset');
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('bq2_session')).id),ID('probe'),'the renderer belongs to the reset test child');
+  assert.deepEqual(JSON.parse(await page.evaluate(ns=>localStorage.getItem(ns+'treeLedger'),NS('probe'))),{version:1,secure:[],extending:[],discovered:[],baseline:{secure:[],extending:[],discovered:[]},legacyStage:0,claims:[],opened:[]},'only the exact fresh child bootstrap is allowed after reset');
+  assert.deepEqual(nachher.filter((k) => k !== NS('probe') + 'rankSeen' && k !== NS('probe')+'rankPolicy' && k !== NS('probe') + 'kidLang' && k !== NS('probe')+'treeLedger'), []);
   assert.equal(await page.evaluate((ns) => localStorage.getItem(ns + 'total'), NS('mia')), '7', 'child data still untouched');
   assert.ok(await page.evaluate((k) => localStorage.getItem(k), 'bq2_pw_' + ID('probe')), 'own password survives the reset');
   assert.deepEqual(fehler, []);

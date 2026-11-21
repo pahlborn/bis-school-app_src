@@ -150,7 +150,9 @@ test('W1 affected explanatory text removes knowledge-day demands while descripti
  const{appLesen}=await import('../werkzeug/module.mjs');const html=appLesen('utf8');
  for(const old of['6 Antworten an 2 Tagen','6 answers on 2 days','KEY.minDays','KEY.meetsDays','KEY.extDays','CONF.days','8 Aufgaben an 3 Tagen','8 tasks on 3 days','20 Aufgaben an 5 Übungstagen','20 tasks on 5 practice days','fewer than 6 answers or fewer than 2 days'])assert.ok(!html.includes(old),old);
  assert.ok(html.includes('Belegumfang')&&html.includes('Evidence amount'));assert.ok(html.includes('in den letzten 14 Tagen')&&html.includes('in the last 14 days'));
- assert.ok(html.includes('nach 1, 3, 6, 10, 15 und 25 Tagen')&&html.includes('after 1, 3, 6, 10, 15 and 25 days'),'tree remains for later EP05');
+ assert.ok(html.includes('Ein Ast je Fach entsteht durch die erste sichere Quest')&&html.includes('The first secure quest in a subject grows a branch'),'EP05 tree now follows the same secure knowledge');
+ assert.ok(html.includes('gelöstes Neuland eine Blüte (kein Könnensnachweis)')&&html.includes('a solved discovery adds a flower (not proof of secure knowledge)'));
+ assert.ok(!html.includes('nach 1, 3, 6, 10, 15 und 25 Tagen')&&!html.includes('after 1, 3, 6, 10, 15 and 25 days'),'no obsolete growth-by-days rule');
 });
 
 test('W1 independent-first touch: tip/example/solution preserve stars and raw correctness; separate failed groups stay visible',async()=>{

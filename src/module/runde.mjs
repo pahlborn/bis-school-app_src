@@ -8,13 +8,14 @@
  * Replaces repeated tasks in a round by other tasks of the SAME level (the difficulty of the round stays the same).
  * Of every group of equal tasks one stays: the first one marked "keep" (e.g. a due repeat), otherwise the first one.
  * Replacements come from `more()` (for example a new round of the same quest), at most `tries` times.
+ * Optional fallback supplies one finite existing-catalogue pool after the normal refills are exhausted.
  * Order and length stay; a task without a replacement stays as it is (never a shorter round).
  * @param {Array} round tasks
  * @param {() => Array} more new candidate tasks
  * @param {{id: (q) => string, level: (q) => number, keep?: (q) => boolean, tries?: number}} how
  * @returns {Array} a new array (the input is not changed)
  */
-export function ohneDoppelte(round, more, { id, level, keep = () => false, tries = 12 } = {}) {
+export function ohneDoppelte(round, more, { id, level, keep = () => false, tries = 12, fallback } = {}) {
   const out = round.slice(), ids = out.map(id), groups = new Map();
   ids.forEach((x, i) => { if (!groups.has(x)) groups.set(x, []); groups.get(x).push(i); });
   const replace = [];
@@ -25,12 +26,15 @@ export function ohneDoppelte(round, more, { id, level, keep = () => false, tries
   }
   if (!replace.length) return out;
   const used = new Set(ids), stock = [];
-  let geholt = 0;
+  let geholt = 0, fallbackUsed = false;
   const take = (lv) => {
     for (;;) {
       const j = stock.findIndex((q) => level(q) === lv && !used.has(id(q)));
       if (j >= 0) return stock.splice(j, 1)[0];
-      if (geholt >= tries) return null;
+      if (geholt >= tries) {
+        if (!fallbackUsed && typeof fallback === 'function') { stock.push(...fallback()); fallbackUsed = true; continue; }
+        return null;
+      }
       stock.push(...more()); geholt++;
     }
   };

@@ -21,6 +21,7 @@
 import { mergeLog, lastWins, lastWinsOrder, effectiveTime, SCHOOL_EVALUATION_TARGETS, schoolEvaluationNeedsPractice } from './ereignisse.mjs';
 import { schoolStandardInfo, schoolStandardsByQuest } from './standardkatalog.mjs';
 import {gapSchoolRatings,gapObserve,gapUndo,gapProjectSource,gapRemember,gapForget,gapUse,gapConsumed} from './lueckenverlauf.mjs';
+import {treeProjection} from './wissensbaum.mjs';
 import {starProjection} from './sterne.mjs';
 import {contentVoteState} from './inhaltsfeedback.mjs';
 import {secureEvidence} from './wissen.mjs';
@@ -103,6 +104,7 @@ function abApply(st, ctx, e) {
       } else if (p.solutionShown && p.beforeTry) abPushEvidence(st, ctx, p.skill, [p.day,1,0,false],p.level); // answer shown: support level
       break;
     }
+    case 'tree_record': case 'tree_open': Object.assign(st,treeProjection(st,e.type,p));break;
     case 'reward_seen': case 'discovery_bonus': case 'round_reward': Object.assign(st,starProjection(st,e.type,p));break;
     case 'round_done': {                                                        // index.html: showResults
       st.total += p.stars;

@@ -56,6 +56,7 @@ const evField = {
   evalTitle: (x) => evStr(x) && x.length <= 160 && x === x.trim() && !/[\x00-\x1f\x7f]/.test(x),
   roundId: x=>typeof x==='string'&&/^r_[a-f0-9]{24}$/.test(x),
   quests: x=>Array.isArray(x)&&x.length<=100&&new Set(x).size===x.length&&x.every(k=>typeof k==='string'&&/^[a-z][a-z0-9_]{0,63}$/.test(k)),
+  treeTokens: x=>Array.isArray(x)&&x.length<=300&&new Set(x).size===x.length&&x.every(t=>typeof t==='string'&&/^(leaf|fruit|flower):(maths|science|english|deutsch|reading):[1-9][0-9]?$/.test(t)),
   str: evStr, nstr: (x) => x === null || evStr(x), bool: (x) => typeof x === 'boolean', any: (x) => x !== undefined,
   int: (x) => Number.isInteger(x) && x >= 0, pos: (x) => Number.isInteger(x) && x >= 1, lvl: (x) => x === 1 || x === 2 || x === 3,
   arr: Array.isArray, obj: evObj, utc: (x) => !Number.isNaN(evMs(x)),
@@ -79,6 +80,8 @@ const evField = {
    the storage places in werkzeug/speicherstellen.json (concept 7.2) and kept short. */
 const EV_SPEC = {
   answer: ['day:day skill:str level:lvl attempt:int ok:bool qid:str', 'family:nstr response:any help:bool example:bool hintShown:bool exampleShown:bool solutionShown:bool beforeTry:bool sheet:str'],
+  tree_record: ['secure:quests extending:quests discovered:quests baseline:bool legacy:int tokens:treeTokens', ''],
+  tree_open: ['ordinal:pos', ''],
   reward_seen: ['secure:quests solved:quests', ''],
   discovery_bonus: ['quest:str round:roundId', ''],
   round_reward: ['day:day round:roundId skill:str correct:int stars:int count:pos', ''],
@@ -213,6 +216,7 @@ export function checkEvent(e) {
       if (base === revision || ((withdrawn || resolves) && !base)) err.push('payload.base: invalid revision base');
       if (Array.isArray(resolves) && (resolves.includes(revision) || resolves.includes(base))) err.push('payload.resolves: invalid conflict revisions');
     }
+    if(e.type==='tree_record'&&(e.payload.legacy>6||e.payload.baseline&&e.payload.tokens?.length||!e.payload.baseline&&e.payload.legacy!==0))err.push('payload: invalid tree migration');
     if(e.type==='round_reward'&&(e.payload.correct>e.payload.count||e.payload.stars>e.payload.correct))err.push('payload: invalid reward counts');
     for (const k of Object.keys(e.payload)) if (!evOwn(req, k) && !evOwn(opt, k)) err.push(`payload.${k}: unknown field`);
   }

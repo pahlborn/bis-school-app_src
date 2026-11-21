@@ -126,16 +126,20 @@ test('die Mystery Question ist den ganzen Tag dieselbe und wechselt am naechsten
   assert.notEqual(a, c);
 });
 
-test('Lernbaum waechst mit Uebungstagen und meldet sich einmal', async () => {
-  const { ctx, page } = await app();
-  await page.evaluate((ev) => localStorage.setItem('bq2_ev', JSON.stringify(ev)), { numbers: [0, 1, 2, 3, 4, 5].map((i) => [tag(i), 2, 1]) });
-  await page.reload(); await page.waitForSelector('#home h1');
-  assert.equal(await page.textContent('#treeText'), 'A strong young plant.');
-  assert.equal(await page.textContent('#homeNote'), '🌱 A new part has grown on your learning tree.');
-  assert.equal(await page.isVisible('#homeNote'), true, 'the growth notification is actually shown');
-  await page.reload(); await page.waitForSelector('#home h1');
-  assert.equal(await page.isVisible('#homeNote'), false, 'die Meldung kommt nur beim Wachsen');
-  await ctx.close();
+test('Wissensbaum: sechs gleiche-Tags-Erfolge ergeben einen Ast; sechs Fehlertage erzeugen kein Wissen', async () => {
+  const {ctx,page}=await app();
+  await page.evaluate((day)=>{localStorage.setItem('bq2_ev',JSON.stringify({numbers:Array.from({length:6},()=>[day,2,1,true])}));localStorage.removeItem('bq2_treeLedger');},tag(0));
+  await page.reload();await page.waitForSelector('#home h1');
+  assert.equal(await page.locator('#tree [data-tree-branch="maths"]').getAttribute('data-secure'),'1');
+  assert.match(await page.textContent('#treeText'),/1 branches · 0 leaves/);
+  // Only the approved EP05 tree assertion changes; every other fun path remains.
+  await ctx.close();const other=await app(),fresh=other.page;
+  await fresh.evaluate((days)=>{localStorage.setItem('bq2_ev',JSON.stringify({numbers:days.map(day=>[day,2,0,false])}));localStorage.removeItem('bq2_treeLedger');},[0,1,2,3,4,5].map(tag));
+  await fresh.reload();await fresh.waitForSelector('#home h1');
+  assert.equal(await fresh.locator('#tree [data-tree-branch="maths"]').getAttribute('data-secure'),'0');
+  assert.match(await fresh.textContent('#treeText'),/0 branches · 0 leaves/);
+  assert.equal(await fresh.locator('#treeHomeLegacy svg').count(),1,'old extent is separately retained, not called knowledge');
+  await other.ctx.close();
 });
 
 test('Challenge: freiwillig; annehmen gibt Risk-taker (auch bei Fehler), danach Glow-Frage -> Reflective', async () => {
