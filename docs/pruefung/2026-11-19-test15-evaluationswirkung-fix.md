@@ -1,6 +1,13 @@
-# TEST15-WIRKUNG-FIX-01-v1 · lokaler Korrektur- und Prüfstand
+# Test 15 · Evaluationswirkung: Softwareprüfung und Geräteabnahme
 
-**Aktueller Stand 20.11.2026: Kriterien-/Gehalten-Anschluss lokal bestanden, unabhängige Endprüfung und Gesamt-CI offen.** Die ausdrücklich freigegebene Fortsetzung schließt den unabhängigen W1-Quellbefund fachlich an; lokale Nachweise stehen im letzten Abschnitt. Unabhängige Endprüfung, vollständige CI und echte Geräteabnahme werden daraus nicht vorweggenommen. Sämtliche früheren Fehler und Abbrüche bleiben als getrennte Historie erhalten.
+**Stand 22.11.2026:** Die berichteten iPad-Schritte und der manuelle Browser-Wirkungsvergleich sind im Abnahmenachtrag unten je Prüfschritt festgehalten. Die finale Softwareprüfung von PR233 ist abgeschlossen. Die noch offene EV-5.1-Sichtprüfung zum Abschnitt „Standards“ im Toddle-Original ist durch die Nutzerrückmeldung vom22.11. bestätigt. Ein pauschaler Abschluss aller Ziel1-Stories oder ein Gerätetest neuerer main-Fassungen wird daraus nicht abgeleitet.
+
+Der aktuelle Nachtrag wurde von Atlas aus den Nutzerrückmeldungen und verlinkten Produktnachweisen erstellt. Grundlage der Dokumentation ist main `5438aaf470326a2c2d87f31a6b537392bf2840d8`; tatsächlich am Gerät geprüft wurde die veröffentlichte Fassung `0.152.5-beta / aa3b57c949f86f1c89b8a041b8f6439c18f97727` im vorhandenen Test15-Projekt. Die Eingabephase wurde bereits auf der vorigen Webfassung geprüft; die Standtrennung ist unten ausdrücklich beschrieben.
+
+Die folgenden früheren Arbeitsstände und Fehler bleiben als Historie erhalten.
+
+
+**Historischer Zwischenstand 20.11.2026: Kriterien-/Gehalten-Anschluss lokal bestanden, unabhängige Endprüfung und Gesamt-CI offen.** Die ausdrücklich freigegebene Fortsetzung schließt den unabhängigen W1-Quellbefund fachlich an; lokale Nachweise stehen im letzten Abschnitt. Unabhängige Endprüfung, vollständige CI und echte Geräteabnahme werden daraus nicht vorweggenommen. Sämtliche früheren Fehler und Abbrüche bleiben als getrennte Historie erhalten.
 
 **Historischer lokaler Stand vor der unten dokumentierten Fortsetzung: ANGEHALTEN, kein Gesamt-PASS.** Die direkte D5-Prüfung (1/1), die gezielte Formular-/Legacy-/Revisionsgruppe (5/5) und der zusätzliche Upgrade-Browsertest (1/1) sind lokal bestanden, jeweils ohne Fehler, Abbruch oder Skip. Das anschließend **einmalig** ausgeführte `npm test` endete mit Exit 1: **1091 Tests, 1090 bestanden, 1 fehlgeschlagen, 0 abgebrochen, 0 übersprungen**. Der bestehende Leistungstest `tests/module/lesen.test.mjs:179` misst 68,2 ms Median statt der geforderten weniger als 50 ms. Keine Wiederholung, Schwellenänderung oder Reparatur wurde begonnen. Der frühere D5-Timeout vom 19.11. ist unten ausdrücklich als frühere Prüfphase erhalten.
 
@@ -186,3 +193,76 @@ Die negative Regression gibt nur einen solchen Alt-Prefix plus eine verwaiste Ko
 ### Grenzen und Übergabe
 
 Kein eigener Gesamt-`npm test`, kein Push, Merge, Veröffentlichen, CI- oder echter iPad-PASS durch diese Instanz. Atlas übernimmt den sauberen Commit zur unabhängigen Prüfung und vollständigen Standard-CI. Die frühere lokale Leistungstestabweichung und alle Abbrüche bleiben oben erhalten; sie werden nicht in Erfolge umgedeutet. Ziel1 und EV7 sind erst nach den getrennten echten Geräte-/Browserabnahmen angenommen.
+
+## Abnahmenachtrag · 21.11.2026
+
+### Anliegen, Stand und Ausführende
+
+EV-7.3 verlangt die echte Kette vom Lesen einer Evaluation bis zu passender Übung und Erhalt nach Neustart; EV-7.4 verlangt bei manueller Browser-Eingabe dieselben Einstufungen je Standard und dieselbe Lücke. Der Nutzer führte die Gerätetests aus; Atlas leitete an, prüfte Quellen und protokollierte. Die Rückmeldungen sind manuelle Nutzerbeobachtungen, keine unabhängigen Geräteausführungen durch Atlas oder eine CI.
+
+- Testseite: [Big Quest](https://big-quest-test.github.io/), Wurzeladresse; die frühere Formular-Vorschau unter einem Unterpfad ist keine Vergleichsinstanz.
+- Eingabephase am 19.11.: Webquelle `1ea91622e7f55dbc4a0bebcc89bd199bade31928`, Version0.152.4; im vorhandenen nativen Test15-Projekt.
+- Wirkungs-/Neustartphase am 21.11.: Webquelle `aa3b57c949f86f1c89b8a041b8f6439c18f97727`, Version0.152.5; veröffentlicht als `402322a998cd8b66cb2deefd6a57d68338d60138`. [Versionsrückmeldung](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7042121789), [Veröffentlichungsnachweis](https://github.com/pahlborn/bis-school-app_src/pull/233#issuecomment-7040629073).
+- Native Quelle des vorhandenen Pakets: `eda2e547820244b573439ca713e81b7417ede5c2`; [Paket und Anleitung](https://github.com/pahlborn/bis-school-app_src/tree/423975fa5a88f0e1ba994694272e0576b6570a7e/handoffs/big-quest/device-tests/TEST-15). Kein neues Paket für den Web-Wirkungsfix.
+- Der [Vergleich der beiden Webquellen](https://github.com/pahlborn/bis-school-app_src/compare/1ea91622e7f55dbc4a0bebcc89bd199bade31928...aa3b57c949f86f1c89b8a041b8f6439c18f97727) enthält keine Änderung einer Datei unter `ios/` und keine geänderte Zeile der Dokument-/Evaluationsformular- oder nativen Importfunktionen in `index.html`. Die Eingabenachweise werden deshalb weiterverwendet, die nachgebesserte Wirkung ist getrennt neu beobachtet.
+- Aktuelles main zur Dokumentation: `5438aaf470326a2c2d87f31a6b537392bf2840d8` bereitet0.152.6 vor. Die manuellen Aussagen dieses Nachtrags gelten für0.152.5; eine Veröffentlichung oder Geräteabnahme neuerer main-Stände wird nicht behauptet.
+
+### Finale Softwareprüfung von PR233
+
+Der Kandidat `8401a3a45f31316efded537f377b8e33586f6e63` wurde nach ausdrücklicher Freigabe als `aa3b57c` nach main übernommen; der Mergebaum entspricht dem getesteten Kandidaten.
+
+| Nachweis | Ergebnis und Grenze |
+|---|---|
+| [Vollständige Web-PR-CI44726634201](https://github.com/pahlborn/bis-school-app_src/actions/runs/44726634201) | Erfolg am Kandidaten, Versuch1;1180/1180 ohne Fehler, Abbrüche, Skips oder TODO laut geprüftem Endnachweis. Kein Geräte-PASS aus CI. |
+| [Linux-Export44726634338](https://github.com/pahlborn/bis-school-app_src/actions/runs/44726634338) | Erfolg am selben Kandidaten. Kein neues Kundenpaket daraus ausgegeben. |
+| [Unabhängige Argus-Endprüfung](https://github.com/pahlborn/bis-school-app_src/pull/233#issuecomment-7038302128) | PASS_WITH_NOTES / RA_AGREED für genau8401a3a, keine verbleibenden Produktblocker im geprüften Softwareumfang. Die Informationsgrenze eines alten Snapshots ohne verfügbare Wurzel bleibt bestehen. |
+| [Native Mac-Prüfung44470905013](https://github.com/pahlborn/bis-school-app_src/actions/runs/44470905013) | Erfolg für die unveränderte native Quelleeda2e54: Xcode-Bau und Swift-Regression. Keine Behauptung eines neuen Mac-Laufs durch diesen Nachtrag. |
+
+D5 bleibt mit beiden automatischen Themenlagen geprüft; ein nachträgliches Zählen adaptiver Hilfekarten am Gerät ersetzt diesen Nachweis nicht. Die ältere Zweitagesformulierung in EV-7.2 ist durch die inzwischen angenommene W1-Regel aus PR231 übersteuert. Die bereits oben dokumentierten Vier-/Fünf-/Sechs-Antwort-Grenzen bleiben unverändert.
+
+### EV-7.3 · Manuelle iPad-Ergebnisse
+
+Die Tabelle führt tatsächlich berichtete Schritte zusammen. Sie behauptet keinen einzigen ununterbrochenen Lauf auf nur einem Webstand. Die anfängliche Eingabephase und die später korrigierte Wirkung sind jeweils ihrer Fassung zugeordnet.
+
+| Schritt | Ergebnis | Nutzerbeobachtung und Quelle |
+|---|---|---|
+| 1. Echte Evaluation aus Toddle lesen | PASS | Im nativen Leser vollständig lesbar; [Rückmeldung vom19.11.](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7008765275). |
+| 2. Claude füllt das Formular | PASS | Echte Befüllung mit Kriterien, Einstufungen und passenden Vorschlägen durch „Ja, alles passt“ bestätigt; [Rückmeldung vom19.11.](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7009344215). Keine eigenen Provider-Metadaten erhoben. |
+| 3. Vorgeschlagene Bereiche prüfen | PASS | Explizites Ohne-Bereich in der Vorschau und danach Wiederherstellen des fachlich passenden Bereichs geprüft; [Ohne-Bereich](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7009418965), [wiederhergestellte Zuordnung](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7009561744). |
+| 4. Bestätigen | PASS |19.11.: nach einmaliger Bestätigung genau ein Eintrag beim richtigen Kind.21.11.: neue native Übernahme beim neu angelegten Testkind ausdrücklich angezeigt; [erster Bestätigungsfall](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7009746988), [neue Übernahme](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7058890318), [Kindzuordnung](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7059350362). Keine exakte Ereignisanzahl für den zweiten Fall behauptet. |
+| 5. Lücke ist aktiv | PASS |21.11.: neue Übernahme, 🎯, automatischer Modus und tatsächlich grüner Fokus-Schalter gemeldet; [Rückmeldung](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7058890318). Eine bloße Beschriftung „Im Fokus“ zählt nicht. |
+| 6. Neue Runde: passende Übung | PASS |21.11.: im Kinderbereich in Playgrounds eine neue Practise-Today-Runde gestartet; passende Aufgabe vom Nutzer gesehen; [Rückmeldung](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7059903268). Keine Aufgabenquote oder Lösung daraus abgeleitet. |
+| 7. Playgrounds neu starten: alles noch da | PASS |21.11.: laufende App im selben Projekt tatsächlich gestoppt und neu gestartet; neue Evaluation, aktive Schullücke und grüner Fokus weiter sichtbar; [Rückmeldung](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7059694708). Keine zusätzliche Schlüsselbunddiagnose daraus abgeleitet. |
+
+Schritt7 wurde im späteren Prüfabschnitt vor Schritt6 ausgeführt. Die passende neue Aufgabe wurde also bereits nach dem Neustart beobachtet. Die vorher zurückgenommene Evaluation blieb Historie; das Profil wird nicht als historisch leer bezeichnet. Das sichtbare Übungsangebot ist kein isolierter Vorher-/Nachher-Ursachennachweis. Der kontrollierte fachliche Gegenbeleg und D5 bleiben eigenständige automatische Softwareprüfungen.
+
+### EV-7.4 · Manuelle Browser-Eingabe und Ergebnisvergleich
+
+**PASS für das geforderte Ergebnis:** dieselben Einstufungen je Standard und dieselbe aktive Schullücke wie im iPad-Fall, vom Nutzer in Safari bestätigt.
+
+1. Zuerst wurde die neue native Evaluation nach Neuladen auch in Safari angezeigt. Das ist nur ein [Anzeige-/Abgleichnachweis](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7063077051), keine manuelle Neueingabe.
+2. Für die eigentliche Eingabe wurde beim selben Test-Elternteil ein weiteres Testkind angelegt. Dort wurde das gemeinsame Formular in Safari von Hand befüllt; [Vorbereitung](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7063223009).
+3. Die langen optionalen Felder Lernziel, Arbeitsanweisung und Lehrkraft-Rückmeldung durften leer bleiben. Für den Wirkungsvergleich bleiben Datum, Fach und sämtliche bewerteten Originalkriterien mit Einstufungen und bestätigten Bereichen gleich. Normales Kopieren eines Kriterientextes in sein Feld ist erlaubt; kein Parser, Gesamttextimport oder Browser-KI. [Begründung anhand Formular, Validator und Ableitung](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7063308502). Keine vollständige Gleichheit ausgelassener Beschreibungstexte behauptet.
+4. Der Nutzer betätigte „Evaluation bestätigen“ früher als angeleitet. Anschließend bestätigte er genau eine angezeigte Evaluation beim neuen Testkind; [Speicher-/Anzeigefall](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7063442203). Eine bewusste Vorschauprüfung vor dieser Bestätigung ist nicht berichtet und wird nicht nachträglich als PASS geführt.
+5. Unter Details/Fassungsverlauf wurden sämtliche drei Kriterien mit denselben Bereichen und Einstufungen wie beim iPad-Eintrag bestätigt; [Kriterienvergleich](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7063467286).
+6. Danach bestätigte der Nutzer beim Browser-Testkind im Fachbereich ausdrücklich dieselben abgeleiteten Einstufungen unter „Aus der Schule“ und dieselbe aktive Lücke mit 🎯 unter „Lücken laut Schule“; [Wirkungsvergleich](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7063508835).
+
+Nicht zusätzlich geprüft/behauptet: Browser-Übungsrunde, erneuter Browser-Neustart oder allgemeine Konflikt-/Mehrgerätefreiheit. Diese sind kein Teil des einzelnen Ergebnisvergleichs aus EV-7.4. Die Vorschau-/Doppelbestätigungs-/Kindwechselregressionen bleiben separate automatische Formularnachweise.
+
+### Grenzen, Korrekturen und nächste Zuständigkeit
+
+- Der ursprüngliche Aufgabenstand war teilweise schon vor der Übernahme vorhanden. Ein früher daraus abgeleiteter Import-Ursachenbeleg wurde korrigiert; [Korrektur](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7057293441).
+- Falsche Antworten können Folgekarten verändern. Die frühere Aufforderung, daraus die ursprüngliche D5-Mischung zu zählen, wurde zurückgenommen; [Korrektur der Testanweisung](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7042950883). Keine Produktregel oder D5-Ausnahme geändert.
+- Der automatische Live-Abruf nach der Veröffentlichung scheiterte einmalig mit „fetch failed“, Exit1. Er bleibt fehlgeschlagen. Die späteren manuellen Nutzerbeobachtungen sind getrennte Evidenz; kein rückwirkender automatischer Live-PASS.
+- Keine Namen Dritter, Zugangsdaten, Schlüssel oder konkreten Leistungs-/Bewertungstexte werden in diesem öffentlichen Bericht ergänzt.
+- Die Ergebnisse belegen die oben abgegrenzten manuellen Schritte und den Browser-Wirkungsvergleich. Der Nachtrag erfindet keine neue Abnahme aller übrigen Ziel1-Stories. Atlas gleicht die Gesamtauswertung mit den vorhandenen Storyberichten ab; die Mergeentscheidung für den Dokumentations-PR und jede neue Veröffentlichung bleiben beim Nutzer.
+
+## EV-5.1 · Sichtprüfung am Toddle-Original · 22.11.2026
+
+**PASS für die geforderte Gerätebeobachtung:** Der Nutzer bestätigt, dass die verwendete echte Evaluation im Toddle-Original einen Abschnitt „Standards“ zeigt. Auf die ausdrückliche Frage nach diesem Originalabschnitt antwortet er „Ja“; [konkrete Rückmeldung](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7074093635). Eine Anzeige in Big Quest wird damit nicht als Toddle-Quelle ausgegeben.
+
+Damit ist die im [unabhängigen Review vom21.11. als N2 festgehaltene Informationslücke](https://github.com/pahlborn/bis-school-app_src/pull/238#issuecomment-7063662366) durch die dort verlangte kleinste Handlung geschlossen. Atlas ordnet die Originalrückmeldung dem [EV-5.1-Abnahmekriterium](https://github.com/pahlborn/bis-school-app_src/blob/5438aaf470326a2c2d87f31a6b537392bf2840d8/docs/konzept/evaluationen-ziel1-epics.md#L222) zu. Keine Wiederholung der EV-7-Kette oder neue Übernahme.
+
+Diese Rückmeldung belegt die Existenz des Quellenabschnitts im konkreten Fall. Sie erfindet keine Anzahl oder Inhalte von Standards, keine Kriteriumsverknüpfungen und keine neue automatische Ausleseprüfung. Die vorhandenen Softwaretests zum eindeutigen Quellenabgleich bleiben separate Evidenz. Keine geheimen Werte, Namen oder Leistungsdaten erhoben; keine Veröffentlichung oder weitere Produktänderung.
+
+Der unabhängige PASS_WITH_NOTES für den bisherigen Nachtrag gilt für Kopf36d599e. Diese kleine nachfolgende Ergänzung wurde von Atlas unmittelbar gegen die neue Nutzerrückmeldung geprüft; sie wird nicht als neuer unabhängiger Gesamtlauf ausgegeben.
