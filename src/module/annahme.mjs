@@ -74,6 +74,8 @@ const ANN_LIMITS = {
 const annObj = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
 const annOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 const annEnc = new TextEncoder();
+const annGleichePub = (a, b) => annObj(a) && annObj(b) && a.ecdh === b.ecdh && a.ecdsa === b.ecdsa;
+const annBestaetigungOk = (b) => annObj(b) && Object.keys(b).length === 2 && b.v === 1 && typeof b.at === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(b.at) && Number.isFinite(Date.parse(b.at));
 function annCanon(x) {
   if (x === null || typeof x !== 'object') return JSON.stringify(x);
   if (Array.isArray(x)) return '[' + x.map((v) => annCanon(v === undefined ? null : v)).join(',') + ']';
@@ -102,27 +104,64 @@ export function canonicalBytes(event, area) {
   if (typeof area !== 'string' || !area) throw new Error('annahme: Bereich fehlt.');
   return annEnc.encode('bq-sig1|' + area + '|' + annCanon(event));
 }
+/* A first signature after renewal attests the unchanged intent at a separate signing time. This is deliberately
+   a different signature domain; neither an ordinary signature nor a changed confirmation can be substituted. */
+function annBestaetigteBytes(event, area, bestaetigt) {
+  canonicalBytes(event, area); // the same area validation as the legacy format
+  return annEnc.encode('bq-sig2|' + area + '|' + annCanon({ event, bestaetigt }));
+}
 /* -> { event, sig }; a malformed event is not signed */
-export async function signEvent(event, area, myKeys) {
+export async function signEvent(event, area, myKeys, bestaetigt) {
   const errors = checkEvent(event);
   if (errors.length) throw new Error('annahme: Ereignis ungueltig, nicht unterschrieben (' + errors.join('; ') + ')');
   const copy = JSON.parse(JSON.stringify(event));
+  if (bestaetigt !== undefined) {
+    if (event.type !== 'school_evaluation' || !annBestaetigungOk(bestaetigt) || checkEvent({ ...event, at: bestaetigt.at }).length) throw new Error('annahme: Bestaetigung ungueltig.');
+    const b = { ...bestaetigt };
+    return { event: copy, sig: await signBytes(myKeys, annBestaetigteBytes(copy, area, b)), bestaetigt: b };
+  }
   return { event: copy, sig: await signBytes(myKeys, canonicalBytes(copy, area)) };
+}
+
+/* Historical eligibility remains mandatory. The attesting key must be a later key of the SAME continuously admitted
+   parent, and the original device must stay registered throughout. Ended/re-added membership or devices cannot bridge
+   the gap. Check against signing time, not read time: a valid stored signature remains replayable after later renewals.
+   The transport's key-version/removal guard still rejects late uploads made with revoked keys. */
+function annBestaetigtZuDerZeit(member, e, b, z) {
+  if (!Array.isArray(member.perioden) || !annObj(member.geraete) || !Number.isFinite(z.now)) return { grund: 'unterschrift' };
+  const von = effectiveTime(e.at, z.now), bis = Date.parse(b.at);
+  if (!(von < bis) || bis > z.now) return { grund: 'unterschrift' };
+  const start = member.perioden.findIndex((p) => p === annZur(member.perioden, von));
+  const ende = member.perioden.findIndex((p) => p === annZur(member.perioden, bis));
+  if (start < 0 || ende <= start) return { grund: 'nicht-mitglied' };
+  const l = member.perioden.slice(start, ende + 1);
+  if (l.some((p, i) => p.role !== 'parent' || (i && l[i - 1].bis !== p.von))) return { grund: 'rolle-darf-nicht' };
+  if (annGleichePub(l[0].pub, l[l.length - 1].pub)) return { grund: 'unterschrift' };
+  const g = member.geraete[e.device];
+  if (!Array.isArray(g) || !g.some((p) => (p.von === null || p.von <= von) && (p.bis === null || bis < p.bis))) return { grund: 'geraet-nicht-angemeldet' };
+  return annZuDerZeit(member, { ...e, at: b.at }, z);
 }
 
 /* ---------- accept ---------- */
 /* item = { event, sig } -> { ok: true } or { ok: false, grund } (grund: one of ANNAHME_GRUENDE) */
 export async function acceptEvent(item, zulassung) {
   annCheckAdmission(zulassung);
-  if (!annObj(item) || Object.keys(item).some((k) => k !== 'event' && k !== 'sig') || checkEvent(item.event).length) return { ok: false, grund: 'format' };
+  if (!annObj(item) || Object.keys(item).some((k) => !['event', 'sig', 'bestaetigt'].includes(k)) || checkEvent(item.event).length ||
+      (annOwn(item, 'bestaetigt') && (item.event.type !== 'school_evaluation' || !annBestaetigungOk(item.bestaetigt) || checkEvent({ ...item.event, at: item.bestaetigt.at }).length))) return { ok: false, grund: 'format' };
   const e = item.event;
   const eintrag = annOwn(zulassung.members, e.author) ? zulassung.members[e.author] : null;
   if (!annObj(eintrag)) return { ok: false, grund: 'autor-unbekannt' };
   const zeit = annZuDerZeit(eintrag, e, zulassung);
   if (zeit.grund) return { ok: false, grund: zeit.grund };
-  const member = zeit.member;
+  let member = zeit.member;
   if (!Array.isArray(member.devices) || !member.devices.includes(e.device)) return { ok: false, grund: 'geraet-fremd' };
-  if (typeof item.sig !== 'string' || !item.sig || !annObj(member.pub) || !(await verifyBytes(member.pub, canonicalBytes(e, zulassung.area), item.sig))) return { ok: false, grund: 'unterschrift' };
+  if (item.bestaetigt) {
+    const b = annBestaetigtZuDerZeit(eintrag, e, item.bestaetigt, zulassung);
+    if (b.grund) return { ok: false, grund: b.grund };
+    member = b.member;
+  }
+  const bytes = item.bestaetigt ? annBestaetigteBytes(e, zulassung.area, item.bestaetigt) : canonicalBytes(e, zulassung.area);
+  if (typeof item.sig !== 'string' || !item.sig || !annObj(member.pub) || !(await verifyBytes(member.pub, bytes, item.sig))) return { ok: false, grund: 'unterschrift' };
   if (!passtZumBereich(e, zulassung.area)) return { ok: false, grund: 'bereich-falsch' };
   if (!roleMayWrite(member.role, e, zulassung.area)) return { ok: false, grund: 'rolle-darf-nicht' };
   return { ok: true };

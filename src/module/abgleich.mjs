@@ -30,7 +30,7 @@ export const ABGLEICH_BUENDEL_MAX = 100;
 export const ABGLEICH_GRUENDE = Object.freeze(['entschluesseln', 'eintrag-passt-nicht', ...ANNAHME_GRUENDE, 'nach-entfernung']);
 
 // Older clients advanced their school cursor even after dropping unknown evaluation events.
-const ABG_SCHULE_LESESTAND = 1;
+const ABG_SCHULE_LESESTAND = 2; // reread immutable bundles rejected by clients without confirmation envelopes
 const ABG_KEYS = ['bereich', 'geraet', 'ausgang', 'unterwegs', 'naechsteNr', 'merker', 'wartend', 'log'];
 const abgObj = (x) => x !== null && typeof x === 'object' && !Array.isArray(x);
 const abgStr = (x) => typeof x === 'string' && x.length > 0;
@@ -57,7 +57,7 @@ function abgPruefeStand(st) {
 function abgPruefeSchluessel(s) {
   if (!abgObj(s) || !(s.keys instanceof Map)) throw abgFehler('schluessel braucht keys (Map Version -> Schluessel).');
 }
-const abgEintragOk = (x) => abgObj(x) && Object.keys(x).length === 2 && abgStr(x.sig) && checkEvent(x.event).length === 0;
+const abgEintragOk = (x) => abgObj(x) && Object.keys(x).every((k) => ['event', 'sig', 'bestaetigt'].includes(k)) && abgStr(x.sig) && checkEvent(x.event).length === 0;
 
 /* puts entries into the log: the same id once, order and choice of variant exactly like mergeLog (every device the
    same); for the same event with different signatures the smaller signature stays (again: every device the same) */
@@ -242,7 +242,7 @@ export async function holen(stand, { zugang, schluessel, zulassung, now } = {}) 
     // the device may still hold the key (a child's device until the new password), so the version does not tell
     const vomEntfernten = wechsel.some((w) => Array.isArray(w.geraete) && w.geraete.includes(x.event.device) && (dev !== x.event.device || nr > bis(w, dev)));
     if (zuSpaet || vomEntfernten) verworfen.push({ ...ohneKv(m), grund: 'nach-entfernung', ...typ(x) });
-    else if (abgEintragOk(x)) angenommen.push({ event: x.event, sig: x.sig });
+    else if (abgEintragOk(x)) angenommen.push(abgClone(x));
   }
 
   // one step: from here on nothing can fail half-way

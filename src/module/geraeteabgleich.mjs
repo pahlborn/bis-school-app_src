@@ -32,7 +32,7 @@
 //
 // Names: every helper starts with "gab"/"GAB_" because all modules and index.html share one scope in the app.
 
-import { newEvent, mergeLog, lastWins } from './ereignisse.mjs';
+import { newEvent, mergeLog, lastWins, effectiveTime } from './ereignisse.mjs';
 import { signEvent, acceptEvent } from './annahme.mjs';
 import { BEREICH_AUCH, bereichName, bereichVonEreignis, passtZumBereich, halter, schluesselLesen, schluesselVerteilen } from './bereiche.mjs';
 import { abgleichStand, vormerken, senden, buendelErneuern } from './abgleich.mjs';
@@ -255,7 +255,22 @@ async function gabBereich(o, area, ziel, anker, stand) {
       if (!gabObj(e) || e.device !== geraet || bekannt.has(e.id) || bereichVonEreignis(e) === '*' || !passtZumBereich(e, area)) continue;
       if (art === 'freigabe' && BEREICH_AUCH[e.type] === 'freigabe') continue;
       if (!Object.prototype.hasOwnProperty.call(personen, e.author)) { bericht.ohneSchluessel++; continue; }
-      vormerken(stand, await signEvent(e, area, signier(e.author)), { now });
+      let bestaetigt;
+      if (e.type === 'school_evaluation') {
+        const p = personen[e.author], m = zul.members[e.author], pe = m && m.perioden[m.perioden.length - 1];
+        const gl = m && gabObj(m.geraete) && Array.isArray(m.geraete[geraet]) ? m.geraete[geraet] : null;
+        const et = effectiveTime(e.at, now), frueher = m && m.perioden.find((q) => (q.von === null || q.von <= et) && (q.bis === null || et < q.bis));
+        // First-sign only, with the freshly logged-in same parent and the current area key. The admission checks BOTH
+        // times, continuous membership/device eligibility and the new key; an invalid intent stays in the app log.
+        if (frueher && !gabGleichePub(frueher.pub, offen(e.author) ? p.alt.pub : p.pub)) {
+          if (!schreiber || offen(e.author) || p.role !== 'parent' || !pe || pe.bis !== null || !gabGleichePub(pe.pub, p.pub) ||
+              !gl || !gl.length || gl[gl.length - 1].bis !== null || typeof p.nachAnmeldung !== 'function' || !p.nachAnmeldung(e, geraet)) continue;
+          bestaetigt = { v: 1, at: new Date(now).toISOString() };
+        }
+      }
+      const eintrag = await signEvent(e, area, signier(e.author), bestaetigt);
+      if (e.type === 'school_evaluation' && !(await acceptEvent(eintrag, zul)).ok) continue;
+      vormerken(stand, eintrag, { now });
     }
     // 4b. a prepared, unconfirmed bundle sealed with an area key version that a key renewal of its entries' author has
     //     replaced since (the upload was interrupted, the author renewed his keys on another device, he is logged in

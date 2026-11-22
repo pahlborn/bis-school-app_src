@@ -55,6 +55,10 @@ import { PBKDF2_ROUNDS, bytesToB64, b64ToBytes, sealEntry, openEntryText, pbkdf2
 import { canonicalBytes } from './annahme.mjs';
 import { pwWeak } from './passwort.mjs';
 
+/* Runtime-only proof of a successful password login. Never serialized, restored from cache or supplied by callers.
+   It binds the recovery permission to this exact account/key and the actual storage device used for login. */
+const ktoAnmeldungen = new WeakMap();
+
 /* kinds of account (the roles of the events) */
 export const KONTO_ARTEN = Object.freeze(['child', 'parent', 'teacher', 'admin']);
 /* who issues start codes for whom (concept 4, 10.6): the admin for grown-ups, a parent for its children and - task
@@ -539,7 +543,10 @@ export async function anmelden({ zugang, anmeldename, passwort, runden = PBKDF2_
   const akt = await ktoAktuell(zugang, e);
   const schluessel = await ktoOeffnen(akt.gesperrt, e.kennung, akt.pub, 0, passwort, runden);
   if (!schluessel) throw ktoFehler('anmeldung');
-  return ktoKonto(e, n, schluessel, akt.stand, akt.pub);
+  const konto = ktoKonto(e, n, schluessel, akt.stand, akt.pub);
+  if (typeof zugang.geraet === 'string') ktoAnmeldungen.set(konto, { person: konto.kennung, role: konto.art, keys: schluessel,
+    signKey: schluessel.ecdsa.privateKey, exchangeKey: schluessel.ecdh.privateKey, pub: { ...akt.pub }, geraet: zugang.geraet });
+  return konto;
 }
 
 /* ---------- recovery code (US9.4) ---------- */
@@ -622,6 +629,14 @@ export function kontoPersonen(...konten) {
       ...(k.ursprung && !ktoGleichePub(k.ursprung, k.pub) ? { ursprung: { ...k.ursprung } } : {}),
       ...(k.alt ? { alt: { keys: k.alt.schluessel, pub: { ...k.alt.pub } } } : {}),
     };
+    const a = ktoAnmeldungen.get(k);
+    if (a && a.role === 'parent' && k.art === a.role && a.person === k.kennung && a.keys === k.schluessel && ktoGleichePub(a.pub, k.pub)) {
+      out[k.kennung].nachAnmeldung = (e, geraet) => {
+        return ktoObj(e) && e.author === a.person && k.art === a.role && k.kennung === a.person && e.device === geraet &&
+          geraet === a.geraet && a.keys === k.schluessel && k.schluessel.ecdsa.privateKey === a.signKey &&
+          k.schluessel.ecdh.privateKey === a.exchangeKey && ktoGleichePub(a.pub, k.pub);
+      };
+    }
   }
   return out;
 }

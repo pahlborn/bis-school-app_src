@@ -161,7 +161,7 @@ test('upgrade recovers an assessment rejected by the exact legacy app without re
   assert.equal(identity.session.user, LOGIN);
   assert.ok(identity.session.id && identity.device);
   const area = 'schule:' + identity.session.id;
-  await K.page.waitForFunction((a) => JSON.parse(localStorage.getItem('bq_abgleich') || '{}')[a]?.merker?.schuleLesestand === 1, area, { timeout: 65000 });
+  await K.page.waitForFunction((a) => JSON.parse(localStorage.getItem('bq_abgleich') || '{}')[a]?.merker?.schuleLesestand === 2, area, { timeout: 65000 });
   const oldResponse = await K.page.goto(server.url + 'historisch');
   assert.equal(oldResponse.headers()['x-bq-qa-source'], 'eb354e31');
   await K.page.waitForSelector('#home:not([hidden])');
@@ -210,7 +210,7 @@ test('upgrade recovers an assessment rejected by the exact legacy app without re
   await K.page.waitForSelector('#home:not([hidden])');
   await K.page.waitForFunction(({ area, id }) => {
     const school = JSON.parse(localStorage.getItem('bq_abgleich') || '{}')[area];
-    return school?.merker?.schuleLesestand === 1 && school.log.some(({ event }) => event.id === id);
+    return school?.merker?.schuleLesestand === 2 && school.log.some(({ event }) => event.id === id);
   }, { area, id }, { timeout: 70000 });
   const upgraded = await schoolState(K.page);
   assert.equal(upgraded.log.filter(({ event }) => event.id === id).length, 1);

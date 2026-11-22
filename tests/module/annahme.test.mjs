@@ -361,3 +361,57 @@ test('manual school evaluation must be signed by a parent for the child in its p
     assert.equal(await reason(await signed(role, 'school_evaluation')), 'rolle-darf-nicht', role);
   }
 });
+
+// Synthetic admission periods exercise the new first-signature envelope independently of the sync writer.
+test('unsigned renewal envelope: exact bytes, two eligible times, continuity, signature binding and durable replay', async (t) => {
+  const oldKeys = KEYS.p_e1, keys = await newPersonKeys(), pub = await publicKeysOf(keys), oldPub = await publicKeysOf(oldKeys);
+  const at = Date.parse('2026-11-02T16:04:11.123Z'), rotated = at + 1000, signedAt = at + 2000;
+  const event = mk('school_evaluation', 'p_e1', 'd_e1');
+  const b = { v: 1, at: new Date(signedAt).toISOString() }, area = 'schule:p_k1';
+  const z = { area, now: signedAt, members: { p_e1: { role: 'parent', pub, devices: ['d_e1'],
+    perioden: [{ von: null, bis: rotated, role: 'parent', pub: oldPub }, { von: rotated, bis: null, role: 'parent', pub }],
+    geraete: { d_e1: [{ von: at - 1000, bis: null }] } } } };
+  const item = await signEvent(event, area, keys, b), copy = (x) => JSON.parse(JSON.stringify(x));
+  assert.deepEqual(item.event, event);
+  assert.deepEqual(await acceptEvent(copy(item), z), { ok: true });
+  assert.equal(await reason(await signEvent(event, area, keys), z), 'unterschrift', 'ordinary current-key signature at historical time is still rejected');
+  assert.deepEqual(await acceptEvent(await signEvent(event, area, oldKeys), z), { ok: true }, 'legacy historical signature remains valid');
+  const bad = async (name, mutate, expected) => t.test(name, async () => {
+    const changed = copy(z); mutate(changed.members.p_e1, changed);
+    const r = await acceptEvent(item, changed); assert.equal(r.ok, false); if (expected) assert.equal(r.grund, expected);
+  });
+  await bad('historical membership absent', (m) => { m.perioden[0].von = at + 1; }, 'nicht-mitglied');
+  await bad('current membership absent at signing', (m) => { m.perioden[1].bis = signedAt; }, 'nicht-mitglied');
+  await bad('historical role is teacher', (m) => { m.perioden[0].role = 'teacher'; }, 'rolle-darf-nicht');
+  await bad('current role is teacher', (m) => { m.perioden[1].role = 'teacher'; }, 'rolle-darf-nicht');
+  await bad('removed then rejoined membership', (m) => { m.perioden[0].bis = rotated - 1; }, 'rolle-darf-nicht');
+  await bad('historical device was not registered', (m) => { m.geraete.d_e1[0].von = at + 1; }, 'geraet-nicht-angemeldet');
+  await bad('device revoked before signing', (m) => { m.geraete.d_e1[0].bis = signedAt; }, 'geraet-nicht-angemeldet');
+  await bad('removed then re-added device', (m) => { m.geraete.d_e1 = [{ von: at - 1000, bis: rotated }, { von: rotated + 1, bis: null }]; }, 'geraet-nicht-angemeldet');
+  await bad('plain admission cannot authorize envelope', (m) => { delete m.perioden; delete m.geraete; }, 'unterschrift');
+  await bad('no actual public-key change', (m) => { m.perioden[0].pub = pub; }, 'unterschrift');
+  for (const [name, changed] of [
+    ['event content', { ...item, event: { ...event, payload: { ...event.payload, title: 'Tampered' } } }],
+    ['event author', { ...item, event: { ...event, author: 'p_e2' } }],
+    ['event device', { ...item, event: { ...event, device: 'd_e2' } }],
+    ['original event time', { ...item, event: { ...event, at: new Date(at + 1).toISOString() } }],
+    ['confirmation time', { ...item, bestaetigt: { ...b, at: new Date(signedAt - 1).toISOString() } }],
+    ['stripped confirmation', { event, sig: item.sig }],
+    ['future confirmation', await signEvent(event, area, keys, { ...b, at: new Date(signedAt + 1).toISOString() })],
+    ['old signing key', await signEvent(event, area, oldKeys, b)],
+    ['stranger signing key', await signEvent(event, area, stranger, b)],
+    ['wrong area signature', await signEvent(event, 'schule:p_k2', keys, b)],
+  ]) await t.test(name + ' is rejected', async () => { assert.equal((await acceptEvent(changed, z)).ok, false); });
+  assert.equal(await reason(await signEvent(event, 'schule:p_k2', keys, b), { ...z, area: 'schule:p_k2' }), 'bereich-falsch', 'even a valid attestation cannot move the event to another child');
+  const laterKeys = await newPersonKeys(), laterPub = await publicKeysOf(laterKeys), later = copy(z);
+  later.now = signedAt + 10000;
+  later.members.p_e1.perioden[1].bis = signedAt + 1000;
+  later.members.p_e1.perioden.push({ von: signedAt + 1000, bis: signedAt + 2000, role: 'parent', pub: laterPub });
+  later.members.p_e1.geraete.d_e1[0].bis = signedAt + 2000;
+  assert.deepEqual(await acceptEvent(copy(item), later), { ok: true }, 'later key renewal and removal do not erase a valid earlier attestation');
+  for (const malformed of [null, { v: 2, at: b.at }, { ...b, extra: 1 }, { v: 1, at: '2026-02-30T00:00:00.000Z' }]) {
+    assert.equal(await reason({ ...item, bestaetigt: malformed }, z), 'format');
+    await assert.rejects(signEvent(event, area, keys, malformed), /Bestaetigung/);
+  }
+  await assert.rejects(signEvent(mk('setting_set', 'p_e1', 'd_e1'), area, keys, b), /Bestaetigung/);
+});

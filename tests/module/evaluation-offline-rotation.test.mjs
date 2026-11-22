@@ -4,9 +4,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { verbindungen, kindAnlegen, elternteilEinladen, abgleichMitVerbindungen } from '../../src/module/einladung.mjs';
-import { startcodeAusstellen, ersteAnmeldung, anmelden, schluesselErneuern } from '../../src/module/konto.mjs';
+import { startcodeAusstellen, ersteAnmeldung, anmelden, schluesselErneuern, kontoPersonen } from '../../src/module/konto.mjs';
 import { lokalerSpeicher } from '../../src/module/speicher.mjs';
-import { newEvent, checkEvent } from '../../src/module/ereignisse.mjs';
+import { newEvent, checkEvent, mergeLog } from '../../src/module/ereignisse.mjs';
+import { deriveSchool } from '../../src/module/ableitung.mjs';
 import { GERAETEABGLEICH_SPEICHER } from '../../src/module/geraeteabgleich.mjs';
 import { abgleichStand, buendelErneuern } from '../../src/module/abgleich.mjs';
 
@@ -145,4 +146,78 @@ test('buendelErneuern: no newer key version here, or an author who did not renew
   const t = stand0({ wechsel: { erneuert: ['p_other'] } });
   assert.equal(await buendelErneuern(t, { schluessel: neuerSchluessel, erlaubt: ja }), false);
   assert.ok(s.unterwegs && t.unterwegs);
+});
+
+test('REST-ROT-UNSIGNED-01: persisted confirmation survives restart, exact-account login, renewal and upgraded replay exactly once', async () => {
+  const uhr = { t: T0 }, storage = lokalerSpeicher({ now: () => uhr.t }), W = { uhr, geraet: (d) => storage.geraet(d) };
+  const { P1, P2, K } = await familie(W), child = K.konto.kennung, area = 'schule:' + child;
+  const P1b = geraet(W, 'd_P1b', await anmelden({ zugang: W.geraet('d_P1b'), anmeldename: 'peter', passwort: PW.peter, runden: R }));
+  await P1b.sync();
+  const evaluation = '0a667a6c-8d8c-4520-a6ec-000000000011', revision = '0a667a6c-8d8c-4520-a6ec-000000000012';
+  P1.schreibt(child, 'school_evaluation', { child, evaluation, revision, title: 'Synthetic persisted unsigned assessment', day: HEUTE,
+    assessment: { area: 'maths', goal: '', instructions: '', feedback: '', criteria: [{ criterion: 'Synthetic criterion', rating: 'C', standard: 'M-N1', evidence: '' }] } });
+  const event = P1.log(child).find((e) => e.payload?.evaluation === evaluation), bytes = JSON.stringify(event);
+  assert.deepEqual(checkEvent(event), []);
+  const stateOf = (g) => JSON.parse(g.a.getItem(GERAETEABGLEICH_SPEICHER.staende))[area];
+  assert.equal(stateOf(P1).log.some((x) => x.event.id === event.id), false, 'no first signature');
+  assert.equal(stateOf(P1).ausgang.some((x) => x.event.id === event.id), false, 'no prepared entry');
+  const persisted = JSON.parse(JSON.stringify([...P1.a.m]));
+  P1b.konto = await schluesselErneuern({ zugang: P1b.z(), anmeldename: 'peter', passwort: PW.peter, neuesPasswort: PW.neu, runden: R });
+  P1b.fertig(await P1b.sync());
+  const origin = geraet(W, P1.d, { ...P1b.konto }); // restored local data plus a cloned current account is not a login
+  for (const [k, v] of persisted) origin.a.setItem(k, v);
+  assert.equal(kontoPersonen(origin.konto)[origin.konto.kennung].nachAnmeldung, undefined);
+  await origin.sync();
+  assert.equal(JSON.stringify(origin.log(child).find((e) => e.id === event.id)), bytes, 'stale cache leaves confirmed data intact');
+  assert.equal(stateOf(origin).log.some((x) => x.event.id === event.id), false, 'stale cache cannot permanently queue a bad signature');
+  assert.equal(stateOf(origin).ausgang.some((x) => x.event.id === event.id), false);
+  origin.konto = await anmelden({ zugang: origin.z(), anmeldename: 'peter', passwort: PW.neu, runden: R });
+  const p = kontoPersonen(origin.konto)[origin.konto.kennung], can = p.nachAnmeldung;
+  assert.equal(typeof can, 'function');
+  assert.equal(can(event, 'd_foreign'), false, 'bound to the actual login device');
+  assert.equal(can({ ...event, author: P2.konto.kennung }, origin.d), false, 'same parent only');
+  const keys = origin.konto.schluessel;
+  origin.konto.schluessel = { ...keys };
+  assert.equal(can(event, origin.d), false, 'exact key object, not a copied container');
+  origin.konto.schluessel = keys;
+  const privateKey = keys.ecdsa.privateKey;
+  keys.ecdsa.privateKey = P2.konto.schluessel.ecdsa.privateKey;
+  assert.equal(can(event, origin.d), false, 'exact private CryptoKey object');
+  keys.ecdsa.privateKey = privateKey;
+  assert.equal(can(event, origin.d), true);
+  assert.equal(origin.konto.kennung, P1.konto.kennung);
+  assert.ok(origin.v().kinder.some((c) => c.id === child));
+  await origin.sync();
+  const signed = stateOf(origin).log.find((x) => x.event.id === event.id);
+  assert.equal(signed.bestaetigt.v, 1);
+  assert.equal(JSON.stringify(signed.event), bytes, 'all domain bytes unchanged');
+  for (let n = 0; n < 3; n++) for (const g of [origin, P1b, P2, K]) await g.sync();
+  for (const g of [origin, P1b, P2, K]) {
+    assert.deepEqual(g.log(child).filter((e) => e.id === event.id), [event], g.d + ': exactly once');
+    assert.equal(g.log(child).filter((e) => e.payload?.evaluation === evaluation && e.payload.revision === revision).length, 1);
+    assert.equal(deriveSchool(g.log(child), { now: W.uhr.t }).asOf, deriveSchool([event], { now: W.uhr.t }).asOf, 'school asOf unchanged');
+    assert.deepEqual(mergeLog([[event], g.log(child)], W.uhr.t).conflicts, []);
+    const restored = JSON.parse(JSON.stringify([...g.a.m]));
+    g.a.m.clear(); for (const [k, v] of restored) g.a.setItem(k, v);
+    await g.sync();
+    assert.deepEqual(stateOf(g).log.find((x) => x.event.id === event.id), signed, 'JSON restore preserves signed envelope');
+  }
+  // A previous reader may have rejected the envelope and advanced its old cursor. Upgrade must reread server bundles.
+  const beforeUpgrade = JSON.parse(P2.a.getItem(GERAETEABGLEICH_SPEICHER.staende));
+  beforeUpgrade[area].log = beforeUpgrade[area].log.filter((x) => x.event.id !== event.id);
+  beforeUpgrade[area].merker.schuleLesestand = 1;
+  P2.a.setItem(GERAETEABGLEICH_SPEICHER.staende, JSON.stringify(beforeUpgrade));
+  P2.a.setItem('bq2_' + child + '__events', JSON.stringify(P2.log(child).filter((e) => e.id !== event.id)));
+  await P2.sync(); await P2.sync();
+  assert.deepEqual(P2.log(child).filter((e) => e.id === event.id), [event], 'upgraded reader restores original exactly once');
+  assert.equal(stateOf(P2).merker.schuleLesestand, 2);
+  assert.deepEqual(stateOf(P2).log.find((x) => x.event.id === event.id), signed);
+  // Another renewal must not replace this already signed envelope or invalidate its signing period.
+  P1b.konto = await schluesselErneuern({ zugang: P1b.z(), anmeldename: 'peter', passwort: PW.neu, neuesPasswort: 'Heron-Fig-Dune-2468', runden: R });
+  P1b.fertig(await P1b.sync());
+  origin.konto = await anmelden({ zugang: origin.z(), anmeldename: 'peter', passwort: 'Heron-Fig-Dune-2468', runden: R });
+  for (const g of [origin, P1b, P2, K]) {
+    await g.sync(); assert.deepEqual(stateOf(g).log.find((x) => x.event.id === event.id), signed, 'subsequent renewal keeps earlier envelope');
+    assert.deepEqual(g.log(child).filter((e) => e.id === event.id), [event]);
+  }
 });
