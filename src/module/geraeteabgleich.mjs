@@ -33,9 +33,9 @@
 // Names: every helper starts with "gab"/"GAB_" because all modules and index.html share one scope in the app.
 
 import { newEvent, mergeLog, lastWins } from './ereignisse.mjs';
-import { signEvent } from './annahme.mjs';
+import { signEvent, acceptEvent } from './annahme.mjs';
 import { BEREICH_AUCH, bereichName, bereichVonEreignis, passtZumBereich, halter, schluesselLesen, schluesselVerteilen } from './bereiche.mjs';
-import { abgleichStand, vormerken, senden } from './abgleich.mjs';
+import { abgleichStand, vormerken, senden, buendelErneuern } from './abgleich.mjs';
 import { zulassungAus, aktiveMitglieder, bereichHolen } from './zulassung.mjs';
 
 /* keys in the device storage */
@@ -256,6 +256,24 @@ async function gabBereich(o, area, ziel, anker, stand) {
       if (art === 'freigabe' && BEREICH_AUCH[e.type] === 'freigabe') continue;
       if (!Object.prototype.hasOwnProperty.call(personen, e.author)) { bericht.ohneSchluessel++; continue; }
       vormerken(stand, await signEvent(e, area, signier(e.author)), { now });
+    }
+    // 4b. a prepared, unconfirmed bundle sealed with an area key version that a key renewal of its entries' author has
+    //     replaced since (the upload was interrupted, the author renewed his keys on another device, he is logged in
+    //     here again): readers would drop it (module abgleich, holen: old key version beyond the stand of the change).
+    //     Only the transport is made anew (module abgleich, buendelErneuern) - the entries stay byte for byte as they
+    //     are. Only for an entry of an author whose keys are on this device NOW and whom the admission shows with exactly
+    //     these keys, from a device registered for him now (no device_removed), that is no admission event and fits this
+    //     area (child binding), and that the admission built here accepts (old signature valid in the period of its own
+    //     time). Nobody else's entry, no removed author or device, nothing confirmed; no check of the readers is loosened.
+    if (schreiber && stand.unterwegs) {
+      const erlaubt = async (x) => {
+        const e = x.event, p = personen[e.author], m = zul.members[e.author];
+        if (!p || e.device !== geraet || bereichVonEreignis(e) === '*' || !passtZumBereich(e, area) || offen(e.author)) return false;
+        const pe = m && m.perioden[m.perioden.length - 1], gl = m && gabObj(m.geraete) && Array.isArray(m.geraete[geraet]) ? m.geraete[geraet] : null;
+        if (!pe || pe.bis !== null || !gabGleichePub(pe.pub, p.pub) || !gl || !gl.length || gl[gl.length - 1].bis !== null) return false;
+        return (await acceptEvent(x, zul)).ok === true;
+      };
+      await buendelErneuern(stand, { schluessel: schreiber, erlaubt });
     }
     // 5. send
     if (stand.ausgang.length || stand.unterwegs) {

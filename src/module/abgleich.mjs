@@ -142,6 +142,43 @@ export async function senden(stand, { zugang, schluessel } = {}) {
   return { gesendet };
 }
 
+/* A prepared, not yet confirmed bundle was sealed with an area key version that has been replaced since by a change
+   that renewed the keys of the author of its entries (key_rotated.erneuert): readers would drop it (holen: old key
+   version, number beyond the stand of the change). The entries themselves are fine - signed by the author's keys of that
+   time, in the period of their own time. So only the TRANSPORT is made anew: the prepared bundle is dropped and senden
+   prepares it again with the current key version. The entries (event and signature), their order and the bundle
+   number stay exactly as they are - no new variant of any event, no new time, nothing is signed here.
+   erlaubt(entry) -> true / false (async allowed): the caller's check for an entry that the guard would drop (its
+   author renewed his keys, they are on this device, the admission accepts the entry, ...).
+   Nothing changes (false) when: no bundle, no newer key version, no such key change, a removed author or a removed
+   device is involved, or erlaubt says no for any affected entry. -> true when the prepared bundle was dropped. */
+export async function buendelErneuern(stand, { schluessel, erlaubt } = {}) {
+  abgPruefeStand(stand); abgPruefeSchluessel(schluessel);
+  const u = stand.unterwegs;
+  if (!u || typeof erlaubt !== 'function' || !Number.isInteger(u.inhalt.kv) || !(schluessel.aktuell > u.inhalt.kv)) return false;
+  const teil = stand.ausgang.slice(0, u.anzahl);
+  if (!teil.length || teil.length !== u.anzahl) return false;
+  const wechsel = stand.log.filter((x) => abgObj(x) && abgObj(x.event) && x.event.type === 'key_rotated' && abgObj(x.event.payload)).map((x) => x.event.payload);
+  const liste = (w, k) => (Array.isArray(w[k]) ? w[k] : []);
+  const bis = (w, d) => (abgObj(w.stand) && Object.prototype.hasOwnProperty.call(w.stand, d) ? w.stand[d] : 0);
+  let betroffen = 0;
+  for (const w of wechsel) {
+    if (!Number.isInteger(w.version) || !(u.inhalt.kv < w.version)) continue;
+    if (liste(w, 'geraete').includes(stand.geraet)) return false;
+    const spaet = u.nr > bis(w, stand.geraet);
+    for (const x of teil) {
+      const a = x.event.author;
+      if (liste(w, 'entfernt').includes(a)) { if (spaet) return false; continue; }
+      if (!spaet || !liste(w, 'erneuert').includes(a)) continue;
+      if (!(await erlaubt(x))) return false;
+      betroffen++;
+    }
+  }
+  if (!betroffen) return false;
+  stand.unterwegs = null;
+  return true;
+}
+
 /* ---------- fetch ---------- */
 /* lists from the marker plus "wartend", reads, decrypts, checks with annahme and puts the accepted entries into the
    log. Nothing is dropped silently: every entry is either accepted or reported in "verworfen" with a reason; a bad
