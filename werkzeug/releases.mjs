@@ -9,6 +9,21 @@ export const MARKE = '/*BQ_RELEASES*/null';
 
 export const RELEASE_NOTES = {
   current: {
+    epics: [],
+    stories: [],
+    bugfixes: [
+      {
+        de: 'Offline bestätigte Schulbewertungen werden auch nach einem Wechsel des Kontoschlüssels auf weitere berechtigte Geräte übertragen.',
+        en: 'School evaluations confirmed offline also reach other authorized devices after an account key change.'
+      },
+      {
+        de: 'Beim Update werden zuvor übersprungene Schulbewertungen nachgelesen, ohne doppelte Fassungen anzulegen.',
+        en: 'After the update, previously skipped school evaluations are recovered without creating duplicate revisions.'
+      }
+    ]
+  },
+  history: [{
+    version: 'V 0.152.6 (Betaversion)',
     epics: [
       {
         de: 'Die möglichen Sterne werden vor jeder Aufgabe angezeigt. Leichte und normale Aufgaben aus schon einmal sicheren Quests bringen bei direkter Wahl keine weiteren Sterne.',
@@ -43,8 +58,7 @@ export const RELEASE_NOTES = {
         en: 'Specific Examples avoids duplicate tasks even in rare selection combinations.'
       }
     ]
-  },
-  history: [{
+  }, {
     version: 'V 0.152.5 (Betaversion)',
     date: '20.11.2026 12:29',
     epics: [

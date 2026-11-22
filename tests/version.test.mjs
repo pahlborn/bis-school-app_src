@@ -28,9 +28,9 @@ const appQuelle = await appLesen();
 
 test('version comes from package.json plus git metadata', () => {
   const v = versionErmitteln(WURZEL, new Date('2026-10-30T13:05:00Z'));
-  assert.deepEqual({ major: v.major, minor: v.minor, patch: v.patch, kanal: v.kanal }, { major: 0, minor: 152, patch: 6, kanal: 'beta' });
+  assert.deepEqual({ major: v.major, minor: v.minor, patch: v.patch, kanal: v.kanal }, { major: 0, minor: 152, patch: 7, kanal: 'beta' });
   assert.equal(v.n, Number(git(WURZEL, 'rev-list', '--count', '--first-parent', 'HEAD')));
-  assert.equal(versionRoh(v), '0.152.6-beta');
+  assert.equal(versionRoh(v), '0.152.7-beta');
   assert.equal(v.hash, git(WURZEL, 'rev-parse', 'HEAD').slice(0, 7));
   assert.match(v.hash, /^[0-9a-f]{7}$/);
   assert.equal(v.date, '30.10.2026 14:05');
@@ -83,7 +83,9 @@ test('dist: vault holds the app with version byte for byte; shell and manifest c
   assert.ok(klar.toString('utf8').includes('const APP_RELEASES=' + JSON.stringify(releaseEintraege(V)) + ';'), 'release notes set');
   assert.deepEqual(r.version, V);
   const offen = ohneTresor(html) + await fs.readFile(path.join(ziel, 'manifest.webmanifest'), 'utf8');
-  for (const x of ['a1b2c3d', '30.10.2026 14:05', versionText(V), 'APP_VERSION', 'APP_RELEASES', releaseEintraege(V)[0].epics[0].de]) assert.ok(!offen.includes(x), x);
+  const releaseTexte = releaseEintraege(V).flatMap((r) => [...r.epics, ...r.stories, ...r.bugfixes].flatMap((x) => Object.values(x)));
+  assert.ok(releaseTexte.length > 0, 'release text is available for the privacy check');
+  for (const x of ['a1b2c3d', '30.10.2026 14:05', versionText(V), 'APP_VERSION', 'APP_RELEASES', ...releaseTexte]) assert.ok(!offen.includes(x), x);
 });
 
 // ---- browser: what child and adults see, and the update check ----
