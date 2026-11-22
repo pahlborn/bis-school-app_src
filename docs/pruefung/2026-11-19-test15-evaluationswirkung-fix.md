@@ -1,6 +1,6 @@
 # Test 15 · Evaluationswirkung: Softwareprüfung und Geräteabnahme
 
-**Stand 21.11.2026:** Die berichteten iPad-Schritte und der manuelle Browser-Wirkungsvergleich sind im Abnahmenachtrag unten je Prüfschritt festgehalten. Die finale Softwareprüfung von PR233 ist abgeschlossen. Ein pauschaler Abschluss aller Ziel1-Stories oder ein Gerätetest neuerer main-Fassungen wird daraus nicht abgeleitet.
+**Stand 22.11.2026:** Die berichteten iPad-Schritte und der manuelle Browser-Wirkungsvergleich sind im Abnahmenachtrag unten je Prüfschritt festgehalten. Die finale Softwareprüfung von PR233 ist abgeschlossen. Die noch offene EV-5.1-Sichtprüfung zum Abschnitt „Standards“ im Toddle-Original ist durch die Nutzerrückmeldung vom22.11. bestätigt. Ein pauschaler Abschluss aller Ziel1-Stories oder ein Gerätetest neuerer main-Fassungen wird daraus nicht abgeleitet.
 
 Der aktuelle Nachtrag wurde von Atlas aus den Nutzerrückmeldungen und verlinkten Produktnachweisen erstellt. Grundlage der Dokumentation ist main `5438aaf470326a2c2d87f31a6b537392bf2840d8`; tatsächlich am Gerät geprüft wurde die veröffentlichte Fassung `0.152.5-beta / aa3b57c949f86f1c89b8a041b8f6439c18f97727` im vorhandenen Test15-Projekt. Die Eingabephase wurde bereits auf der vorigen Webfassung geprüft; die Standtrennung ist unten ausdrücklich beschrieben.
 
@@ -256,3 +256,13 @@ Nicht zusätzlich geprüft/behauptet: Browser-Übungsrunde, erneuter Browser-Neu
 - Der automatische Live-Abruf nach der Veröffentlichung scheiterte einmalig mit „fetch failed“, Exit1. Er bleibt fehlgeschlagen. Die späteren manuellen Nutzerbeobachtungen sind getrennte Evidenz; kein rückwirkender automatischer Live-PASS.
 - Keine Namen Dritter, Zugangsdaten, Schlüssel oder konkreten Leistungs-/Bewertungstexte werden in diesem öffentlichen Bericht ergänzt.
 - Die Ergebnisse belegen die oben abgegrenzten manuellen Schritte und den Browser-Wirkungsvergleich. Der Nachtrag erfindet keine neue Abnahme aller übrigen Ziel1-Stories. Atlas gleicht die Gesamtauswertung mit den vorhandenen Storyberichten ab; die Mergeentscheidung für den Dokumentations-PR und jede neue Veröffentlichung bleiben beim Nutzer.
+
+## EV-5.1 · Sichtprüfung am Toddle-Original · 22.11.2026
+
+**PASS für die geforderte Gerätebeobachtung:** Der Nutzer bestätigt, dass die verwendete echte Evaluation im Toddle-Original einen Abschnitt „Standards“ zeigt. Auf die ausdrückliche Frage nach diesem Originalabschnitt antwortet er „Ja“; [konkrete Rückmeldung](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7074093635). Eine Anzeige in Big Quest wird damit nicht als Toddle-Quelle ausgegeben.
+
+Damit ist die im [unabhängigen Review vom21.11. als N2 festgehaltene Informationslücke](https://github.com/pahlborn/bis-school-app_src/pull/238#issuecomment-7063662366) durch die dort verlangte kleinste Handlung geschlossen. Atlas ordnet die Originalrückmeldung dem [EV-5.1-Abnahmekriterium](https://github.com/pahlborn/bis-school-app_src/blob/5438aaf470326a2c2d87f31a6b537392bf2840d8/docs/konzept/evaluationen-ziel1-epics.md#L222) zu. Keine Wiederholung der EV-7-Kette oder neue Übernahme.
+
+Diese Rückmeldung belegt die Existenz des Quellenabschnitts im konkreten Fall. Sie erfindet keine Anzahl oder Inhalte von Standards, keine Kriteriumsverknüpfungen und keine neue automatische Ausleseprüfung. Die vorhandenen Softwaretests zum eindeutigen Quellenabgleich bleiben separate Evidenz. Keine geheimen Werte, Namen oder Leistungsdaten erhoben; keine Veröffentlichung oder weitere Produktänderung.
+
+Der unabhängige PASS_WITH_NOTES für den bisherigen Nachtrag gilt für Kopf36d599e. Diese kleine nachfolgende Ergänzung wurde von Atlas unmittelbar gegen die neue Nutzerrückmeldung geprüft; sie wird nicht als neuer unabhängiger Gesamtlauf ausgegeben.
