@@ -56,7 +56,8 @@ import { canonicalBytes } from './annahme.mjs';
 import { pwWeak } from './passwort.mjs';
 
 /* Runtime-only proof of a successful password login. Never serialized, restored from cache or supplied by callers.
-   It binds the recovery permission to this exact account/key and the actual storage device used for login. */
+   It binds recovery to the actual private CryptoKey objects and login device. The app copies account containers in
+   kontoMerken/kontoKonto; those in-memory copies share the keys. IndexedDB/structured-clone keys have new identities. */
 const ktoAnmeldungen = new WeakMap();
 
 /* kinds of account (the roles of the events) */
@@ -544,7 +545,7 @@ export async function anmelden({ zugang, anmeldename, passwort, runden = PBKDF2_
   const schluessel = await ktoOeffnen(akt.gesperrt, e.kennung, akt.pub, 0, passwort, runden);
   if (!schluessel) throw ktoFehler('anmeldung');
   const konto = ktoKonto(e, n, schluessel, akt.stand, akt.pub);
-  if (typeof zugang.geraet === 'string') ktoAnmeldungen.set(konto, { person: konto.kennung, role: konto.art, keys: schluessel,
+  if (typeof zugang.geraet === 'string') ktoAnmeldungen.set(schluessel.ecdsa.privateKey, { person: konto.kennung, role: konto.art,
     signKey: schluessel.ecdsa.privateKey, exchangeKey: schluessel.ecdh.privateKey, pub: { ...akt.pub }, geraet: zugang.geraet });
   return konto;
 }
@@ -629,11 +630,11 @@ export function kontoPersonen(...konten) {
       ...(k.ursprung && !ktoGleichePub(k.ursprung, k.pub) ? { ursprung: { ...k.ursprung } } : {}),
       ...(k.alt ? { alt: { keys: k.alt.schluessel, pub: { ...k.alt.pub } } } : {}),
     };
-    const a = ktoAnmeldungen.get(k);
-    if (a && a.role === 'parent' && k.art === a.role && a.person === k.kennung && a.keys === k.schluessel && ktoGleichePub(a.pub, k.pub)) {
+    const a = ktoAnmeldungen.get(k.schluessel.ecdsa && k.schluessel.ecdsa.privateKey);
+    if (a && a.role === 'parent' && k.art === a.role && a.person === k.kennung && ktoGleichePub(a.pub, k.pub)) {
       out[k.kennung].nachAnmeldung = (e, geraet) => {
         return ktoObj(e) && e.author === a.person && k.art === a.role && k.kennung === a.person && e.device === geraet &&
-          geraet === a.geraet && a.keys === k.schluessel && k.schluessel.ecdsa.privateKey === a.signKey &&
+          geraet === a.geraet && ktoObj(k.schluessel) && ktoObj(k.schluessel.ecdsa) && ktoObj(k.schluessel.ecdh) && k.schluessel.ecdsa.privateKey === a.signKey &&
           k.schluessel.ecdh.privateKey === a.exchangeKey && ktoGleichePub(a.pub, k.pub);
       };
     }

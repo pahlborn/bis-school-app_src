@@ -3,6 +3,8 @@
 //   node --test tests/module/evaluation-offline-rotation.test.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
 import { verbindungen, kindAnlegen, elternteilEinladen, abgleichMitVerbindungen } from '../../src/module/einladung.mjs';
 import { startcodeAusstellen, ersteAnmeldung, anmelden, schluesselErneuern, kontoPersonen } from '../../src/module/konto.mjs';
 import { lokalerSpeicher } from '../../src/module/speicher.mjs';
@@ -15,6 +17,20 @@ const R = 1000, T0 = Date.UTC(2026, 10, 4, 8), HEUTE = '2026-11-04';
 const PW = { verwalter: 'Tiger-Lamp-River-4271', peter: 'Otter-Cake-Moss-1234', anna: 'Koala-Bread-Cliff-5502', kathie: 'Puffin-Jam-Lake-9876', neu: 'Walrus-Taco-Pine-1357' };
 const weiter = (W, ms = 60000) => (W.uhr.t += ms);
 const ablage = () => { const m = new Map(); return { m, getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => { m.set(k, String(v)); } }; };
+/* Execute the actual app adapters. They deliberately create new account containers; an IndexedDB roundtrip clones
+   CryptoKeys as well. The recovery permission must survive the former and must never survive the latter. */
+function appKontenAdapter() {
+  const html = fs.readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+  const sourceOf = (name, prefix = '') => {
+    const begin = html.indexOf(prefix + 'function ' + name + '('), end = html.indexOf('\n}', begin) + 2;
+    assert.ok(begin >= 0 && end > begin); return html.slice(begin, end);
+  };
+  let idbKopie;
+  const context = vm.createContext({ kontoOffen: new Map(), kontoAlt: new Map(), kontoListe: () => [], kontoFehlerListe: [],
+    kontoIdbTun: async (_, action) => action({ put: (v) => { idbKopie = structuredClone(v); } }) });
+  vm.runInContext(sourceOf('kontoMerken', 'async ') + '\n' + sourceOf('kontoKonto'), context);
+  return { merken: (k) => context.kontoMerken(k), konto: (id) => context.kontoKonto(id), idbKopie: () => idbKopie };
+}
 function geraet(W, d, konto) {
   const a = ablage(); a.setItem('bq2_evDevice', JSON.stringify(d));
   const g = {
@@ -171,19 +187,37 @@ test('REST-ROT-UNSIGNED-01: persisted confirmation survives restart, exact-accou
   assert.equal(JSON.stringify(origin.log(child).find((e) => e.id === event.id)), bytes, 'stale cache leaves confirmed data intact');
   assert.equal(stateOf(origin).log.some((x) => x.event.id === event.id), false, 'stale cache cannot permanently queue a bad signature');
   assert.equal(stateOf(origin).ausgang.some((x) => x.event.id === event.id), false);
-  origin.konto = await anmelden({ zugang: origin.z(), anmeldename: 'peter', passwort: PW.neu, runden: R });
+  const login = await anmelden({ zugang: origin.z(), anmeldename: 'peter', passwort: PW.neu, runden: R });
+  const adapter = appKontenAdapter();
+  await adapter.merken(login);
+  origin.konto = adapter.konto(login.kennung);
+  assert.notEqual(origin.konto, login, 'actual UI adapter copies the login account');
+  assert.equal(origin.konto.schluessel.ecdsa.privateKey, login.schluessel.ecdsa.privateKey, 'in-memory adapter retains actual CryptoKey identity');
+  const cached = adapter.idbKopie();
+  assert.notEqual(cached.schluessel.ecdsa.privateKey, login.schluessel.ecdsa.privateKey, 'IDB structured clone creates a new CryptoKey identity');
+  assert.equal(kontoPersonen(cached)[cached.kennung].nachAnmeldung, undefined, 'IDB cache cannot confer fresh login');
+  assert.equal(kontoPersonen(JSON.parse(JSON.stringify(cached)))[cached.kennung].nachAnmeldung, undefined, 'serialized account cannot confer fresh login');
+  origin.sync = () => abgleichMitVerbindungen({ ablage: origin.a, zugang: origin.z(), konten: [adapter.konto(login.kennung)], now: weiter(W), heute: HEUTE });
   const p = kontoPersonen(origin.konto)[origin.konto.kennung], can = p.nachAnmeldung;
   assert.equal(typeof can, 'function');
   assert.equal(can(event, 'd_foreign'), false, 'bound to the actual login device');
   assert.equal(can({ ...event, author: P2.konto.kennung }, origin.d), false, 'same parent only');
   const keys = origin.konto.schluessel;
   origin.konto.schluessel = { ...keys };
-  assert.equal(can(event, origin.d), false, 'exact key object, not a copied container');
+  assert.equal(can(event, origin.d), true, 'ordinary in-memory key containers may be copied while actual CryptoKeys stay identical');
   origin.konto.schluessel = keys;
   const privateKey = keys.ecdsa.privateKey;
   keys.ecdsa.privateKey = P2.konto.schluessel.ecdsa.privateKey;
   assert.equal(can(event, origin.d), false, 'exact private CryptoKey object');
   keys.ecdsa.privateKey = privateKey;
+  const exchangeKey = keys.ecdh.privateKey;
+  keys.ecdh.privateKey = P2.konto.schluessel.ecdh.privateKey;
+  assert.equal(can(event, origin.d), false, 'exchange CryptoKey identity is bound as well');
+  keys.ecdh.privateKey = exchangeKey;
+  const person = origin.konto.kennung, role = origin.konto.art, pub = origin.konto.pub;
+  origin.konto.kennung = P2.konto.kennung; assert.equal(can(event, origin.d), false); origin.konto.kennung = person;
+  origin.konto.art = 'teacher'; assert.equal(can(event, origin.d), false); origin.konto.art = role;
+  origin.konto.pub = P2.konto.pub; assert.equal(can(event, origin.d), false); origin.konto.pub = pub;
   assert.equal(can(event, origin.d), true);
   assert.equal(origin.konto.kennung, P1.konto.kennung);
   assert.ok(origin.v().kinder.some((c) => c.id === child));
@@ -215,7 +249,8 @@ test('REST-ROT-UNSIGNED-01: persisted confirmation survives restart, exact-accou
   // Another renewal must not replace this already signed envelope or invalidate its signing period.
   P1b.konto = await schluesselErneuern({ zugang: P1b.z(), anmeldename: 'peter', passwort: PW.neu, neuesPasswort: 'Heron-Fig-Dune-2468', runden: R });
   P1b.fertig(await P1b.sync());
-  origin.konto = await anmelden({ zugang: origin.z(), anmeldename: 'peter', passwort: 'Heron-Fig-Dune-2468', runden: R });
+  await adapter.merken(await anmelden({ zugang: origin.z(), anmeldename: 'peter', passwort: 'Heron-Fig-Dune-2468', runden: R }));
+  origin.konto = adapter.konto(login.kennung);
   for (const g of [origin, P1b, P2, K]) {
     await g.sync(); assert.deepEqual(stateOf(g).log.find((x) => x.event.id === event.id), signed, 'subsequent renewal keeps earlier envelope');
     assert.deepEqual(g.log(child).filter((e) => e.id === event.id), [event]);
