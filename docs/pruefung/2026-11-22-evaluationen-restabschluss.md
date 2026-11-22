@@ -80,4 +80,35 @@ Die Zeile in EV-7.2 ist mit der bereits beschlossenen W1-Regel abgeglichen: 6 An
 
 Keine Wiederholung der abgeschlossenen Inhalts-Verifier, keine neue Vollsuite, keine Quell-/Test-/Workflowänderung, kein Merge und keine Veröffentlichung aus diesem Abgleich. Eltern-/Lehrkräftegestaltung bleibt pausiert. Ziel 2, neue Quests und Store-Veröffentlichung werden hier nicht begonnen. Ältere offene Prototyp-PRs werden nicht automatisch geschlossen.
 
-Atlas führt R1 mit Peters tatsächlicher Geräterückmeldung fort; die konkrete Diagnosefrage wurde bereits gestellt. R2 bleibt als Produktbefund REST-ROT-01 offen, der nächste technische Korrekturschnitt ist oben abgegrenzt; Implementierung ist noch nicht begonnen. Dieser Abgleich begründet keinen Ziel-1-Gesamtabschluss. Die Kundenannahme bleibt Peter vorbehalten.
+Atlas führt R1 mit Peters tatsächlicher Geräterückmeldung fort; die konkrete Diagnosefrage wurde bereits gestellt. R2 bleibt insgesamt offen; die nachfolgende Teilkorrektur ersetzt den früheren Stand „Implementierung noch nicht begonnen“. Dieser Abgleich begründet keinen Ziel-1-Gesamtabschluss. Die Kundenannahme bleibt Peter vorbehalten.
+
+## Umsetzung nach Peters Freigabe am22.11.
+
+**Teilkorrektur vorhanden, Gesamturteil FAIL.** Der reguläre Forge/Claude lieferte auf e17a46b zunächst einen nicht anwendbaren Patch mit einer ungeprüften Retiming-Strategie. Atlas übernahm ihn nicht. Argus belegte daran Ereignis-Inhaltskonflikte, verändertes Schul-`asOf` und mögliche Umkehr einer späteren Einstellung. Die zweite echte Forge-Lieferung ersetzt ausschließlich die Transportverpackung, erhält Ereignis und Signatur bytegleich und entfernt das beanstandete Retiming.
+
+Dieser Kandidat ist als [7b44c49](https://github.com/pahlborn/bis-school-app_src/commit/7b44c49f77312e491476b71766bfc9c879dfeeeb), Tree `da43b63919d16daf77ccdefc97db63bb41c4727f`, im Zweig `fix/evaluation-offline-key-rotation-20261122` gesichert, **nicht gemergt oder veröffentlicht**. Zwei Produktionsmodule und ein neuer Regressionstest; Atlas extrahierte die vollständigen Forge-Dateien und stellte nur eine versehentlich entfallene historische Kommentar-ID wieder her.
+
+| Prüfung | Ergebnis / Grenze |
+|---|---|
+| Neuer Originalfall auf unverändertem e17a46b | Erwartet FAIL, `0 !== 1`; gültiger fachlicher Rotbeleg. |
+| Neuer Kandidaten-/Helperlauf durch Atlas |7/7, Exit0. Eigene Forge-Tests bleiben wegen fehlender Shell NOT_RUN. |
+| Bestehende betroffene Suiten `erneuern`, `abgleich`, `geraeteabgleich` durch Atlas |30/30, Exit0. |
+| Tatsächlicher Testbau durch Atlas | Exit0; keine Veröffentlichung. |
+| Unabhängiger Sentinel: prepared/in-flight und signed-only | Bestanden; dieselbe Evaluation/Revision auf den berechtigten Geräten genau einmal. |
+| Unabhängiger Sentinel: gesamter Inhalt/`at`, Schul-`asOf`, Konflikte, JSON-Replay, LWW und fünf bestehende Schutzfälle | Bestanden, ausschließlich synthetische Modulintegration. Keine allgemeine Browser-/Mixed-Version-/Snapshotfreigabe. |
+| Unabhängiger Sentinel: vor dem ersten Signieren offline bestätigter Vorgang | **FAIL**, Exit1: nach echtem Schlüsselwechsel, neuer Anmeldung und drei weiteren Runden Ursprung1, anderer Elternteil0, erneuerndes Gerät0. |
+| Argus auf genau7b44c49 | **FAIL für R2 insgesamt**; reine Periodenprobe und anschließend selbst gelesener unsigned-Vollflow bestätigen die offene Lücke. |
+
+**REST-ROT-UNSIGNED-01 / ARG-ROT-02:** Ein zunächst unsigniertes altes Ereignis wird nach Neuanmeldung mit dem aktuellen Schlüssel signiert; die historische Prüfung wählt den alten Schlüssel nach `event.at`. Ein vorbereiteter alter Transport existiert dabei nicht und kann deshalb nicht neu verpackt werden. Die vollständige Flow-Ursache wurde nicht bis zu jedem internen Schritt isoliert; das fehlgeschlagene Nutzerergebnis ist konkret reproduziert. Dieser ursprünglich mitgeplante Zustand darf nicht als erledigt ausgeblendet werden.
+
+Eigene QA-Ende/Rückgabe wurden vor Berichtsanalyse validiert, veröffentlicht und rückgelesen: [Sentinel7084331521](https://github.com/pahlborn/agentarium/issues/2#issuecomment-7084331521), [Argus7084333794](https://github.com/pahlborn/agentarium/issues/2#issuecomment-7084333794). Der vorbereitete Originalfall ist damit tatsächlich verbessert, der Gesamtauftrag noch nicht abgeschlossen. Keine neue Vollsuite oder CI für diesen wissentlich unvollständigen Kandidaten begonnen.
+
+Gesicherte unsigned-Probe: `/workspace/work/bq-rot-implementation-20261122/qa/sentinel-rest-rot-unsigned-flow-20261122.mjs`, SHA256 `e2ad0e285850f5d8ae2ddb3535520d033c7fb09214e1a7b1ce5b58a8e2be40ee`; Rohlog `6abfcf9c408b3b49e9f82b33dc2f59b6f696af8edaff66b633d4366ea33e1323`. Eigene Original-/Integritäts-/LWW-/signed-only-Belege und tatsächliche Autor-Testlogs sind im selben privaten Arbeitsbereich gesichert; keine echten Konten oder Schlüssel wurden verwendet.
+
+### Noch offener technischer Weg
+
+Forge wurde mit dem konkreten unsigned-Gegenbeleg erneut eng beauftragt. [Lauf45060660521](https://github.com/pahlborn/agentarium/actions/runs/45060660521) startete tatsächlich und endete mit `safety_blocked`; der Relay hielt den Rücklauf zurück. Es gibt daraus **keinen nutzbaren Patch und keinen belastbaren Fachvorschlag**. Die freigegebenen Metadaten nennen `RuntimeError`; der genaue Grund bleibt unbekannt. Host-Start/Ende, Sitzung und Verbrauch sind getrennt erhalten; keine Schutzumgehung oder blinde Wiederholung.
+
+Die ursprüngliche Fehlerbehebung bleibt beauftragt. Der [konkrete begrenzte Codex-Übergabeauftrag](../planung/2026-11-22-evaluation-unsigned-korrektur.md) ist zur nach Regel§2 erforderlichen rollenbezogenen Freigabe vorbereitet; Codex ist dafür noch nicht gestartet. R1 benötigt weiterhin ausschließlich die bereits angefragten echten iPad-Diagnosewerte. Die veröffentlichte Beta bleibt0.152.6.
+
+Beobachtete tatsächliche Claude-Kosten der drei technischen Läufe:0,4916324+0,8715903+0,2781113=1,6413340USD. Die dritte Zahl stammt aus dem getrennten Host-Enddatensatz, obwohl die blockierte Produktmetadatei Kosten und Sitzung auf `null` setzt. Native Kosten und globale historische Abschlusszähler bleiben unbekannt. Die zweite fachliche Nacharbeit ist als begrenzter Cadence-Befund vorgemerkt; kein Prozess-PASS oder zusätzlicher Lauf behauptet.

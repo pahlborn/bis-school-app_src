@@ -1,0 +1,13 @@
+# Übergabe: Noch unsignierte Offline-Evaluation nach Schlüsselwechsel
+
+Status: konkreter Codex-Vertretungsauftrag vorbereitet, rollenbezogene Freigabe ausstehend. Peters Auftrag zur Fehlerbehebung besteht; [Vertretungsregel §2](https://github.com/pahlborn/agentarium/blob/21a6f8f90d3934aa878d360fbfbf1cfee7b645fe/governance/vertretungen-freigabe-2026-11-15.md) verlangt vor diesem neuen Vertretungseinsatz ein ausdrückliches Ja. Der reguläre Forge-A3-Rücklauf wurde im [Lauf45060660521](https://github.com/pahlborn/agentarium/actions/runs/45060660521) mit `safety_blocked` zurückgehalten; kein nutzbarer Patch. Die genauere Ursache ist aus den freigegebenen Metadaten nicht ersichtlich. Keine Schutzgrenze umgehen oder blind erneut ausführen.
+
+1. Basis ist [7b44c49](https://github.com/pahlborn/bis-school-app_src/commit/7b44c49f77312e491476b71766bfc9c879dfeeeb), Tree `da43b63919d16daf77ccdefc97db63bb41c4727f`; Prepared-/Signed-Recovery und ihre bestandenen Schutzfälle erhalten.
+2. Den bestätigten unsigned-Vollflow aus dem [Restbericht](../pruefung/2026-11-22-evaluationen-restabschluss.md) reproduzieren: vor erster Signatur offline bestätigt, echter Kontoschlüsselwechsel, neu angemeldeter gleicher Elternteil, gleiches berechtigtes Kind; nach Wiederaufnahme genau einmal zustellen.
+3. Vor Umsetzung den konkreten Signatur-/Annahmevertrag nennen; das gesamte Domainereignis einschließlich `at`, ID, Kind, Autor, Originaldatum und Revision unverändert lassen.
+4. Bestehende Module zur Signatur/Annahme und Übertragung gezielt ergänzen; höchstens vier Produktionsdateien, kein weiterer Speicherweg, keine neue Oberfläche oder Infrastruktur.
+5. Historische und aktuelle Mitgliedschaft/Geräteberechtigung sowie Signaturbindung erhalten; keine pauschale Autorisierung alter Zeiten, kein Retiming und keine Aufbewahrung alter privater Schlüssel.
+6. Altlesen, Restore, Wiederholung und gegebenenfalls Wiederlesen nach Client-Upgrade nachweisen; bestätigte Daten dürfen für ältere Clients nicht dauerhaft verloren gehen.
+7. Original prepared-, signed-only- und unsigned-Fälle, unveränderte Ereignisbytes/Schul-`asOf`/Reihenfolge, Duplikatschutz und Entzugs-/Fälschungsfälle gezielt prüfen; keine Kriterien abschwächen.
+8. Codex liefert einen exakten Kandidaten mit eigenen realen Tests und Prüfbericht; regulärer Sentinel und Argus prüfen danach unabhängig das relevante Delta. Keine als Forge ausgegebene Codex-Arbeit.
+9. Atlas integriert erst nach behobenen Pflichtbefunden und vollständiger erforderlicher CI. Veröffentlichung und echter iPad-Diagnosenachweis bleiben getrennt; letzterer braucht Peters Werte.
