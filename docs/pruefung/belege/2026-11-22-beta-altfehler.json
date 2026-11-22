@@ -1,0 +1,27 @@
+{
+  "scope": "deterministic unchanged baseline/main browser counterexamples; no product mutation",
+  "results": [
+    {
+      "synthetic": true,
+      "commit": "e17a46b1463b4d20a6ad5a4ecfde9ecb28467f86",
+      "liveSourceSha256": "865a9fa09f48f361c38ff09c5bb58f3393d52647f5949746e3ed10073310a0f2",
+      "prompt": "How many seats are still free? Type your answer.",
+      "answer": "4200",
+      "example": null,
+      "pdfShowsQuestionMarkOperator": true,
+      "pdfHasMinusOperator": false,
+      "pdfFragment": "(1. 600 ? 300 = ?) Tj"
+    },
+    {
+      "synthetic": true,
+      "commit": "2c6d143bd5f0e24edfbea507ba741af983a166d4",
+      "liveSourceSha256": "865a9fa09f48f361c38ff09c5bb58f3393d52647f5949746e3ed10073310a0f2",
+      "prompt": "How many seats are still free? Type your answer.",
+      "answer": "4200",
+      "example": null,
+      "pdfShowsQuestionMarkOperator": true,
+      "pdfHasMinusOperator": false,
+      "pdfFragment": "(1. 600 ? 300 = ?) Tj"
+    }
+  ]
+}
