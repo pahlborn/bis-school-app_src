@@ -2,7 +2,7 @@
 
 **Status: Arbeitsfassung.** Peter und Claude gehen den Elternbereich noch Abschnitt für Abschnitt durch; dieser Auftrag wird dabei fortgeschrieben. **Nicht beginnen vor Peters Freigabe.**
 
-Grundlagen: `docs/konzept/textleitlinie.md` (vor allem Regel 4: Originalbegriffe) und `docs/konzept/elternbereich-entscheidungen-2026-11-18.md` (Abschnitt „Begriffe und Evaluations-Seite“, 23.11.). Vorlage für die Gestaltung ist Peters Klickdummy (5 Seiten: Übersicht, Fachansicht, Hilfe, Einstellungen, Evaluations); Peter stellt ihn bei der Freigabe bereit.
+Grundlagen: `docs/konzept/textleitlinie.md` (vor allem Regel 4: Originalbegriffe) und `docs/konzept/elternbereich-entscheidungen-2026-11-18.md` (Abschnitt „Begriffe und Evaluations-Seite“, 23.11.). Vorlage für die Gestaltung ist Peters Klickdummy (5 Seiten: Übersicht, Fachansicht, Hilfe, Verwalten, Evaluations); Peter stellt ihn bei der Freigabe bereit.
 
 ## A · Fokus
 
@@ -12,10 +12,10 @@ Grundlagen: `docs/konzept/textleitlinie.md` (vor allem Regel 4: Originalbegriffe
 - Korrigieren und Zurückziehen einer Evaluation ändern den Fokus entsprechend.
 - Abnahme: Tests für übernehmen → Quest im automatischen Fokus, zurückziehen → Quest wieder draußen, ohne Areas of Development → bisheriges Verhalten.
 
-**A2 · Fokus-Steuerung in „Einstellungen für [Kind]“**
+**A2 · Fokus-Steuerung unter „Verwalten“ (Teil des Kindes, siehe D)**
 - Befund: `focusMode` gibt es einmal je Kind, für alle Fächer. Ein Quest-Schalter in der Fachansicht stellt heute unbemerkt das ganze Kind auf Manuell (`toggleFocus`).
-- Neu: eigener Abschnitt „🎯 Fokus für Practise Today“ in den Einstellungen des Kindes: Schalter Automatisch | Manuell, Hinweis „gilt für alle Fächer“, darunter je Fach eine zuklappbare Liste der Quests mit Haken, Hinweis „Ein Haken stellt den Fokus auf Manuell“.
-- Fachansicht: kein Schalter und keine Haken mehr. Quests im Fokus tragen ein nicht klickbares Etikett „🎯 Im Fokus“. Am Seitenende eine Zeile „🎯 Fokus · Automatisch · gilt für alle Fächer · Anpassen in den Einstellungen ›“.
+- Neu: eigener Abschnitt „🎯 Fokus für Practise Today“ unter „Verwalten“, im Teil des Kindes: Schalter Automatisch | Manuell, Hinweis „gilt für alle Fächer“, darunter je Fach eine zuklappbare Liste der Quests mit Haken, Hinweis „Ein Haken stellt den Fokus auf Manuell“.
+- Fachansicht: kein Schalter und keine Haken mehr. Quests im Fokus tragen ein nicht klickbares Etikett „🎯 Im Fokus“. Am Seitenende eine Zeile „🎯 Fokus · Automatisch · gilt für alle Fächer · Anpassen unter Verwalten ›“.
 - Zurück auf Automatisch ist jederzeit möglich.
 
 **A3 · Texte zur Wirkung** (Textleitlinie beachten)
@@ -25,7 +25,7 @@ Grundlagen: `docs/konzept/textleitlinie.md` (vor allem Regel 4: Originalbegriffe
 
 ## B · Evaluations-Seite
 
-Ersetzt den Abschnitt „Schulische Einstufungen“. Aufbau wie im Entscheidungsdokument (23.11.), zusätzlich:
+Ersetzt den Abschnitt „Schulische Einstufungen“. Erreichbar über „Verwalten“ (siehe D) und über die Links „Evaluation 05.11. ›“ in der Fachansicht. Aufbau wie im Entscheidungsdokument (23.11.), zusätzlich:
 - Kurze Titel: Präfixe wie „G3“, „Grade 3“, „2026-27“ entfernen; Originaltitel in den Details.
 - PYP-Themen ausschreiben, z. B. „How the world works (HTWW)“, „Where we are in place and time (WWA)“.
 - Fach aus den Standards ableiten und in der Vorschau bestätigen lassen.
@@ -38,7 +38,15 @@ Ersetzt den Abschnitt „Schulische Einstufungen“. Aufbau wie im Entscheidungs
 
 Alle sichtbaren Texte (DE und EN) nach Textleitlinie Regel 4 umstellen, u. a.: „Lücke“, „Lücken laut Schule“, „Wird sicherer“, „Braucht Unterstützung“, „Next steps“, „Schulische Einstufungen“. Der Hilfetext „Neue Bewertungen der Schule werden bei Gelegenheit übernommen“ ist sachlich falsch (Eltern übernehmen selbst) und wird ersetzt. Interne Namen im Code dürfen bleiben.
 
-## D · Noch in Durchsicht (nicht umsetzen)
+## D · „Verwalten“ statt „Einstellungen“
 
-- Übersicht: Ob „Evaluations“ und „Übungsblätter“ als Werkzeuge in die Kopfzeile wandern, ist offen.
-- Fachansicht (übrige Teile), Übungsblätter, Hilfe, Einstellungen (übrige Teile).
+- Knopf in der Kopfzeile und Seitentitel heißen „Verwalten“. Die Seite hat zwei Teile:
+  1. **[Kind]** („gilt nur für dieses Kind“): Evaluations (Knopf „Evaluation übernehmen“, die zwei neuesten Einträge mit Zählern je Stufe, „Alle Evaluations ›“ zur Evaluations-Seite), 🎯 Fokus für Practise Today (A2), Lernen & Spaß, Profil und Klasse, Freigaben.
+  2. **Familie & App** („gilt für alle Kinder und Geräte“): Familie & Geräte, Sicherung, Über die App.
+- Die Evaluations-Seite ist eine Unterseite von „Verwalten“ (Zurück-Knopf „‹ Verwalten“).
+- Die Übersicht zeigt keine Zeile und keinen Abschnitt zu Evaluations mehr; dort steht nur der Lernerfolg.
+- Hilfetexte mit Wegangaben („Einstellungen › …“) auf „Verwalten › …“ umstellen.
+
+## E · Noch in Durchsicht (nicht umsetzen)
+
+- Übersicht (übrige Teile), Fachansicht (übrige Teile), Übungsblätter (Ort: eventuell unter „Verwalten“, Teil des Kindes), Hilfe.
