@@ -56,7 +56,8 @@ Alle sichtbaren Texte (DE und EN) nach Textleitlinie Regel 4 umstellen, u. a.: �
 ## F · Übungsblätter unter „Verwalten“
 
 - Der Abschnitt „Übungsblätter“ (`sheetsPageHTML`) wandert von der Übersicht unter „Verwalten“, Teil des Kindes, direkt nach den Evaluations. Inhalt und Funktion bleiben: Liste, offene zuerst, Stand je Blatt, Ergebnisse je Aufgabe, „Blatt verwerfen“ solange nichts eingetragen ist.
-- Die eigene Hinweiszeile auf der Übersicht („📄 … ist noch offen“) entfällt. Stattdessen zeigt Block „Seit Ihrem letzten Besuch“ eine Kachel „N Übungsblätter warten aufs Eintragen ›“ (nur wenn N > 0), die zu „Verwalten“ führt.
+- Auf der Übersicht bleibt ein Hinweis, gestaltet wie der Sicherungs-Tipp (Leiste mit Knopf), nur wenn mindestens ein Blatt wartet: „Tipp: N Übungsblätter warten aufs Eintragen – [Kind] trägt die Antworten unter ‚My sheets‘ ein.“ Knopf „Ansehen“ führt zu „Verwalten › Übungsblätter“. Er ersetzt die heutige Zeile „📄 … ist noch offen“.
+- Höchstens zwei Tipp-Leisten gleichzeitig (Übungsblätter, Sicherung); weitere Hinweise warten, bis eine Leiste verschwindet.
 - Leerer Zustand positiv formulieren, z. B. „Neue Blätter erstellt [Kind] auf der Startseite („📄 Practice sheet“) oder Sie in der Fachansicht bei einer Quest.“
 - Der Knopf „📄 Übungsblatt“ je Quest in der Fachansicht bleibt.
 
