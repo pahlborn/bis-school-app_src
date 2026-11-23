@@ -291,7 +291,7 @@ Prüfen: `node --test tests/module/standardkatalog.test.mjs`, danach die betroff
 ### EV-7.2 Startschwierigkeit
 > Als **Kind** möchte ich am Anfang nicht überfordert werden.
 
-- Für einen Bereich mit RS oder C gilt die Startschwierigkeit aus der Schulbewertung (`standOf`), bis 6 eigene Antworten an 2 Tagen vorliegen (Test).
+- Für einen Bereich mit RS oder C gilt die Startschwierigkeit aus der Schulbewertung (`standOf`), bis 6 eigene Antworten vorliegen (Test). Es gibt keine Tagesbedingung; danach gilt der gemeinsame Quest-Stand nach [Entscheidung W1](inhalt-motivation-entscheidungen.md#2-grundlage-woran-können-gemessen-wird-entscheidung-w1).
 
 ### EV-7.3 Abnahme auf dem iPad 📱
 > Als **Elternteil (iPad)** möchte ich eine echte Evaluation von Anfang bis Ende übernehmen.
