@@ -1,6 +1,6 @@
 # Auftrag an Atlas: Umbau Elternbereich
 
-**Status: Arbeitsfassung.** Peter und Claude gehen den Elternbereich noch Abschnitt für Abschnitt durch; dieser Auftrag wird dabei fortgeschrieben. **Nicht beginnen vor Peters Freigabe.**
+**Status (23.11.): Abschnitte A–H von Peter zur Umsetzung freigegeben.** Abschnitt I ist noch in Durchsicht und wird später ergänzt – nicht umsetzen.
 
 Grundlagen: `docs/konzept/textleitlinie.md` (vor allem Regel 4: Originalbegriffe) und `docs/konzept/elternbereich-entscheidungen-2026-11-18.md` (Abschnitt „Begriffe und Evaluations-Seite“, 23.11.). Vorlage für die Gestaltung ist Peters Klickdummy (5 Seiten: Übersicht, Fachansicht, Hilfe, Verwalten, Evaluations); Peter stellt ihn bei der Freigabe bereit.
 
@@ -66,10 +66,18 @@ Alle sichtbaren Texte (DE und EN) nach Textleitlinie Regel 4 umstellen, u. a.: �
 - Text nach Textleitlinie: „Tipp: Sichern Sie [Kind]s Lernstand – so bleiben alle Erfolge erhalten.“ Knopf „Jetzt sichern“. Ersetzt „💾 Noch nie gesichert“ und „💾 Neue Übungen seit der letzten Sicherung“; die Regel, wann der Hinweis erscheint (`backupLine`: bis zur ersten Sicherung bei jedem Besuch, danach frühestens nach 30 Tagen und nur bei neuen Übungen), bleibt.
 - Familienfassung prüfen: `canBackup` verlangt Konten (`accountsOn()`). Erscheint der Hinweis in der Familienfassung nicht, dort einbauen – ohne Konto ist die Sicherung der einzige Schutz gegen Datenverlust. Ergebnis der Prüfung im Statusbericht nennen; Tests für beide Fassungen.
 
+## H · Übersicht: Fächerzeilen in „Wo steht [Kind]?“
+
+- Je Fach eine Zeile: Name · Anzahl Quests, je Quest ein Balken in der Farbe des Quest-Stands, Pfeil zur Fachansicht. Der wiederholende Text („1 Extending (E) · 1 Meeting expectations (M) · …“) entfällt.
+- Kein Kasten mit Learning goals oder Areas of Development in der Übersicht; diese stehen in der Fachansicht.
+- Balken, deren Farbe noch aus der Evaluation kommt (`assessQuest(...).schoolBase`: weniger als `KEY.minAnswers` eigene Antworten und ein Schulstand vorhanden), werden **umrandet** gezeigt (weiße Fläche, Rand in der Stufenfarbe); alle anderen gefüllt.
+- Legende am Ende der Tabelle: Überschrift „Übungsstand in der App“, die fünf Farben (Extending (E), Meeting expectations (M), Consolidating (C), Requires support (RS), noch nicht geübt), dazu „umrandet = Ausgangspunkt aus der schulischen Evaluation, bis [Kind] in dieser Quest mindestens sechs Fragen beantwortet hat“ und „Learning goals und Areas of Development aus den Evaluations stehen in der Fachansicht.“
+- Fachansicht: Zusatz „Stand laut Schule“ (DE) bzw. „Starting point from school“ (EN) wird zu „Ausgangspunkt: Evaluation [Datum]“ bzw. „Starting point: evaluation [date]“.
+
 ## Backlog (nicht Teil dieses Auftrags)
 
 - **Auswertung „Was gefällt den Kindern?“:** Zähler je Witz, Geschichte und Word of the Day über alle Kinder, damit ein späteres Update darauf reagieren kann. Voraussetzungen: nur Zähler ohne Kind, Konto oder Gerät; Hinweis im Datenschutztext; Einwilligung der Eltern, die sie selbst einschalten (Opt-in). Rechtliche Einzelheiten zusammen mit den Datenschutztexten vor der Beta klären.
 
-## H · Noch in Durchsicht (nicht umsetzen)
+## I · Noch in Durchsicht (nicht umsetzen)
 
 - Fachansicht (übrige Teile), Hilfe.
