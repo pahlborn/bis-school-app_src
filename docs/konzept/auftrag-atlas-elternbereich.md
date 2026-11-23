@@ -47,6 +47,16 @@ Alle sichtbaren Texte (DE und EN) nach Textleitlinie Regel 4 umstellen, u. a.: �
 - Die Übersicht zeigt keine Zeile und keinen Abschnitt zu Evaluations mehr; dort steht nur der Lernerfolg.
 - Hilfetexte mit Wegangaben („Einstellungen › …“) auf „Verwalten › …“ umstellen.
 
-## E · Noch in Durchsicht (nicht umsetzen)
+## E · Übersicht: „Was deinem Kind gefällt“ entfällt
 
-- Übersicht (übrige Teile), Fachansicht (übrige Teile), Übungsblätter (Ort: eventuell unter „Verwalten“, Teil des Kindes), Hilfe.
+- Der Abschnitt (`parentHTML` in `src/module/inhaltsfeedback.mjs`, eingebunden in `parentHomeHTML`) wird aus dem Elternbereich entfernt. Grund: Die Daumen sollen dem Team zeigen, was Kindern gefällt; für Eltern ist eine Liste der letzten 6 Daumen ohne Nutzen.
+- Speichern bleibt unverändert: ein Daumen je Inhalt (`contentFeedback`), Ereignis `content_vote`, 👎 bei Witzen blendet den Witz für dieses Kind aus.
+- Tests, die den Abschnitt im Elternbereich prüfen, werden angepasst, ohne die Prüfungen für das Speichern zu schwächen.
+
+## Backlog (nicht Teil dieses Auftrags)
+
+- **Auswertung „Was gefällt den Kindern?“:** Zähler je Witz, Geschichte und Word of the Day über alle Kinder, damit ein späteres Update darauf reagieren kann. Voraussetzungen: nur Zähler ohne Kind, Konto oder Gerät; Hinweis im Datenschutztext; Einwilligung der Eltern, die sie selbst einschalten (Opt-in). Rechtliche Einzelheiten zusammen mit den Datenschutztexten vor der Beta klären.
+
+## F · Noch in Durchsicht (nicht umsetzen)
+
+- Fachansicht (übrige Teile), Übungsblätter (Ort: eventuell unter „Verwalten“, Teil des Kindes), Hilfe.
