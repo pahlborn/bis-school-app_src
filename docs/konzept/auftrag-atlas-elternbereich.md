@@ -53,7 +53,7 @@ Alle sichtbaren Texte (DE und EN) nach Textleitlinie Regel 4 umstellen, u. a.: �
 - Speichern bleibt unverändert: ein Daumen je Inhalt (`contentFeedback`), Ereignis `content_vote`, 👎 bei Witzen blendet den Witz für dieses Kind aus.
 - Tests, die den Abschnitt im Elternbereich prüfen, werden angepasst, ohne die Prüfungen für das Speichern zu schwächen.
 
-## G · Übungsblätter unter „Verwalten“
+## F · Übungsblätter unter „Verwalten“
 
 - Der Abschnitt „Übungsblätter“ (`sheetsPageHTML`) wandert von der Übersicht unter „Verwalten“, Teil des Kindes, direkt nach den Evaluations. Inhalt und Funktion bleiben: Liste, offene zuerst, Stand je Blatt, Ergebnisse je Aufgabe, „Blatt verwerfen“ solange nichts eingetragen ist.
 - Die eigene Hinweiszeile auf der Übersicht („📄 … ist noch offen“) entfällt. Stattdessen zeigt Block „Seit Ihrem letzten Besuch“ eine Kachel „N Übungsblätter warten aufs Eintragen ›“ (nur wenn N > 0), die zu „Verwalten“ führt.
@@ -64,6 +64,6 @@ Alle sichtbaren Texte (DE und EN) nach Textleitlinie Regel 4 umstellen, u. a.: �
 
 - **Auswertung „Was gefällt den Kindern?“:** Zähler je Witz, Geschichte und Word of the Day über alle Kinder, damit ein späteres Update darauf reagieren kann. Voraussetzungen: nur Zähler ohne Kind, Konto oder Gerät; Hinweis im Datenschutztext; Einwilligung der Eltern, die sie selbst einschalten (Opt-in). Rechtliche Einzelheiten zusammen mit den Datenschutztexten vor der Beta klären.
 
-## F · Noch in Durchsicht (nicht umsetzen)
+## G · Noch in Durchsicht (nicht umsetzen)
 
 - Fachansicht (übrige Teile), Hilfe.
