@@ -2,6 +2,28 @@
 
 Stand 18.11.2026, Darstellung und unabhängige Erstlösung präzisiert am 19.11., Wiederanlauf verbindlich entschieden am 20.11.2026 · Grundlage: Analyse des Elternbereichs am Stand `main` (Testkind mit synthetischen Übungsdaten, Elternbereich zu- und aufgeklappt, Fachansicht Science) und Peters Rückmeldungen. Ergänzt `docs/konzept/elternbereich.md` und `docs/konzept/inhalt-motivation-entscheidungen.md`; wo es abweicht, gilt dieses Dokument.
 
+
+## Begriffe und Evaluations-Seite (Peter, 23.11.)
+
+Grundlage: Aufbau einer echten Evaluation in Toddle (Final remarks mit Strengths und Areas of Development; Learning goals mit Learner Profile Attributes, Key Concept und Standards mit E/M/C/RS). Eigene oder eingedeutschte Begriffe entfallen; die Originalbezeichnungen gelten (siehe Textleitlinie, Regel 4).
+
+| Bisher in diesem Dokument / im Klickdummy | Ab jetzt |
+| --- | --- |
+| Lücke, Area of improvement (Standard mit RS oder C) | **Learning goal** mit Stufe, z. B. „Learning goal · Requires support (RS)“; Verlauf bis „gehalten“ unverändert |
+| Next step (Lehrkraft) | **Areas of Development** (Lehrkraft), im Wortlaut; Überschrift so, wie die Lehrkraft sie schreibt |
+| Schulbewertung, „laut Schule“ | **Evaluation** mit Datum, z. B. „Evaluation 05.11.“ |
+| Angekündigt, noch ohne Bewertung | **Awaiting evaluation** |
+
+Die Regeln aus Thema 2 (Verlauf, „gehalten“ = 5 von 6 selbst richtig, Schließen und Wiederöffnen) gelten unverändert für Learning goals mit RS oder C.
+
+**Evaluations-Seite** (ersetzt den Abschnitt „Schulische Einstufungen“; Vorlage: Klickdummy, Seite 5):
+- Oben „Evaluation übernehmen“ mit drei Schritten: Text holen (Aus Toddle oder einfügen), Vorschau prüfen, bestätigen.
+- Liste, neueste zuerst. Je Evaluation: kurzer Titel (Präfixe wie „G3“, „Grade 3“, „2026-27“ entfernt; Originaltitel in den Details), Fach, PYP-Thema ausgeschrieben (z. B. „How the world works (HTWW)“), Zähler je Stufe statt einer Gesamtstufe, Zeile „Wirkt in der App“.
+- Details in Toddle-Reihenfolge: Strengths, Areas of Development (je Punkt die übende Quest), Standards mit Stufe und Quest oder „keine Übung in Big Quest“, Learner Profile Attributes und Key Concept (nur angezeigt), Toddle-Titel mit Abgabe- und Bewertungsdatum, „Korrigieren“ und „Zurückziehen“.
+- Das Fach wird aus den Standards abgeleitet und in der Vorschau bestätigt; Namen von Standardgruppen erscheinen ohne Schulkürzel.
+- Die Zuordnung „Welche Quest übt welchen Standard?“ steht in der Hilfe.
+- Filter bleiben: Fach, Zeitraum, „Nur mit C oder RS“.
+
 ## Befund in Kürze
 
 - Der Elternbereich erklärt ausführlich, **wie die App funktioniert**, zeigt aber kaum, **was das Kind gemacht hat** und **wo es steht**.
