@@ -22,7 +22,7 @@ Die Regeln aus Thema 2 (Verlauf, „gehalten“ = 5 von 6 selbst richtig, Schlie
 - Details in Toddle-Reihenfolge: Strengths, Areas of Development (je Punkt die übende Quest), Standards mit Stufe und Quest oder „keine Übung in Big Quest“, Learner Profile Attributes und Key Concept (nur angezeigt), Toddle-Titel mit Abgabe- und Bewertungsdatum, „Korrigieren“ und „Zurückziehen“.
 - Das Fach wird aus den Standards abgeleitet und in der Vorschau bestätigt; Namen von Standardgruppen erscheinen ohne Schulkürzel.
 - Die Zuordnung „Welche Quest übt welchen Standard?“ steht in der Hilfe.
-- Offen: Filter (bei wenigen Evaluations voraussichtlich entbehrlich).
+- Filter bleiben: Fach, Zeitraum, „Nur mit C oder RS“.
 
 ## Befund in Kürze
 
