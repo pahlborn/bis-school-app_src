@@ -61,10 +61,15 @@ Alle sichtbaren Texte (DE und EN) nach Textleitlinie Regel 4 umstellen, u. a.: �
 - Leerer Zustand positiv formulieren, z. B. „Neue Blätter erstellt [Kind] auf der Startseite („📄 Practice sheet“) oder Sie in der Fachansicht bei einer Quest.“
 - Der Knopf „📄 Übungsblatt“ je Quest in der Fachansicht bleibt.
 
+## G · Sicherungs-Hinweis
+
+- Text nach Textleitlinie: „Tipp: Sichern Sie [Kind]s Lernstand – so bleiben alle Erfolge erhalten.“ Knopf „Jetzt sichern“. Ersetzt „💾 Noch nie gesichert“ und „💾 Neue Übungen seit der letzten Sicherung“; die Regel, wann der Hinweis erscheint (`backupLine`: bis zur ersten Sicherung bei jedem Besuch, danach frühestens nach 30 Tagen und nur bei neuen Übungen), bleibt.
+- Familienfassung prüfen: `canBackup` verlangt Konten (`accountsOn()`). Erscheint der Hinweis in der Familienfassung nicht, dort einbauen – ohne Konto ist die Sicherung der einzige Schutz gegen Datenverlust. Ergebnis der Prüfung im Statusbericht nennen; Tests für beide Fassungen.
+
 ## Backlog (nicht Teil dieses Auftrags)
 
 - **Auswertung „Was gefällt den Kindern?“:** Zähler je Witz, Geschichte und Word of the Day über alle Kinder, damit ein späteres Update darauf reagieren kann. Voraussetzungen: nur Zähler ohne Kind, Konto oder Gerät; Hinweis im Datenschutztext; Einwilligung der Eltern, die sie selbst einschalten (Opt-in). Rechtliche Einzelheiten zusammen mit den Datenschutztexten vor der Beta klären.
 
-## G · Noch in Durchsicht (nicht umsetzen)
+## H · Noch in Durchsicht (nicht umsetzen)
 
 - Fachansicht (übrige Teile), Hilfe.
