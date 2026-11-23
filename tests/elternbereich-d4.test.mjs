@@ -1,6 +1,6 @@
 // Paket D4 (Konzept Elternbereich 6.6, R10, R11): die Lücke für Eltern. Erfundene Schuldaten, keine echten.
 //  T19: „Jetzt angehen“, „Als geschlossen markieren“, „Weiter üben“ wirken und werden vermerkt; Lehrkraft sieht keine Knöpfe.
-//  T17: Fortschritt in Aufgaben, keine Zeitwörter; „Lücke geschlossen ✓“ im Block „Aus der Schule“.
+//  T17: Fortschritt in Aufgaben, keine Zeitwörter; „Learning goal geschlossen ✓“ im Block „Aus der Schule“.
 //   node --test tests/elternbereich-d4.test.mjs
 
 import { test, before, after } from 'node:test';
@@ -61,7 +61,7 @@ test('T19/T17 parents: work on it now, mark as closed, keep practising - with no
   await page.locator('[data-gapact="close"][data-gapstd="M-N2"]').click();
   await page.waitForFunction(() => /von Ihnen geschlossen/.test(document.querySelector('#pSchool .pgaps')?.innerText || ''));
   t = await liste(page);
-  assert.match(t, /Lücke geschlossen ✓[^\n]*Zahlen vergleichen[^\n]*von Ihnen geschlossen/);
+  assert.match(t, /Learning goal geschlossen ✓[^\n]*Zahlen vergleichen[^\n]*von Ihnen geschlossen/);
   assert.equal((await lies(page)).closed['M-N2'].by, 'parents');
   assert.equal(await karte(page, 'numbers').locator('.ptag.gap').count(), 1);
   // the app closes Time & Numbers after six following answers at the common secure stand → "keep practising"
@@ -69,7 +69,7 @@ test('T19/T17 parents: work on it now, mark as closed, keep practising - with no
   await page.evaluate(()=>{for(let i=0;i<6;i++)window.__gapRecord({world:'numbers',level:2},true);});
   await mathe(page);
   t = await liste(page);
-  assert.match(t, /Lücke geschlossen ✓[^\n]*Stellenwert[^\n]*laut den Antworten in der App/);
+  assert.match(t, /Learning goal geschlossen ✓[^\n]*Stellenwert[^\n]*laut den Antworten in der App/);
   await page.locator('[data-gapact="hold"][data-gapstd="M-N1"]').click();
   await page.waitForFunction(() => /von Ihnen offen gehalten/.test(document.querySelector('#pSchool .pgaps')?.innerText || ''));
   let g = await lies(page);

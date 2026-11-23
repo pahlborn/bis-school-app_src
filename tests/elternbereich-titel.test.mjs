@@ -1,8 +1,8 @@
 // Elternbereich – neue Titel (Peter, 05.11., Punkte 1–3). Erfundene Schuldaten, keine echten. Echte Klicks.
-//  T1  Kapitel im Elternbereich (DE): „📖 Das Konzept von Big Quest“ · „🤝 So unterstützen Sie Ihr Kind“ · „🏫 Schulische Einstufungen“;
+//  T1  Kapitel im Elternbereich (DE): „📖 Das Konzept von Big Quest“ · „🤝 So unterstützen Sie Ihr Kind“ · „🏫 Evaluations“;
 //      „Neu hier?“ führt mit demselben Titel zum Konzept; Kopf-Chip und Reiter gleich.
-//  T2  Dasselbe auf Englisch: „The Big Quest concept“ · „How to support your child“ · „School assessments“.
-//  T3  ⓘ an „So unterstützen Sie Ihr Kind“ und „Schulische Einstufungen“ mit dem neuen Titel (DE/EN);
+//  T2  Dasselbe auf Englisch: „The Big Quest concept“ · „How to support your child“ · „Evaluations“.
+//  T3  ⓘ an „So unterstützen Sie Ihr Kind“ und „Evaluations“ mit dem neuen Titel (DE/EN);
 //      Verweis in ⓘ „Fokus“ nennt das Konzept mit neuem Titel.
 //  T4  Die alten Titel stehen nirgends mehr in der App.
 //   node --test tests/elternbereich-titel.test.mjs
@@ -28,8 +28,8 @@ before(async () => {
 after(async () => { await browser?.close(); server?.close(); });
 
 const NEU = {
-  de: ['📖 Das Konzept von Big Quest', '🤝 So unterstützen Sie Ihr Kind', '🏫 Schulische Einstufungen', '📄 Übungsblätter'],
-  en: ['📖 The Big Quest concept', '🤝 How to support your child', '🏫 School assessments', '📄 Practice sheets'],
+  de: ['📖 Das Konzept von Big Quest', '🤝 So unterstützen Sie Ihr Kind', '🏫 Evaluations', '📄 Übungsblätter'],
+  en: ['📖 The Big Quest concept', '🤝 How to support your child', '🏫 Evaluations', '📄 Practice sheets'],
 };
 const ALT = ['So funktioniert Big Quest', 'Ihr Kind unterstützen', 'Bewertungen der Schule – Verlauf', 'Einstufungen der Schule', 'How Big Quest works', 'Supporting your child', 'School evaluations – history'];
 
@@ -59,12 +59,12 @@ test('T1–T3 new titles in the grown-ups area, German and English, with the ⓘ
   assert.equal((await page.textContent('#aboutChip')).trim(), NEU.de[0]);
   assert.equal((await page.textContent('#tabInfo')).trim(), NEU.de[0]);
   assert.equal(await info(page, 'support'), 'So unterstützen Sie Ihr Kind');
-  assert.equal(await info(page, 'school'), 'Schulische Einstufungen');
+  assert.equal(await info(page, 'school'), 'Evaluations');
   await page.locator('.phdr [data-plang="en"]').click();
   assert.deepEqual(await kapitel(page), NEU.en);
   assert.equal((await page.textContent('[data-pconcept]')).trim(), NEU.en[0]);
   assert.equal(await info(page, 'support'), 'How to support your child');
-  assert.equal(await info(page, 'school'), 'School assessments');
+  assert.equal(await info(page, 'school'), 'Evaluations');
   const body = await page.locator('#aboutBody').innerText();
   for (const a of ALT) assert.ok(!body.includes(a), 'old title still shown: ' + a);
   assert.deepEqual(fehler, []);

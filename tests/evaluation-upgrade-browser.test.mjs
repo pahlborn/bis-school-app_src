@@ -179,7 +179,7 @@ test('upgrade recovers an assessment rejected by the exact legacy app without re
   const form = P.page.locator('#pSchoolEvaluation');
   await P.page.evaluate(()=>window.__legacyEvaluationDraft());
   await form.getByLabel('Titel').fill(TITLE);
-  await form.getByLabel('Bewertungsdatum').fill(await P.page.evaluate(() => new Date().toISOString().slice(0, 10)));
+  await form.getByLabel('Evaluation-Datum').fill(await P.page.evaluate(() => new Date().toISOString().slice(0, 10)));
   await form.getByLabel('Kriterium').selectOption('M-N5');
   await form.getByLabel('Einstufung').selectOption('C');
   await form.getByRole('button', { name: 'Vorschau anzeigen' }).click();

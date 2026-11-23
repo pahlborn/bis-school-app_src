@@ -33,7 +33,7 @@ import { anmStartlink } from '../src/module/anmeldung.mjs';
 import { neuFormular, registrieren } from './erstanmeldung-hilfen.mjs';
 import { keyFingerprint } from '../src/module/krypto.mjs';
 import { appSandbox, stellbareUhr } from './app-sandbox.mjs';
-import { browserStarten, LADEZEIT_MS } from './app-hilfen.mjs';
+import { browserStarten, LADEZEIT_MS, elternSeite } from './app-hilfen.mjs';
 import { githubNachbau } from './module/github-nachbau.mjs';
 import { TEST_PW } from './hilfen.mjs';
 
@@ -334,6 +334,11 @@ test('Sandbox: gebaute Familienfassung - anmelden, Kind anlegen, ueben, Schulbew
   assert.match(P.S.lauf(() => P.S.holen('schoolHTML')()), new RegExp(BEISPIEL.kinder.kathie.tasks[0].title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), 'im Elternbereich sichtbar');
   // das Kind sieht sie nie
   assert.equal(K.S.lauf(() => K.S.holen('schoolData')()), null);
+  // Actual built family page, using only the existing synthetic account/storage replica.
+  assert.equal(P.S.lauf(() => P.S.holen('accountsOn')()), true, 'family build: accounts enabled');
+  assert.equal(P.S.lauf(() => P.S.holen('canBackup')()), true, 'synthetic parent may back up this child');
+  await familyCopyBrowser(P, W);
+
 
   // Export: lesbare Seite und JSON
   P.einstellungen('familie');
@@ -459,6 +464,49 @@ test('Kathies App (Live-Bau): nichts davon - kein Export/Loeschen, kein Abschnit
   assert.equal(S.lauf(() => S.holen('KONTO_UI')), false);
   assert.doesNotMatch(S.lauf(() => S.holen('aboutAppHTML')()), /endgueltig-loeschen/);
 });
+
+async function familyCopyBrowser(P, W) {
+  const server = http.createServer((req, res) => { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); res.end(HTML); });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const url = `http://127.0.0.1:${server.address().port}/`, browser = await browserStarten();
+  try {
+    const ctx = await browser.newContext();
+    await ctx.route('**/*', async route => {
+      const target = route.request().url();
+      if (target.startsWith(url)) return route.continue();
+      if (target.startsWith(GITHUB + '/')) return route.fulfill({ response: await route.fetch({ url: W.N.basis + target.slice(GITHUB.length) }) });
+      return route.abort();
+    });
+    await ctx.addInitScript(data => { for (const [k, v] of Object.entries(data)) localStorage.setItem(k, v); window.AudioContext = undefined; }, Object.fromEntries(P.S.ablage));
+    const page = await ctx.newPage(), errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await page.clock.setFixedTime(new Date(W.uhr.jetzt()));
+    await page.goto(url);
+    await page.fill('#passwort', TEST_PW); await page.click('#oeffnen');
+    await page.waitForSelector('#parentClose');
+    await elternSeite(page, 'home');
+    await page.locator('[data-psec="school"] > summary').click();
+    await page.locator('.psrow').first().waitFor();
+    await page.locator('[data-psec="school"] > summary').click();
+    assert.equal(await page.locator('.pbackup-note').count(), 1, 'family overview shows backup tip after practice');
+    const records = await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter(k => /__events$/.test(k)).map(k => [k, localStorage.getItem(k)])));
+    for (const lang of ['de', 'en']) {
+      await page.locator(`.phdr [data-plang="${lang}"]`).click();
+      const note = await page.locator('.pbackup-note').innerText();
+      assert.match(note, lang === 'de' ? /Tipp: Sichern Sie .+s Lernstand – so bleiben alle Erfolge erhalten\./ : /Tip: Back up .+’s learning progress to keep every achievement\./);
+      assert.equal(await page.locator('.pbackup-note [data-backup]').innerText(), lang === 'de' ? 'Jetzt sichern' : 'Back up now');
+      await page.locator('[data-psec="school"] > summary').click();
+      const school = await page.locator('[data-psec="school"]').innerText();
+      assert.match(school, /Evaluations/); assert.match(school, /Consolidating \(C\)|Requires support \(RS\)/);
+      await page.locator('[data-psdet]').first().click();
+      const detail = await page.locator('.psdet').first().innerText();
+      assert.match(detail, /Strengths[\s\S]*Areas of Development/);
+      assert.deepEqual(await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter(k => /__events$/.test(k)).map(k => [k, localStorage.getItem(k)]))), records, 'reading text leaves stored events unchanged');
+      await page.locator('[data-psec="school"] > summary').click();
+    }
+    assert.deepEqual(errors, []); await ctx.close();
+  } finally { await browser.close(); server.close(); }
+}
 
 test('Browser: Huelle -> Familienpasswort -> die Familienfassung startet mit der Anmeldung; alte Eintraege bleiben', async () => {
   const server = http.createServer((req, res) => {

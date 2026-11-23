@@ -1,7 +1,7 @@
 // Paket F3 (Konzept Elternbereich 6, 7.2 Punkte 4–6): So funktioniert Big Quest, Teil 2. Erfundene Schuldaten, keine echten.
 //  T6: „keinen zweiten Weg“ / „don’t add a second method“ je Sprache genau einmal.
 //  T7: „So funktioniert Big Quest“ höchstens 7 000 Zeichen ohne Quellen (sichtbarer Text; „Genaue Schwellen“ zugeklappt zählt nicht).
-//  Dazu: Helfen wie die Schule höchstens 3 Sätze; Wie die App einstuft mit Kurzfassung, „Lücken schließen“ (mit dem
+//  Dazu: Helfen wie die Schule höchstens 3 Sätze; Wie die App einstuft mit Kurzfassung, „Learning goals erreichen“ (mit dem
 //  ehrlichen Satz) und „Genaue Schwellen“ zugeklappt; keine Schulbegriffe; Fokus-ⓘ und „Aus der Schule“ nennen die Lücke.
 //   node --test tests/elternbereich-f3.test.mjs
 
@@ -34,9 +34,9 @@ test('T6/T7 part 2: short, gaps explained honestly, exact thresholds folded away
   await anmelden(page, 'adult', 'papa', C.papa); await passwortSetzen(page, 'Moon-Glass-Paper-8812');
   await page.waitForSelector('#parentClose');
   const S = {
-    de: { helfen: 'Helfen wie die Schule', ein: 'Wie die App einstuft', kern: 'keinen zweiten Weg', luecken: 'Lücken schließen', genau: 'Genaue Schwellen', quellen: 'Quellen',
+    de: { helfen: 'Helfen wie die Schule', ein: 'Wie die App einstuft', kern: 'keinen zweiten Weg', luecken: 'Learning goals erreichen', genau: 'Genaue Schwellen', quellen: 'Quellen',
       ehrlich: 'Bestätigt sicher heißt: sicher bei den Antworten in der App. Wer geantwortet hat und mit welchen Hilfsmitteln, weiß die App nicht', knoepfe: ['Jetzt angehen', 'Als geschlossen markieren', 'Weiter üben'] },
-    en: { helfen: 'Helping the way school does', ein: 'How the app judges', kern: 'don’t add a second method', luecken: 'Closing gaps', genau: 'Exact thresholds', quellen: 'Sources',
+    en: { helfen: 'Helping the way school does', ein: 'How the app judges', kern: 'don’t add a second method', luecken: 'Reaching learning goals', genau: 'Exact thresholds', quellen: 'Sources',
       ehrlich: 'Confirmed secure means: secure in the answers in the app. The app does not know who answered', knoepfe: ['Work on it now', 'Mark as closed', 'Keep practicing'] }
   };
   for (const lang of ['de', 'en']) {
@@ -66,14 +66,14 @@ test('T6/T7 part 2: short, gaps explained honestly, exact thresholds folded away
     const genau = ein.locator('details.about-sub');
     assert.equal((await genau.locator('summary').textContent()).trim(), L.genau);
     assert.equal(await genau.evaluate((d) => d.open), false, `${lang}: exact thresholds folded away`);
-    assert.ok(!/Requires support|Consolidating|Meeting expectations|Extending/.test(et), `${lang}: no school terms (the page is child-reachable without accounts)`);
+    for (const term of ['Requires support (RS)', 'Consolidating (C)', 'Meeting expectations (M)', 'Extending (E)']) assert.ok(et.includes(term), `${lang}: original level ${term}`);
   }
   await page.locator('.phdr [data-plang="de"]').click();
   // focus ⓘ and the introduction "From school" name the gap
   await page.locator('[data-psubj="maths"]').click(); await page.waitForSelector('#pSchool');
-  assert.match(await page.locator('#pSchool > p.small').first().innerText(), /Schwache Einstufungen übt die App als Lücke, bis sie geschlossen ist\./);
+  assert.match(await page.locator('#pSchool > p.small').first().innerText(), /Learning goals mit Consolidating \(C\) oder Requires support \(RS\) übt die App, bis sie geschlossen sind\./);
   const fokus = await page.evaluate(() => { const b = document.createElement('button'); b.className = 'info-btn'; b.dataset.help = 'focus'; document.body.append(b); b.click(); const t = document.querySelector('#helpText').innerText; b.remove(); return t; });
-  assert.match(fokus, /aktive Lücke/);
+  assert.match(fokus, /aktive Learning goal/);
   assert.deepEqual(fehler, []);
   await ctx.close();
 });

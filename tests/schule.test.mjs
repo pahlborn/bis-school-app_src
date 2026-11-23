@@ -60,36 +60,36 @@ test('school data in the grown-ups area (C1): per subject "From school" with sta
   // history chapter: only the assignments (evaluated and waiting), with rubric and next steps
   await page.locator('details.psec[data-psec="school"] > summary').click();
   const t = await page.locator('details.psec[data-psec="school"]').innerText();
-  assert.match(t, /Schulische Einstufungen/);
-  for (const w of ['Mastering Basic Numbers and Calculations – Milestone', 'Persuade for the Park!', 'Friction Frenzy', 'Lesson 4', 'Wartet auf Bewertung']) assert.ok(t.includes(w), w);
+  assert.match(t, /Evaluations/);
+  for (const w of ['Mastering Basic Numbers and Calculations – Milestone', 'Persuade for the Park!', 'Friction Frenzy', 'Lesson 4', 'Awaiting evaluation']) assert.ok(t.includes(w), w);
   assert.ok(!t.includes('Standards – zuletzt') && !t.includes('ES = mit Unterstützung'), 'standards table and learning skills moved to the subjects');
   assert.ok(!/BIS\b|3B/.test(t), 'neutral wording');
   // rubric: the teacher's rating and the child's own rating side by side (Peter 01.11.) - since 05.11. in the details row
   const zeile = page.locator('details.psec[data-psec="school"] tr.psrow', { hasText: 'Milestone' });
   await zeile.locator('[data-psdet]').click();
   const ms = page.locator(`details.psec[data-psec="school"] tr.psdet[data-psdetrow="${await zeile.getAttribute('data-psrow')}"]`);
-  assert.deepEqual(await ms.locator('table.psrub tbody tr', { hasText: 'Sticker combinations' }).locator('td').allInnerTexts(), ['Sticker combinations', 'Wird sicherer', 'Darüber hinaus']);
-  assert.match(t, /Stand der Daten: 01\.11\.2026 · neueste Bewertung: 27\.10\.2026\. Einstufungen der Lehrkraft/);
+  assert.deepEqual(await ms.locator('table.psrub tbody tr', { hasText: 'Sticker combinations' }).locator('td').allInnerTexts(), ['Sticker combinations', 'Consolidating (C)', 'Extending (E)']);
+  assert.match(t, /Stand der Daten: 01\.11\.2026 · neueste Evaluation: 27\.10\.2026\. Einstufungen der Lehrkraft/);
   assert.match(await ms.innerText(), /Daraus im automatischen Fokus: Word Problems/);
   // maths: "From school" with the standards of maths and the next steps
   await page.locator('[data-psubj="maths"]').click();
   const b = await page.locator('#pSchool').innerText();
   assert.match(b, /Aus der Schule/);
-  assert.match(b, /Runden auf Zehner, Hunderter und Tausender\s+Sicher \(Meeting expectations\) 27\.10\.2026\s+vorher: Wird sicherer \(03\.10\.2026\)/);
-  assert.match(b, /Stellenwert[^\n]*\s+Wird sicherer/);
-  assert.match(b, /Nächste Schritte[\s\S]*Daraus im automatischen Fokus: [^\n]*Word Problems/);
+  assert.match(b, /Runden auf Zehner, Hunderter und Tausender\s+Meeting expectations \(M\) 27\.10\.2026\s+vorher: Consolidating \(C\) \(03\.10\.2026\)/);
+  assert.match(b, /Stellenwert[^\n]*\s+Consolidating \(C\)/);
+  assert.match(b, /Areas of Development[\s\S]*Daraus im automatischen Fokus: [^\n]*Word Problems/);
   assert.ok(!/Friction|S-F1|Kräfte/.test(b), 'no science standard in maths');
   // the school rating next to the app status at the quest
   const round = await page.locator('.pquest', { has: page.locator('[data-pfocus="round"]') }).innerText();
-  assert.match(round, /🏫 Schule\s+Sicher \(Meeting expectations\)\s+27\.10\.2026/);
+  assert.match(round, /🏫 Evaluation 27\.10\.2026\s+Meeting expectations \(M\)/);
   // automatic focus = the teacher's next steps (Peter 01.11.): word problems yes, data detective no
   assert.equal(await page.getAttribute('[data-pfocus="wordprob"]', 'aria-pressed'), 'true');
   assert.equal(await page.getAttribute('[data-pfocus="detective"]', 'aria-pressed'), 'false');
-  assert.match(round, /nächster Schritt laut Schule/);
+  assert.match(round, /Areas of Development \(Lehrkraft\)/);
   // Me as a Learner: learning skills and learner profile
   await page.locator('#pBack').click();
   await page.locator('[data-psubj="learner"]').click();
-  assert.match(await page.locator('#pSchool').innerText(), /Lernkompetenzen und Learner Profile[\s\S]*ES = mit Unterstützung/);
+  assert.match(await page.locator('#pSchool').innerText(), /Learner Profile Attributes[\s\S]*ES = mit Unterstützung/);
   // English
   await page.locator('#pBack').click(); await page.locator('[data-psubj="maths"]').click();
   await page.locator('.phdr [data-plang="en"]').click();

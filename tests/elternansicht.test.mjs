@@ -47,7 +47,7 @@ test('overview: same subjects as the child, summary in words, colours explained,
   assert.match(s, /keine schulische Beurteilung/);
   assert.doesNotMatch(await page.textContent('#aboutBody'), /So lesen Sie diese Seite/, 'no self-explanation (B4)');
   assert.deepEqual(await page.$$eval('#aboutBody .pleg-line .pleg', (l) => l.map((x) => x.textContent.trim())),
-    ['Sicher', 'Darüber hinaus', 'Wird sicherer', 'Braucht Unterstützung', 'Noch nicht einschätzbar'], 'colours explained in one line');
+    ['Meeting expectations (M)', 'Extending (E)', 'Consolidating (C)', 'Requires support (RS)', 'Noch nicht einschätzbar'], 'colours explained in one line');
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'no horizontal overflow');
   assert.deepEqual(fehler, []);
   await ctx.close();
@@ -59,7 +59,7 @@ test('subject page: status with school term, how sure, basis, trend, recency, ti
   await elternOeffnen(page);
   await page.locator('[data-psubj="science"]').click();
   const units = await page.locator('.pquest', { hasText: 'Units & Measuring' }).textContent();
-  assert.match(units, /Braucht Unterstützung \(Requires support\)/); assert.match(units,/erste Belege/);
+  assert.match(units, /Requires support \(RS\)/); assert.match(units,/erste Belege/);
   assert.match(units, /10 Aufgaben · 2 selbst gelöst/);   // E1: level 2
   await page.locator('.pquest', { hasText: 'Units & Measuring' }).locator('details.pbasis > summary').click();
   assert.match(await page.locator('.pquest', { hasText: 'Units & Measuring' }).locator('details.pbasis table').innerText(), /10 Aufgaben an 3 Tagen[\s\S]*selbst gelöst\s+2/);
@@ -72,12 +72,12 @@ test('subject page: status with school term, how sure, basis, trend, recency, ti
   await page.locator('#pBack').click();
   await page.locator('[data-psubj="maths"]').click();
   const round = await page.locator('.pquest', { hasText: 'Rounding Road' }).textContent();
-  assert.match(round, /Sicher \(Meeting expectations\)/); assert.match(round,/breitere Belege/);
+  assert.match(round, /Meeting expectations \(M\)/); assert.match(round,/breitere Belege/);
   assert.doesNotMatch(round,/Breitere Belege ab etwa 20/,'already a broader sample: no early-sample note');
   await page.locator('#pBack').click();
   await page.locator('[data-psubj="english"]').click();
   const sent = await page.locator('.pquest', { hasText: 'Capital Letters' }).textContent();
-  assert.match(sent,/Sicher \(Meeting expectations\)/,'seven correct L2 answers meet the common stand without a day veto');
+  assert.match(sent,/Meeting expectations \(M\)/,'seven correct L2 answers meet the common stand without a day veto');
   assert.match(sent,/wenig Belege/,'fewer than eight describes quantity separately');
   await page.locator('#pBack').click();
   await page.locator('[data-psubj="maths"]').click();
@@ -127,9 +127,9 @@ test('DE/EN switch changes the whole grown-ups view and is remembered', async ()
   await elternOeffnen(page);
   await page.locator('[data-plang="en"]').click();
   const s = await page.textContent('#aboutBody');
-  assert.match(s, /Grown-ups area/); assert.match(s, /Needs support/); assert.match(s, /Going well/); assert.match(s, /not a school assessment/);
+  assert.match(s, /Grown-ups area/); assert.match(s, /Requires support \(RS\)/); assert.match(s, /Going well/); assert.match(s, /not a school assessment/);
   await page.locator('[data-psubj="science"]').click();
-  assert.match(await page.textContent('#aboutBody'), /What is this based on\?.*Needs support/s);
+  assert.match(await page.textContent('#aboutBody'), /What is this based on\?.*Requires support \(RS\)/s);
   await page.reload(); await page.waitForSelector('#aboutBtn');
   await elternOeffnen(page);
   assert.match(await page.textContent('#aboutBody'), /Grown-ups area/);

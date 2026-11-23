@@ -164,11 +164,11 @@ jedeWelt('Export: jede Speicherstelle aus 7.2 kommt vor, mit Wert oder Grund; JS
   assert.ok(d.zugriff.some((z) => z.bereich === 'freigabe:g1'), 'Bereich der Freigabe');
   assert.ok(d.hinweise.some((h) => /Versionsgeschichte/.test(h)), 'Hinweis Git-Historie');
   // lesbare Seite
-  for (const t of ['Alle Daten von Kathie Beispiel', 'Profil', 'Lernstand', 'Schulische Einstufungen', 'MA.3.1', 'Freigaben', 'Protokoll der Freigaben', 'Geräte', 'kathie iPad', 'Wer hat einen Schlüssel', 'Jede Speicherstelle der App', 'Versionsgeschichte', 'p_LEHRKRAFT1']) assert.ok(x.html.includes(t), 'Seite: ' + t);
+  for (const t of ['Alle Daten von Kathie Beispiel', 'Profil', 'Lernstand', 'Evaluations', 'MA.3.1', 'Freigaben', 'Protokoll der Freigaben', 'Geräte', 'kathie iPad', 'Wer hat einen Schlüssel', 'Jede Speicherstelle der App', 'Versionsgeschichte', 'p_LEHRKRAFT1']) assert.ok(x.html.includes(t), 'Seite: ' + t);
   for (const s of KINDDATEN_STELLEN) assert.ok(x.html.includes('<code>' + s.key + '</code>'), 'Seite nennt ' + s.key);
   assert.equal(/<\/script|<script/i.test(x.html), false, 'kein Skript in der Seite');
   const en = await kindDatenExport({ ablage: P1.a, konto: P1.konto, kind: kk, now: W.uhr.t, heute: HEUTE, sprache: 'en' });
-  assert.ok(en.html.includes('All data of Kathie Beispiel') && en.html.includes('<html lang="en">') && en.html.includes('School assessments'));
+  assert.ok(en.html.includes('All data of Kathie Beispiel') && en.html.includes('<html lang="en">') && en.html.includes('Evaluations'));
   // Anna bekommt dieselben Daten
   const y = await kindDatenExport({ ablage: P2.a, konto: P2.konto, kind: kk, now: W.uhr.t, heute: HEUTE });
   const ohne = (o) => { const c = { ...o }; delete c.events; return c; };

@@ -1,7 +1,7 @@
 // Paket C1 (Konzept Elternbereich 5.3, 5.4, 5.9): Schule in der Fachansicht. Erfundene Schuldaten, keine echten.
 //  T13: „Aus der Schule“ zeigt nur die Standards des Fachs, jeder Standard steht in genau einem Fach;
 //       Lehrkraft ohne Umfang „Schuldaten“ sieht weder Block noch Schul-Punkt noch Verlauf; Fokus-Etikett passt zu den nächsten Schritten.
-//  Außerdem: 🏫-Punkt an den Kacheln mit der schwächsten Einstufung; Kapitel „Schulische Einstufungen“ (bis 05.11. „Bewertungen der Schule – Verlauf“) nur mit Aufgaben.
+//  Außerdem: 🏫-Punkt an den Kacheln mit der schwächsten Einstufung; Kapitel „Evaluations“ (bis 05.11. „Bewertungen der Schule – Verlauf“) nur mit Aufgaben.
 // Echte Klicks.
 //   node --test tests/elternbereich-c1.test.mjs
 
@@ -25,7 +25,7 @@ const SCHULE = { version: 1, kinder: { mia: { asOf: tag(-2), tasks: [
 
 let browser, server;
 before(async () => {
-  server = await kontenServer({ users: [await konto('mia', 'student', C.mia), await konto('papa', 'parent', C.papa, { kinder: ['mia'] }), await konto('frau', 'teacher', C.frau)] }, { schule: SCHULE });
+  server = await kontenServer({ users: [await konto('mia', 'student', C.mia), await konto('papa', 'parent', C.papa, { kinder: ['mia'] }), await konto('frau', 'teacher', C.frau)] }, { schule: SCHULE, anpassen: app => app.replace('function schoolHTML(){', 'window.__cgSource=()=>JSON.parse(JSON.stringify(schoolData()));function schoolHTML(){') });
   browser = await browserStarten();
 });
 after(async () => { await browser?.close(); server?.close(); });
@@ -62,20 +62,20 @@ test('T13 "From school" per subject: only its standards, each standard in exactl
   // maths: rounding with its earlier rating, next steps with the focus that follows from them
   await fach(page, 'maths');
   const b = await page.locator('#pSchool').innerText();
-  assert.match(b, /Sicher \(Meeting expectations\)[\s\S]*vorher: Wird sicherer/);
+  assert.match(b, /Meeting expectations \(M\)[\s\S]*vorher: Consolidating \(C\)/);
   assert.match(b, /Sachaufgaben in zwei Schritten üben\.[\s\S]*Daraus im automatischen Fokus: Word Problems/);
   assert.ok(!b.includes('Begründen, warum etwas rutscht'), 'science next step not in maths');
-  assert.match(await page.locator('.pquest', { has: page.locator('[data-pfocus="wordprob"]') }).innerText(), /nächster Schritt laut Schule/);
+  assert.match(await page.locator('.pquest', { has: page.locator('[data-pfocus="wordprob"]') }).innerText(), /Areas of Development \(Lehrkraft\)/);
   assert.equal(await page.getAttribute('[data-pfocus="wordprob"]', 'aria-pressed'), 'true', 'focus tag matches the automatic focus');
-  assert.match(await page.locator('.pquest', { has: page.locator('[data-pfocus="round"]') }).innerText(), /🏫 Schule\s+Sicher/);
+  assert.match(await page.locator('.pquest', { has: page.locator('[data-pfocus="round"]') }).innerText(), /🏫 Evaluation \d\d\.\d\d\.\d{4}\s+Meeting expectations \(M\)/);
   // learner: learning skills
   await fach(page, 'learner');
-  assert.match(await page.locator('#pSchool').innerText(), /Lernkompetenzen und Learner Profile[\s\S]*Thinker: Obs\./);
+  assert.match(await page.locator('#pSchool').innerText(), /Learner Profile Attributes[\s\S]*Thinker: Obs\./);
   // history: only the assignments, the waiting one included; no standards table
   await page.locator('#pBack').click();
   await page.locator('details.psec[data-psec="school"] > summary').click();
   const h = await page.locator('details.psec[data-psec="school"]').innerText();
-  for (const w of ['Schulische Einstufungen', 'Rounding check B', 'Forces lab', 'Wartet auf Bewertung', 'Persuasive letter']) assert.ok(h.includes(w), w);
+  for (const w of ['Evaluations', 'Rounding check B', 'Forces lab', 'Awaiting evaluation', 'Persuasive letter']) assert.ok(h.includes(w), w);
   // since 05.11. one table of the assignments (and rubrics in the details), still no standards table
   assert.equal(await page.locator('details.psec[data-psec="school"] table:not(.pstab):not(.psrub)').count(), 0, 'no standards table in the history');
   assert.ok(!h.includes('Standards – zuletzt'));
@@ -104,6 +104,33 @@ test('T13 teacher: with "learning" only no school data anywhere; with "school da
   assert.equal(await page.locator('details.psec[data-psec="school"]').count(), 1, 'school data: history');
   await fach(page, 'maths');
   assert.equal(await page.locator('#pSchool').count(), 1, 'school data: block');
+  assert.deepEqual(fehler, []);
+  await ctx.close();
+});
+
+test('C/G original school terms in both parent languages preserve source data', async () => {
+  const { ctx, page, fehler } = await oeffnen(browser, server);
+  await kindDann(page, 'papa');
+  const snapshot = () => page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter(k => /__(?:school|events)$/.test(k)).map(k => [k, localStorage.getItem(k)])));
+  const before = await snapshot();
+  const source = await page.evaluate(() => window.__cgSource());
+  assert.equal(source.tasks.length, 5, 'all source evaluations are present');
+  for (const lang of ['de', 'en']) {
+    await page.locator(`.phdr [data-plang="${lang}"]`).click();
+    await fach(page, 'maths');
+    const school = await page.locator('#pSchool').innerText();
+    for (const term of ['Meeting expectations (M)', 'Consolidating (C)', 'Requires support (RS)', 'Areas of Development', 'Learning goals', 'Evaluation']) assert.ok(school.includes(term), `${lang}: ${term}`);
+    assert.ok(school.includes(SCHULE.kinder.mia.tasks[1].next[lang]), `${lang}: teacher text stays verbatim`);
+    assert.doesNotMatch(school, /Lücke|\b[Gg]aps?\b/);
+    await page.locator('#pBack').click();
+    await page.locator('details.psec[data-psec="school"] > summary').click();
+    assert.match(await page.locator('[data-psec="school"]').innerText(), /Evaluations[\s\S]*Awaiting evaluation/);
+    await page.locator('[data-psdet]').first().click();
+    assert.match(await page.locator('.psdet').first().innerText(), /Strengths[\s\S]*Areas of Development/);
+    assert.deepEqual(await page.evaluate(() => window.__cgSource()), source, `${lang}: original source records unchanged`);
+    assert.deepEqual(await snapshot(), before, `${lang}: school data and revisions unchanged`);
+    await page.locator('details.psec[data-psec="school"] > summary').click();
+  }
   assert.deepEqual(fehler, []);
   await ctx.close();
 });

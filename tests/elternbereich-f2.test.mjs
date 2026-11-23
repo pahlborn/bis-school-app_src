@@ -18,8 +18,8 @@ const abschnitt = (page, titel) => page.locator('#aboutBody details.psec[data-ps
 test('T6 core sentences once per language in the grown-ups area; parts 1–3 in order, correct and short', async () => {
   const { ctx, page } = await appOeffnen(browser, server.url);
   await elternOeffnen(page);
-  for (const [lang, S] of [['de', { titel: ['Grundidee', 'Aufbau', 'So lernt das Kind'], kern: ['nach 1, 3 und 7 Tagen', 'keinen zweiten Weg'], luecke: /Lücken/, falsch: ['die Eltern legen fest', 'Einzelheiten stehen im Elternbereich', 'Exkurs', 'Lernlogik', 'nach drei und nach sieben Tagen'] }],
-                           ['en', { titel: ['Core idea', 'Structure', 'How your child learns'], kern: ['after 1, 3 and 7 days'], luecke: /gaps/, falsch: ['the parents decide', 'details are in the', 'Side note', 'after three and seven days'] }]]) {
+  for (const [lang, S] of [['de', { titel: ['Grundidee', 'Aufbau', 'So lernt das Kind'], kern: ['nach 1, 3 und 7 Tagen', 'keinen zweiten Weg'], luecke: /Learning goals/, falsch: ['die Eltern legen fest', 'Einzelheiten stehen im Elternbereich', 'Exkurs', 'Lernlogik', 'nach drei und nach sieben Tagen'] }],
+                           ['en', { titel: ['Core idea', 'Structure', 'How your child learns'], kern: ['after 1, 3 and 7 days'], luecke: /learning goals/, falsch: ['the parents decide', 'details are in the', 'Side note', 'after three and seven days'] }]]) {
     await page.locator(`.phdr [data-plang="${lang}"]`).click();
     await elternSeite(page, 'concept');
     const titel = await page.locator('#aboutBody details.psec[data-psec="concept"] details.about-sec > summary').allInnerTexts();
