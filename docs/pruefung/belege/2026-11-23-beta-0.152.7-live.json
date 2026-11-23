@@ -1,0 +1,64 @@
+{
+  "status": "PASS",
+  "checked_at": "2026-11-23T04:46:08.754623+00:00",
+  "url": "https://big-quest-test.github.io/",
+  "publish_commit": "b8dd6cfad81421104abad1865e921cfbe9217d0c",
+  "source": "2c6d143bd5f0e24edfbea507ba741af983a166d4",
+  "assets": [
+    {
+      "file": "index.html",
+      "http": 200,
+      "expected_bytes": 1928310,
+      "actual_bytes": 1928310,
+      "expected_sha256": "184fda12038127b1eeb8f33f8d87ad9e4e0f6a87bb6f5e9333d42c8f7eb2c283",
+      "actual_sha256": "184fda12038127b1eeb8f33f8d87ad9e4e0f6a87bb6f5e9333d42c8f7eb2c283",
+      "equal": true,
+      "version": {
+        "n": 211,
+        "major": 0,
+        "minor": 152,
+        "patch": 7,
+        "kanal": "beta",
+        "hash": "2c6d143",
+        "date": "22.11.2026 21:28",
+        "draft": false
+      }
+    },
+    {
+      "file": "manifest.webmanifest",
+      "http": 200,
+      "expected_bytes": 301,
+      "actual_bytes": 301,
+      "expected_sha256": "3fd8fd91f56de3813d2c7135afd4b15959bf567b4662b4ac29d5a73ba807d689",
+      "actual_sha256": "3fd8fd91f56de3813d2c7135afd4b15959bf567b4662b4ac29d5a73ba807d689",
+      "equal": true
+    },
+    {
+      "file": "icon-180.png",
+      "http": 200,
+      "expected_bytes": 5128,
+      "actual_bytes": 5128,
+      "expected_sha256": "3c63f5f3182aa21558d379836eee4e42b391e59ce417f48eff175c08efe29ee6",
+      "actual_sha256": "3c63f5f3182aa21558d379836eee4e42b391e59ce417f48eff175c08efe29ee6",
+      "equal": true
+    },
+    {
+      "file": "icon-192.png",
+      "http": 200,
+      "expected_bytes": 5351,
+      "actual_bytes": 5351,
+      "expected_sha256": "a7978e221d0a4644f99ddde5a687178677fcad59787ac52f2400dc736ef81add",
+      "actual_sha256": "a7978e221d0a4644f99ddde5a687178677fcad59787ac52f2400dc736ef81add",
+      "equal": true
+    },
+    {
+      "file": "icon-512.png",
+      "http": 200,
+      "expected_bytes": 7115,
+      "actual_bytes": 7115,
+      "expected_sha256": "0f812cebfc6dfe6c9199d51537d847a193dcf0c304ed0bf7d37a40a7c5ff6988",
+      "actual_sha256": "0f812cebfc6dfe6c9199d51537d847a193dcf0c304ed0bf7d37a40a7c5ff6988",
+      "equal": true
+    }
+  ]
+}
