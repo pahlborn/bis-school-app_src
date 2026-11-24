@@ -56,8 +56,8 @@ test('Quelle: Marke genau einmal, keine Google-Adresse; Schriften geprueft; Lize
   const ofl = fs.readFileSync(path.join(WURZEL, 'werkzeug', 'schriften', 'OFL.txt'), 'utf8');
   for (const t of ['SIL OPEN FONT LICENSE Version 1.1', 'Copyright 2016 The Fredoka Project Authors', 'Copyright 2014 The Nunito Project Authors']) assert.ok(ofl.includes(t), t);
   // die App nennt Schriften und Lizenz unter "Quellen" (DE/EN) und erwaehnt Google Fonts nicht mehr im Datenschutz
-  assert.ok(QUELLTEXT.includes('und Nunito (© 2014 The Nunito Project Authors) – in die App eingebettet, SIL Open Font License 1.1'));
-  assert.ok(QUELLTEXT.includes('and Nunito (© 2014 The Nunito Project Authors) – embedded in the app, SIL Open Font License 1.1'));
+  assert.ok(QUELLTEXT.includes('und Nunito (© 2014 The Nunito Project Authors) – in Big Quest eingebettet, SIL Open Font License 1.1'));
+  assert.ok(QUELLTEXT.includes('and Nunito (© 2014 The Nunito Project Authors) – embedded in Big Quest, SIL Open Font License 1.1'));
   assert.doesNotMatch(QUELLTEXT, /Google Fonts|an Google übermittelt|IP address to Google/);
   assert.ok(QUELLTEXT.includes('<h3>Datenschutz</h3>\n<p><b>Vorläufige Fassung, noch nicht DSGVO-konform.</b></p>') || QUELLTEXT.includes('<h3>Datenschutz</h3>\r\n<p><b>Vorläufige Fassung, noch nicht DSGVO-konform.</b></p>'));
   assert.ok(QUELLTEXT.includes('<h3>Privacy</h3>\n<p><b>Preliminary version, not yet GDPR-compliant.</b></p>') || QUELLTEXT.includes('<h3>Privacy</h3>\r\n<p><b>Preliminary version, not yet GDPR-compliant.</b></p>'));

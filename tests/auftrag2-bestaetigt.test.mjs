@@ -68,7 +68,7 @@ test('Auftrag 2: Balken unter 100 % und der passende Text, wenn genau eine Bedin
     assert.ok(!['m','e'].includes(a.level),f.name+': common status is not secure');
     let t = await mathe(page);
     assert.match(t, f.de, f.name + ': text (subject view)');
-    assert.ok(!/Lücke geschlossen/.test(t), f.name + ': gap still open');
+    assert.ok(!/Learning goal geschlossen/.test(t), f.name + ': gap still open');
     const w = await breite(page, '#pSchool');
     assert.ok(w < 100, f.name + ': bar below 100 %'); assert.equal(w, f.w, f.name + ': bar = smallest share');
     for (const z of ['fällig', 'Rückstand', 'verpasst', 'Tage bis', 'Wochen', 'bis zum', 'weiter üben']) assert.ok(!t.includes(z), f.name + ': no ' + z);
@@ -103,12 +103,12 @@ test('W1 real touch journey separates reached M and held, permits help, survives
   assert.ok(relevant>=6);assert.equal(await page.locator('#resScore').textContent(),'8');await home();
   let a=await page.evaluate(()=>window.__g.assessQuest('numbers'));assert.equal(a.level,'m');assert.equal(a.days,1);
   assert.equal(await page.evaluate(()=>window.__g.openGaps().length),1,'M alone leaves gap open');
-  await enterParent(true);let t=await mathe(page);assert.match(t,/Sicher erreicht/);assert.match(t,/Lücke noch offen/);
+  await enterParent(true);let t=await mathe(page);assert.match(t,/Meeting expectations \(M\) erreicht/);assert.match(t,/Learning goal noch offen/);
   const journey=page.locator('[data-journey="M-N1"]');assert.equal(await journey.locator('.gjstations>li').count(),4);assert.equal(await journey.locator('[data-stage="4"].done').count(),0);
-  assert.match(await journey.innerText(),/Erste Antworten nach der Schulbewertung/);assert.match(await journey.innerText(),/von 6 bearbeitet/);
+  assert.match(await journey.innerText(),/Erste Antworten nach der Evaluation/);assert.match(await journey.innerText(),/von 6 bearbeitet/);
   await page.locator('#parentClose').tap();await page.waitForSelector('#home:not([hidden])');await openNumbers();
   for(let i=0;i<8;i++){const s=await zustand(page),q=s.round[s.idx];if(i===0){if(await page.locator('#takeChallenge').isVisible())await page.locator('#takeChallenge').tap();await page.locator('#helpBtn').tap();}await tapRight(page,q);await page.locator('#nextBtn').tap();}
-  await home();await enterParent();t=await mathe(page);assert.match(t,/Lücke geschlossen/);assert.equal(await journey.locator('[data-stage="4"].done').count(),1);
+  await home();await enterParent();t=await mathe(page);assert.match(t,/Learning goal geschlossen/);assert.equal(await journey.locator('[data-stage="4"].done').count(),1);
   assert.match(await journey.innerText(),/Gehalten · 5 von 6 selbst im ersten Versuch richtig/);assert.ok(await page.evaluate(()=>window.__g.gapData().journey['M-N1'].quests.numbers.checks.some(x=>x.help)),'help occupies a slot; the other five independent answers confirm');
   for(const lang of['de','en']){await mathe(page,lang);for(const viewport of[{width:768,height:1024},{width:1024,height:768}]){
    await page.setViewportSize(viewport);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
@@ -127,7 +127,7 @@ test('W1 real touch journey separates reached M and held, permits help, survives
    if(await page.locator('#home').isVisible())await page.locator('#adultBtn').tap();
    await anmelden(page,'adult','papa','Moon-Glass-Paper-8812');await page.waitForSelector('#parentClose');
   }
-  t=await mathe(page,'en');assert.match(t,/Gap closed/);assert.match(t,/Shaky lately/);assert.deepEqual(fehler,[]);
+  t=await mathe(page,'en');assert.match(t,/Learning goal closed/);assert.match(t,/Shaky lately/);assert.deepEqual(fehler,[]);
  }finally{await ctx.close();}
 });
 test('W1 parent shows the school M starting point with five wrong own answers and its actual basis',async()=>{
@@ -140,8 +140,8 @@ test('W1 parent shows the school M starting point with five wrong own answers an
   for(const lang of['de','en']){
    if(await page.locator('#pBack').count())await page.locator('#pBack').tap();await sprache(page,lang);await page.locator('[data-psubj="maths"]').tap();
    const card=page.locator('.pquest').filter({has:page.locator('[data-pfocus="numbers"]')});
-   assert.match(await card.locator('.pqchips .pst').first().innerText(),lang==='de'?/Sicher/:/Secure/);await card.locator('.pbasis summary').tap();
-   assert.match(await card.innerText(),lang==='de'?/Ausgangspunkt laut Schule/:/Starting point from school/);assert.doesNotMatch(await card.innerText(),/Noch nicht einschätzbar|Not yet possible to judge/);
+   assert.match(await card.locator('.pqchips .pst').first().innerText(),lang==='de'?/Meeting expectations \(M\)/:/Meeting expectations \(M\)/);await card.locator('.pbasis summary').tap();
+   assert.match(await card.innerText(),lang==='de'?/Ausgangspunkt: Evaluation/:/Starting point: Evaluation/);assert.doesNotMatch(await card.innerText(),/Noch nicht einschätzbar|Not yet possible to judge/);
   }
   assert.deepEqual(fehler,[]);
  }finally{await ctx.close();}

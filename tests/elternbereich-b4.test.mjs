@@ -58,17 +58,24 @@ test('T18 backup note only after new practice and when the last backup is missin
   const hinweis = async () => ((await page.locator('.pbackup-note').count()) ? (await page.textContent('.pbackup-note')).trim() : null);
   const faelle = [
     ['no practice, never backed up', { attempts: [], lastBackup: null }, null],
-    ['practice, never backed up', { attempts: [versuch(tag(-1))], lastBackup: null }, /Noch nie gesichert/],
+    ['practice, never backed up', { attempts: [versuch(tag(-1))], lastBackup: null }, /Tipp: Sichern Sie [^–]+s Lernstand – so bleiben alle Erfolge erhalten\./],
     ['backup 40 days ago, no practice since', { attempts: [versuch(tag(-45))], lastBackup: tag(-40) }, null],
-    ['backup 40 days ago, practice yesterday', { attempts: [versuch(tag(-45)), versuch(tag(-1))], lastBackup: tag(-40) }, /Neue Übungen seit der letzten Sicherung/],
+    ['backup 40 days ago, practice yesterday', { attempts: [versuch(tag(-45)), versuch(tag(-1))], lastBackup: tag(-40) }, /Tipp: Sichern Sie [^–]+s Lernstand – so bleiben alle Erfolge erhalten\./],
     ['backup 10 days ago, practice yesterday', { attempts: [versuch(tag(-1))], lastBackup: tag(-10) }, null],
-    ['backup 40 days ago, entered sheet yesterday', { attempts: [versuch(tag(-45))], lastBackup: tag(-40), sheets: [{ id: 's1', day: tag(-1), items: [{ q: 'x', res: 'self' }] }] }, /Neue Übungen/]
+    ['backup 40 days ago, entered sheet yesterday', { attempts: [versuch(tag(-45))], lastBackup: tag(-40), sheets: [{ id: 's1', day: tag(-1), items: [{ q: 'x', res: 'self' }] }] }, /Tipp: Sichern Sie [^–]+s Lernstand – so bleiben alle Erfolge erhalten\./]
   ];
   for (const [name, daten, soll] of faelle) {
     await setzen(page, daten);
     const h = await hinweis();
     if (soll) assert.match(h || '', soll, name); else assert.equal(h, null, name);
     if (soll) assert.equal(await page.locator('.pbackup-note [data-backup]').count(), 1, name + ': with "back up now"');
+    await page.locator('.phdr [data-plang="en"]').click();
+    if (soll) {
+      assert.match(await hinweis(), /Tip: Back up .+’s learning progress to keep every achievement\./, name + ': US English');
+      assert.equal(await page.locator('.pbackup-note [data-backup]').innerText(), 'Back up now');
+    } else assert.equal(await hinweis(), null, name + ': English visibility rule');
+    await page.locator('.phdr [data-plang="de"]').click();
+    if (soll) assert.equal(await page.locator('.pbackup-note [data-backup]').innerText(), 'Jetzt sichern');
   }
   assert.ok(!(await page.textContent('#aboutBody')).includes('Letzte Sicherung'), 'no permanent "last backup" line on the overview');
   assert.deepEqual(fehler, []);

@@ -23,7 +23,7 @@ test('T16 every quest card in every subject has the three levels; "How to help" 
     await page.locator(`[data-psubj="${f}"]`).first().click(); await page.waitForSelector('#pBack');
     const t = await page.textContent('#aboutBody');
     assert.ok(!t.includes('Was kann ich hier tun?'), 'no self-explanation in ' + f);
-    assert.match(await page.textContent('.pfmode'), /Automatisch: die App wählt\. Manuell: Sie wählen\./);
+    assert.match(await page.textContent('.pfmode'), /Automatisch: Big Quest wählt\. Manuell: Sie wählen\./);
     assert.equal(await page.locator('.pfmode .info-btn[data-help="focusmode"]').count(), 1);
     const r = await page.$$eval('.pquest', (qs) => qs.map((q) => ({
       name: q.querySelector('.pqn')?.textContent || '',

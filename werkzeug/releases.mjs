@@ -10,6 +10,18 @@ export const MARKE = '/*BQ_RELEASES*/null';
 export const RELEASE_NOTES = {
   current: {
     epics: [],
+    stories: [{
+      de: 'Big Quest zeigt Evaluations, Learning goals und Einstufungen in den Originalbegriffen der Schule. Lehrkrafttexte bleiben im Wortlaut erhalten.',
+      en: 'Big Quest shows Evaluations, Learning goals and ratings in the school’s original terms. Teacher text stays verbatim.'
+    }],
+    bugfixes: [{
+      de: 'Die Hilfe erklärt die Übernahme durch Eltern. Der Sicherungstipp lädt zum Sichern des Lernstands ein.',
+      en: 'Help explains how parents add evaluations. The backup tip invites parents to save their child’s progress.'
+    }]
+  },
+  history: [{
+    version: 'V 0.152.7 (Betaversion)',
+    epics: [],
     stories: [],
     bugfixes: [
       {
@@ -21,8 +33,8 @@ export const RELEASE_NOTES = {
         en: 'After the update, previously skipped school evaluations are recovered without creating duplicate revisions.'
       }
     ]
-  },
-  history: [{
+  }, {
+
     version: 'V 0.152.6 (Betaversion)',
     epics: [
       {

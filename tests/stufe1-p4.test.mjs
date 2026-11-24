@@ -75,7 +75,7 @@ async function sicht(page) {
     uebersicht: await n('.psubject'), schule: await n('details.psec[data-psec="school"]'), einstellungen: false,
     sicherung: false, freigaben: false, konten: await n('details.psec[data-psec="administration"] details[data-admin="accounts"]'), fokus: false, schulzeile: false
   };
-  if (r.uebersicht) { await page.locator('[data-psubj="maths"]').click(); const t = await page.textContent('#aboutBody'); r.fokus = await n('[data-pfocus]'); r.schulzeile = /🏫 Schule/.test(t); r.profil = r.profil || PROFIL(t); await page.locator('#pBack').click(); }
+  if (r.uebersicht) { await page.locator('[data-psubj="maths"]').click(); const t = await page.textContent('#aboutBody'); r.fokus = await n('[data-pfocus]'); r.schulzeile = await n('.pqschool'); if(r.schulzeile) assert.match(await page.locator('.pqschool').first().innerText(), /Evaluation \d/); r.profil = r.profil || PROFIL(t); await page.locator('#pBack').click(); }
   // ⚙ settings (B1): the child's settings (with the profile), backup and grants
   await page.locator('#pSettings').click(); await page.waitForSelector('#pSetBack');
   r.profil = r.profil || PROFIL(await page.textContent('#aboutBody'));

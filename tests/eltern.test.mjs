@@ -145,12 +145,12 @@ test('observation overview uses the school words only behind PIN and labels shar
   const text=await page.textContent('#aboutBody');
   assert.ok(text.includes('Meeting expectations'));
   const card=page.locator('.pquest').filter({has:page.locator('[data-pfocus="round"]')});
-  assert.match(await card.locator('.pqchips .pst').first().innerText(),/Sicher/,'the same ten correct L2 answers already meet the common status');
+  assert.match(await card.locator('.pqchips .pst').first().innerText(),/Meeting expectations \(M\)/,'the same ten correct L2 answers already meet the common status');
   assert.equal(await card.locator('.psure').innerText(),'erste Belege','quantity describes the sample, never vetoes M');
   assert.ok(text.includes('Worauf beruht das?'));
   assert.ok(text.includes('keine schulische Beurteilung'));
   await page.locator('.phdr [data-plang="en"]').click();
-  assert.match(await card.locator('.pqchips .pst').first().innerText(),/Secure/);
+  assert.match(await card.locator('.pqchips .pst').first().innerText(),/Meeting expectations \(M\)/);
   assert.equal(await card.locator('.psure').innerText(),'initial evidence');
   await zurStart(page);
   assert.ok(!(await page.evaluate(()=>document.body.innerText)).includes('Meeting expectations'));

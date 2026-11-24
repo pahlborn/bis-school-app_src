@@ -116,7 +116,7 @@ test('T14 a teacher looking through a grant writes nothing; parents see the gap 
   await page.waitForSelector('#parentClose');
   await page.locator('[data-psubj="maths"]').click(); await page.waitForSelector('#pBack');
   assert.deepEqual(await lies(page, 'gaps'),beforeGrant,'teacher: render does not persist computed closure or move the gap');
-  assert.ok(!(await page.locator('.pquest', { has: page.locator('.pqn', { hasText: 'Time & Numbers' }) }).innerText()).includes('Lücke'), 'teacher view: numbers is (computed) closed already');
+  assert.ok(!(await page.locator('.pquest', { has: page.locator('.pqn', { hasText: 'Time & Numbers' }) }).innerText()).includes('Learning goal'), 'teacher view: numbers is (computed) closed already');
   await page.locator('#parentClose').click(); await page.waitForSelector('#home:not([hidden])');
   // parents (no new confirmed answers): nothing was stored by the teacher, so numbers is an open gap; tags at the quests
   await setze(page, { attempts: [], ev: {},gaps:null });
@@ -125,14 +125,14 @@ test('T14 a teacher looking through a grant writes nothing; parents see the gap 
   await page.waitForSelector('#parentClose');
   await page.locator('[data-psubj="maths"]').click(); await page.waitForSelector('#pBack');
   const karte = (k) => page.locator('.pquest', { has: page.locator(`[data-pfocus="${k}"]`) });
-  assert.match(await karte('numbers').locator('.ptag.gap').innerText(), /🎯 Lücke laut Schule \(\d\d\.\d\d\.\d{4}\)/);
-  assert.match(await karte('detective').locator('.ptag.gapwait').innerText(), /Lücke laut Schule \(\d\d\.\d\d\.\d{4}\) · wartet/);
+  assert.match(await karte('numbers').locator('.ptag.gap').innerText(), /🎯 Learning goal · Requires support \(RS\) · Evaluation \d\d\.\d\d\.\d{4}/);
+  assert.match(await karte('detective').locator('.ptag.gapwait').innerText(), /Learning goal · Consolidating \(C\) · Evaluation \d\d\.\d\d\.\d{4} · wartet/);
   for (const k of ['combos', 'wordprob']) assert.equal(await karte(k).locator('.ptag.gapwait').count(), 1, 'both quests of a waiting gap marked: ' + k);
   assert.equal(await karte('round').locator('.ptag.gap, .ptag.gapwait').count(), 0, 'no gap tag without a gap');
   assert.equal(await page.getAttribute('[data-pfocus="numbers"]', 'aria-pressed'), 'true', 'active gap switched on in the automatic focus');
   assert.equal(await page.getAttribute('[data-pfocus="detective"]', 'aria-pressed'), 'false', 'waiting gap not in the focus');
   await page.locator('.phdr [data-plang="en"]').click();
-  assert.match(await karte('numbers').locator('.ptag.gap').innerText(), /gap per school/);
+  assert.match(await karte('numbers').locator('.ptag.gap').innerText(), /Learning goal · Requires support \(RS\) · Evaluation/);
   assert.deepEqual(fehler, []);
   await ctx.close();
 });

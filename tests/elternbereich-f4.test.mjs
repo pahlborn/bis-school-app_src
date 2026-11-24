@@ -15,7 +15,7 @@ const GRUPPEN = {
   de: ['Forschung zu Lernen, Feedback und Hilfe', 'IB und Schule', 'Lehrpläne zum Vergleich', 'Lernprogramme und Materialien', 'Technik und Datenschutz', 'Nicht öffentliche Quellen'],
   en: ['Research on learning, feedback and help', 'IB and school', 'Curricula for comparison', 'Learning programs and materials', 'Technology and privacy', 'Non-public sources']
 };
-const QUELLEN = 56, SCHULE = 4;     // 56: + Schriftarten Fredoka/Nunito mit Lizenz (05.11.)
+const QUELLEN = 56, SCHULE = 4, SCHULLINKS = 3;     // One school reference is neutral text to omit its identifying URL.
 // spot checks: a source sits in its group
 const STICH = { 1: 'doi.org/10.3102/0034654308325185', 2: 'ibo.org/terms-and-conditions', 3: 'lehrplanplus.bayern.de', 4: 'typing.com', 5: 'ico.org.uk' };
 
@@ -47,8 +47,10 @@ test('T9 sources: six folded groups, the same number of links, school website on
   for (const lang of ['de', 'en']) {
     await page.locator(`.phdr [data-plang="${lang}"]`).click();
     await elternSeite(page, 'concept');
-    const sec = await pruefen(page, '#aboutBody details.psec[data-psec="concept"]', lang, QUELLEN + SCHULE);
-    assert.equal(await sec.locator('details.psrc[data-src="2"] a[href*="bis-school.com"]').count(), SCHULE, `${lang}: school website in group 2`);
+    const sec = await pruefen(page, '#aboutBody details.psec[data-psec="concept"]', lang, QUELLEN + SCHULLINKS);
+    assert.equal(await sec.locator('details.psrc[data-src="2"] [data-school-source]').count(), SCHULE, `${lang}: all school references remain in group 2`);
+    assert.equal(await sec.locator('details.psrc[data-src="2"] a[href*="bis-school.com"]').count(), SCHULLINKS, `${lang}: non-identifying school links in group 2`);
+    assert.equal(await sec.locator('details.psrc[data-src="2"] .school-source-reference').count(), 1, `${lang}: identifying URL replaced by its neutral reference`);
   }
   assert.deepEqual(fehler, []);
   await ctx.close();

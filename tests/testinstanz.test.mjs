@@ -17,13 +17,14 @@ import path from 'node:path';
 import http from 'node:http';
 import { WURZEL, QUELLEN, testinstanzBauen, appZusammensetzen } from '../werkzeug/bauen.mjs';
 import { TESTINSTANZ, ersatzLesen, testinstanzUmwandeln, testinstanzPruefen, testinstanzManifest, geraeteNamen, VERSION_AUS_KLARTEXT, SPEICHER_MARKE, SPEICHER_TESTINSTANZ, SCHULE_TESTFREIGABE_MARKE } from '../werkzeug/testinstanz.mjs';
-import { woerterLesen } from '../werkzeug/kern.mjs';
+import { woerterLesen, verboteneTreffer } from '../werkzeug/kern.mjs';
+import { schulbewertungenUebernehmen } from '../werkzeug/schulbewertungen-uebernehmen.mjs';
 import { appLesen } from '../werkzeug/module.mjs';
 import { GITHUB_TOKEN_SCHLUESSEL, githubSpeicher } from '../src/module/github.mjs';
 import { startcodeAusstellen, ersteAnmeldung, kontoLookup } from '../src/module/konto.mjs';
 import { kindAnlegen, abgleichMitVerbindungen } from '../src/module/einladung.mjs';
 import { appSandbox } from './app-sandbox.mjs';
-import { browserStarten, LADEZEIT_MS } from './app-hilfen.mjs';
+import { browserStarten, LADEZEIT_MS, elternSeite, zurStart } from './app-hilfen.mjs';
 import { githubNachbau } from './module/github-nachbau.mjs';
 
 const VERSION = { major: 0, minor: 999, patch: 0, kanal: 'beta', hash: 'abc1234', date: '04.11.2026 18:00', draft: false };
@@ -50,14 +51,15 @@ before(async () => {
   N = await githubNachbau({ token: TOKEN, repos: [REPO] });
   const z = githubSpeicher({ repo: REPO, token: TOKEN, basis: N.basis }).geraet('d_Werkzeug1');
   const jetzt = Date.now();
+  const parentUser = 'mira.sonnental', parentPassword = 'Werkzeug-Eltern-Passwort-1';
   const admin = await ersteAnmeldung({ zugang: z, code: (await startcodeAusstellen({ zugang: z, aussteller: null, anmeldename: 'admin', art: 'admin', now: jetzt })).code, passwort: 'Werkzeug-Admin-Passwort-1', now: jetzt, runden: 1000 });
-  const peter = await ersteAnmeldung({ zugang: z, code: (await startcodeAusstellen({ zugang: z, aussteller: admin, anmeldename: 'mira.sonnental', art: 'parent', now: jetzt })).code, passwort: 'Werkzeug-Eltern-Passwort-1', now: jetzt, runden: 1000 });
+  const peter = await ersteAnmeldung({ zugang: z, code: (await startcodeAusstellen({ zugang: z, aussteller: admin, anmeldename: parentUser, art: 'parent', now: jetzt })).code, passwort: parentPassword, now: jetzt });
   // Aufgabe "Einladungen - Oberflaeche": ein Kind uebt erst, wenn ein Elterngeraet es aufgenommen hat - die Kinder legt
   // Geraet des Elternteils (ohne App, Modul einladung) an; ELTERN.sync() nimmt sie auf, waehrend sie warten
   const m = new Map(), a = { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => { m.set(k, String(v)); } };
   a.setItem('bq2_evDevice', JSON.stringify('d_Werkzeug2'));
   const zP = githubSpeicher({ repo: REPO, token: TOKEN, basis: N.basis }).geraet('d_Werkzeug2');
-  ELTERN = { sync: () => abgleichMitVerbindungen({ ablage: a, zugang: zP, konten: [peter], now: Date.now(), heute: new Date().toISOString().slice(0, 10) }) };
+  ELTERN = { user: parentUser, pw: parentPassword, sync: () => abgleichMitVerbindungen({ ablage: a, zugang: zP, konten: [peter], now: Date.now(), heute: new Date().toISOString().slice(0, 10) }) };
   await ELTERN.sync();
   CODES = {};
   for (const n of ['mia.a', 'mia.b', 'mia.c']) CODES[n] = (await kindAnlegen({ zugang: zP, ablage: a, konto: peter, anmeldename: n, anzeigename: '', now: Date.now() })).code;
@@ -348,12 +350,17 @@ async function testBrowserBeenden(browser, ctx, server) {
   }
 }
 
-test('Browser: die gebaute Testinstanz startet mit der Anmeldung, Zugang einmal eingeben, Kind meldet sich ueber das Test-Repo an, ein Fach oeffnet sich, nur bqt_-Eintraege gelesen und geschrieben', async () => {
+test('Browser: die gebaute Testinstanz startet mit der Anmeldung, Zugang einmal eingeben, Kind meldet sich ueber das Test-Repo an, ein Fach oeffnet sich, nur bqt_-Eintraege gelesen und geschrieben', async (t) => {
+  const candidateDir = path.join(os.tmpdir(), 'bq-cg-v3-test-kandidat');
+  const candidate = await testinstanzBauen({ ziel: candidateDir });
+  assert.deepEqual([candidate.version.major, candidate.version.minor, candidate.version.patch, candidate.version.kanal], [0, 152, 8, 'beta']);
+  assert.equal(candidate.pruefungen.length, 18);
+  assert.equal(candidate.pruefungen.every(p => p.ok), true, 'candidate test build passes every existing search check');
   const server = http.createServer((req, res) => {
     const datei = { '/': 'index.html', '/index.html': 'index.html', '/manifest.webmanifest': 'manifest.webmanifest' }[req.url.split('?')[0]];
     if (!datei) { res.writeHead(404); return res.end(); }
     res.writeHead(200, { 'content-type': datei.endsWith('.html') ? 'text/html; charset=utf-8' : 'application/manifest+json' });
-    res.end(fs.readFileSync(path.join(ZIEL, datei)));
+    res.end(fs.readFileSync(path.join(candidateDir, datei)));
   });
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   const url = `http://127.0.0.1:${server.address().port}/`;
@@ -399,6 +406,11 @@ test('Browser: die gebaute Testinstanz startet mit der Anmeldung, Zugang einmal 
     await page.locator('#pwUse').click();
     await page.locator('#setPwGo').click();
     await page.waitForFunction(() => document.querySelector('#kidWait') || document.querySelector('#home h1'), { timeout: 30000 });
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem('bqt_session'))?.id);
+    const child = await page.evaluate(() => JSON.parse(localStorage.getItem('bqt_session')));
+    assert.equal(child.user, 'mia.b', 'the same child enters admission');
+    assert.ok(child.id, 'admission has a child ID');
+    assert.equal(await page.evaluate(id => !!JSON.parse(localStorage.getItem('bqt_pendingAdmission') || '{}')[id], child.id), true, 'child admission is pending before the parent accepts it');
     await ELTERN.sync();
     if (await page.locator('#kidWait').count()) await page.locator('#welcomeGo').click({ timeout: 30000 });
     else {
@@ -406,6 +418,11 @@ test('Browser: die gebaute Testinstanz startet mit der Anmeldung, Zugang einmal 
       if (!(await page.locator('#home h1').count())) await page.locator('#welcomeGo').click({ timeout: 30000 });
     }
     await page.waitForSelector('#home h1');
+    // Returning to the visible page uses the normal child sync; parent admission alone is not child readiness.
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await page.waitForFunction(id => !JSON.parse(localStorage.getItem('bqt_pendingAdmission') || '{}')[id], child.id);
+    assert.equal(await page.evaluate(id => !!JSON.parse(localStorage.getItem('bqt_pendingAdmission') || '{}')[id], child.id), false, 'child admission is complete before the extra practice');
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('bqt_session')).id), child.id, 'the child ID stays identical after admission');
     await page.locator('#subjects button.subject').first().click();
     await page.waitForSelector('#subjectBody button.world');
     assert.ok(await page.locator('#subjectBody button.world').first().isVisible(), 'Fach-Seite sichtbar');
@@ -420,6 +437,79 @@ test('Browser: die gebaute Testinstanz startet mit der Anmeldung, Zugang einmal 
     assert.deepEqual(r.gelesen.filter((k) => !k.startsWith('bqt')), [], 'nur bqt gelesen');
     for (const [k, v] of Object.entries(KATHIE)) assert.equal(r.alle[k], v, 'unveraendert: ' + k);
     assert.deepEqual(Object.keys(r.alle).filter((k) => !(k in KATHIE) && !k.startsWith('bqt_')), [], 'nur bqt_ geschrieben');
+
+    // Exercise once through the built UI, then use the existing synthetic parent account.
+    await page.locator('#subjectBody button.world').first().click();
+    await page.locator('#helpBtn').click(); await page.locator('#answerBtn').click();
+    await page.locator('#nextBtn').click(); await zurStart(page);
+    await page.waitForSelector('#home:not([hidden])');
+    const childEvents = await page.evaluate(id => JSON.parse(localStorage.getItem('bqt_' + id + '__events') || '[]'), child.id);
+    const answers = childEvents.filter(e => e.type === 'answer');
+    assert.ok(answers.length > 0 && answers.every(e => /^\d{4}-\d{2}-\d{2}$/.test(e.payload.day)), 'dated answers are in this child’s regular event log');
+    assert.equal(await page.evaluate(id => JSON.parse(localStorage.getItem('bqt_' + id + '__pendingEvents') || '[]').filter(e => e.type === 'answer').length, child.id), 0, 'the extra practice is not left in the pending log');
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    const example = JSON.parse(lies('tests/schuldaten-beispiel.json'));
+    await schulbewertungenUebernehmen({
+      speicher: { geraet: d => githubSpeicher({ repo: REPO, token: TOKEN, basis: N.basis }).geraet(d) },
+      anmeldename: ELTERN.user, passwort: ELTERN.pw, schule: example, zuordnung: { kathie: 'mia.b' },
+      now: Date.now(), heute: new Date().toISOString().slice(0, 10)
+    });
+    await page.locator('#adultBtn').click();
+    await page.locator('#loginUser').fill(ELTERN.user); await page.locator('#loginPw').fill(ELTERN.pw);
+    await page.locator('#loginGo').click(); await page.waitForSelector('#parentClose');
+    await page.waitForFunction(user => document.querySelector('#pKidSel option[value="' + user + '"]') || document.querySelector('#pKid')?.textContent.includes(user), child.user);
+    if (await page.locator('#pKidSel').count()) {
+      if (await page.locator('#pKidSel').inputValue() !== child.user) await page.locator('#pKidSel').selectOption(child.user);
+      assert.equal(await page.locator('#pKidSel').inputValue(), child.user, 'parent selected the same child');
+    } else assert.ok((await page.locator('#pKid').innerText()).includes(child.user), 'parent header identifies the same child');
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('bqt_session')).id), child.id, 'parent login preserves the child ID');
+    assert.deepEqual(await page.evaluate(id => JSON.parse(localStorage.getItem('bqt_' + id + '__events') || '[]').filter(e => e.type === 'answer'), child.id), answers, 'parent data includes the same complete regular answers');
+    const parentEvents = await page.evaluate(id => JSON.parse(localStorage.getItem('bqt_' + id + '__events') || '[]'), child.id);
+    assert.deepEqual(parentEvents.filter(e => childEvents.some(before => before.id === e.id)), childEvents, 'parent data preserves every complete canonical child event');
+    const imported = parentEvents.filter(e => !childEvents.some(before => before.id === e.id));
+    assert.deepEqual(imported.map(e => e.type), ['school_import'], 'only the requested school import was added');
+    assert.deepEqual(imported[0].payload.data, example.kinder.kathie, 'the complete imported school source stays unchanged');
+    await elternSeite(page, 'home');
+    await page.locator('[data-psec="school"] > summary').waitFor();
+    assert.equal(await page.locator('.pbackup-note').count(), 1, 'candidate test parent sees the backup tip after practice');
+    const records = () => page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter(k => /__events$/.test(k)).map(k => [k, localStorage.getItem(k)])));
+    const before = await records();
+    for (const lang of ['de', 'en']) {
+      await page.locator(`.phdr [data-plang="${lang}"]`).click();
+      assert.match(await page.locator('.pbackup-note').innerText(), lang === 'de' ? /Tipp: Sichern Sie .+s Lernstand – so bleiben alle Erfolge erhalten\./ : /Tip: Back up .+’s learning progress to keep every achievement\./);
+      assert.equal(await page.locator('.pbackup-note [data-backup]').innerText(), lang === 'de' ? 'Jetzt sichern' : 'Back up now');
+      await page.locator('[data-psec="school"] > summary').click();
+      const school = page.locator('[data-psec="school"]');
+      assert.match(await school.innerText(), /Evaluations[\s\S]*(Consolidating \(C\)|Requires support \(RS\))/);
+      const sourceRow = school.locator('.psrow').filter({ hasText: example.kinder.kathie.tasks[0].title });
+      const sourceIndex = await sourceRow.getAttribute('data-psrow');
+      const sourceButton = sourceRow.locator('[data-psdet]');
+      if (await sourceButton.getAttribute('aria-expanded') !== 'true') await sourceButton.click();
+      const sourceDetail = school.locator(`.psdet[data-psdetrow="${sourceIndex}"]`);
+      assert.equal(await sourceDetail.isVisible(), true, 'the exact source details are visible in either language');
+      const detail = await sourceDetail.innerText();
+      assert.match(detail, /Strengths[\s\S]*Areas of Development/);
+      assert.ok(detail.includes(example.kinder.kathie.tasks[0].good[lang]), 'candidate test teacher text stays verbatim');
+      assert.equal(verboteneTreffer(await page.locator('body').innerText(), woerterLesen(lies(QUELLEN.woerter))).length, 0, 'built test surface contains no prohibited terms');
+      assert.deepEqual(await records(), before, 'candidate test reading leaves every stored event unchanged');
+      await page.locator('[data-psec="school"] > summary').click();
+      const subjects = await page.locator('[data-psubj]').evaluateAll(buttons => buttons.map(button => button.dataset.psubj));
+      for (const subject of subjects) {
+        await page.locator(`[data-psubj="${subject}"]`).click();
+        const surface = await page.locator('#aboutBody').textContent() + '\n' + await page.locator('#aboutBody a[href]').evaluateAll(links => links.map(link => link.getAttribute('href')).join('\n'));
+        assert.equal(verboteneTreffer(surface, woerterLesen(lies(QUELLEN.woerter))).length, 0, 'generated test subject help and links contain no prohibited terms');
+        await elternSeite(page, 'home');
+      }
+      for (const section of ['concept', 'support', 'app', 'aboutapp']) {
+        await elternSeite(page, section);
+        const surface = await page.locator('#aboutBody').textContent() + '\n' + await page.locator('#aboutBody a[href]').evaluateAll(links => links.map(link => link.getAttribute('href')).join('\n'));
+        assert.equal(verboteneTreffer(surface, woerterLesen(lies(QUELLEN.woerter))).length, 0, 'generated test help and links contain no prohibited terms');
+        await elternSeite(page, 'home');
+      }
+      assert.deepEqual(await records(), before, 'test help navigation preserves every stored child event');
+    }
+    assert.deepEqual(fehler, []);
+    t.diagnostic('C/G candidate test: 0.152.8-beta, source ' + candidate.version.hash + ', checks 18/18, DE/EN, accounts enabled, admitted synthetic child, backup tip 1, prohibited surface matches 0, ' + candidateDir);
   } finally { await testBrowserBeenden(browser, ctx, server); }
 });
 

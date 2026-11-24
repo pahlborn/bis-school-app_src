@@ -28,9 +28,9 @@ const appQuelle = await appLesen();
 
 test('version comes from package.json plus git metadata', () => {
   const v = versionErmitteln(WURZEL, new Date('2026-10-30T13:05:00Z'));
-  assert.deepEqual({ major: v.major, minor: v.minor, patch: v.patch, kanal: v.kanal }, { major: 0, minor: 152, patch: 7, kanal: 'beta' });
+  assert.deepEqual({ major: v.major, minor: v.minor, patch: v.patch, kanal: v.kanal }, { major: 0, minor: 152, patch: 8, kanal: 'beta' });
   assert.equal(v.n, Number(git(WURZEL, 'rev-list', '--count', '--first-parent', 'HEAD')));
-  assert.equal(versionRoh(v), '0.152.7-beta');
+  assert.equal(versionRoh(v), '0.152.8-beta');
   assert.equal(v.hash, git(WURZEL, 'rev-parse', 'HEAD').slice(0, 7));
   assert.match(v.hash, /^[0-9a-f]{7}$/);
   assert.equal(v.date, '30.10.2026 14:05');
@@ -153,7 +153,7 @@ test('published shell: "check for new version" says current, then reports a newe
   inhalt['/app/'] = await fs.readFile(path.join(ziel2, 'index.html'), 'utf8');
   await page.locator('#checkUpdate').click();
   await page.waitForFunction(() => document.querySelector('#updateMessage').textContent.includes('V 0.14'));
-  assert.equal(await page.textContent('#updateMessage'), `Neuer Stand ${versionText(V14)} verfügbar – App schließen und neu öffnen.`);
+  assert.equal(await page.textContent('#updateMessage'), `Neuer Stand ${versionText(V14)} verfügbar – Big Quest schließen und neu öffnen.`);
   assert.deepEqual(anfragen, []);
   assert.deepEqual(fehler, []);
   await ctx.close();

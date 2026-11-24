@@ -1,10 +1,10 @@
-// Schulische Einstufungen neu gestaltet (Peter, 05.11., Punkt 4). Erfundene Schuldaten (60 Aufgaben über gut ein Schuljahr),
+// Evaluations neu gestaltet (Peter, 05.11., Punkt 4). Erfundene Schuldaten (60 Aufgaben über gut ein Schuljahr),
 // keine echten. Echte Klicks.
 //  T1  Tabelle: eine Zeile je bewerteter Aufgabe (Datum · Fach · Aufgabe · Einstufungen in Worten · Details), neueste zuerst;
-//      „Wartet auf Bewertung“ als eigener kleiner Block; Stand aus den Daten (asOf, neueste Bewertung), kein festes Datum.
-//  T2  Filter Fach, Zeitraum (letzte 8 Wochen, dieses Schuljahr), nur „Braucht Unterstützung / Wird sicherer“; Sortierung
+//      „Awaiting evaluation“ als eigener kleiner Block; Stand aus den Daten (asOf, neueste Evaluation), kein festes Datum.
+//  T2  Filter Fach, Zeitraum (letzte 8 Wochen, dieses Schuljahr), nur „Requires support \(RS\) / Consolidating \(C\)“; Sortierung
 //      Datum, Fach, Einstufung; leeres Ergebnis mit „Filter zurücksetzen“. Erwartung unabhängig von der App gerechnet.
-//  T3  Details in fester Gliederung (Standards · Bewertungsraster · Stärken · Nächste Schritte) für JEDE Aufgabe, kurze Punkte;
+//  T3  Details in fester Gliederung (Standards · Bewertungsraster · Stärken · Areas of Development) für JEDE Aufgabe, kurze Punkte;
 //      Raster Lehrkraft / Selbst nebeneinander.
 //  T4  Englisch: dieselbe Ansicht, kein Deutsch.
 //  T5  iPhone-Breite: Karten statt Tabelle, nichts ragt über den Rand.
@@ -32,15 +32,15 @@ const AUFGABEN = Array.from({ length: 60 }, (_, i) => {
     day: tag(-3 - 5 * ((i * 7) % 60)), area, title: 'Task ' + String(i + 1).padStart(2, '0'), std, quests: area === 'math' ? ['round'] : [], focusNext: [],
     ...(area === 'learner' ? { atl: { Thinkers: ['ES', 'Obs.', 'Ind.'][i % 3] } } : {}),
     ...(i % 4 === 0 ? { rubric: [{ crit: 'Accuracy', teacher: 'C', self: 'E' }, { crit: 'Explaining', teacher: 'M', self: 'M' }] } : {}),
-    good: txt('Rundet sicher. Begründet klar; arbeitet gut mit.', 'Rounds securely. Explains clearly; works well with others.'),
+    good: txt('Rundet sicher. Begründet klar; arbeitet gut mit.\nBeleg: <b>Original & Text</b>.', 'Rounds securely. Explains clearly; works well with others.\nEvidence: <b>Original & text</b>.'),
     next: i % 6 === 0 ? txt('', '') : txt('Genauer lesen; Einheiten notieren.', 'Read more carefully; write down units.'),
   };
 });
 const WARTET = { day: tag(-1), area: 'english', title: 'Glows check', std: {}, quests: [], focusNext: [], pending: true, good: txt('', ''), next: txt('', '') };
 const ASOF = tag(-1);
 const SCHULE = { version: 1, kinder: { mia: { asOf: ASOF, tasks: [...AUFGABEN, WARTET] } } };
-const GLIEDERUNG = { de: ['Standards', 'Bewertungsraster', 'Stärken', 'Nächste Schritte'], en: ['Standards', 'Rubric', 'Strengths', 'Next steps'] };
-const WORT = { de: { rs: 'Braucht Unterstützung', c: 'Wird sicherer', m: 'Sicher', e: 'Darüber hinaus' }, en: { rs: 'Needs support', c: 'Getting there', m: 'Secure', e: 'Going beyond' } };
+const GLIEDERUNG = { de: ['Standards', 'Bewertungsraster', 'Strengths', 'Areas of Development'], en: ['Standards', 'Rubric', 'Strengths', 'Areas of Development'] };
+const WORT = { de: { rs: 'Requires support (RS)', c: 'Consolidating (C)', m: 'Meeting expectations (M)', e: 'Extending (E)' }, en: { rs: 'Requires support (RS)', c: 'Consolidating (C)', m: 'Meeting expectations (M)', e: 'Extending (E)' } };
 const LV = { RS: 'rs', N: 'rs', C: 'c', M: 'm', E: 'e' }, ORDER = ['rs', 'c', 'm', 'e'];
 
 // the expectation, computed here (not taken from the app)
@@ -172,10 +172,10 @@ test('T1–T3 table, filters, sorting and fixed outline (German, 60 assignments)
   const k = kapitel(page), text = await k.innerText();
   // T1: data date from the data, newest evaluation, no old hard-coded status line
   const neueste = AUFGABEN.map((t) => t.day).sort().pop();
-  assert.ok(text.includes(`Stand der Daten: ${fmtDe(ASOF)} · neueste Bewertung: ${fmtDe(neueste)}.`), text.slice(0, 300));
+  assert.ok(text.includes(`Stand der Daten: ${fmtDe(ASOF)} · neueste Evaluation: ${fmtDe(neueste)}.`), text.slice(0, 300));
   assert.ok(!/Stand:\s*30\. Oktober 2026\.?|Stand:\s*30\.10\.2026\.?/.test(text), 'no old fixed status line');
   // waiting assignment: its own small block, not in the table
-  assert.match(await k.locator('.pspend').innerText(), /Wartet auf Bewertung[\s\S]*Glows check/);
+  assert.match(await k.locator('.pspend').innerText(), /Awaiting evaluation[\s\S]*Glows check/);
   assert.ok(!(await k.locator('table.pstab').innerText()).includes('Glows check'));
   // T1: one row per evaluated assignment, newest first, columns in this order
   assert.deepEqual(await k.locator('table.pstab > thead th').allInnerTexts().then((x) => x.slice(0, 4)), ['Datum', 'Fach', 'Aufgabe', 'Einstufung']);
@@ -192,7 +192,7 @@ test('T1–T3 table, filters, sorting and fixed outline (German, 60 assignments)
     assert.deepEqual(await k.locator(`tr.psrow[data-psrow="${i}"] .pslv .pst`).allInnerTexts(), soll, t.title);
   }
   const chips = (await k.locator('tr.psrow .pslv').allInnerTexts()).join(' | ');
-  assert.ok(!/\b(RS|C|M|E|N)\b/.test(chips), 'no letter codes: ' + chips.slice(0, 200));
+  assert.ok(!/\b(RS|C|M|E|N)\b/.test(chips.replace(/Extending \(E\)|Meeting expectations \(M\)|Consolidating \(C\)|Requires support \(RS\)/g, '')), 'level codes occur only with their original terms');
   // T2: filters (each alone and combined) and sorting - expectation computed here
   const faelle = [{ area: 'math' }, { area: 'learner' }, { period: '8w' }, { period: 'year' }, { weak: true }, { sort: 'subject' }, { sort: 'level' },
     { area: 'english', period: 'year', weak: true, sort: 'level' }, { area: 'science', period: '8w', sort: 'date' }];
@@ -212,7 +212,7 @@ test('T1–T3 table, filters, sorting and fixed outline (German, 60 assignments)
   assert.deepEqual(await zeilen(page), erwartet({}, heute));
   assert.equal(await k.locator('select[data-psf="area"]').inputValue(), '');
   assert.equal(await k.locator('input[data-psf="weak"]').isChecked(), false);
-  // T3: details - the same outline for EVERY assignment; short points; rubric side by side
+  // T3: details - the same outline for EVERY assignment; verbatim teacher text; rubric side by side
   const gliederung = await k.locator('tr.psdet').evaluateAll((r) => r.map((x) => [...x.querySelectorAll('h4')].map((h) => h.textContent)));
   assert.equal(gliederung.length, 60);
   for (const g of gliederung) assert.deepEqual(g, GLIEDERUNG.de);
@@ -224,10 +224,16 @@ test('T1–T3 table, filters, sorting and fixed outline (German, 60 assignments)
   assert.ok(await d0.isVisible());
   assert.equal(await b.getAttribute('aria-expanded'), 'true');
   assert.deepEqual(await d0.locator('table.psrub thead th').allInnerTexts(), ['Kriterium', 'Lehrkraft', 'Selbst']);
-  assert.deepEqual(await d0.locator('table.psrub tbody tr').first().locator('td').allInnerTexts(), ['Accuracy', 'Wird sicherer', 'Darüber hinaus']);
-  const punkte = await d0.locator('h4:has-text("Stärken") + ul > li').allInnerTexts();
-  assert.deepEqual(punkte, ['Rundet sicher', 'Begründet klar', 'arbeitet gut mit']);
-  assert.deepEqual(await d0.locator('h4:has-text("Nächste Schritte") + p').allInnerTexts(), ['keine Angabe'], 'empty next steps: the heading stays');
+  assert.deepEqual(await d0.locator('table.psrub tbody tr').first().locator('td').allInnerTexts(), ['Accuracy', 'Consolidating (C)', 'Extending (E)']);
+  const punkte = await d0.locator('h4:has-text("Strengths") + ul > li').allInnerTexts();
+  assert.deepEqual(punkte, [AUFGABEN[0].good.de], 'the complete teacher text keeps punctuation, line breaks and literal markup');
+  assert.equal(await d0.locator('.pssource-text b').count(), 0, 'teacher markup is escaped');
+  for (let i = 0; i < AUFGABEN.length; i++) {
+    const detail = k.locator(`tr.psdet[data-psdetrow="${i}"]`);
+    for (const [field, heading] of [['good', 'Strengths'], ['next', 'Areas of Development']])
+      assert.deepEqual(await detail.locator(`h4:has-text("${heading}") + ul > li`).allTextContents(), AUFGABEN[i][field].de ? [AUFGABEN[i][field].de] : [], 'each German source text stays complete');
+  }
+  assert.deepEqual(await d0.locator('h4:has-text("Areas of Development") + p').allInnerTexts(), ['keine Angabe'], 'empty next steps: the heading stays');
   const std0 = await d0.locator('h4:has-text("Standards") + ul > li').allInnerTexts();
   assert.equal(std0.length, Object.keys(AUFGABEN[0].std).length);
   // learner: learning skills in words
@@ -257,13 +263,20 @@ test('T4 English: the same view, no German', async () => {
   for (const g of await k.locator('tr.psdet').evaluateAll((r) => r.map((x) => [...x.querySelectorAll('h4')].map((h) => h.textContent))))
     assert.deepEqual(g, GLIEDERUNG.en);
   await k.locator('tr.psrow[data-psrow="0"] [data-psdet]').click();
-  assert.deepEqual(await k.locator('tr.psdet[data-psdetrow="0"] table.psrub tbody tr').first().locator('td').allInnerTexts(), ['Accuracy', 'Getting there', 'Going beyond']);
-  assert.deepEqual(await k.locator('tr.psdet[data-psdetrow="0"] h4:has-text("Strengths") + ul > li').allInnerTexts(), ['Rounds securely', 'Explains clearly', 'works well with others']);
+  assert.deepEqual(await k.locator('tr.psdet[data-psdetrow="0"] table.psrub tbody tr').first().locator('td').allInnerTexts(), ['Accuracy', 'Consolidating (C)', 'Extending (E)']);
+  assert.deepEqual(await k.locator('tr.psdet[data-psdetrow="0"] h4:has-text("Strengths") + ul > li').allInnerTexts(), [AUFGABEN[0].good.en]);
+  assert.equal(await k.locator('tr.psdet[data-psdetrow="0"] .pssource-text b').count(), 0, 'teacher markup is escaped');
+  for (let i = 0; i < AUFGABEN.length; i++) {
+    const detail = k.locator(`tr.psdet[data-psdetrow="${i}"]`);
+    for (const [field, heading] of [['good', 'Strengths'], ['next', 'Areas of Development']])
+      assert.deepEqual(await detail.locator(`h4:has-text("${heading}") + ul > li`).allTextContents(), AUFGABEN[i][field].en ? [AUFGABEN[i][field].en] : [], 'each English source text stays complete');
+  }
   const text = await k.innerText();
   assert.match(text, /Data as of: .* · latest evaluation: /);
   assert.match(text, /Awaiting evaluation[\s\S]*Glows check/);
   for (const w of ['Stärken', 'Zeitraum', 'Sortieren', 'Aufgabe', 'Einstufung', 'Wird sicherer', 'Lehrkraft', 'Datum', 'Mathe', 'Englisch', 'Lernen', 'Stand der Daten', 'keine Angabe', 'Filter zurücksetzen'])
     assert.ok(!text.includes(w), 'German in English: ' + w);
+  for (const term of ['Strengths', 'Areas of Development', 'Consolidating (C)']) assert.ok(text.includes(term), 'original term in English: ' + term);
   assert.deepEqual(await k.locator('select[data-psf="period"] option').allInnerTexts(), ['All', 'Last 8 weeks', 'This school year']);
   assert.deepEqual(fehler, []);
   await ctx.close();
@@ -295,7 +308,7 @@ test('T6 the child sees none of it; a teacher only with the grant "school data" 
   const { ctx, page, fehler } = await oeffnen(browser, server, { viewport: { width: 1000, height: 900 } });
   await kindAnmelden(page);
   const kind = await page.evaluate(() => document.body.innerText);
-  for (const w of ['Schulische Einstufungen', 'School assessments', 'Task 01', 'Glows check', 'Stand der Daten', 'Data as of']) assert.ok(!kind.includes(w), 'child sees ' + w);
+  for (const w of ['Evaluations', 'Evaluations', 'Task 01', 'Glows check', 'Stand der Daten', 'Data as of']) assert.ok(!kind.includes(w), 'child sees ' + w);
   assert.equal(await page.locator('.pstab, #pSchoolAll').count(), 0);
   const freigabe = (scope) => page.evaluate(([id, g]) => localStorage.setItem('bq2_' + id + '__grants', JSON.stringify([g])), [ID('mia'), { id: 'g1', grantee: ID('frau'), scope, from: tag(0), until: tag(10), by: ID('papa') }]);
   await freigabe(['learning']);

@@ -25,7 +25,8 @@ test('child: ❓ Help opens the child guide; ⓘ at the learning tree explains i
   const { ctx, page, fehler } = await appOeffnen(browser, server.url, { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   await page.locator('#guideBtn').click();
   assert.deepEqual(await offen(page), ['How to use Big Quest'], 'the child guide opens in place');
-  assert.ok(!BEWERTUNG.test(await page.textContent('#aboutBody')));
+  assert.ok(!BEWERTUNG.test(await page.locator('#aboutBody details.about-sec[open] .about-sec-body').textContent()), 'the opened child guide shows no assessment');
+  assert.equal(await page.locator('#aboutBody .pSchool, #aboutBody .pqchip, #aboutBody .pslv').count(), 0, 'school results and parent assessment chips are absent');
   await page.locator('#aboutBack').click();
   const t = await hilfe(page, '#home .info-btn[data-help="tree"]', 'Your learning tree');
   assert.ok(!BEWERTUNG.test(t));

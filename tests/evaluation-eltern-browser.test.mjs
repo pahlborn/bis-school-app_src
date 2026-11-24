@@ -208,11 +208,11 @@ test('legacy correction drafts preserve the current focus, a synced confirmation
   assert.match(await form.innerText(), new RegExp(CHILD));
   await form.getByLabel('Titel').fill(TITLE);
   const today = await P.page.evaluate(() => new Date().toISOString().slice(0, 10));
-  await form.getByLabel('Bewertungsdatum').fill(today);
+  await form.getByLabel('Evaluation-Datum').fill(today);
   await form.getByLabel('Kriterium').selectOption('M-N5');
   await form.getByLabel('Einstufung').selectOption('C');
   await form.getByRole('button', { name: 'Vorschau anzeigen' }).click();
-  assert.match(await form.innerText(), /Vorschau[\s\S]*Tessa Sonnenweg[\s\S]*Zweischrittige Stickeraufgabe[\s\S]*Wird sicherer/);
+  assert.match(await form.innerText(), /Vorschau[\s\S]*Tessa Sonnenweg[\s\S]*Zweischrittige Stickeraufgabe[\s\S]*Consolidating \(C\)/);
   assert.equal(await form.getByRole('checkbox').isChecked(), true);
   assert.deepEqual(await evaluationEvents(P.page), []);
   assert.deepEqual(await evaluationEvents(K.page), []);
@@ -238,11 +238,11 @@ test('legacy correction drafts preserve the current focus, a synced confirmation
   const roundingTitle = 'Runden mit Abstandsbegründung';
   await P.page.evaluate(() => window.__evaluationIntegration.openLegacy());
   await form.getByLabel('Titel').fill(roundingTitle);
-  await form.getByLabel('Bewertungsdatum').fill(today);
+  await form.getByLabel('Evaluation-Datum').fill(today);
   await form.getByLabel('Kriterium').selectOption('M-N3');
   await form.getByLabel('Einstufung').selectOption('C');
   await form.getByRole('button', { name: 'Vorschau anzeigen' }).click();
-  assert.match(await form.innerText(), /Vorschau[\s\S]*Runden mit Abstandsbegründung[\s\S]*Wird sicherer/);
+  assert.match(await form.innerText(), /Vorschau[\s\S]*Runden mit Abstandsbegründung[\s\S]*Consolidating \(C\)/);
   assert.equal(await form.getByRole('checkbox', { name: 'Runden mit Abstandsbegründung in Practise Today üben' }).isChecked(), true);
   assert.equal((await evaluationEvents(P.page)).length, 1);
   assert.equal((await evaluationEvents(K.page)).length, 1);
@@ -277,7 +277,7 @@ test('legacy correction drafts preserve the current focus, a synced confirmation
 
   const correctedTitle = 'Runden mit Abstandsbegründung – korrigiert';
   let detail = await showDetails(P.page, roundingTitle);
-  await detail.getByRole('button', { name: 'Bewertung korrigieren', exact: true }).click();
+  await detail.getByRole('button', { name: 'Evaluation korrigieren', exact: true }).click();
   assert.equal(await form.getByLabel('Titel').inputValue(), roundingTitle);
   assert.equal(await form.getByLabel('Kriterium').inputValue(), 'M-N3');
   await form.getByLabel('Titel').fill(correctedTitle);
@@ -308,7 +308,7 @@ test('legacy correction drafts preserve the current focus, a synced confirmation
 
   detail = await showDetails(P.page, correctedTitle);
   assert.ok((await detail.innerText()).includes(roundingTitle), 'previous title is visible in the parent history');
-  await detail.getByRole('button', { name: 'Bewertung zurücknehmen', exact: true }).click();
+  await detail.getByRole('button', { name: 'Evaluation zurücknehmen', exact: true }).click();
   await form.getByRole('button', { name: 'Rücknahme bestätigen', exact: true }).waitFor();
   assert.equal((await evaluationEvents(P.page)).length, 3);
   assert.equal((await evaluationEvents(K.page)).length, 3);
@@ -434,7 +434,7 @@ test('integration F1: stored criterion assessments show original grades, empty r
       const rows = details.locator(`[data-eval-history="${revision}"] .pseval-criteria > li`);
       assert.equal(await rows.count(), 5);
       for (let i = 0; i < INTEGRATION_CRITERIA.length; i++) assert.ok((await rows.nth(i).innerText()).includes(INTEGRATION_CRITERIA[i].criterion));
-      for (const [i, pattern] of (lang === 'de' ? [[0, /Darüber hinaus/], [1, /Wird sicherer/], [2, /Braucht Unterstützung/], [3, /Keine Einstufung/], [4, /Kein passender Bereich.*Sicher/s]] : [[0, /Going beyond/], [1, /Getting there/], [2, /Needs support/], [3, /Not rated/], [4, /No matching area.*Secure/s]])) assert.match(await rows.nth(i).innerText(), pattern);
+      for (const [i, pattern] of (lang === 'de' ? [[0, /Extending \(E\)/], [1, /Consolidating \(C\)/], [2, /Requires support \(RS\)/], [3, /Keine Einstufung/], [4, /Kein passender Bereich.*Meeting expectations \(M\)/s]] : [[0, /Extending \(E\)/], [1, /Consolidating \(C\)/], [2, /Requires support \(RS\)/], [3, /Not rated/], [4, /No matching area.*Meeting expectations \(M\)/s]])) assert.match(await rows.nth(i).innerText(), pattern);
     }
     assert.deepEqual(await details.locator('.psrub tbody tr td:first-child').allTextContents(), INTEGRATION_CRITERIA.map(c => c.criterion));
     assert.match(await history.nth(0).innerText(), lang === 'de' ? /Frühere Fassung/ : /Earlier revision/);
@@ -506,8 +506,8 @@ test('integration F1 unmapped: Test-11 history retains criterion grades without 
       assert.match(await rows.nth(i).innerText(), lang === 'de' ? /Kein zugeordneter Bereich/ : /No assigned area/);
       assert.ok(!(await rows.nth(i).innerText()).endsWith(' · N'), 'technical N is not a criterion grade');
     }
-    assert.match(await rows.nth(0).innerText(), lang === 'de' ? /Darüber hinaus/ : /Going beyond/);
-    assert.match(await rows.nth(1).innerText(), lang === 'de' ? /Wird sicherer/ : /Getting there/);
+    assert.match(await rows.nth(0).innerText(), lang === 'de' ? /Extending \(E\)/ : /Extending \(E\)/);
+    assert.match(await rows.nth(1).innerText(), lang === 'de' ? /Consolidating \(C\)/ : /Consolidating \(C\)/);
     assert.match(await rows.nth(3).innerText(), lang === 'de' ? /Keine Einstufung/ : /Not rated/);
   }
   assert.deepEqual(P.errors, []);
@@ -541,9 +541,9 @@ test('EV4/EV7 manual: confirmed criteria activate the visible gap, automatic foc
   await form.getByRole('button', { name: 'Evaluation hinzufügen' }).click();
   assert.equal(await form.locator('select[name="doc-area"]').count(), 1, 'subject is the existing app selection, not free text');
   await form.getByLabel('Titel der Evaluation', { exact: true }).fill('Fiktive drei Kriterien');
-  await form.getByLabel('Bewertungsdatum', { exact: true }).fill(new Date().toISOString().slice(0, 10));
+  await form.getByLabel('Evaluation-Datum', { exact: true }).fill(new Date().toISOString().slice(0, 10));
   await form.getByLabel('Fach', { exact: true }).selectOption('maths');
-  await form.getByLabel('Lernziel', { exact: true }).fill('Fiktives Lernziel');
+  await form.getByLabel('Learning goals', { exact: true }).fill('Fiktives Lernziel');
   await form.getByLabel('Arbeitsanweisung', { exact: true }).fill('Fiktive Anweisung');
   await form.getByLabel('Lehrkraft-Rückmeldung', { exact: true }).fill('Fiktive Rückmeldung');
   const criteria = [
@@ -566,8 +566,8 @@ test('EV4/EV7 manual: confirmed criteria activate the visible gap, automatic foc
   await form.locator('[data-doc-standard="0"]').selectOption('M-N1');
   await form.getByRole('button', { name: 'Vorschau anzeigen', exact: true }).click();
   assert.deepEqual(await evaluationEvents(P.page), [], 'preview writes no event');
-  assert.match(await form.innerText(), /M-N1[\s\S]*Lücke/);
-  assert.match(await form.innerText(), /M-N3[\s\S]*keine Lücke/);
+  assert.match(await form.innerText(), /M-N1[\s\S]*Learning goal · Consolidating \(C\)/);
+  assert.match(await form.innerText(), /M-N3[\s\S]*Kein Learning goal für zusätzliche Übung/);
   await form.getByRole('button', { name: 'Evaluation bestätigen', exact: true }).evaluate(button => { button.click(); button.click(); });
   const events = await evaluationEvents(P.page);
   assert.equal(events.length, 1, 'double confirmation writes exactly once');
@@ -770,12 +770,12 @@ test('EV4 O3 and design: weaker grade, explicit parent override, catalog, DE/EN 
   await form.locator('button[type="submit"]').click();
   assert.deepEqual(await evaluationEvents(P.page),[]);
   assert.match(await form.locator('[data-eval-area="E-W1"]').innerText(),/C.*weaker of C and M/s);
-  assert.match(await form.locator('[data-eval-area="E-W1"]').innerText(),/Gap/);
-  assert.match(await form.locator('[data-eval-area="E-S1"]').innerText(),/No gap.*no exercise in Big Quest/s);
-  assert.match(await form.locator('[data-eval-area="M-N1"]').innerText(),/Not rated.*No gap/s);
+  assert.match(await form.locator('[data-eval-area="E-W1"]').innerText(),/Learning goal · Consolidating \(C\)/);
+  assert.match(await form.locator('[data-eval-area="E-S1"]').innerText(),/No learning goal for additional practice.*no exercise in Big Quest/s);
+  assert.match(await form.locator('[data-eval-area="M-N1"]').innerText(),/Not rated.*No learning goal for additional practice/s);
   await formFits(P.page);
   await form.getByRole('combobox',{name:'Change rating for this area · E-W1',exact:true}).selectOption('M');
-  assert.match(await form.locator('[data-eval-area="E-W1"]').innerText(),/M.*No gap/s);
+  assert.match(await form.locator('[data-eval-area="E-W1"]').innerText(),/Meeting expectations \(M\).*No learning goal for additional practice/s);
   assert.deepEqual(await evaluationEvents(P.page),[],'even changing the override in preview writes nothing');
   await form.locator('button[type="submit"]').click();
   const event=(await evaluationEvents(P.page))[0];
@@ -971,11 +971,11 @@ test('EV4 legacy document: truthful preview and editable original assignment sur
   await form.locator('button[type="submit"]').click();
   assert.equal((await evaluationEvents(P.page)).length,1,'a legacy correction preview writes nothing');
   assert.doesNotMatch(await form.innerText(),/Keine zugeordneten Einstufungen\. Kein zusätzlicher Übungsfokus\./,'a known legacy assignment must not be described as absent');
-  assert.match(await form.innerText(),/M-N3: C[\s\S]*Lücke/);
+  assert.match(await form.innerText(),/M-N3: Consolidating \(C\)[\s\S]*Learning goal · Consolidating \(C\)/);
   for(const lang of ['en','de']){
     await P.page.locator(`.phdr [data-plang="${lang}"]`).click();
     await formFits(P.page);
-    assert.match(await form.locator('[data-eval-legacy-effect]').innerText(),/M-N3: C/);
+    assert.match(await form.locator('[data-eval-legacy-effect]').innerText(),/M-N3: Consolidating \(C\)/);
     assert.equal(await form.getByRole('checkbox').isChecked(),true);
   }
   assert.equal(await form.getByRole('checkbox',{name:'Runden mit Abstandsbegründung in Practise Today üben',exact:true}).isChecked(),true);
@@ -994,7 +994,7 @@ test('EV4 legacy document: truthful preview and editable original assignment sur
   await form.locator('[name="standard"]').selectOption('M-N5');
   await form.locator('[name="rating"]').selectOption('RS');
   await form.locator('button[type="submit"]').click();
-  assert.match(await form.innerText(),/M-N5: RS/);
+  assert.match(await form.innerText(),/M-N5: Requires support \(RS\)/);
   const focus=form.getByRole('checkbox',{name:'Zweischrittige Subtraktion in Practise Today üben',exact:true});
   assert.equal(await focus.isChecked(),true);
   await focus.uncheck();
@@ -1017,8 +1017,8 @@ test('EV4 legacy document: truthful preview and editable original assignment sur
   await form.locator('[data-doc-standard="0"]').selectOption('M-N1');
   await form.locator('button[type="submit"]').click();
   assert.equal(await form.locator('[name="exerciseFocus"]').count(),0);
-  assert.match(await form.innerText(),/M-N1: C[\s\S]*Lücke/);
-  assert.doesNotMatch(await form.innerText(),/M-N5: RS/,'preview must reflect only the explicit criterion assignment');
+  assert.match(await form.innerText(),/M-N1: Consolidating \(C\)[\s\S]*Learning goal · Consolidating \(C\)/);
+  assert.doesNotMatch(await form.innerText(),/M-N5: Requires support \(RS\)/,'preview must reflect only the explicit criterion assignment');
   assert.equal((await evaluationEvents(P.page)).length,2);
   await form.locator('button[type="submit"]').evaluate(button=>{button.click();button.click();});
   const finalEvents=await evaluationEvents(P.page);
@@ -1070,7 +1070,7 @@ test('EV5 form: proposal for new criteria, parent correction incl. none survives
   assert.doesNotMatch(await form.innerText(), /Toddle|similarity|aiProposal/i);
   await form.locator('button[type="submit"]').click();
   assert.deepEqual(await evaluationEvents(P.page), [], 'preview writes nothing');
-  assert.match(await form.innerText(), /M-N3: C/);
+  assert.match(await form.innerText(), /M-N3: Consolidating \(C\)/);
   await form.locator('button[type="submit"]').evaluate(b => { b.click(); b.click(); });
   const events = await evaluationEvents(P.page);
   assert.equal(events.length, 1, 'one confirmed event');
@@ -1114,7 +1114,7 @@ test('EV6 growth: stored none criterion with a catalog match -> notice, preview 
   assert.equal((await evaluationEvents(P.page)).length, 1);
   await notice.locator('[data-eval-action="remap"]').click();
   assert.equal((await evaluationEvents(P.page)).length, 1, 'opening the preview writes nothing');
-  assert.match(await form.innerText(), /M-N3: C/);
+  assert.match(await form.innerText(), /M-N3: Consolidating \(C\)/);
   await form.getByRole('button', { name: 'Korrektur bestätigen', exact: true }).evaluate(b => { b.click(); b.click(); });
   const events = await evaluationEvents(P.page);
   assert.equal(events.length, 2, 'exactly one revision, no duplicate on repeated confirmation');

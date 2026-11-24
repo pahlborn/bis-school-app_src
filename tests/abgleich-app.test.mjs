@@ -596,7 +596,7 @@ test('7 App mit einem anderen Speicher: gleich bei der Anmeldung eine klare Meld
   const X = geraet(t, W, { name: 'iPad mit anderer Fassung', repo: 'pahlborn/anderes-repo' });
   X.klick('#roleStudent'); X.tippe('#loginUser', 'kathie'); X.tippe('#loginPw', 'AAAAAAAAAAAAAAAAAAAAAA'); X.absenden('#loginGo');
   await X.warten(() => { const m = X.im('#loginMsg'); return m && m.textContent && !/moment/i.test(m.textContent); }, 'Meldung');
-  assert.equal(X.im('#loginMsg').textContent, 'This version of the app is connected to a different storage – there are no accounts there. Please ask your grown-up or the admin.');
+  assert.equal(X.im('#loginMsg').textContent, 'This version of Big Quest is connected to a different storage – there are no accounts there. Please ask your grown-up or the admin.');
   assert.equal(X.da('#setPwForm'), false, 'kein "Passwort waehlen"');
   X.klick('#loginBack');
   X.klick('#roleAdult'); X.tippe('#loginUser', 'peter.a'); X.tippe('#loginPw', P.pw); X.absenden('#loginGo');

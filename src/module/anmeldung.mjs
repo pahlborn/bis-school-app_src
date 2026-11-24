@@ -254,7 +254,7 @@ export function anmCodeDatei({ anmeldename, code, datum, sprache = 'de' } = {}) 
     'Erstellt am: ' + datum,
     '',
     'Wofuer: Passwort vergessen? Auf der Anmeldeseite "Passwort vergessen?" tippen, Anmeldename und diesen Code eingeben',
-    'und ein neues Passwort waehlen. Danach zeigt die App einen neuen Code - dieser hier gilt dann nicht mehr.',
+    'und ein neues Passwort waehlen. Danach zeigt Big Quest einen neuen Code - dieser hier gilt dann nicht mehr.',
     'Sicher aufbewahren und nicht weitergeben.'
   ] : [
     'Big Quest - recovery code',
@@ -264,7 +264,7 @@ export function anmCodeDatei({ anmeldename, code, datum, sprache = 'de' } = {}) 
     'Created on: ' + datum,
     '',
     'What for: forgot your password? On the login page tap "Forgot your password?", enter your login name and this code',
-    'and choose a new password. Then the app shows a new code - this one no longer works.',
+    'and choose a new password. Then Big Quest shows a new code - this one no longer works.',
     'Keep it safe and do not share it.'
   ];
   return { name: (de ? 'Big-Quest-Wiederherstellungscode-' : 'Big-Quest-recovery-code-') + n + '.txt', text: text.join('\n') + '\n' };

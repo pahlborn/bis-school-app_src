@@ -139,9 +139,9 @@ function kdtBereiche(ablage, kind) {
 const KDT_TEXT = {
   de: {
     titel: 'Alle Daten von', erstellt: 'Erstellt am', von: 'von', stand: 'Stand: letzter Abgleich dieses Geräts. Die vollständige, maschinenlesbare Fassung steht in der JSON-Datei.',
-    profil: 'Profil', lernstand: 'Lernstand', blaetter: 'Übungsblätter', einstellungen: 'Einstellungen', schule: 'Schulische Einstufungen',
-    luecken: 'Lücken laut Schule', freigaben: 'Freigaben', protokoll: 'Protokoll der Freigaben', geraete: 'Geräte', zugriff: 'Wer hat einen Schlüssel',
-    stellen: 'Jede Speicherstelle der App', hinweise: 'Gut zu wissen', ereignisse: 'Alle Einträge',
+    profil: 'Profil', lernstand: 'Lernstand', blaetter: 'Übungsblätter', einstellungen: 'Einstellungen', schule: 'Evaluations',
+    luecken: 'Learning goals', freigaben: 'Freigaben', protokoll: 'Protokoll der Freigaben', geraete: 'Geräte', zugriff: 'Wer hat einen Schlüssel',
+    stellen: 'Jede Speicherstelle von Big Quest', hinweise: 'Gut zu wissen', ereignisse: 'Alle Einträge',
     feld: 'Feld', wert: 'Wert', bereich: 'Bereich', imExport: 'Im Export', grund: 'Hinweis', ja: 'ja', nein: 'nein', leer: '–',
     sterne: 'Sterne gesamt', abzeichen: 'Abzeichen', tage: 'Übungstage', antworten: 'Antworten', bestwerte: 'Bestwerte',
     empfaenger: 'Empfänger', umfang: 'Umfang', ab: 'von', bis: 'bis', status: 'Stand', beendet: 'beendet', abgelaufen: 'abgelaufen', laeuft: 'läuft',
@@ -155,9 +155,9 @@ const KDT_TEXT = {
   },
   en: {
     titel: 'All data of', erstellt: 'Created on', von: 'by', stand: 'As of the last sync of this device. The complete, machine-readable version is in the JSON file.',
-    profil: 'Profile', lernstand: 'Progress', blaetter: 'Practice sheets', einstellungen: 'Settings', schule: 'School assessments',
-    luecken: 'Gaps according to school', freigaben: 'Shares', protokoll: 'Share log', geraete: 'Devices', zugriff: 'Who holds a key',
-    stellen: 'Every storage place of the app', hinweise: 'Good to know', ereignisse: 'All entries',
+    profil: 'Profile', lernstand: 'Progress', blaetter: 'Practice sheets', einstellungen: 'Settings', schule: 'Evaluations',
+    luecken: 'Learning goals', freigaben: 'Shares', protokoll: 'Share log', geraete: 'Devices', zugriff: 'Who holds a key',
+    stellen: 'Every storage place of Big Quest', hinweise: 'Good to know', ereignisse: 'All entries',
     feld: 'Field', wert: 'Value', bereich: 'Area', imExport: 'In the export', grund: 'Note', ja: 'yes', nein: 'no', leer: '–',
     sterne: 'Stars in total', abzeichen: 'Badges', tage: 'Practice days', antworten: 'Answers', bestwerte: 'Best scores',
     empfaenger: 'Recipient', umfang: 'Scope', ab: 'from', bis: 'until', status: 'Status', beendet: 'ended', abgelaufen: 'expired', laeuft: 'active',
