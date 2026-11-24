@@ -340,7 +340,7 @@ test('Sandbox: gebaute Familienfassung - anmelden, Kind anlegen, ueben, Schulbew
   await familyCopyBrowser(P, W);
   const candidateDir = path.join(os.tmpdir(), 'bq-cg-v3-familie-kandidat');
   const candidate = await familieBauen(TEST_PW, { ziel: candidateDir });
-  assert.deepEqual([candidate.version.major, candidate.version.minor, candidate.version.patch, candidate.version.kanal], [0, 152, 8, 'beta']);
+  assert.deepEqual([candidate.version.major, candidate.version.minor, candidate.version.patch, candidate.version.kanal], [0, 152, 9, 'beta']);
   assert.equal(candidate.pruefungen.length, 19);
   assert.equal(candidate.pruefungen.every(p => p.ok), true, 'candidate family build passes every existing search check');
   await familyCopyBrowser(P, W, { html: fs.readFileSync(path.join(candidateDir, 'index.html'), 'utf8'), candidate: true });

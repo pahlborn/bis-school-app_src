@@ -74,3 +74,27 @@ Danach scheitert der folgende Familienzweig bereits an seiner ausdrücklichen Ko
 Entstandener Screenshot: `docs/pruefung/images/2026-11-24-quest-kennzeichen-test.png`. Die normale Quest-Auswahl zeigt Focus und New; das Profil wurde ausschließlich generisch als Child vorbereitet und vor der Aufnahme per Assertion geprüft. Die lokal betrachtete Aufnahme enthält die Mathematik-Auswahl und keine Personen-/Konto-/Zugangswerte. Kein Screenshot der Familienfassung entstand.
 
 Nach dem Fehler sofortige Stopprückgabe und ausschließlich lokale WIP-Sicherung von eigenem Test, Bericht und Testbau-Aufnahme. Keine Vollsuite und keine erneuten Regressionen; die früheren 17/17 bleiben historische Belege. Kein Push, PR, Merge oder Deployment. Die früheren ungültigen Läufe bleiben ausdrücklich FAIL und werden durch diesen Fortschritt nicht umgedeutet.
+
+
+## Abgeschlossene gezielte Matrix vor Code-/Testfreeze
+
+Die unabhängig rückgelesenen sicheren Boolfelder zeigten danach die konkrete falsche Vorgabe: Auch die tatsächlich erzeugte Familienfassung besitzt bereits vor der Hookmutation einen vorhandenen Kontencontainer. Die frühere Ableitung `Familie=false` allein aus null-Parametern des Bauaufrufs war eine unzutreffende Fixtureannahme von Atlas, kein J-Produktfehler. Der Hook ersetzt/erzeugt diesen Container nicht. Die einzige anschließende Änderung setzte die exakte Vorbedingung für beide Fassungen streng auf `{configured:true,resolved:true}`; keine beliebigen Booleans, keine weitere Session-/Authvariante und keine Produktänderung.
+
+`CHROMIUM_PATH=/usr/bin/chromium BQ_QUEST_J_SCREENSHOTS=1 node --test --test-reporter=tap tests/quest-kennzeichen.test.mjs`
+
+Ergebnis: **7/7 PASS, 0 FAIL, 0 übersprungen, Exit 0**. Beleg `/tmp/quest-j-v2-final-targeted.log` (0600). Beide tatsächlich erzeugten Artefakte durchliefen vollständig die sichtbare reguläre Quest-Auswahl mit generischer bestehender Kindersitzung, allen beibehaltenen Vorrang-/Zuordnungs-/Historien-/DEEN-/aria-/Touch- und Sitzungsbestandsassertionen. Das belegt den zugewiesenen UIumfang mit vorhandener Testdatenübersetzung, ausdrücklich keine reguläre Anmeldung, Geräteverbindung oder Synchronisierung.
+
+Frisch wiederholt: `CHROMIUM_PATH=/usr/bin/chromium node --test --test-reporter=tap tests/version.test.mjs tests/app.test.mjs tests/neuland.test.mjs` → **17/17 PASS, Exit 0**; `/tmp/quest-j-v2-final-regression.log` (0600).
+
+Visuell geprüfte generische Aufnahmen der echten Fachauswahl:
+
+- `docs/pruefung/images/2026-11-24-quest-kennzeichen-test.png` — 🎯 Focus und 🌱 New.
+- `docs/pruefung/images/2026-11-24-quest-kennzeichen-family.png` — 🎯 Focus und 🌱 New.
+- `docs/pruefung/images/2026-11-24-quest-kennzeichen-goal-test.png` — 🧩 Learning goal sichtbar.
+- `docs/pruefung/images/2026-11-24-quest-kennzeichen-goal-family.png` — 🧩 Learning goal sichtbar.
+
+Alle Aufnahmen enthalten die Mathematik-Auswahl ohne Personen-/Zugangswerte. Das vorbereitete Profil ist ausschließlich Child. Die vorhandene rechte Fortschrittsanzeige New! bleibt unverändert; pro Karte gibt es höchstens ein neues quest-marker-Kennzeichen.
+
+Vor Freeze wurden zusätzlich ausschließlich die beiden von Atlas exakt verifizierten aktuellen Versionsassertionen in `tests/testinstanz.test.mjs:356` und `tests/familienfassung.test.mjs:343` von Patch 8 auf 9 aktualisiert, jeweils mit strenger Trefferzahl 1. Major, Minor, Kanal und alle Verhaltensassertionen bleiben unverändert. Die volle unveränderte npm-test-Registrierung enthält beide Dateien und prüft sie im anschließenden Gesamtlauf. Weitere Produktänderungen gab es seit dem ersten WIP nicht.
+
+Nächster Schritt auf sauberem Code-/Testfreeze: vollständiger npm-test-Lauf ohne gleichzeitige Edits oder Browser-QA; anschließend ausschließlich dokumentarische Ergebnisergänzung. Die historischen fehlgeschlagenen Fixtures oben bleiben erhalten.

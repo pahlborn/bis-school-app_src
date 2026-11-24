@@ -147,7 +147,7 @@ test('J both real builds retain English labels, precedence and touch fit in DE/E
          const page=await ctx.newPage(),fehler=[];page.on('pageerror',e=>fehler.push(e.message));
          await page.goto(builtServer.url,{waitUntil:'domcontentloaded'});
          await page.waitForFunction(()=>!!window.__questJ);
-         assert.deepEqual(await page.evaluate(()=>window.__questJ.prepareChild()),kind==='test'?{configured:true,resolved:true}:{configured:false,resolved:false},kind);
+         assert.deepEqual(await page.evaluate(()=>window.__questJ.prepareChild()),{configured:true,resolved:true},kind);
          for(const lang of ['de','en']){
            assert.deepEqual(await render(page,{lang,mode:'auto',active:['numbers']}),{badge:'🧩 Learning goal',label:'Learning goal',count:1},kind);
            assert.deepEqual(await render(page,{lang,focus:['numbers'],active:['numbers']}),{badge:'🎯 Focus',label:'Focus',count:1},kind);
@@ -171,6 +171,9 @@ test('J both real builds retain English labels, precedence and touch fit in DE/E
            assert.equal(await page.locator('#profileName').textContent(),'Child');
            const imageDir=path.resolve('docs/pruefung/images');await fs.mkdir(imageDir,{recursive:true});
            await page.screenshot({path:path.join(imageDir,'2026-11-24-quest-kennzeichen-'+kind+'.png'),fullPage:true});
+           await render(page,{mode:'auto',active:['numbers']});
+           assert.ok(await page.locator('[data-item="numbers"] .quest-marker[aria-label="Learning goal"]').isVisible());
+           await page.screenshot({path:path.join(imageDir,'2026-11-24-quest-kennzeichen-goal-'+kind+'.png'),fullPage:true});
          }
          assert.deepEqual(fehler,[],kind);
        }finally{await ctx.close();}
