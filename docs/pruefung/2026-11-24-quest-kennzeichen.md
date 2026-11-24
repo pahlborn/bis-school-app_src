@@ -1,4 +1,6 @@
-# Quest-Kennzeichen J V2 · WIP · 24.11.2026
+# Quest-Kennzeichen J V2 · Prüfstand · 24.11.2026
+
+**Aktueller Status: Vollsuite abgeschlossen mit 2 Fehlern; keine Mergefreigabe.** Gezielte J-Matrix 7/7 PASS, frische Regressionen 17/17 PASS, beide gebauten UI-Fassungen und vier generische Aufnahmen belegt. Vollständiger unveränderter npm-test-Lauf: 1279 Tests, 1277 PASS, 2 FAIL, Exit 1. Geprüfter Code-/Testfreeze: `fbb989f0b52245f3e68daa1a06d3a3acf8b3d111`, Tree `91abda1288267f81f1a1361d68bb348ce7fd8e63`. Die sichere Fehlerklassifikation und Laufidentität stehen am Ende; es folgte ausschließlich diese dokumentarische Ergänzung. Frühere WIP-/Fehlerstände bleiben als Historie erhalten.
 
 Auftrag: BQ-QUEST-SYMBOLS-J-20261124 V2. Lokaler Zweig `feature/quest-symbols-j-v2-20261124`, Worktree `/workspace/work/bq-quest-symbols-j-v2-20261124`, Basis `9d034fae0cb882f289e2f12fb81350d95a31a03c`. Dieser Teilstand ist nicht zur Abnahme oder Veröffentlichung freigegeben.
 
@@ -98,3 +100,29 @@ Alle Aufnahmen enthalten die Mathematik-Auswahl ohne Personen-/Zugangswerte. Das
 Vor Freeze wurden zusätzlich ausschließlich die beiden von Atlas exakt verifizierten aktuellen Versionsassertionen in `tests/testinstanz.test.mjs:356` und `tests/familienfassung.test.mjs:343` von Patch 8 auf 9 aktualisiert, jeweils mit strenger Trefferzahl 1. Major, Minor, Kanal und alle Verhaltensassertionen bleiben unverändert. Die volle unveränderte npm-test-Registrierung enthält beide Dateien und prüft sie im anschließenden Gesamtlauf. Weitere Produktänderungen gab es seit dem ersten WIP nicht.
 
 Nächster Schritt auf sauberem Code-/Testfreeze: vollständiger npm-test-Lauf ohne gleichzeitige Edits oder Browser-QA; anschließend ausschließlich dokumentarische Ergebnisergänzung. Die historischen fehlgeschlagenen Fixtures oben bleiben erhalten.
+
+
+## Vollständiger Primärlauf auf sauberem Freeze
+
+Befehl: `CHROMIUM_PATH=/usr/bin/chromium npm test`. Der vollständige bestehende npm-test-Befehl einschließlich des einmal ergänzten J-Tests wurde ausgeführt. Es gab während des Laufs keine Edits und keine parallele Browser-QA oder andere Runtimeprüfung.
+
+- Code-/Testcommit: `fbb989f0b52245f3e68daa1a06d3a3acf8b3d111`.
+- Tree: `91abda1288267f81f1a1361d68bb348ce7fd8e63`.
+- Start UTC: `2026-11-24T20:55:06.733243+00:00`.
+- Ende UTC: `2026-11-24T21:11:11.283019+00:00`.
+- Gemessene Laufdauer: `964.543 s`; Primärreporter: `963970.724411 ms`.
+- Primärsummen: **1279 Tests, 0 Suites, 1277 PASS, 2 FAIL, 0 cancelled, 0 skipped, 0 todo; Exit 1**.
+- Rohlog: `/tmp/quest-j-v2-full-suite.log`, 0600, `186025 Bytes`.
+- SHA256 Rohlog: `aa0c64bfeb74c13ddef04b3b6fbeac6ec03b437befa45ae1f0f78adcf1fc10b8`.
+- Laufmetadaten: `/tmp/quest-j-v2-full-suite-meta.json`, 0600.
+
+Ausschließlich sichere Fehlerklassifikation aus diesem vorhandenen Log, ohne neue Quellvorbereitung, Nachstellung oder Korrektur:
+
+| Datei / sichere Stelle | Fehlertyp | Begrenzter Befund |
+| --- | --- | --- |
+| `tests/familienfassung.test.mjs:346` (Testdeklaration Zeile 294; weiterer Stack Zeile 503) | AssertionError / ERR_ASSERTION | Einer der zwei gescheiterten bestehenden Fälle. Keine numeric/bool-actual/expected-Felder oder erlaubten J-Labelwerte aus dem Fehlerblock erkannt. Inhaltliche Ursache hier nicht weiter untersucht. |
+| `tests/startseite.test.mjs:64` (Testdeklaration Zeile 54) | AssertionError / ERR_ASSERTION | Zweiter gescheiterter bestehender Fall. Keine numeric/bool-actual/expected-Felder oder erlaubten J-Labelwerte aus dem Fehlerblock erkannt. Inhaltliche Ursache hier nicht weiter untersucht. |
+
+Der Worktree war nach dem Gesamtlauf weiterhin unverändert sauber. Die Vollsuite ist ausdrücklich nicht bestanden. Es erfolgten danach ausschließlich diese Ergebnisdokumentation und ein separater docs-only Commit; keine Code-/Test-/Screenshotänderung, keine Folgeprüfung und kein blindes Nachstellen. Die Entscheidung über den sicheren nächsten Erkenntnis-/Korrekturweg liegt bei Atlas. Weitere Root-Quellvorbereitungsmethoden sind laut Atlas/Cadence angehalten; diese Arbeit setzt sie nicht fort.
+
+Die beiden temporären Lesedateien bleiben gelöscht und uncommitted. Vier generische Screenshotdateien sind bereits auf dem geprüften Freeze gesichert. Kein PR, Merge oder Deployment durch diesen Worker; die weitere Review-/CI-/Freigabekoordination übernimmt Atlas.
