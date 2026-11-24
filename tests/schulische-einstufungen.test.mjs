@@ -192,7 +192,7 @@ test('T1–T3 table, filters, sorting and fixed outline (German, 60 assignments)
     assert.deepEqual(await k.locator(`tr.psrow[data-psrow="${i}"] .pslv .pst`).allInnerTexts(), soll, t.title);
   }
   const chips = (await k.locator('tr.psrow .pslv').allInnerTexts()).join(' | ');
-  assert.ok(!/\b(RS|C|M|E|N)\b/.test(chips), 'no letter codes: ' + chips.slice(0, 200));
+  assert.ok(!/\b(RS|C|M|E|N)\b/.test(chips.replace(/Extending \(E\)|Meeting expectations \(M\)|Consolidating \(C\)|Requires support \(RS\)/g, '')), 'level codes occur only with their original terms');
   // T2: filters (each alone and combined) and sorting - expectation computed here
   const faelle = [{ area: 'math' }, { area: 'learner' }, { period: '8w' }, { period: 'year' }, { weak: true }, { sort: 'subject' }, { sort: 'level' },
     { area: 'english', period: 'year', weak: true, sort: 'level' }, { area: 'science', period: '8w', sort: 'date' }];
@@ -225,7 +225,7 @@ test('T1–T3 table, filters, sorting and fixed outline (German, 60 assignments)
   assert.equal(await b.getAttribute('aria-expanded'), 'true');
   assert.deepEqual(await d0.locator('table.psrub thead th').allInnerTexts(), ['Kriterium', 'Lehrkraft', 'Selbst']);
   assert.deepEqual(await d0.locator('table.psrub tbody tr').first().locator('td').allInnerTexts(), ['Accuracy', 'Consolidating (C)', 'Extending (E)']);
-  const punkte = await d0.locator('h4:has-text("Stärken") + ul > li').allInnerTexts();
+  const punkte = await d0.locator('h4:has-text("Strengths") + ul > li').allInnerTexts();
   assert.deepEqual(punkte, ['Rundet sicher', 'Begründet klar', 'arbeitet gut mit']);
   assert.deepEqual(await d0.locator('h4:has-text("Areas of Development") + p').allInnerTexts(), ['keine Angabe'], 'empty next steps: the heading stays');
   const std0 = await d0.locator('h4:has-text("Standards") + ul > li').allInnerTexts();

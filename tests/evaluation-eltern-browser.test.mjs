@@ -543,7 +543,7 @@ test('EV4/EV7 manual: confirmed criteria activate the visible gap, automatic foc
   await form.getByLabel('Titel der Evaluation', { exact: true }).fill('Fiktive drei Kriterien');
   await form.getByLabel('Evaluation-Datum', { exact: true }).fill(new Date().toISOString().slice(0, 10));
   await form.getByLabel('Fach', { exact: true }).selectOption('maths');
-  await form.getByLabel('Lernziel', { exact: true }).fill('Fiktives Lernziel');
+  await form.getByLabel('Learning goals', { exact: true }).fill('Fiktives Lernziel');
   await form.getByLabel('Arbeitsanweisung', { exact: true }).fill('Fiktive Anweisung');
   await form.getByLabel('Lehrkraft-Rückmeldung', { exact: true }).fill('Fiktive Rückmeldung');
   const criteria = [
@@ -770,12 +770,12 @@ test('EV4 O3 and design: weaker grade, explicit parent override, catalog, DE/EN 
   await form.locator('button[type="submit"]').click();
   assert.deepEqual(await evaluationEvents(P.page),[]);
   assert.match(await form.locator('[data-eval-area="E-W1"]').innerText(),/C.*weaker of C and M/s);
-  assert.match(await form.locator('[data-eval-area="E-W1"]').innerText(),/Gap/);
-  assert.match(await form.locator('[data-eval-area="E-S1"]').innerText(),/No gap.*no exercise in Big Quest/s);
-  assert.match(await form.locator('[data-eval-area="M-N1"]').innerText(),/Not rated.*No gap/s);
+  assert.match(await form.locator('[data-eval-area="E-W1"]').innerText(),/Learning goal · Consolidating \(C\)/);
+  assert.match(await form.locator('[data-eval-area="E-S1"]').innerText(),/No learning goal for additional practice.*no exercise in Big Quest/s);
+  assert.match(await form.locator('[data-eval-area="M-N1"]').innerText(),/Not rated.*No learning goal for additional practice/s);
   await formFits(P.page);
   await form.getByRole('combobox',{name:'Change rating for this area · E-W1',exact:true}).selectOption('M');
-  assert.match(await form.locator('[data-eval-area="E-W1"]').innerText(),/M.*No gap/s);
+  assert.match(await form.locator('[data-eval-area="E-W1"]').innerText(),/Meeting expectations \(M\).*No learning goal for additional practice/s);
   assert.deepEqual(await evaluationEvents(P.page),[],'even changing the override in preview writes nothing');
   await form.locator('button[type="submit"]').click();
   const event=(await evaluationEvents(P.page))[0];
@@ -994,7 +994,7 @@ test('EV4 legacy document: truthful preview and editable original assignment sur
   await form.locator('[name="standard"]').selectOption('M-N5');
   await form.locator('[name="rating"]').selectOption('RS');
   await form.locator('button[type="submit"]').click();
-  assert.match(await form.innerText(),/M-N5: RS/);
+  assert.match(await form.innerText(),/M-N5: Requires support \(RS\)/);
   const focus=form.getByRole('checkbox',{name:'Zweischrittige Subtraktion in Practise Today üben',exact:true});
   assert.equal(await focus.isChecked(),true);
   await focus.uncheck();
@@ -1018,7 +1018,7 @@ test('EV4 legacy document: truthful preview and editable original assignment sur
   await form.locator('button[type="submit"]').click();
   assert.equal(await form.locator('[name="exerciseFocus"]').count(),0);
   assert.match(await form.innerText(),/M-N1: Consolidating \(C\)[\s\S]*Learning goal · Consolidating \(C\)/);
-  assert.doesNotMatch(await form.innerText(),/M-N5: RS/,'preview must reflect only the explicit criterion assignment');
+  assert.doesNotMatch(await form.innerText(),/M-N5: Requires support \(RS\)/,'preview must reflect only the explicit criterion assignment');
   assert.equal((await evaluationEvents(P.page)).length,2);
   await form.locator('button[type="submit"]').evaluate(button=>{button.click();button.click();});
   const finalEvents=await evaluationEvents(P.page);

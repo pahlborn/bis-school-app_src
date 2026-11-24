@@ -93,7 +93,7 @@ test('school data in the grown-ups area (C1): per subject "From school" with sta
   // English
   await page.locator('#pBack').click(); await page.locator('[data-psubj="maths"]').click();
   await page.locator('.phdr [data-plang="en"]').click();
-  assert.match(await page.locator('.pquest', { has: page.locator('[data-pfocus="round"]') }).innerText(), /🏫 School\s+Secure/);
+  assert.match(await page.locator('.pquest', { has: page.locator('[data-pfocus="round"]') }).innerText(), /🏫 Evaluation Oct 27, 2026\s+Meeting expectations \(M\)/);
   assert.match(await page.locator('#pSchool').innerText(), /From school/);
   assert.deepEqual(fehler, []);
   await ctx.close();
@@ -124,7 +124,7 @@ test('another child has no school ratings: overview says so, no starting point',
   await page.locator('#adultBtn').click(); await login(page, 'adult', 'papa', 'langes-passwort');
   await page.waitForSelector('#parentClose');
   await page.locator('details.psec[data-psec="school"] > summary').click();
-  assert.match(await page.locator('details.psec[data-psec="school"]').innerText(), /noch keine schulischen Einstufungen/);
+  assert.match(await page.locator('details.psec[data-psec="school"]').innerText(), /Hier erscheinen die übernommenen Evaluations Ihres Kindes\./);
   await page.locator('[data-psubj="maths"]').click();
   assert.equal(await page.locator('.pquest', { hasText: '🏫 Schule' }).count(), 0);
   assert.deepEqual(fehler, []);

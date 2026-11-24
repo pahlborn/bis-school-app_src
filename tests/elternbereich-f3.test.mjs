@@ -26,7 +26,7 @@ after(async () => { await browser?.close(); server?.close(); });
 const zaehle = (t, w) => t.split(w).length - 1;
 const sec = (page, titel) => page.locator('#aboutBody details.psec[data-psec="concept"] details.about-sec').filter({ has: page.locator('summary', { hasText: titel }) }).first();
 
-test('T6/T7 part 2: short, gaps explained honestly, exact thresholds folded away, no school terms; focus ⓘ and "From school" name the gap', async () => {
+test('T6/T7 part 2: short, gaps explained honestly, exact thresholds folded away, no school terms; focus ⓘ and "From school" name the gap', async (t) => {
   const { ctx, page, fehler } = await oeffnen(browser, server);
   await anmelden(page, 'student', 'mia', C.mia); await passwortSetzen(page, 'Tiger-Lamp-River-4271');
   await page.waitForSelector('#home:not([hidden])');
@@ -35,9 +35,9 @@ test('T6/T7 part 2: short, gaps explained honestly, exact thresholds folded away
   await page.waitForSelector('#parentClose');
   const S = {
     de: { helfen: 'Helfen wie die Schule', ein: 'Wie die App einstuft', kern: 'keinen zweiten Weg', luecken: 'Learning goals erreichen', genau: 'Genaue Schwellen', quellen: 'Quellen',
-      ehrlich: 'Bestätigt sicher heißt: sicher bei den Antworten in der App. Wer geantwortet hat und mit welchen Hilfsmitteln, weiß die App nicht', knoepfe: ['Jetzt angehen', 'Als geschlossen markieren', 'Weiter üben'] },
+      ehrlich: 'Meeting expectations (M) beschreibt die Antworten in der App. Wer geantwortet hat und mit welchen Hilfsmitteln, weiß die App nicht', knoepfe: ['Jetzt angehen', 'Als geschlossen markieren', 'Weiter üben'] },
     en: { helfen: 'Helping the way school does', ein: 'How the app judges', kern: 'don’t add a second method', luecken: 'Reaching learning goals', genau: 'Exact thresholds', quellen: 'Sources',
-      ehrlich: 'Confirmed secure means: secure in the answers in the app. The app does not know who answered', knoepfe: ['Work on it now', 'Mark as closed', 'Keep practicing'] }
+      ehrlich: 'Meeting expectations (M) describes the answers in the app. The app does not know who answered', knoepfe: ['Work on it now', 'Mark as closed', 'Keep practicing'] }
   };
   for (const lang of ['de', 'en']) {
     const L = S[lang];
@@ -53,6 +53,7 @@ test('T6/T7 part 2: short, gaps explained honestly, exact thresholds folded away
     const genauText = (await sec(page, L.ein).locator('details.about-sub').textContent()).replace(/\s+/g, ' ');
     const n = kapitel.length - quellen.length - genauText.length;
     assert.ok(n <= 7000, `${lang}: ${n} characters without sources and folded thresholds`);
+    t.diagnostic(`C/G concept text ${lang}: ${n}/7000 characters`);
     // helping the way school does: the why in at most 3 sentences
     const helfen = (await sec(page, L.helfen).locator('.about-sec-body').textContent()).trim();
     assert.ok(helfen.split(/(?<=[.!?])\s+(?=[A-ZÄÖÜ„“])/).length <= 3, `${lang}: at most 3 sentences: ${helfen}`);

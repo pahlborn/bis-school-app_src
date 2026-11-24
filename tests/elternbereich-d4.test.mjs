@@ -89,7 +89,7 @@ test('T19/T17 parents: work on it now, mark as closed, keep practising - with no
   await page.locator('#helpClose').click();
   // English
   await page.locator('.phdr [data-plang="en"]').click();
-  assert.match(await liste(page), /Gap closed ✓[\s\S]*closed by you/);
+  assert.match(await liste(page), /Learning goal closed ✓[\s\S]*closed by you/);
   assert.deepEqual(fehler, []);
   await ctx.close();
 });

@@ -105,7 +105,7 @@ test('W1 real touch journey separates reached M and held, permits help, survives
   assert.equal(await page.evaluate(()=>window.__g.openGaps().length),1,'M alone leaves gap open');
   await enterParent(true);let t=await mathe(page);assert.match(t,/Meeting expectations \(M\) erreicht/);assert.match(t,/Learning goal noch offen/);
   const journey=page.locator('[data-journey="M-N1"]');assert.equal(await journey.locator('.gjstations>li').count(),4);assert.equal(await journey.locator('[data-stage="4"].done').count(),0);
-  assert.match(await journey.innerText(),/Erste Antworten nach der Schulbewertung/);assert.match(await journey.innerText(),/von 6 bearbeitet/);
+  assert.match(await journey.innerText(),/Erste Antworten nach der Evaluation/);assert.match(await journey.innerText(),/von 6 bearbeitet/);
   await page.locator('#parentClose').tap();await page.waitForSelector('#home:not([hidden])');await openNumbers();
   for(let i=0;i<8;i++){const s=await zustand(page),q=s.round[s.idx];if(i===0){if(await page.locator('#takeChallenge').isVisible())await page.locator('#takeChallenge').tap();await page.locator('#helpBtn').tap();}await tapRight(page,q);await page.locator('#nextBtn').tap();}
   await home();await enterParent();t=await mathe(page);assert.match(t,/Learning goal geschlossen/);assert.equal(await journey.locator('[data-stage="4"].done').count(),1);
@@ -127,7 +127,7 @@ test('W1 real touch journey separates reached M and held, permits help, survives
    if(await page.locator('#home').isVisible())await page.locator('#adultBtn').tap();
    await anmelden(page,'adult','papa','Moon-Glass-Paper-8812');await page.waitForSelector('#parentClose');
   }
-  t=await mathe(page,'en');assert.match(t,/Gap closed/);assert.match(t,/Shaky lately/);assert.deepEqual(fehler,[]);
+  t=await mathe(page,'en');assert.match(t,/Learning goal closed/);assert.match(t,/Shaky lately/);assert.deepEqual(fehler,[]);
  }finally{await ctx.close();}
 });
 test('W1 parent shows the school M starting point with five wrong own answers and its actual basis',async()=>{

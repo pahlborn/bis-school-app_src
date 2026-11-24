@@ -132,7 +132,7 @@ test('T14 a teacher looking through a grant writes nothing; parents see the gap 
   assert.equal(await page.getAttribute('[data-pfocus="numbers"]', 'aria-pressed'), 'true', 'active gap switched on in the automatic focus');
   assert.equal(await page.getAttribute('[data-pfocus="detective"]', 'aria-pressed'), 'false', 'waiting gap not in the focus');
   await page.locator('.phdr [data-plang="en"]').click();
-  assert.match(await karte('numbers').locator('.ptag.gap').innerText(), /gap per school/);
+  assert.match(await karte('numbers').locator('.ptag.gap').innerText(), /Learning goal · Requires support \(RS\) · Evaluation/);
   assert.deepEqual(fehler, []);
   await ctx.close();
 });

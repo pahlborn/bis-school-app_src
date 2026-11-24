@@ -338,6 +338,13 @@ test('Sandbox: gebaute Familienfassung - anmelden, Kind anlegen, ueben, Schulbew
   assert.equal(P.S.lauf(() => P.S.holen('accountsOn')()), true, 'family build: accounts enabled');
   assert.equal(P.S.lauf(() => P.S.holen('canBackup')()), true, 'synthetic parent may back up this child');
   await familyCopyBrowser(P, W);
+  const candidateDir = path.join(os.tmpdir(), 'bq-cg-v2-familie-kandidat');
+  const candidate = await familieBauen(TEST_PW, { ziel: candidateDir });
+  assert.deepEqual([candidate.version.major, candidate.version.minor, candidate.version.patch, candidate.version.kanal], [0, 152, 8, 'beta']);
+  assert.equal(candidate.pruefungen.length, 19);
+  assert.equal(candidate.pruefungen.every(p => p.ok), true, 'candidate family build passes every existing search check');
+  await familyCopyBrowser(P, W, { html: fs.readFileSync(path.join(candidateDir, 'index.html'), 'utf8'), candidate: true });
+  t.diagnostic('C/G candidate family: 0.152.8-beta, source ' + candidate.version.hash + ', checks 19/19, DE/EN, ' + candidateDir);
 
 
   // Export: lesbare Seite und JSON
@@ -465,8 +472,12 @@ test('Kathies App (Live-Bau): nichts davon - kein Export/Loeschen, kein Abschnit
   assert.doesNotMatch(S.lauf(() => S.holen('aboutAppHTML')()), /endgueltig-loeschen/);
 });
 
-async function familyCopyBrowser(P, W) {
-  const server = http.createServer((req, res) => { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); res.end(HTML); });
+async function familyCopyBrowser(P, W, { html = HTML, candidate = false } = {}) {
+  const childLabel = P.S.lauf(() => P.S.holen('kidChipLabel')(P.S.holen('viewedKid')()));
+  const accountUser = P.liste().find(k => k.id === P.kennung).user;
+  const childId = P.S.lauf(() => P.S.holen('schoolKid')());
+  const expectedEvents = P.S.ablage.get('bqf_' + childId + '__events');
+  const server = http.createServer((req, res) => { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); res.end(html); });
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const url = `http://127.0.0.1:${server.address().port}/`, browser = await browserStarten();
   try {
@@ -484,6 +495,20 @@ async function familyCopyBrowser(P, W) {
     await page.goto(url);
     await page.fill('#passwort', TEST_PW); await page.click('#oeffnen');
     await page.waitForSelector('#parentClose');
+    assert.equal((await page.locator('#pKid').innerText()).includes(childLabel), false, 'counterproof: copied parent frame has no ready child');
+    assert.equal(await page.locator('.pnokid').count(), 1, 'counterproof: child assignment is missing');
+    assert.equal(await page.locator('[data-psec="school"]').count(), 0, 'counterproof: no school section before account login');
+    assert.equal(await page.locator('.pbackup-note').count(), 0, 'counterproof: no backup tip before account login');
+    await page.locator('#parentClose').click();
+    if (candidate) assert.match(await page.locator('#loginVersion').innerText(), /0\.152\.8/);
+    await page.locator('#roleAdult').click();
+    await page.locator('#loginUser').fill(accountUser);
+    await page.locator('#loginPw').fill(P.pw);
+    await page.locator('#loginGo').click();
+    await page.waitForSelector('#parentClose');
+    await page.waitForFunction(label => document.querySelector('#pKid')?.textContent.includes(label), childLabel);
+    assert.equal(await page.locator('.pnokid').count(), 0, 'normal account login provides the child');
+    assert.equal(await page.evaluate(([id, events]) => localStorage.getItem('bqf_' + id + '__events') === events, [childId, expectedEvents]), true, 'same complete child event history after normal login');
     await elternSeite(page, 'home');
     await page.locator('[data-psec="school"] > summary').click();
     await page.locator('.psrow').first().waitFor();
