@@ -1,6 +1,6 @@
 # Auftrag an Atlas: Umbau Elternbereich
 
-**Status (23.11.): Abschnitte A–H von Peter zur Umsetzung freigegeben.** Abschnitt I ist noch in Durchsicht und wird später ergänzt – nicht umsetzen.
+**Status: Abschnitte A–H (23.11.) und J (24.11.) von Peter zur Umsetzung freigegeben.** Abschnitt I ist noch in Durchsicht und wird später ergänzt – nicht umsetzen.
 
 Grundlagen: `docs/konzept/textleitlinie.md` (vor allem Regel 4: Originalbegriffe) und `docs/konzept/elternbereich-entscheidungen-2026-11-18.md` (Abschnitt „Begriffe und Evaluations-Seite“, 23.11.). Vorlage für die Gestaltung ist Peters Klickdummy (5 Seiten: Übersicht, Fachansicht, Hilfe, Verwalten, Evaluations); Peter stellt ihn bei der Freigabe bereit.
 
@@ -73,6 +73,21 @@ Alle sichtbaren Texte (DE und EN) nach Textleitlinie Regel 4 umstellen, u. a.: �
 - Balken, deren Farbe noch aus der Evaluation kommt (`assessQuest(...).schoolBase`: weniger als `KEY.minAnswers` eigene Antworten und ein Schulstand vorhanden), werden **umrandet** gezeigt (weiße Fläche, Rand in der Stufenfarbe); alle anderen gefüllt.
 - Legende am Ende der Tabelle: Überschrift „Übungsstand in Big Quest“, die fünf Farben (Extending (E), Meeting expectations (M), Consolidating (C), Requires support (RS), noch nicht geübt), dazu „umrandet = Ausgangspunkt aus der schulischen Evaluation, bis [Kind] in dieser Quest mindestens sechs Fragen beantwortet hat“ und „Learning goals und Areas of Development aus den Evaluations stehen in der Fachansicht.“
 - Fachansicht: Zusatz „Stand laut Schule“ (DE) bzw. „Starting point from school“ (EN) wird zu „Ausgangspunkt: Evaluation [Datum]“ bzw. „Starting point: evaluation [date]“.
+
+## J · Symbole bei der Quest-Auswahl (Kind)
+
+Grundlage: `docs/konzept/elternbereich-entscheidungen-2026-11-18.md`, Thema 4 („Das Kind umgeht Practise Today“). Auf main am 24.11. nicht umgesetzt.
+
+- Ziel: Das Kind sieht bei der Quest-Auswahl, wo Üben gerade besonders lohnt – auch wenn es nicht über Practise Today geht. Practise Today wird **nicht** größer oder prominenter; Aufgaben in normalen Quest-Runden ändern sich **nicht**.
+- Drei Kennzeichen auf den Quest-Karten des Kindes:
+  - **Learning goal:** Quests des aktiven Learning goals (`activeGapQuests`). Bei manuellem Fokus kein Learning-goal-Kennzeichen, weil Big Quest es dann nicht extra übt.
+  - **Fokus:** Quests in `focusTopics()` (automatisch oder manuell).
+  - **Neuland:** Quests, die Practise Today als Neuland anbietet (noch nicht geübt, freigeschaltet), dieselbe Regel wie der Neuland-Platz.
+- Höchstens ein Kennzeichen je Karte, Vorrang Learning goal vor Fokus vor Neuland (ein Learning goal ist im automatischen Modus ohnehin im Fokus).
+- Symbole laut Beschluss: 🎯 Fokus, 🧩 Learning goal, 🧭 Neuland. **Konflikt prüfen und vor der Umsetzung Peter vorlegen:** 🧭 ist bereits das Symbol des Titels „Explorer“ in der Kopfzeile (`#rankIcon`). Vorschlag für Neuland mit Alternative (z. B. 🌱 oder ✨) im Plan.
+- Kindertexte englisch und kurz (wie die übrige Kinderoberfläche), z. B. „Focus“, „Learning goal“, „New“; jeweils mit `aria-label`. Elterntexte und Handbuch folgen später.
+- Gilt für Familienfassung und Testfassung. Keine Änderung an Sternen, Titeln, Fokuslogik oder Learning-goal-Logik.
+- Abnahme: Tests für die Zuordnung (aktives Learning goal, Fokus automatisch und manuell, Neuland, Vorrang, kein Learning-goal-Kennzeichen bei manuellem Fokus), DE/EN, beide Fassungen; Screenshot der Quest-Auswahl im Statusbericht. Eigener PR mit Versionsanhebung, volle Testsuite.
 
 ## Backlog (nicht Teil dieses Auftrags)
 
