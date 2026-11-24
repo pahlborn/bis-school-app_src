@@ -1,6 +1,6 @@
-# BQ-PARENTS-01-CG-TEXT V1/V2/V3 · angehaltener Entwicklungsstand
+# BQ-PARENTS-01-CG-TEXT V1–V3.2 · lokaler Softwareabschluss
 
-**Aktueller Stand 24.11.2026: V3 PAUSIERT / UNVOLLSTÄNDIG.** Nach drei weiteren Testaufrufen hat Atlas die Pause und ausschließlich die lokale Sicherung bestätigt. Die unterschiedlichen Ursachen und neu erreichten Teilkriterien stehen im V3-Nachtrag am Ende. Ihre Einordnung nach §6 und die sachgerechte Originaltextprüfung werden unabhängig geprüft. Keine vollständige Suite, kein Vollsuiten-Freeze und keine Integrationsfreigabe. Die V1-/V2-Befunde und abgebrochenen Läufe bleiben historisch erhalten.
+**Aktueller Stand 24.11.2026: V3.2 lokal vollständig geprüft.** Auf dem unveränderten Code-/Testfreeze `f8108146fcefd9417418b82997e3e51c0f6bd545`, Tree `1f777dbde4c5c8f445c36b58fe27393f90e68d3f`, bestehen **1272/1272 Tests**, Exit **0**, ohne FAIL/SKIP/CANCEL. Beide wirklichen Kandidaten `0.152.8-beta` bestehen DE/EN samt Sicherungshinweis 1 und vollständiger Elternhilfe-/Linkprüfung. Maßgeblich ist der Abschlussabschnitt V3.1/V3.2 am Ende. Die folgenden blockierten V1-/V2-/V3-Stände, Fehlversuche und Abbrüche bleiben unveränderte Historie. Normale PR-CI, konkrete Mergefreigabe und eine Veröffentlichung sind dadurch nicht vorweggenommen.
 
 ## Anliegen
 
@@ -95,7 +95,7 @@ GitHub-main wurde über den Connector frisch als `d5ae13528ad1eb4eb508750be5cae0
 - `familyCopyBrowser` meldet den lediglich kopierten Elternrahmen über die bestehende Oberfläche ab und meldet das vorhandene synthetische Elternkonto normal an. Vorher werden fehlende Kindzuordnung, Schulabschnitt und Sicherungstipp beobachtet; danach die Kindkennung und derselbe vollständige Übungs-/Schul-Eventbestand. Kein Schlüsseltransfer, keine IndexedDB- oder Produktspeicheränderung.
 - Die ursprünglichen Schul-, Sicherungs-, DE/EN- und Unverändertheitsassertionen bleiben erhalten. Der erfolgreiche Familienfall durchlief danach auch alle ursprünglichen Export-, Kindlösch-, Kontolösch- und Speichertrennungsschritte.
 - Verbleibende sichtbare englische gap-Bezeichnungen im C-Umfang sowie alte wörtliche Erwartungen wurden gezielt auf Learning goals und die Originalstufen mit Kürzeln umgestellt. Mathematische/physische Wortbedeutungen und interne gap-Namen bleiben. Die eigene Abkürzungsprüfung erlaubt Kürzel ausschließlich zusammen mit dem jeweiligen Originalbegriff.
-- Der sichtbare Konzepttext wurde durch Kürzung zweier erläuternder Sätze unter die unveränderte Grenze7000 gebracht. Die M-/Gehaltenregel, Aufgaben-/Zeit-/Berechtigungsgrenzen, Fokus, W1, Sterne und gespeicherte Originaldaten wurden nicht geändert.
+- Der sichtbare Konzepttext wurde durch Kürzung zweier erläuternder Sätze unter die unveränderte Grenze 7000 gebracht. Die M-/Gehaltenregel, Aufgaben-/Zeit-/Berechtigungsgrenzen, Fokus, W1, Sterne und gespeicherte Originaldaten wurden nicht geändert.
 - Der bestehende Familienfall prüft zusätzlich einen wirklich mit `familieBauen` erzeugten Kandidaten0.152.8-beta. Der bestehende Testinstanz-Browserfall verwendet zusätzlich den wirklich mit `testinstanzBauen` erzeugten Kandidaten. Seine synthetische Elternanlage verwendet dafür die normalen PBKDF2-Vorgaben; die bisherige Anlage mit1000Runden war für die normale UI-/Werkzeuganmeldung ungeeignet. Kein Produktgrenzwert wurde gesenkt.
 - Die zusätzliche Testinstanz-Sicherungsassertion bleibt rot: erwartet1, beobachtet0. Sie wurde ausdrücklich nicht auf0 umgestellt. Paketversion0.152.8-beta, Versionstest und DE/EN-Releasehinweise bleiben wie vorbereitet.
 
@@ -206,3 +206,121 @@ Die historische genaue Verzweigung des früher beobachteten Sicherungshinweises0
 Atlas gab nach der Pause ausschließlich diesen Berichtsabschnitt und den vorhandenen Testdiff zur lokalen Sicherung frei. Danach keine weitere Probe, Korrektur oder lesende Ausbauarbeit. Keine C-Selbstbezeichnungsänderung begonnen, keine neue abschließende Verbotenprüfung, kein finaler Familien-/Testkandidaten-DE/EN-Nachweis, kein Freeze und kein vollständiges `npm test`. Version0.152.8-beta bleibt erhalten. Die frühere Familienprüfung, Fixtureversionen0.998/0.999 und V1-/V2-Fehlerhistorie werden dadurch nicht umgedeutet.
 
 Dieser Sicherungscommit ist ein **unvollständiger Pausenstand**, kein eingefrorener Abnahmekandidat. Commit/Tree werden in der Rückgabe genannt. Keine Geheimniswerte oder Namen Dritter in diesen Nachtrag aufgenommen. Kein Push, PR, Merge nach main, Release oder Deployment. Nächster Owner Atlas: enge unabhängige Prüfung der Halteregel und des sachgerechten C-Nachweises; kein weiteres Lauf-Go liegt vor.
+
+
+## Abschluss V3.1/V3.2 · 24.11.2026
+
+### Auftrag, Identität und Ergebnis
+
+Tatsächlicher Bearbeiter bleibt Codex `/root/codex_cg_v3_delivery_20261124`, kein Claude-/Forge-Lauf. Die unabhängige Einordnung der Pause und der Folgeauftrag stehen in [PR206#7130289063](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7130289063) und [PR206#7130307128](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7130307128). Die konkret geprüfte damalige Folge enthielt unterschiedliche Fehler mit neuen erreichten Kriterien; §6 wurde dadurch nicht allgemein geändert. Die acht V3-Pflichtquellen auf main `ea840127ba8d7d5519a32179a81284093525c9b9` und die aktuellen C/G-Nachträge blieben verbindlich. Diese Hauptbasis ist im eigenen Featurezweig enthalten; main wurde nicht verändert.
+
+Die abschließende Entwicklersuite lief nach [Root-Laufsignal PR206#7132117868](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7132117868) exakt auf:
+
+- Code/Testcommit: `f8108146fcefd9417418b82997e3e51c0f6bd545`.
+- Tree: `1f777dbde4c5c8f445c36b58fe27393f90e68d3f`.
+- Eigener Zweig: `feature/elternbereich-cg-v3-20261124`; Worktree `/workspace/work/bq-eltern-cg-v3-20261124`.
+- Befehl: `CHROMIUM_PATH=/usr/bin/chromium npm test`.
+- Ergebnis: **1272 Tests, 1272 PASS, 0 FAIL, 0 SKIP, 0 CANCEL, 0 TODO; Exit 0**.
+- Dauer: **924021.234602 ms** (15 Minuten 24.021 Sekunden).
+- Primärlog: `/tmp/cg-v32-full-f810814.log`; Exitdatei: `/tmp/cg-v32-full-f810814.exit` mit Inhalt 0. Beide Dateimodus 0600.
+
+HEAD/Tree und leerer Arbeitsbaum wurden nach dem tatsächlichen Lauf erneut bestätigt. Währenddessen gab es keinerlei Code-, Test-, Text- oder Dokumentänderung. Erst danach entstand dieser reine Berichtnachtrag. Es gab keine dritte Vollsuite oder weitere Zusatz-QA nach diesem Erfolg.
+
+### Konkreter finaler Umfang
+
+Die vorbereiteten C-Begriffe bleiben in DE/US-EN erhalten: Extending (E), Meeting expectations (M), Consolidating (C), Requires support (RS), Evaluations, Learning goals, Strengths und Areas of Development. Die sichtbaren Stufen haben ihre Kürzel mit den Originalbegriffen; mathematische Wortbedeutungen, interne Bezeichner und im Kontext erklärte Kürzel wurden nicht blind ersetzt. Vorhandene Lehrkrafttexte, Daten, Revisionen und Zuordnungen bleiben erhalten. Die Anleitung beschreibt den wirklichen Elternschritt mit Vorschau und Bestätigung.
+
+Big Quest bezeichnet sich in eigenen sichtbaren DE/EN-Texten als Big Quest. Interne APP-/gap-/Studio-Kennungen und Verweise auf andere Apps bleiben kontextbezogen bestehen. Die Konzeptlänge wurde mit unveränderter Grenze 7000 erneut tatsächlich gemessen: **DE 6742, EN 6254 Zeichen**. Die W1-/Gehalten-/Fokus-/Sterne- und Berechtigungsregeln wurden nicht geändert. Paketversion und Versionstest bleiben `0.152.8-beta`; DE/EN-Releasehinweise sind konsistent, frühere Hinweise erhalten. Die Hauptbasis trägt weiterhin `0.152.7-beta`.
+
+Die ursprüngliche unzutreffende `__attempts`-Rohspeichererwartung wurde durch den bestehenden kombinierten kanonischen Nachweis ersetzt: identische Kind-ID, normale Aufnahme abgeschlossen, keine Antworten mehr pending, reguläre datierte answer-Ereignisse und nach Elternlogin dieselben vollständigen vorhandenen Ereignisse. Der ausdrücklich angeforderte Schulimport kommt genau einmal hinzu und wird vollständig mit seiner Quelle verglichen. Sicherungshinweis-Anzahl1, DE/EN-Texte/Knöpfe und alle ursprünglichen Folgeprüfungen bleiben streng. Keine direkte Pending-/Regulärdatenmanipulation und kein Schlüsseltransfer. Die historische genaue Verzweigung des früheren Hint0 bleibt unbewiesen.
+
+`good` und `next` werden in den bestehenden Evaluation-Details vollständig escaped und mit sichtbaren Zeilenumbrüchen dargestellt. Der unabhängige FAA-Review fand zusätzlich einen **echten C2-Fehler** in der Fachansicht: Dort blieb der Zeilenumbruch trotz vollständigem textContent sichtbar nicht erhalten. Primärbeleg: [V3.2-Auftrag PR206#7131771174](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7131771174), geschütztes QA-JSON `/tmp/bq-sentinel-cg-final-20261124-qa/02-verbatim-result.json`. Details waren bereits korrekt; dieser FAA-Fachbefund bleibt historisch FAIL.
+
+Der einzige Produktionsdelta von FAA zu f810814 ist ein vorhandener `.pssource-text`-Span um den schon escaped ausgegebenen next-Text in `schoolSubjectHTML`. Datum/Titel, Gliederung, Leerzustände, Fokusableitung und gespeicherte Daten bleiben unverändert; keine globale Parser- oder CSS-Regeländerung. Der bestehende C1-Browserfall prüft DE/EN mit ergänztem synthetischem Punkt/LF/literalem HTML: exakte sichtbare Gleichheit, tatsächliche Sichtbarkeit, Pre-wrap, keine erzeugten HTMLtags und unveränderte vollständige Quellrecords/gespeicherte Ereignisse. Die bisherigen synthetischen Sätze und Detailvergleiche bleiben erhalten.
+
+### Tatsächliche Kandidaten und Sicherungskonfiguration
+
+Die letzte Vollsuite baute beide Kandidaten wirklich aus f810814; sie wurden nicht aus einem älteren Artefakt übernommen:
+
+| Variante | Tatsächlicher Bau und Pfad | Browser-/Datenbeleg |
+| --- | --- | --- |
+| Testinstanz `0.152.8-beta` | `testinstanzBauen({ziel})`, `/tmp/bq-cg-v3-test-kandidat`; vorhandene Suchläufe **18/18** | DE/EN, normales synthetisches Elternkonto und dasselbe regulär aufgenommene dynamische Kind; kanonische datierte Übungsdaten, vollständiger Quellen-/Ereignisvergleich, Sicherungshinweis **1**, beide Knöpfe und vollständige Elternhilfe/Links bestanden. |
+| Familienfassung `0.152.8-beta` | `familieBauen(TEST_PW,{ziel})` mit vorhandener synthetischer Fixture, `/tmp/bq-cg-v3-familie-kandidat`; vorhandene Suchläufe **19/19** | Wirkliche verschlüsselte Hülle geöffnet, normale synthetische Elternanmeldung; vorher fehlende Kindbereitschaft als Gegenbeleg, danach dieselbe Kindzuordnung und vollständige Daten. DE/EN, Sicherungshinweis **1**, beide Knöpfe, Originaltext und Hilfe/Links bestanden. Danach liefen alle ursprünglichen Export-/Kindlösch-/Kontolösch-/Speicherschutzschritte durch. |
+
+Die bestehenden synthetischen Fixture-Bauversionen `0.998.0-beta` und `0.999.0-beta` wurden weiterhin separat verwendet. Sie sind ausdrücklich kein Ersatz für die genannten Kandidaten. Die Kandidaten-Diagnosen der finalen Vollsuite nennen beide `0.152.8-beta` und Quellhash `f810814`.
+
+Beide geprüften Konfigurationen verwenden den vorhandenen Kontenmodus und regulär bereitgestellte synthetische Kinddaten. Im Familien-Sandboxpfad sind accountsOn/canBackup weiterhin ausdrücklich true; im wirklichen Browser wird die Berechtigung durch den tatsächlich angezeigten Sicherungstipp belegt. Der dynamisch aufgenommene Testinstanzfall wird nicht durch ein neu gesetztes Testflag umgangen. Die bestehende Zeit-/Neue-Übung-/Berechtigungsregel bleibt erhalten und ihre ursprünglichen Fälle bestehen. **Kontenloses G bleibt PR6**; dafür wird kein PASS behauptet.
+
+### Verbotenprüfung und Quellenreferenzen
+
+Die bestehende Liste umfasst unverändert 13 Einträge; Liste, Bauprüfer und Grenzwerte wurden nicht verändert. Die vollständige öffentliche Testfassung besteht ihren bestehenden Suchlauf; die öffentliche Familienhülle besteht ihren getrennten Suchlauf. Zusätzlich prüfen die tatsächlichen Browser beider Kandidaten in DE/EN den vollständig erzeugten Elterntext einschließlich gefalteter Hilfe und wirklicher href-Ziele: alle Fachansichten, Konzept, Unterstützung, Hilfeseite und Über-Big-Quest-Ansicht. **0 Listenfunde**. Erlaubte interne data-/class-/Legacykennungen werden dabei nicht mit benutzerlesbarem Text oder Linkzielen verwechselt.
+
+Der erste zusätzliche Blick in die entschlüsselte deutsche Familien-Konzepthilfe hatte vier gesperrte Einträge ergeben; dieser echte Vorfix-Befund wurde nicht als Hüllen-PASS umgedeutet. Nach ausdrücklicher Atlas-Disposition wurden nur eigene Hilfs-/Quellenbeschreibungen und zwei eigene sichtbare Bezeichnungen mit vorhandenen neutralen Begriffen bereinigt. Originale Evaluations-/Lehrkraftdaten wurden nicht ersetzt. Eine identifizierende URL wurde ohne erfundenes Ersatzziel als neutrale Textreferenz erhalten. Weiterhin **4 Schulreferenzen = 3 unveränderte reale Links + 1 Textreferenz**, außerdem unverändert **56 weitere Quellenlinks** und dieselbe Gruppierung.
+
+Die Rohquelle `index.html` enthält noch drei Listenbegriffe an acht Stellen in Kommentaren beziehungsweise Legacy-/internen Kennungen. Diese sind von der erzeugten Oberfläche zu unterscheiden. Die zusammengesetzte App enthält einen weiteren Modul-/Legacybezug; deshalb erfasst der vorhandene explizite Rohquellmarker genau einen zusätzlich vollständig entfernten Eintrag, nicht fälschlich zwei nur aus index.html entfernte. Der Detektor bleibt aktiv und seine negativen bestehenden Fälle erhalten. Keine gesperrten Werte oder Namen werden hier wiedergegeben.
+
+### Eigene V3.1/V3.2-Läufe und erhaltene Fehlerhistorie
+
+Die folgenden Vorläufe prüften aufeinanderfolgende Arbeitsstände; erst die benannten Freeze-Läufe sind vollständige Commit-/Treebelege. Ein früherer grüner Teilfall macht weder einen späteren FAIL noch einen abgebrochenen historischen Lauf grün. Sämtliche Einträge unten haben 0 SKIP/CANCEL; Ergebnisse werden nicht addiert.
+
+| Lauf | Tests | PASS / FAIL | Exit | Dauer ms | Primärlog / Exitdatei | Befund |
+| --- | ---: | ---: | ---: | ---: | --- | --- |
+| A1 | 4 | 3 / 1 | 1 | 9879.431653 | `/tmp/cg-v31-admission-wording.log` / `/tmp/cg-v31-admission-wording.exit` | Admission/Pending plus strenge DE/EN-Detailfälle; neuer unzutreffender Gesamtlogvergleich übersah den regulär hinzukommenden Schulimport. |
+| A2 | 1 | 1 / 0 | 0 | 8303.268195 | `/tmp/cg-v31-test-candidate.log` / `/tmp/cg-v31-test-candidate.exit` | Kanonische vorhandene Ereignisse plus exakt angeforderter vollständiger Import; realer Testkandidat DE/EN bestanden. |
+| A3 | 55 | 51 / 4 | 1 | 134514.259293 | `/tmp/cg-v31-wording-focus.log` / `/tmp/cg-v31-wording-focus.exit` | Erster eigener Textfokus: vier überholte Text-/Export-/Versionserwartungen. |
+| A4 | 137 | 135 / 2 | 1 | 651948.731287 | `/tmp/cg-v31-focus-final.log` / `/tmp/cg-v31-focus-final.exit` | Breiter Fokus: zwei weitere alte Selbstbezeichnungsassertionen; ursprüngliche Verhaltensfolgen bleiben erhalten. |
+| A5 | 2 | 2 / 0 | 0 | 21232.445915 | `/tmp/cg-v31-candidates-focus.log` / `/tmp/cg-v31-candidates-focus.exit` | Beide tatsächlichen Kandidaten; damalige sichtbare Schul-/Sicherungsflächen bestanden, noch kein umfassender Hilfenachweis. |
+| A6 | 44 | 43 / 1 | 1 | 46710.21061 | `/tmp/cg-v31-final-help-focus.log` / `/tmp/cg-v31-final-help-focus.exit` | Ein neu zu breiter Kürzelscan beanstandete auch im Kontext erklärte Kürzel; sachgerecht auf benannte UI-Stufen präzisiert. |
+| A7 | 2 | 1 / 1 | 1 | 45161.72184 | `/tmp/cg-v31-final-candidates.log` / `/tmp/cg-v31-final-candidates.exit` | Testkandidat bestanden; Familien-Fixture stoppte vor neuem Kandidatenbau an der erweiterten Fach-/Hilfenprüfung. Weitere eigene Bezeichnungen bereinigt und Text/Linkziele von internen Kennungen getrennt. |
+| A8 | 4 | 4 / 0 | 0 | 31871.576085 | `/tmp/cg-v31-help-candidates-green.log` / `/tmp/cg-v31-help-candidates-green.exit` | Relevante DE/EN-Hilfe, Textgrenze und beide wirklichen Kandidaten grün. |
+| Voll1 | 1272 | 1265 / 7 | 1 | 937584.128396 | `/tmp/cg-v31-full-c2b8431.log` / `/tmp/cg-v31-full-c2b8431.exit` | Erste vollständige Suite auf c2b8431/f2bfd5c7: bleibt FAIL; sieben konkret lokalisierte Erwartungsstellen. |
+| A9 | 7 | 6 / 1 | 1 | 13554.039326 | `/tmp/cg-v31-full-failures-focus.log` / `/tmp/cg-v31-full-failures-focus.exit` | Sechs Fälle einschließlich vollständiger Restore-/Rechtefolgen und striktem Modulvergleich grün; Rohquellmarker noch fälschlich allein an index.html ausgerichtet. |
+| A10 | 1 | 1 / 0 | 0 | 349.509393 | `/tmp/cg-v31-kern-marker-green.log` / `/tmp/cg-v31-kern-marker-green.exit` | Expliziter Marker auf tatsächlich zusammengesetzte App korrigiert; ursprünglicher Fall grün. |
+| C2a | 3 | 2 / 1 | 1 | 8154.237622 | `/tmp/cg-v32-c1-focus.log` / `/tmp/cg-v32-c1-focus.exit` | Neue C2-Fachregression bereits grün; älterer T13-Fall durch ersetzten statt ergänzten synthetischen Basissatz rot. |
+| C2b | 3 | 3 / 0 | 0 | 7500.381905 | `/tmp/cg-v32-c1-green.log` / `/tmp/cg-v32-c1-green.exit` | Ursprüngliche synthetische Sätze vollständig erhalten und nur ergänzt; gesamte C1-Datei grün. |
+| Voll2 | 1272 | 1272 / 0 | 0 | 924021.234602 | `/tmp/cg-v32-full-f810814.log` / `/tmp/cg-v32-full-f810814.exit` | Finale vollständige Suite auf f810814/1f777dbd: PASS; währenddessen keinerlei Edits. |
+
+Die sieben Fehler aus Voll1 betrafen die mehrzeilige Kapitelüberschrift, den auf die ganze gefaltete Kinder-Infoseite angewandten Wortscan, den expliziten Rohquellmarker, den historischen sterne-Ganzdateivergleich, den datierten Schul-Ausgangspunkt, den Sicherungstext und den Rechte-Helfer für den Quellenchip. Die Korrektur ändert ausschließlich sieben Testdateien: tatsächliche geöffnete Kinderhilfe ohne Bewertungsdaten, alle vier Originalstufen mit Kürzel, exakte Quelldatumsanzeige, vollständiger neuer Sicherungstext und dieselbe strenge Rechtematrix. Im historischen Modulvergleich sind ausschließlich die zwei konkret erlaubten STAR_TEXT-Literale abgebildet; der gesamte übrige Modultext und alle folgenden Funktions-/Generatorvergleiche bleiben exakt. Keine pauschale TEXT-/Dateiausnahme, keine entfernten Fälle oder gelockerten Schwellen/Timeouts.
+
+Eine zusätzliche reine Lesesonde endete einmal an einem JavaScript-Syntaxfehler und wurde lesend korrigiert; kein Test oder Build daraus. Eine spätere Lesung eines älteren Familienartefakts wurde nicht als aktueller Produktnachweis gewertet. Die früheren V1-/V2-Abbrüche, die drei V3-Aufrufe und die tatsächliche Pause stehen unverändert oben. Insbesondere bleibt der historische Fokuslauf ohne ausgewählten Dateifall abgebrochen.
+
+Wesentliche tatsächlich ausgeführte Befehle (jeweils mit `CHROMIUM_PATH=/usr/bin/chromium`):
+
+```bash
+# A1
+node --test --test-name-pattern='Browser: die gebaute Testinstanz|2d Pending-Daten|T1–T3 table|T4 English' tests/testinstanz.test.mjs tests/konto-anmeldung.test.mjs tests/schulische-einstufungen.test.mjs
+# A2
+node --test --test-name-pattern='Browser: die gebaute Testinstanz' tests/testinstanz.test.mjs
+# A3
+node --test --test-concurrency=7 tests/elternbereich-c1.test.mjs tests/elternbereich-f3.test.mjs tests/elternbereich-b3.test.mjs tests/about.test.mjs tests/elternbereich-titel.test.mjs tests/module/kinddaten.test.mjs tests/version.test.mjs
+# A4
+node --test --test-concurrency=7 tests/elternansicht.test.mjs tests/eltern.test.mjs tests/elternbereich-a1.test.mjs tests/elternbereich-b1.test.mjs tests/elternbereich-b3.test.mjs tests/elternbereich-b4.test.mjs tests/elternbereich-c1.test.mjs tests/elternbereich-d1.test.mjs tests/elternbereich-d4.test.mjs tests/elternbereich-e1.test.mjs tests/elternbereich-f2.test.mjs tests/elternbereich-f3.test.mjs tests/elternbereich-titel.test.mjs tests/schule.test.mjs tests/schulische-einstufungen.test.mjs tests/evaluation-eltern-browser.test.mjs tests/evaluation-upgrade-browser.test.mjs tests/auftrag2-bestaetigt.test.mjs tests/module/kinddaten.test.mjs tests/about.test.mjs tests/version.test.mjs tests/schriften.test.mjs tests/hilfe-rollen.test.mjs
+# A5 und A7
+node --test --test-name-pattern='Sandbox: gebaute Familienfassung|Browser: die gebaute Testinstanz' tests/familienfassung.test.mjs tests/testinstanz.test.mjs
+# A6
+node --test --test-concurrency=7 tests/elternansicht.test.mjs tests/elternbereich-d4.test.mjs tests/elternbereich-f3.test.mjs tests/elternbereich-f4.test.mjs tests/neutral.test.mjs tests/hilfe.test.mjs tests/module/anmeldung.test.mjs
+# A8
+node --test --test-concurrency=7 --test-name-pattern='About \(DE/EN\)|T6/T7|Sandbox: gebaute Familienfassung|Browser: die gebaute Testinstanz' tests/neutral.test.mjs tests/elternbereich-f3.test.mjs tests/familienfassung.test.mjs tests/testinstanz.test.mjs
+# A9
+node --test --test-concurrency=7 --test-name-pattern='grown-ups header:|child: ❓ Help|jedes verbotene Wort|CI repairs preserve|school M/E applies|Sicherung: nur Eltern|Rechtematrix Stufe 1' tests/anmeldung.test.mjs tests/info.test.mjs tests/kern.test.mjs tests/module/ep05-ci-scope.test.mjs tests/module/wissen-ohne-tage.test.mjs tests/stufe1-p1.test.mjs tests/stufe1-p4.test.mjs
+# A10
+node --test --test-name-pattern='jedes verbotene Wort' tests/kern.test.mjs
+# C2a/C2b
+node --test tests/elternbereich-c1.test.mjs
+# Voll1 und Voll2: jeweils vollständig, an den getrennt angegebenen Freezes
+npm test
+```
+
+### Freeze-/Reviewabgrenzung und verbleibender Owner
+
+- `c2b84313f3f6965ed80a96b541d2a8d30da2c756`, Tree `f2bfd5c70a4e8b399137051a492af513658d5272`: erster sauberer Code/Testfreeze; vollständiger Lauf 1272 Tests, 1265 PASS, 7 FAIL bleibt FAIL.
+- `faaaba2eb87311118fdbb0f3b526c56ac76e969a`, Tree `1ddf2a27959d4a4b907d28eb208c1f306a103841`: danach ausschließlich sieben Testdateien, 15 Einfügungen/7 Löschungen. Produktionsdelta zu c2 ausdrücklich leer. Die unabhängige Runtime bestätigte 53 gezielte Node-Tests; ihr separater echter C2-Fachbefund blieb FAIL.
+- `f8108146fcefd9417418b82997e3e51c0f6bd545`, Tree `1f777dbde4c5c8f445c36b58fe27393f90e68d3f`: zu FAA nur eine HTML-Ausgabezeile plus bestehender C1-Test, 8 Einfügungen/2 Löschungen. Der unabhängige Delta-Retest besteht laut Root-Go DE/EN × 320/1000 px für sichtbaren Fach-/Detailwortlaut, Escaping und Datenintegrität; 11 neue vorhandene Rendering-/Kandidatentests wurden tatsächlich ausgeführt. 42 identische FAA-Fälle wurden gezielt übertragen, nicht als neu ausgeführt behauptet. Die FAA-C2-FAIL-Artefakte bleiben erhalten. Erst danach startete die oben dokumentierte erfolgreiche finale Vollsuite.
+
+Als **Fremdevidenzsicht** hat Sentinel danach Primärlog, Exitdatei, Hash und unveränderten Freeze unabhängig bestätigt: `/tmp/bq-sentinel-cg-delta-v3-20261124-qa/QA_ADDENDUM_V3_FULLSUITE.md`. Das ist eine Rücklesung dieses tatsächlichen Entwicklerlaufs, keine behauptete zweite Sentinel-Vollsuite. Der R3-Vollsuitenanteil ist damit passed; ausschließlich die normale PR-CI bleibt blocked.
+
+Dieser Nachtrag entsteht ausschließlich nach der letzten Suite und wird als **reiner Berichtcommit** gesichert. Die getestete Code-/Testidentität bleibt f810814; der neue Berichtkopf und sein Tree werden separat in der Rückgabe genannt. Der abschließende Delta enthält nur diesen Dokumentpfad. Nach dem Bericht erfolgte kein erneuter Bau oder Testlauf.
+
+**Ausgabedisziplin als Einschränkung:** Frühe Quellleseausgaben waren entgegen dem Auftrag unzureichend geschwärzt: betroffen waren synthetische Zugangskonstanten sowie bereits vorhandene Verbotenwerte. Atlas und Peter wurden darüber ohne Werte/Namen informiert. Dieser Bericht wiederholt keine solchen Inhalte. Die Tests verwendeten ausschließlich synthetische App-/Familienkonten und lokale Nachbauten; keine realen App-/Familienzugänge, Schlüssel oder Lernstände.
+
+**Offen bleibt die normale PR-CI und damit die globale R3-/Integrationsannahme.** Lokaler Softwareumfang abgeschlossen; kein PR-/Merge-/Geräte- oder Veröffentlichungs-PASS daraus abgeleitet. Kontenloses G bleibt PR6, übriger Backlog unverändert. Atlas übernimmt finalen QA-Bericht, PR/CI und Peters konkrete Mergefrage. Kein eigener Push, PR, Merge nach main, Release oder Deployment. Am lokalen Ergebnis endet die Bearbeitung.
