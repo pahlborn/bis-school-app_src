@@ -8,7 +8,7 @@ Grundlagen: `docs/konzept/textleitlinie.md` (vor allem Regel 4: Originalbegriffe
 
 **A1 · Areas of Development aus übernommenen Evaluations speisen den automatischen Fokus**
 - Heute: `classTopics` (Zeile ~2386) filtert von Eltern übernommene Evaluations aus (`!t.manual`), und das Formular „Evaluation übernehmen“ schreibt kein `focusNext`. Ohne vorbereitete Daten greift deshalb die feste Liste `FOCUS` (8 Quests).
-- Neu: In der Vorschau ordnet die App jedem Punkt unter „Areas of Development“ eine Quest zu (Vorschlag; Eltern bestätigen oder ändern; „keine passende Quest“ ist erlaubt). Die bestätigte Zuordnung wirkt wie `focusNext` (Evaluations der letzten 8 Wochen, sonst alle).
+- Neu: In der Vorschau ordnet Big Quest jedem Punkt unter „Areas of Development“ eine Quest zu (Vorschlag; Eltern bestätigen oder ändern; „keine passende Quest“ ist erlaubt). Die bestätigte Zuordnung wirkt wie `focusNext` (Evaluations der letzten 8 Wochen, sonst alle).
 - Korrigieren und Zurückziehen einer Evaluation ändern den Fokus entsprechend.
 - Abnahme: Tests für übernehmen → Quest im automatischen Fokus, zurückziehen → Quest wieder draußen, ohne Areas of Development → bisheriges Verhalten.
 
@@ -19,8 +19,8 @@ Grundlagen: `docs/konzept/textleitlinie.md` (vor allem Regel 4: Originalbegriffe
 - Zurück auf Automatisch ist jederzeit möglich.
 
 **A3 · Texte zur Wirkung** (Textleitlinie beachten)
-- Automatisch: „Die App wählt aus den Areas of Development, den Learning goals und dem Übungsstand und passt den Fokus nach neuen Evaluations selbst an.“ (gilt erst mit A1)
-- Manuell: „Sie wählen die Quests selbst. Die App passt dann nichts mehr an. Mit ‚Automatisch‘ übernimmt sie wieder.“ Prüfen, dass der Text auch die entfallenden Learning-goal-Aufgaben in Practise Today abdeckt (`gapLaneQuests` liefert bei Manuell nichts).
+- Automatisch: „Big Quest wählt aus den Areas of Development, den Learning goals und dem Übungsstand und passt den Fokus nach neuen Evaluations selbst an.“ (gilt erst mit A1)
+- Manuell: „Sie wählen die Quests selbst. Big Quest passt dann nichts mehr an. Mit ‚Automatisch‘ übernimmt Big Quest wieder.“ Prüfen, dass der Text auch die entfallenden Learning-goal-Aufgaben in Practise Today abdeckt (`gapLaneQuests` liefert bei Manuell nichts).
 - Hilfetexte, die auf einen Bereich „🎯 Fokus“ verweisen, den es nicht gibt (DE und EN), an den neuen Ort anpassen.
 
 ## B · Evaluations-Seite
@@ -30,19 +30,19 @@ Ersetzt den Abschnitt „Schulische Einstufungen“. Erreichbar über „Verwalt
 - PYP-Themen ausschreiben, z. B. „How the world works (HTWW)“, „Where we are in place and time (WWA)“.
 - Fach aus den Standards ableiten und in der Vorschau bestätigen lassen.
 - Namen von Standardgruppen ohne vorangestelltes Schulkürzel anzeigen (nur das Fach).
-- Zähler je Stufe statt einer Gesamtstufe; Zeile „Wirkt in der App“ je Evaluation, einschließlich „wird in Big Quest nicht geübt“.
+- Zähler je Stufe statt einer Gesamtstufe; Zeile „Wirkt in Big Quest“ je Evaluation, einschließlich „wird in Big Quest nicht geübt“.
 - Filter bleiben (Fach, Zeitraum, „Nur mit C oder RS“).
 - Der Katalog „Welche Quest übt welchen Standard?“ wandert in die Hilfe.
 
-## C · Begriffe in der App
+## C · Begriffe in Big Quest
 
-Alle sichtbaren Texte (DE und EN) nach Textleitlinie Regel 4 umstellen, u. a.: „Lücke“, „Lücken laut Schule“, „Wird sicherer“, „Braucht Unterstützung“, „Next steps“, „Schulische Einstufungen“. Der Hilfetext „Neue Bewertungen der Schule werden bei Gelegenheit übernommen“ ist sachlich falsch (Eltern übernehmen selbst) und wird ersetzt. Interne Namen im Code dürfen bleiben.
+Alle sichtbaren Texte (DE und EN) nach Textleitlinie Regel 4 umstellen, u. a.: „Lücke“, „Lücken laut Schule“, „Wird sicherer“, „Braucht Unterstützung“, „Next steps“, „Schulische Einstufungen“. Der Hilfetext „Neue Bewertungen der Schule werden bei Gelegenheit übernommen“ ist sachlich falsch (Eltern übernehmen selbst) und wird ersetzt. Big Quest spricht von sich als „Big Quest“, nicht als „die App“ (z. B. „Übungsstand in Big Quest“, „Big Quest übt …“, „Über Big Quest“). Interne Namen im Code dürfen bleiben.
 
 ## D · „Verwalten“ statt „Einstellungen“
 
 - Knopf in der Kopfzeile und Seitentitel heißen „Verwalten“. Die Seite hat zwei Teile:
   1. **[Kind]** („gilt nur für dieses Kind“): Evaluations (Knopf „Evaluation übernehmen“, die zwei neuesten Einträge mit Zählern je Stufe, „Alle Evaluations ›“ zur Evaluations-Seite), 🎯 Fokus für Practise Today (A2), Lernen & Spaß, Profil und Klasse, Freigaben.
-  2. **Familie & App** („gilt für alle Kinder und Geräte“): Familie & Geräte, Sicherung, Über die App.
+  2. **Familie & Big Quest** („gilt für alle Kinder und Geräte“): Familie & Geräte, Sicherung, Über Big Quest.
 - Die Evaluations-Seite ist eine Unterseite von „Verwalten“ (Zurück-Knopf „‹ Verwalten“).
 - Die Übersicht zeigt keine Zeile und keinen Abschnitt zu Evaluations mehr; dort steht nur der Lernerfolg.
 - Hilfetexte mit Wegangaben („Einstellungen › …“) auf „Verwalten › …“ umstellen.
@@ -71,7 +71,7 @@ Alle sichtbaren Texte (DE und EN) nach Textleitlinie Regel 4 umstellen, u. a.: �
 - Je Fach eine Zeile: Name · Anzahl Quests, je Quest ein Balken in der Farbe des Quest-Stands, Pfeil zur Fachansicht. Der wiederholende Text („1 Extending (E) · 1 Meeting expectations (M) · …“) entfällt.
 - Kein Kasten mit Learning goals oder Areas of Development in der Übersicht; diese stehen in der Fachansicht.
 - Balken, deren Farbe noch aus der Evaluation kommt (`assessQuest(...).schoolBase`: weniger als `KEY.minAnswers` eigene Antworten und ein Schulstand vorhanden), werden **umrandet** gezeigt (weiße Fläche, Rand in der Stufenfarbe); alle anderen gefüllt.
-- Legende am Ende der Tabelle: Überschrift „Übungsstand in der App“, die fünf Farben (Extending (E), Meeting expectations (M), Consolidating (C), Requires support (RS), noch nicht geübt), dazu „umrandet = Ausgangspunkt aus der schulischen Evaluation, bis [Kind] in dieser Quest mindestens sechs Fragen beantwortet hat“ und „Learning goals und Areas of Development aus den Evaluations stehen in der Fachansicht.“
+- Legende am Ende der Tabelle: Überschrift „Übungsstand in Big Quest“, die fünf Farben (Extending (E), Meeting expectations (M), Consolidating (C), Requires support (RS), noch nicht geübt), dazu „umrandet = Ausgangspunkt aus der schulischen Evaluation, bis [Kind] in dieser Quest mindestens sechs Fragen beantwortet hat“ und „Learning goals und Areas of Development aus den Evaluations stehen in der Fachansicht.“
 - Fachansicht: Zusatz „Stand laut Schule“ (DE) bzw. „Starting point from school“ (EN) wird zu „Ausgangspunkt: Evaluation [Datum]“ bzw. „Starting point: evaluation [date]“.
 
 ## Backlog (nicht Teil dieses Auftrags)
