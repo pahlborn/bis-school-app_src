@@ -34,7 +34,7 @@ test('last20 year-level and last12 challenge windows remain exact',()=>{
 test('school M/E applies through five observations, then six wrong own answers override it immediately',()=>{
  for(const rating of['M','E']){const S=school(rating);for(const n of[0,5,6]){
   set(S,rows(n,2,0));const want=n<6?rating:'RS',a=S.holen('assessQuest')('numbers');assert.equal(S.holen('standOf')('numbers'),want);assert.equal(a.level,want.toLowerCase());assert.equal(a.schoolBase,n<6);
-  if(n<6)for(const lang of['de','en']){S.holen('store').set(S.holen('langKey')(),lang);assert.match(S.holen('basisHTML')(a),lang==='de'?/Ausgangspunkt laut Schule/:/Starting point from school/);}
+  if(n<6)for(const lang of['de','en']){S.holen('store').set(S.holen('langKey')(),lang);assert.match(S.holen('basisHTML')(a),lang==='de'?/Ausgangspunkt: Evaluation 18\.11\.2026/:/Starting point: Evaluation Nov 18, 2026/);}
  }}
 });
 test('real assisted answers remain support and cannot manufacture M/E',()=>{

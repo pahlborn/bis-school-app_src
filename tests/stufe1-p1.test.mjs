@@ -165,7 +165,7 @@ test('Sicherung: nur Eltern des Kindes; Datei vollstaendig ohne Passwoerter; Zur
   await kindMitDaten(a.page);
   const vorher = await kinderSchluessel(a.page);
   await elternbereich(a.page, 'papa', 'langes-passwort');
-  assert.match(await a.page.textContent('.pbackup-note'), /Noch nie gesichert/);   // B4: a note only while there is something to back up
+  assert.match(await a.page.textContent('.pbackup-note'), /^Tipp: Sichern Sie .+s Lernstand – so bleiben alle Erfolge erhalten\.\s*Jetzt sichern$/);   // B4: a note only while there is something to back up
   const [dl] = await Promise.all([a.page.waitForEvent('download'), a.page.locator('.pbackup-note [data-backup]').click()]);
   const datei = path.join(await fs.mkdtemp(path.join((await import('node:os')).tmpdir(), 'bq-sich-')), dl.suggestedFilename());
   await dl.saveAs(datei);

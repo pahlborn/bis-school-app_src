@@ -2,7 +2,14 @@ import {test} from 'node:test';import assert from 'node:assert/strict';import fs
 import {appSandbox} from '../app-sandbox.mjs';import {committedApp} from './ep01-rest-fixtures.mjs';import {MODUL_JSON} from '../../werkzeug/module.mjs';
 const BASE='ef8d2b0b02c22f6b431f773f3cd68161d9d44c81';
 test('CI repairs preserve tree/star/knowledge modules and exact focus/generator behavior outside the approved causes',()=>{
- for(const name of ['wissensbaum','sterne','titel','wissen'])assert.equal(fs.readFileSync(`src/module/${name}.mjs`,'utf8'),execFileSync('git',['show',`${BASE}:src/module/${name}.mjs`],{encoding:'utf8'}),name+' unchanged from independent QA/COPY02 correlation');
+ for(const name of ['wissensbaum','sterne','titel','wissen']){
+  let expected=execFileSync('git',['show',`${BASE}:src/module/${name}.mjs`],{encoding:'utf8'});
+  if(name==='sterne')for(const [before,after]of[
+   ["today:'⭐ for discoveries, gaps, due reviews and challenges; normal tasks in secure quests earn no stars.'","today:'⭐ for discoveries, learning goals, due reviews and challenges; normal tasks in secure quests earn no stars.'"],
+   ["today:'⭐ für Neuland, Lücken, fällige Wiederholungen und Herausforderungen; normale Aufgaben sicherer Quests bringen keine Sterne.'","today:'⭐ für Neuland, Learning goals, fällige Wiederholungen und Herausforderungen; normale Aufgaben sicherer Quests bringen keine Sterne.'"]
+  ]){assert.ok(expected.includes(before),'exact authorized STAR_TEXT baseline literal');expected=expected.replace(before,after);}
+  assert.equal(fs.readFileSync(`src/module/${name}.mjs`,'utf8'),expected,name+' exact module text outside the two authorized C wording literals');
+ }
  const html=committedApp(BASE).replace(/\/\*BQ_JSON:(DAILY_WORD_DATA|DAILY_EXPLAIN_DATA)\*\/null/g,(_,name)=>JSON.stringify(JSON.parse(execFileSync('git',['show',`${BASE}:${MODUL_JSON[name]}`],{encoding:'utf8'}))).replace(/</g,'\\u003c'));
  const old=appSandbox({seed:71,anpassen:()=>html}),current=appSandbox({seed:71});
  assert.equal(String(current.holen('focusTopics')).replace(',schoolLogVersion()',''),String(old.holen('focusTopics')));
