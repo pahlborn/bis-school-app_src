@@ -40,3 +40,20 @@ Zweimal musste die Codelektüre wegen ungeeigneter bereitgestellter Lesedaten an
 Die zwei ausschließlich als Lesehilfe von Atlas angelegten Dateien `.quest-j-input-v2.json` und `.quest-j-input-extra-v2.json` wurden vor dem WIP-Commit gelöscht und werden nicht committed. Abhängigkeiten wurden ohne Lockdateiänderung mit `npm install --no-package-lock --cache /tmp/quest-j-v2-npm-cache` installiert (Exit 0; `/tmp/quest-j-v2-npm-install.log`). Ein erster Standardcacheversuch scheiterte lokal mit ENOENT beim mkdir; keine Infrastrukturänderung.
 
 Nur lokale WIP-Sicherung. Kein Push, kein PR, kein Merge, kein Deployment. Die Arbeit bleibt angehalten; eine nächste Freigabe muss den konkreten zulässigen Entry-Fixtureweg benennen.
+
+
+## Begrenzte Fortsetzung nach unabhängig geprüftem Fixturevertrag
+
+Atlas gab nach einer frischen unabhängigen Zweitsicht genau einen weiteren gezielten Versuch frei. Der WIP-Commit `30a17e8f964c83c6e082d2bd1c7af6b59a3ac711` bleibt historisch unvollständig. Es wurden keine alten Lesedateien und keine weiteren Produkt-/Kontoinhalte geöffnet.
+
+Ausschließlich der eigene Test wurde vorbereitet: Für die Testfassung ergänzt der Hook das vorhandene `APP_ACCOUNTS.users` um einen neuen generischen Studentdatensatz mit zur Laufzeit erzeugter ID und setzt die vorhandene `sessionOf`-/store-Sitzung. Bestehende Konten werden weder geändert noch ausgegeben. Bei der regulär kontenlosen Familienfassung bleibt `APP_ACCOUNTS === null` erhalten; dort wird keine Sitzung erfunden. Der gebaute Browserpfad wartet zunächst auf den Hook, setzt seine ausdrücklich synthetische Vorbedingung und benutzt anschließend echtes `renderHome`/`openSubject`. Der bisherige DOM-hidden-Eingriff wurde aus der Touchprüfung entfernt; auch die Livefälle verwenden jetzt den regulären Fachlistenpfad. Keine Änderung an Produkt-, Show-, Auth-, Geräte- oder Syncfunktionen und keine normale Anmeldebehauptung.
+
+Der einzige freigegebene Versuch:
+
+`CHROMIUM_PATH=/usr/bin/chromium BQ_QUEST_J_SCREENSHOTS=1 node --test --test-reporter=tap tests/quest-kennzeichen.test.mjs`
+
+Beleg: `/tmp/quest-j-v2-session-targeted.log`, Modus 0600. Ergebnis: Exit 1; 7 Tests, 6 PASS, 1 FAIL, 0 übersprungen. Die sechs Livefälle bestehen auf dem regulären Fachlistenpfad. Der gebaute Fall scheitert mit Assertion an der manuellen Fokuszuordnung nach dem Learning-goal-Fall (eigener Test, Zeile 153); kein Entry-Timeout, TypeError oder ReferenceError. Die vorgelagerte Prüfung der synthetisch aufgelösten Test-Kindersitzung und die erste Learning-goal-Zuordnungsassertion wurden erreicht und bestanden. Die danach vorgesehenen Sichtbarkeits-, Sitzungsbestands-, weiteren Zuordnungs- und Familien-UI-Prüfungen wurden noch nicht abgeschlossen. Aus den früheren Assertions wird deshalb keine bereits abgenommene sichtbare Quest-Auswahl beider Fassungen abgeleitet.
+
+Keine Screenshots entstanden. Keine Vollsuite oder zusätzliche Regressionen nach diesem Versuch. Die früheren 17/17 Regressionen bleiben als historischer Beleg bestehen. Keine Korrektur oder weitere Variante nach dem neuen Fehler; sofortige Stopprückgabe an Atlas. Für die unabhängige Bewertung bleibt insbesondere die gespeicherte manuelle Fokusvorbedingung gegenüber dem nachfolgenden tatsächlichen Kartenresultat zu prüfen. Eine solche Bewertung oder weitere Ausführung wurde hier nicht vorgenommen.
+
+Dieser zusätzliche Teilstand wird ausschließlich lokal als weiterer WIP gesichert. Beide früheren temporären Lesedateien bleiben gelöscht. Kein Push, PR, Merge oder Deployment.

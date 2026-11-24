@@ -1,4 +1,5 @@
-// J: card presentation uses existing selection and history; fixtures contain no accounts.
+// J: generic selection fixtures; built test app gets one synthetic signed-in child.
+// Normal account, device-connection and sync flows are outside this test.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
@@ -12,13 +13,32 @@ import { appServer, browserStarten, appOeffnen } from './app-hilfen.mjs';
 import { testbauLeser } from './testbau-leser.mjs';
 
 let browser, server;
-const hook = html => html.replace(/\}\)\(\);\s*<\/script>/, `window.__questJ={
+const hook = html => html.replace(/\}\)\(\);\s*<\/script>/, `let questJSession=null;
+window.__questJ={
   store, focusTopics, activeGapQuests, SUBJECTS, questsIn, WORLDS, openSubject, renderHome,
+  prepareChild:()=>{
+    const configured=APP_ACCOUNTS!==null;
+    if(configured){
+      if(!Array.isArray(APP_ACCOUNTS.users))throw new Error('J fixture needs the existing users array');
+      const child={id:crypto.randomUUID(),user:'child',role:'student'};
+      APP_ACCOUNTS.users.push(child);
+      questJSession=sessionOf(child);store.set('session',questJSession);
+    }
+    store.set('name','Child');renderHome();
+    return {configured,resolved:configured?studentSession()?.id===questJSession.id:false};
+  },
+  sessionOkay:()=>questJSession?studentSession()?.id===questJSession.id&&store.get('session',null)?.id===questJSession.id:APP_ACCOUNTS===null,
   render:(item, active)=>{
     const original=activeGap;
     try { if(active!==undefined) activeGap=()=>active.length?{quests:active}:null;
       return questCard(item,'maths').outerHTML;
     } finally {activeGap=original;}
+  },
+  select:(item,active)=>{
+    const original=activeGap,subject=SUBJECTS.find(s=>s.items.includes(item));
+    try {if(active!==undefined)activeGap=()=>active.length?{quests:active}:null;
+      openSubject(subject.key);
+    }finally{activeGap=original;}
   }
 };})();</script>`);
 before(async()=>{ server=await appServer({anpassen:hook}); browser=await browserStarten(); });
@@ -29,8 +49,9 @@ async function render(page,{quest='numbers',mode='manual',focus=[],active=[],his
    const G=window.__questJ;
    for(const [k,v] of Object.entries({focusMode:mode,focusManual:focus,kidLang:lang,unlocked,ev:{},attempts:[],tried:[],due:[],...history}))G.store.set(k,v);
    G.store.set('best_'+quest,history.best??null);
-   const root=document.querySelector('#subjectBody');root.innerHTML=G.render(quest,active);
-   return {badge:root.querySelector('.quest-marker')?.textContent||'',label:root.querySelector('.quest-marker')?.getAttribute('aria-label')||'',count:root.querySelectorAll('.quest-marker').length};
+   G.select(quest,active);
+   const root=document.querySelector('[data-item="'+quest+'"]');
+   return {badge:root?.querySelector('.quest-marker')?.textContent||'',label:root?.querySelector('.quest-marker')?.getAttribute('aria-label')||'',count:root?.querySelectorAll('.quest-marker').length||0};
  },{quest,mode,focus,active,history,lang,unlocked});
 }
 
@@ -74,8 +95,8 @@ test('J English child labels in DE/EN fit touch cards without hover',async()=>{
      [{mode:'auto',active:['numbers']},'🧩 Learning goal','Learning goal'],
      [{focus:['numbers']},'🎯 Focus','Focus'],[{},'🌱 New','New']]){
      assert.deepEqual(await render(page,{...options,lang}),{badge,label,count:1});
-     await page.locator('#subjectBody').evaluate(e=>{e.closest('section').hidden=false;});
-     const marker=page.locator('.quest-marker');assert.ok(await marker.isVisible());
+     assert.ok(await page.locator('#subjectBody').isVisible());
+     const marker=page.locator('[data-item="numbers"] .quest-marker');assert.ok(await marker.isVisible());
      const box=await marker.boundingBox();assert.ok(box.x>=0&&box.x+box.width<=320);
      assert.equal(await marker.getAttribute('title'),null);
    }
@@ -119,13 +140,37 @@ test('J both real builds retain English labels, precedence and touch fit in DE/E
      // Existing reader translates fixture storage for the built event-log app.
      const builtServer=await appServer({anpassen:()=>testbauLeser(hook(html))});
      try{
-       const{ctx,page,fehler}=await appOeffnen(browser,builtServer.url,{hasTouch:true,viewport:{width:320,height:720}});
+       const ctx=await browser.newContext({hasTouch:true,viewport:{width:320,height:720}});
        try{
+         await ctx.route('**/*',r=>r.request().url().startsWith(builtServer.url)?r.continue():r.abort());
+         await ctx.addInitScript(()=>{window.AudioContext=undefined;window.webkitAudioContext=undefined;});
+         const page=await ctx.newPage(),fehler=[];page.on('pageerror',e=>fehler.push(e.message));
+         await page.goto(builtServer.url,{waitUntil:'domcontentloaded'});
+         await page.waitForFunction(()=>!!window.__questJ);
+         assert.deepEqual(await page.evaluate(()=>window.__questJ.prepareChild()),kind==='test'?{configured:true,resolved:true}:{configured:false,resolved:false},kind);
          for(const lang of ['de','en']){
            assert.deepEqual(await render(page,{lang,mode:'auto',active:['numbers']}),{badge:'🧩 Learning goal',label:'Learning goal',count:1},kind);
            assert.deepEqual(await render(page,{lang,focus:['numbers'],active:['numbers']}),{badge:'🎯 Focus',label:'Focus',count:1},kind);
            assert.deepEqual(await render(page,{lang}),{badge:'🌱 New',label:'New',count:1},kind);
-           assert.equal((await render(page,{lang,history:{tried:['numbers']}})).count,0,kind);
+           const marker=page.locator('[data-item="numbers"] .quest-marker');
+           assert.ok(await marker.isVisible(),kind);
+           const box=await marker.boundingBox();assert.ok(box.x>=0&&box.x+box.width<=320,kind);
+           assert.equal(await marker.getAttribute('title'),null,kind);
+           assert.ok(await page.locator('#subjectBody').isVisible(),kind);
+           assert.equal(await page.evaluate(()=>[...document.querySelectorAll('#subjectBody .world')].every(e=>e.querySelectorAll('.quest-marker').length<=1)),true,kind);
+           assert.equal((await render(page,{lang,quest:'times'})).count,0,kind);
+           assert.equal((await render(page,{lang,quest:'times',unlocked:['times']})).badge,'🌱 New',kind);
+           for(const history of [{ev:{numbers:[['2026-11-24',2,0]]}},{attempts:[{skill:'numbers'}]},{tried:['numbers']},{best:0},{due:[{q:{world:'numbers'}}]}]){
+             assert.equal((await render(page,{lang,history})).count,0,kind);
+           }
+           assert.equal(await page.evaluate(()=>window.__questJ.sessionOkay()),true,kind);
+         }
+         if(process.env.BQ_QUEST_J_SCREENSHOTS==='1'){
+           await page.setViewportSize({width:390,height:844});
+           await render(page,{focus:['numbers']});
+           assert.equal(await page.locator('#profileName').textContent(),'Child');
+           const imageDir=path.resolve('docs/pruefung/images');await fs.mkdir(imageDir,{recursive:true});
+           await page.screenshot({path:path.join(imageDir,'2026-11-24-quest-kennzeichen-'+kind+'.png'),fullPage:true});
          }
          assert.deepEqual(fehler,[],kind);
        }finally{await ctx.close();}
