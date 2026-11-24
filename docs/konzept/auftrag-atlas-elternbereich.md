@@ -76,6 +76,8 @@ Alle sichtbaren Texte (DE und EN) nach Textleitlinie Regel 4 umstellen, u. a.: �
 
 ## Backlog (nicht Teil dieses Auftrags)
 
+- **Aufgaben-Niveaus klären und Lücken schließen:** Die Stufe einer Quest hängt davon ab, welche Aufgaben als Grundlage (Niveau 1), Klasse 3 (Niveau 2) und Challenge (Niveau 3) eingeordnet sind. Das Niveau setzen die Aufgaben selbst; ohne Angabe gilt eine Aufgabe als Niveau 2 (`levelOf`). Zuerst zählen und berichten (wie am 03.11. in `docs/konzept/dev-auftraege-2026-11-03.md`, z. B. 25 erzeugte Runden je Quest): je Quest mit Hauptstandard die Anzahl Aufgaben je Niveau, ohne Niveau-Angabe, und ob Grundlage- und Challenge-Aufgaben fehlen. Stand von Auftrag 1 (Grundlage-Aufgaben) vom 03.11. prüfen. Ergebnis als Bericht an Peter; Ergänzungen erst nach Peters Ja, eigene PRs, Inhalte an den Standards für Klasse 3 ausgerichtet.
+
 - **Auswertung „Was gefällt den Kindern?“:** Zähler je Witz, Geschichte und Word of the Day über alle Kinder, damit ein späteres Update darauf reagieren kann. Voraussetzungen: nur Zähler ohne Kind, Konto oder Gerät; Hinweis im Datenschutztext; Einwilligung der Eltern, die sie selbst einschalten (Opt-in). Rechtliche Einzelheiten zusammen mit den Datenschutztexten vor der Beta klären.
 
 ## I · Noch in Durchsicht (nicht umsetzen)
