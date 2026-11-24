@@ -81,7 +81,7 @@ test('title, eyebrow and home screen are neutral; eyebrow fully visible on a 320
   await ctx.close();
 });
 
-test('About (DE/EN) names no school, class or place and links no school website; adults see 4 neutral school links', async () => {
+test('About (DE/EN) names no school, class or place; adults retain 4 neutral school references with 3 public links', async () => {
   const { ctx, page, fehler } = await appOeffnen(browser, server.url);
   await page.locator('#aboutBtn').click();
   // intro and every topic of the info pages (opened in place), German and English
@@ -99,15 +99,18 @@ test('About (DE/EN) names no school, class or place and links no school website;
     }
     for (const s of seiten) {
       assert.deepEqual(treffer(s), []);
-      assert.ok(!/Requires support|Consolidating|Meeting expectations|Extending/.test(s), 'child-reachable About must not list the internal levels');
+      assert.doesNotMatch(s, /Requires support(?! \(RS\))|Consolidating(?! \(C\))|Meeting expectations(?! \(M\))|Extending(?! \(E\))/, 'named school levels include their correct code');
     }
+    for (const term of ['Requires support (RS)', 'Consolidating (C)', 'Meeting expectations (M)', 'Extending (E)']) assert.ok(seiten.join('\n').includes(term), 'the concept explains the original school levels');
   }
   await page.locator('#aboutBack').click();
   await elternOeffnen(page);
   await page.locator('.phdr [data-plang="de"]').click();
   await elternSeite(page, 'concept');
   const links = page.locator('#aboutBody a[href*="bis-school.com"]');
-  assert.equal(await links.count(), 4);
+  assert.equal(await page.locator('#aboutBody [data-school-source]').count(), 4, 'all four source references remain');
+  assert.equal(await links.count(), 3, 'three non-identifying original links remain');
+  assert.equal(await page.locator('#aboutBody [data-school-source] .school-source-reference').count(), 1, 'one identifying link becomes an unchanged neutral text reference');
   for (const t of await links.allTextContents()) { assert.match(t, /^Website der Schule/); assert.deepEqual(treffer(t), []); }
   assert.deepEqual(treffer(await page.textContent('#aboutBody')), []);
   assert.deepEqual(fehler, []);

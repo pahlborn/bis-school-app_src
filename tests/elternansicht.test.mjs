@@ -95,9 +95,9 @@ test('focus: "Automatic" (class topics + where support helps) or "Manual", each 
   assert.equal(await page.getAttribute('[data-pfocus="detective"]', 'aria-pressed'), 'true', 'needs support → automatic focus');
   assert.equal(await page.getAttribute('[data-pfocus="round"]', 'aria-pressed'), 'true', 'class topic → automatic focus');
   assert.equal(await page.getAttribute('[data-fmode="auto"]', 'aria-pressed'), 'true', 'automatic by default');
-  assert.match(await page.textContent('.pfmode'), /Automatisch: die App wählt\. Manuell: Sie wählen\./);   // E1: one sentence, the rest in ⓘ
+  assert.match(await page.textContent('.pfmode'), /Automatisch: Big Quest wählt\. Manuell: Sie wählen\./);   // E1: one sentence, the rest in ⓘ
   await page.locator('.pfmode .info-btn[data-help="focusmode"]').click();
-  assert.match(await page.locator('#helpDlg').innerText(), /Die App wählt selbst[\s\S]*Sie legen selbst fest/);
+  assert.match(await page.locator('#helpDlg').innerText(), /Big Quest wählt selbst[\s\S]*Sie legen selbst fest/);
   await page.locator('#helpClose').click();
   // a switch in automatic mode starts manual mode from the current choice
   await page.locator('[data-pfocus="round"]').click();

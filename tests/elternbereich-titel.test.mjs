@@ -4,7 +4,7 @@
 //  T2  Dasselbe auf Englisch: „The Big Quest concept“ · „How to support your child“ · „Evaluations“.
 //  T3  ⓘ an „So unterstützen Sie Ihr Kind“ und „Evaluations“ mit dem neuen Titel (DE/EN);
 //      Verweis in ⓘ „Fokus“ nennt das Konzept mit neuem Titel.
-//  T4  Die alten Titel stehen nirgends mehr in der App.
+//  T4  Die alten Titel stehen nirgends mehr in Big Quest.
 //   node --test tests/elternbereich-titel.test.mjs
 
 import { test, before, after } from 'node:test';
@@ -73,7 +73,7 @@ test('T1–T3 new titles in the grown-ups area, German and English, with the ⓘ
 
 test('T3 the focus help points to the concept under its new name; T4 no old title anywhere in the app', async () => {
   const html = (await appLesen()).toString('utf8');
-  assert.ok(html.includes('„📖 Das Konzept von Big Quest → Wie die App einstuft“'));
-  assert.ok(html.includes('“📖 The Big Quest concept → How the app judges”'));
+  assert.ok(html.includes('„📖 Das Konzept von Big Quest → Wie Big Quest einstuft“'));
+  assert.ok(html.includes('“📖 The Big Quest concept → How Big Quest judges”'));
   for (const a of ALT) assert.ok(!html.includes(a), 'old title still in index.html: ' + a);
 });

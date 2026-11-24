@@ -560,7 +560,7 @@ test('3b Fehler beim ersten Mal: abgelaufener oder fremder Startcode, kein Speic
   const B = geraet(t, { geraet: () => Z }, { name: 'Geraet offline' });
   Z.offline();
   await anmelden(B, 'adult', 'anna.c', code);
-  assert.equal(await B.meldung('#loginMsg'), 'Die App erreicht ihren Speicher gerade nicht. Bitte später erneut versuchen.');
+  assert.equal(await B.meldung('#loginMsg'), 'Big Quest erreicht den Speicher gerade nicht. Bitte später erneut versuchen.');
   Z.online();
   B.absenden('#loginGo');
   await B.wartenAuf('#setPwForm');

@@ -17,7 +17,7 @@ export const PT={
     good:'⭐ Das gelingt schon gut',support:'🤝 Hier hilft Unterstützung',few:'👀 Noch nicht einschätzbar',oldT:'🕰️ Länger nicht geübt',
     goodLine:(q,a)=>a.n?`<b>${q}:</b> ${a.self} von ${a.n} Aufgaben selbst gelöst (${PT.de.sw[a.sure]}).`:`<b>${q}:</b> ${a.schoolBase?'Ausgangspunkt: Evaluation':a.evidenceN+' gespeicherte Antworten'}.`,
     fewLine:'Zu wenige Aufgaben für eine Einschätzung – das sagt nichts Schlechtes.',
-    disc:'Übungsstand der App, keine schulische Beurteilung. Das Kind sieht diese Einschätzung nicht.',child:'Ihr Kind',focusN:n=>`${n} im Fokus`,quests:n=>`${n} Quests`},
+    disc:'Übungsstand in Big Quest, keine schulische Beurteilung. Das Kind sieht diese Einschätzung nicht.',child:'Ihr Kind',focusN:n=>`${n} im Fokus`,quests:n=>`${n} Quests`},
   en:{home:'🏠 Overview',sheets:'📄 Practice sheets',settings:'👧 For your child',help:'💡 Help like the school',
     
     howSheets:'Your child enters the answers: start page → “My sheets”. Here you see how each task went.',
@@ -31,5 +31,5 @@ export const PT={
     good:'⭐ Going well',support:'🤝 Where support helps',few:'👀 Not yet possible to judge',oldT:'🕰️ Not practiced for a while',
     goodLine:(q,a)=>a.n?`<b>${q}:</b> ${a.self} of ${a.n} tasks on own (${PT.en.sw[a.sure]}).`:`<b>${q}:</b> ${a.schoolBase?'Starting point: Evaluation':a.evidenceN+' saved answers'}.`,
     fewLine:'Too few tasks to tell yet – that says nothing bad.',
-    disc:'App practice status, not a school assessment. The child does not see this summary.',child:'your child',focusN:n=>`${n} in focus`,quests:n=>`${n} quests`}
+    disc:'Practice status in Big Quest, not a school assessment. The child does not see this summary.',child:'your child',focusN:n=>`${n} in focus`,quests:n=>`${n} quests`}
 };

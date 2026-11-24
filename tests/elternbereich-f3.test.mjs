@@ -1,7 +1,7 @@
 // Paket F3 (Konzept Elternbereich 6, 7.2 Punkte 4–6): So funktioniert Big Quest, Teil 2. Erfundene Schuldaten, keine echten.
 //  T6: „keinen zweiten Weg“ / „don’t add a second method“ je Sprache genau einmal.
 //  T7: „So funktioniert Big Quest“ höchstens 7 000 Zeichen ohne Quellen (sichtbarer Text; „Genaue Schwellen“ zugeklappt zählt nicht).
-//  Dazu: Helfen wie die Schule höchstens 3 Sätze; Wie die App einstuft mit Kurzfassung, „Learning goals erreichen“ (mit dem
+//  Dazu: Helfen wie die Schule höchstens 3 Sätze; Wie Big Quest einstuft mit Kurzfassung, „Learning goals erreichen“ (mit dem
 //  ehrlichen Satz) und „Genaue Schwellen“ zugeklappt; keine Schulbegriffe; Fokus-ⓘ und „Aus der Schule“ nennen die Lücke.
 //   node --test tests/elternbereich-f3.test.mjs
 
@@ -34,10 +34,10 @@ test('T6/T7 part 2: short, gaps explained honestly, exact thresholds folded away
   await anmelden(page, 'adult', 'papa', C.papa); await passwortSetzen(page, 'Moon-Glass-Paper-8812');
   await page.waitForSelector('#parentClose');
   const S = {
-    de: { helfen: 'Helfen wie die Schule', ein: 'Wie die App einstuft', kern: 'keinen zweiten Weg', luecken: 'Learning goals erreichen', genau: 'Genaue Schwellen', quellen: 'Quellen',
-      ehrlich: 'Meeting expectations (M) beschreibt die Antworten in der App. Wer geantwortet hat und mit welchen Hilfsmitteln, weiß die App nicht', knoepfe: ['Jetzt angehen', 'Als geschlossen markieren', 'Weiter üben'] },
-    en: { helfen: 'Helping the way school does', ein: 'How the app judges', kern: 'don’t add a second method', luecken: 'Reaching learning goals', genau: 'Exact thresholds', quellen: 'Sources',
-      ehrlich: 'Meeting expectations (M) describes the answers in the app. The app does not know who answered', knoepfe: ['Work on it now', 'Mark as closed', 'Keep practicing'] }
+    de: { helfen: 'Helfen wie die Schule', ein: 'Wie Big Quest einstuft', kern: 'keinen zweiten Weg', luecken: 'Learning goals erreichen', genau: 'Genaue Schwellen', quellen: 'Quellen',
+      ehrlich: 'Meeting expectations (M) beschreibt die Antworten in Big Quest. Wer geantwortet hat und mit welchen Hilfsmitteln, weiß Big Quest nicht', knoepfe: ['Jetzt angehen', 'Als geschlossen markieren', 'Weiter üben'] },
+    en: { helfen: 'Helping the way school does', ein: 'How Big Quest judges', kern: 'don’t add a second method', luecken: 'Reaching learning goals', genau: 'Exact thresholds', quellen: 'Sources',
+      ehrlich: 'Meeting expectations (M) describes the answers in Big Quest. Big Quest does not know who answered', knoepfe: ['Work on it now', 'Mark as closed', 'Keep practicing'] }
   };
   for (const lang of ['de', 'en']) {
     const L = S[lang];
@@ -72,7 +72,7 @@ test('T6/T7 part 2: short, gaps explained honestly, exact thresholds folded away
   await page.locator('.phdr [data-plang="de"]').click();
   // focus ⓘ and the introduction "From school" name the gap
   await page.locator('[data-psubj="maths"]').click(); await page.waitForSelector('#pSchool');
-  assert.match(await page.locator('#pSchool > p.small').first().innerText(), /Learning goals mit Consolidating \(C\) oder Requires support \(RS\) übt die App, bis sie geschlossen sind\./);
+  assert.match(await page.locator('#pSchool > p.small').first().innerText(), /Learning goals mit Consolidating \(C\) oder Requires support \(RS\) übt Big Quest, bis sie geschlossen sind\./);
   const fokus = await page.evaluate(() => { const b = document.createElement('button'); b.className = 'info-btn'; b.dataset.help = 'focus'; document.body.append(b); b.click(); const t = document.querySelector('#helpText').innerText; b.remove(); return t; });
   assert.match(fokus, /aktive Learning goal/);
   assert.deepEqual(fehler, []);

@@ -1,5 +1,5 @@
 // Paket B3 (Konzept Elternbereich 5.8, R11): ⚙ → Über die App.
-//  T11: Über diese Anwendung, Wichtiger Hinweis (mit Satz zur Verantwortung), Datenschutz, Impressum (Platzhalter), Version;
+//  T11: Über Big Quest, Wichtiger Hinweis (mit Satz zur Verantwortung), Datenschutz, Impressum (Platzhalter), Version;
 //       Datenschutz und Hinweis nicht mehr im Konzept-Kapitel des Elternbereichs; Satz zur Verantwortung auch im ⓘ der Einschätzung;
 //       die Info-Seite außerhalb des Elternbereichs zeigt Hinweis und Datenschutz weiter.
 // Echte Klicks.
@@ -54,8 +54,8 @@ async function administration(page) {
   await d.evaluate((e) => e.querySelectorAll('details').forEach((x) => { x.open = true; }));
   return d;
 }
-const VERANTWORTUNG_DE = 'Die App weiß nicht, wer eine Aufgabe gelöst hat und mit welchen Hilfsmitteln.';
-const VERANTWORTUNG_EN = 'The app does not know who solved a task or with what help.';
+const VERANTWORTUNG_DE = 'Big Quest weiß nicht, wer eine Aufgabe gelöst hat und mit welchen Hilfsmitteln.';
+const VERANTWORTUNG_EN = 'Big Quest does not know who solved a task or with what help.';
 
 test('T11 ⚙ → Über die App: intro, important note with responsibility, privacy, legal notice, version (DE/EN); not in the concept chapter', async () => {
   const { ctx, page, fehler } = await oeffnen(browser, server);
@@ -65,7 +65,7 @@ test('T11 ⚙ → Über die App: intro, important note with responsibility, priv
   await konzept.locator(':scope > summary').click();
   await konzept.evaluate((e) => e.querySelectorAll('details').forEach((x) => { x.open = true; }));
   const k = await konzept.innerText();
-  for (const s of ['Über diese Anwendung', 'Wichtiger Hinweis', 'Konten und Rechte', 'Leseaufnahmen:']) assert.ok(!k.includes(s), 'not in the concept chapter: ' + s);
+  for (const s of ['Über Big Quest', 'Wichtiger Hinweis', 'Konten und Rechte', 'Leseaufnahmen:']) assert.ok(!k.includes(s), 'not in the concept chapter: ' + s);
   assert.deepEqual(await konzept.locator('details.about-sec > summary').allInnerTexts().then((x) => x.filter((s) => /Datenschutz/.test(s))), []);
   // ⚙ → Über die App
   const d = await ueberDieApp(page);
@@ -79,7 +79,7 @@ test('T11 ⚙ → Über die App: intro, important note with responsibility, priv
   assert.ok(await d.locator('#versionInfo').isVisible(), 'version');
   assert.match(t, /Betafassungen tragen sichtbar „\(Betaversion\)“\./);
   assert.match(t, /Finale Freigaben erscheinen später als „V 1\.0\.0“\./);
-  assert.equal(await page.locator('#aboutBody h2', { hasText: 'Über diese Anwendung' }).count(), 0, 'no second page title inside the section');
+  assert.equal(await page.locator('#aboutBody h2', { hasText: 'Über Big Quest' }).count(), 0, 'no second page title inside the section');
   // English
   await page.locator('.phdr [data-plang="en"]').click();
   const en = await page.locator('#aboutBody details.psec[data-psec="aboutapp"]');

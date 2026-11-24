@@ -119,6 +119,8 @@ test('C/G original school terms in both parent languages preserve source data', 
     await page.locator(`.phdr [data-plang="${lang}"]`).click();
     await fach(page, 'maths');
     const school = await page.locator('#pSchool').innerText();
+    assert.deepEqual(await page.locator('.pquest .pqchip:not(.pqschool) > .small').allInnerTexts(), Array(await page.locator('.pquest').count()).fill('Big Quest'), 'practice source names Big Quest in either language');
+    assert.doesNotMatch(school, /\b(?:die App|the app)\b/i, 'visible explanatory text names Big Quest');
     for (const term of ['Meeting expectations (M)', 'Consolidating (C)', 'Requires support (RS)', 'Areas of Development', 'Learning goals', 'Evaluation']) assert.ok(school.includes(term), `${lang}: ${term}`);
     assert.ok(school.includes(SCHULE.kinder.mia.tasks[1].next[lang]), `${lang}: teacher text stays verbatim`);
     assert.doesNotMatch(school, /Lücke|\b[Gg]aps?\b/);

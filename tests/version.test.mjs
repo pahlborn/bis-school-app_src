@@ -153,7 +153,7 @@ test('published shell: "check for new version" says current, then reports a newe
   inhalt['/app/'] = await fs.readFile(path.join(ziel2, 'index.html'), 'utf8');
   await page.locator('#checkUpdate').click();
   await page.waitForFunction(() => document.querySelector('#updateMessage').textContent.includes('V 0.14'));
-  assert.equal(await page.textContent('#updateMessage'), `Neuer Stand ${versionText(V14)} verfügbar – App schließen und neu öffnen.`);
+  assert.equal(await page.textContent('#updateMessage'), `Neuer Stand ${versionText(V14)} verfügbar – Big Quest schließen und neu öffnen.`);
   assert.deepEqual(anfragen, []);
   assert.deepEqual(fehler, []);
   await ctx.close();

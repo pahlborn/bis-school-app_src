@@ -11,8 +11,8 @@ export const RELEASE_NOTES = {
   current: {
     epics: [],
     stories: [{
-      de: 'Evaluations, Learning goals und Einstufungen verwenden die Originalbegriffe der Schule. Lehrkrafttexte bleiben im Wortlaut erhalten.',
-      en: 'Evaluations, learning goals and ratings use the school’s original terms. Teacher text stays verbatim.'
+      de: 'Big Quest zeigt Evaluations, Learning goals und Einstufungen in den Originalbegriffen der Schule. Lehrkrafttexte bleiben im Wortlaut erhalten.',
+      en: 'Big Quest shows Evaluations, Learning goals and ratings in the school’s original terms. Teacher text stays verbatim.'
     }],
     bugfixes: [{
       de: 'Die Hilfe erklärt die Übernahme durch Eltern. Der Sicherungstipp lädt zum Sichern des Lernstands ein.',

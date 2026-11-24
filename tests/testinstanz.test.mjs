@@ -17,7 +17,7 @@ import path from 'node:path';
 import http from 'node:http';
 import { WURZEL, QUELLEN, testinstanzBauen, appZusammensetzen } from '../werkzeug/bauen.mjs';
 import { TESTINSTANZ, ersatzLesen, testinstanzUmwandeln, testinstanzPruefen, testinstanzManifest, geraeteNamen, VERSION_AUS_KLARTEXT, SPEICHER_MARKE, SPEICHER_TESTINSTANZ, SCHULE_TESTFREIGABE_MARKE } from '../werkzeug/testinstanz.mjs';
-import { woerterLesen } from '../werkzeug/kern.mjs';
+import { woerterLesen, verboteneTreffer } from '../werkzeug/kern.mjs';
 import { schulbewertungenUebernehmen } from '../werkzeug/schulbewertungen-uebernehmen.mjs';
 import { appLesen } from '../werkzeug/module.mjs';
 import { GITHUB_TOKEN_SCHLUESSEL, githubSpeicher } from '../src/module/github.mjs';
@@ -443,7 +443,8 @@ test('Browser: die gebaute Testinstanz startet mit der Anmeldung, Zugang einmal 
     await page.locator('#helpBtn').click(); await page.locator('#answerBtn').click();
     await page.locator('#nextBtn').click(); await zurStart(page);
     await page.waitForSelector('#home:not([hidden])');
-    const answers = await page.evaluate(id => JSON.parse(localStorage.getItem('bqt_' + id + '__events') || '[]').filter(e => e.type === 'answer'), child.id);
+    const childEvents = await page.evaluate(id => JSON.parse(localStorage.getItem('bqt_' + id + '__events') || '[]'), child.id);
+    const answers = childEvents.filter(e => e.type === 'answer');
     assert.ok(answers.length > 0 && answers.every(e => /^\d{4}-\d{2}-\d{2}$/.test(e.payload.day)), 'dated answers are in this child’s regular event log');
     assert.equal(await page.evaluate(id => JSON.parse(localStorage.getItem('bqt_' + id + '__pendingEvents') || '[]').filter(e => e.type === 'answer').length, child.id), 0, 'the extra practice is not left in the pending log');
     await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
@@ -463,7 +464,11 @@ test('Browser: die gebaute Testinstanz startet mit der Anmeldung, Zugang einmal 
     } else assert.ok((await page.locator('#pKid').innerText()).includes(child.user), 'parent header identifies the same child');
     assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('bqt_session')).id), child.id, 'parent login preserves the child ID');
     assert.deepEqual(await page.evaluate(id => JSON.parse(localStorage.getItem('bqt_' + id + '__events') || '[]').filter(e => e.type === 'answer'), child.id), answers, 'parent data includes the same complete regular answers');
-    assert.ok(await page.evaluate(id => JSON.parse(localStorage.getItem('bqt_' + id + '__attempts') || '[]').some(a => /^\d{4}-\d{2}-\d{2}$/.test(a.day)), child.id), 'regular dated practice is ready for the parent');
+    const parentEvents = await page.evaluate(id => JSON.parse(localStorage.getItem('bqt_' + id + '__events') || '[]'), child.id);
+    assert.deepEqual(parentEvents.filter(e => childEvents.some(before => before.id === e.id)), childEvents, 'parent data preserves every complete canonical child event');
+    const imported = parentEvents.filter(e => !childEvents.some(before => before.id === e.id));
+    assert.deepEqual(imported.map(e => e.type), ['school_import'], 'only the requested school import was added');
+    assert.deepEqual(imported[0].payload.data, example.kinder.kathie, 'the complete imported school source stays unchanged');
     await elternSeite(page, 'home');
     await page.locator('[data-psec="school"] > summary').waitFor();
     assert.equal(await page.locator('.pbackup-note').count(), 1, 'candidate test parent sees the backup tip after practice');
@@ -478,15 +483,33 @@ test('Browser: die gebaute Testinstanz startet mit der Anmeldung, Zugang einmal 
       assert.match(await school.innerText(), /Evaluations[\s\S]*(Consolidating \(C\)|Requires support \(RS\))/);
       const sourceRow = school.locator('.psrow').filter({ hasText: example.kinder.kathie.tasks[0].title });
       const sourceIndex = await sourceRow.getAttribute('data-psrow');
-      await sourceRow.locator('[data-psdet]').click();
-      const detail = await school.locator(`.psdet[data-psdetrow="${sourceIndex}"]`).innerText();
+      const sourceButton = sourceRow.locator('[data-psdet]');
+      if (await sourceButton.getAttribute('aria-expanded') !== 'true') await sourceButton.click();
+      const sourceDetail = school.locator(`.psdet[data-psdetrow="${sourceIndex}"]`);
+      assert.equal(await sourceDetail.isVisible(), true, 'the exact source details are visible in either language');
+      const detail = await sourceDetail.innerText();
       assert.match(detail, /Strengths[\s\S]*Areas of Development/);
       assert.ok(detail.includes(example.kinder.kathie.tasks[0].good[lang]), 'candidate test teacher text stays verbatim');
+      assert.equal(verboteneTreffer(await page.locator('body').innerText(), woerterLesen(lies(QUELLEN.woerter))).length, 0, 'built test surface contains no prohibited terms');
       assert.deepEqual(await records(), before, 'candidate test reading leaves every stored event unchanged');
       await page.locator('[data-psec="school"] > summary').click();
+      const subjects = await page.locator('[data-psubj]').evaluateAll(buttons => buttons.map(button => button.dataset.psubj));
+      for (const subject of subjects) {
+        await page.locator(`[data-psubj="${subject}"]`).click();
+        const surface = await page.locator('#aboutBody').textContent() + '\n' + await page.locator('#aboutBody a[href]').evaluateAll(links => links.map(link => link.getAttribute('href')).join('\n'));
+        assert.equal(verboteneTreffer(surface, woerterLesen(lies(QUELLEN.woerter))).length, 0, 'generated test subject help and links contain no prohibited terms');
+        await elternSeite(page, 'home');
+      }
+      for (const section of ['concept', 'support', 'app', 'aboutapp']) {
+        await elternSeite(page, section);
+        const surface = await page.locator('#aboutBody').textContent() + '\n' + await page.locator('#aboutBody a[href]').evaluateAll(links => links.map(link => link.getAttribute('href')).join('\n'));
+        assert.equal(verboteneTreffer(surface, woerterLesen(lies(QUELLEN.woerter))).length, 0, 'generated test help and links contain no prohibited terms');
+        await elternSeite(page, 'home');
+      }
+      assert.deepEqual(await records(), before, 'test help navigation preserves every stored child event');
     }
     assert.deepEqual(fehler, []);
-    t.diagnostic('C/G candidate test: 0.152.8-beta, source ' + candidate.version.hash + ', checks 18/18, DE/EN, ' + candidateDir);
+    t.diagnostic('C/G candidate test: 0.152.8-beta, source ' + candidate.version.hash + ', checks 18/18, DE/EN, accounts enabled, admitted synthetic child, backup tip 1, prohibited surface matches 0, ' + candidateDir);
   } finally { await testBrowserBeenden(browser, ctx, server); }
 });
 

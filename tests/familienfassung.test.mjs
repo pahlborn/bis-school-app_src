@@ -24,7 +24,7 @@ import http from 'node:http';
 import { WURZEL, QUELLEN, familieBauen, appZusammensetzen } from '../werkzeug/bauen.mjs';
 import { FAMILIE, SPEICHER_FAMILIE, TOKEN_ZEILE_FAMILIE, familieUmwandeln, familiePruefen, testpersonenNamen } from '../werkzeug/familie.mjs';
 import { SPEICHER_MARKE, TESTINSTANZ } from '../werkzeug/testinstanz.mjs';
-import { woerterLesen, entschluesseln, tresorAusHuelle, ohneTresor } from '../werkzeug/kern.mjs';
+import { woerterLesen, verboteneTreffer, entschluesseln, tresorAusHuelle, ohneTresor } from '../werkzeug/kern.mjs';
 import { appLesen } from '../werkzeug/module.mjs';
 import { schulbewertungenUebernehmen } from '../werkzeug/schulbewertungen-uebernehmen.mjs';
 import { githubSpeicher } from '../src/module/github.mjs';
@@ -338,13 +338,13 @@ test('Sandbox: gebaute Familienfassung - anmelden, Kind anlegen, ueben, Schulbew
   assert.equal(P.S.lauf(() => P.S.holen('accountsOn')()), true, 'family build: accounts enabled');
   assert.equal(P.S.lauf(() => P.S.holen('canBackup')()), true, 'synthetic parent may back up this child');
   await familyCopyBrowser(P, W);
-  const candidateDir = path.join(os.tmpdir(), 'bq-cg-v2-familie-kandidat');
+  const candidateDir = path.join(os.tmpdir(), 'bq-cg-v3-familie-kandidat');
   const candidate = await familieBauen(TEST_PW, { ziel: candidateDir });
   assert.deepEqual([candidate.version.major, candidate.version.minor, candidate.version.patch, candidate.version.kanal], [0, 152, 8, 'beta']);
   assert.equal(candidate.pruefungen.length, 19);
   assert.equal(candidate.pruefungen.every(p => p.ok), true, 'candidate family build passes every existing search check');
   await familyCopyBrowser(P, W, { html: fs.readFileSync(path.join(candidateDir, 'index.html'), 'utf8'), candidate: true });
-  t.diagnostic('C/G candidate family: 0.152.8-beta, source ' + candidate.version.hash + ', checks 19/19, DE/EN, ' + candidateDir);
+  t.diagnostic('C/G candidate family: 0.152.8-beta, source ' + candidate.version.hash + ', checks 19/19, DE/EN, accounts enabled, admitted synthetic child, backup tip 1, prohibited surface matches 0, ' + candidateDir);
 
 
   // Export: lesbare Seite und JSON
@@ -523,11 +523,33 @@ async function familyCopyBrowser(P, W, { html = HTML, candidate = false } = {}) 
       await page.locator('[data-psec="school"] > summary').click();
       const school = await page.locator('[data-psec="school"]').innerText();
       assert.match(school, /Evaluations/); assert.match(school, /Consolidating \(C\)|Requires support \(RS\)/);
-      await page.locator('[data-psdet]').first().click();
-      const detail = await page.locator('.psdet').first().innerText();
+      const sourceTask = BEISPIEL.kinder.kathie.tasks[0];
+      const sourceRow = page.locator('.psrow').filter({ hasText: sourceTask.title });
+      const sourceIndex = await sourceRow.getAttribute('data-psrow');
+      const sourceButton = sourceRow.locator('[data-psdet]');
+      if (await sourceButton.getAttribute('aria-expanded') !== 'true') await sourceButton.click();
+      const sourceDetail = page.locator(`.psdet[data-psdetrow="${sourceIndex}"]`);
+      assert.equal(await sourceDetail.isVisible(), true, 'family source details are visible in either language');
+      const detail = await sourceDetail.innerText();
       assert.match(detail, /Strengths[\s\S]*Areas of Development/);
+      assert.ok(detail.includes(sourceTask.good[lang]), 'family teacher text stays verbatim');
+      assert.equal(verboteneTreffer(await page.locator('body').innerText(), WOERTER).length, 0, 'built family surface contains no prohibited terms');
       assert.deepEqual(await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter(k => /__events$/.test(k)).map(k => [k, localStorage.getItem(k)]))), records, 'reading text leaves stored events unchanged');
       await page.locator('[data-psec="school"] > summary').click();
+      const subjects = await page.locator('[data-psubj]').evaluateAll(buttons => buttons.map(button => button.dataset.psubj));
+      for (const subject of subjects) {
+        await page.locator(`[data-psubj="${subject}"]`).click();
+        const surface = await page.locator('#aboutBody').textContent() + '\n' + await page.locator('#aboutBody a[href]').evaluateAll(links => links.map(link => link.getAttribute('href')).join('\n'));
+        assert.equal(verboteneTreffer(surface, WOERTER).length, 0, 'generated family subject help and links contain no prohibited terms');
+        await elternSeite(page, 'home');
+      }
+      for (const section of ['concept', 'support', 'app', 'aboutapp']) {
+        await elternSeite(page, section);
+        const surface = await page.locator('#aboutBody').textContent() + '\n' + await page.locator('#aboutBody a[href]').evaluateAll(links => links.map(link => link.getAttribute('href')).join('\n'));
+        assert.equal(verboteneTreffer(surface, WOERTER).length, 0, 'generated family help and links contain no prohibited terms');
+        await elternSeite(page, 'home');
+      }
+      assert.deepEqual(await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter(k => /__events$/.test(k)).map(k => [k, localStorage.getItem(k)]))), records, 'family help navigation preserves every stored child event');
     }
     assert.deepEqual(errors, []); await ctx.close();
   } finally { await browser.close(); server.close(); }

@@ -11,8 +11,8 @@ before(async () => { server = await appServer(); browser = await browserStarten(
 after(async () => { await browser?.close(); server?.close(); });
 
 const MENUE = {
-  '#tabDe': ['Anleitung für Erwachsene', 'How to use Big Quest (für Kinder)', 'Grundidee', 'Aufbau', 'So lernt das Kind', 'Helfen wie die Schule', 'Wie die App einstuft', 'Herkunft der Aufgaben', 'Datenschutz', 'Quellen'],
-  '#tabEn': ['Guide for grown-ups', 'How to use Big Quest', 'Core idea', 'Structure', 'How your child learns', 'Helping the way school does', 'How the app judges', 'Origin of the tasks', 'Privacy', 'Sources']
+  '#tabDe': ['Anleitung für Erwachsene', 'How to use Big Quest (für Kinder)', 'Grundidee', 'Aufbau', 'So lernt das Kind', 'Helfen wie die Schule', 'Wie Big Quest einstuft', 'Herkunft der Aufgaben', 'Datenschutz', 'Quellen'],
+  '#tabEn': ['Guide for grown-ups', 'How to use Big Quest', 'Core idea', 'Structure', 'How your child learns', 'Helping the way school does', 'How Big Quest judges', 'Origin of the tasks', 'Privacy', 'Sources']
 };
 const titel = (page) => page.$$eval('#aboutBody details.about-sec > summary', (s) => s.map((x) => x.textContent.trim()));
 
@@ -83,7 +83,7 @@ test('the concept explains how titles, tree, badges and levels are worked out (P
   const { ctx, page } = await appOeffnen(browser, server.url);
   await page.locator('#aboutBtn').click();
   await page.locator('#tabDe').click();
-  const d = await aboutAbschnitt(page, 'Wie die App einstuft');
+  const d = await aboutAbschnitt(page, 'Wie Big Quest einstuft');
   const t = await d.textContent();
   for (const w of ['Explorer ist der Start', 'Investigator: 3 sichere Quests', 'Scientist: 6 aus mindestens 2 Fächern', 'Professor: 12 aus 4 Fächern, davon 2 auf E', 'Legend: 18 aus 5 Fächern, davon 5 auf E', 'Sterne entscheiden keinen Titel mehr', 'Ein Ast je Fach entsteht durch die erste sichere Quest', 'Silber ab 5-mal', 'mindestens 80 %', '15 Prozentpunkte']) assert.ok(t.includes(w), w);
   assert.match(t,/jede weitere gibt ein Blatt.*E gibt eine Frucht.*gelöstes Neuland eine Blüte \(kein Könnensnachweis\)/s);
@@ -94,6 +94,7 @@ test('the concept explains how titles, tree, badges and levels are worked out (P
   assert.match(t,/ab 8 „erste Belege“, ab 20 „breitere Belege“/,'8/20 describe evidence quantity');
   assert.ok(!t.includes('8 ersten Versuchen an mindestens 3 Tagen'),'no old parent knowledge/day veto');
   assert.ok(!t.includes('1, 3 und 7 Tagen'), 'the review rule is in "So lernt das Kind" only (F2)');
-  assert.ok(!/Requires support|Consolidating|Meeting expectations|Extending/.test(t), 'no school terms on a child-reachable page');
+  for (const term of ['Requires support (RS)', 'Consolidating (C)', 'Meeting expectations (M)', 'Extending (E)'])
+    assert.ok(t.includes(term), 'the explanation keeps the original school level with its code');
   await ctx.close();
 });

@@ -32,7 +32,7 @@ const AUFGABEN = Array.from({ length: 60 }, (_, i) => {
     day: tag(-3 - 5 * ((i * 7) % 60)), area, title: 'Task ' + String(i + 1).padStart(2, '0'), std, quests: area === 'math' ? ['round'] : [], focusNext: [],
     ...(area === 'learner' ? { atl: { Thinkers: ['ES', 'Obs.', 'Ind.'][i % 3] } } : {}),
     ...(i % 4 === 0 ? { rubric: [{ crit: 'Accuracy', teacher: 'C', self: 'E' }, { crit: 'Explaining', teacher: 'M', self: 'M' }] } : {}),
-    good: txt('Rundet sicher. Begründet klar; arbeitet gut mit.', 'Rounds securely. Explains clearly; works well with others.'),
+    good: txt('Rundet sicher. Begründet klar; arbeitet gut mit.\nBeleg: <b>Original & Text</b>.', 'Rounds securely. Explains clearly; works well with others.\nEvidence: <b>Original & text</b>.'),
     next: i % 6 === 0 ? txt('', '') : txt('Genauer lesen; Einheiten notieren.', 'Read more carefully; write down units.'),
   };
 });
@@ -212,7 +212,7 @@ test('T1–T3 table, filters, sorting and fixed outline (German, 60 assignments)
   assert.deepEqual(await zeilen(page), erwartet({}, heute));
   assert.equal(await k.locator('select[data-psf="area"]').inputValue(), '');
   assert.equal(await k.locator('input[data-psf="weak"]').isChecked(), false);
-  // T3: details - the same outline for EVERY assignment; short points; rubric side by side
+  // T3: details - the same outline for EVERY assignment; verbatim teacher text; rubric side by side
   const gliederung = await k.locator('tr.psdet').evaluateAll((r) => r.map((x) => [...x.querySelectorAll('h4')].map((h) => h.textContent)));
   assert.equal(gliederung.length, 60);
   for (const g of gliederung) assert.deepEqual(g, GLIEDERUNG.de);
@@ -226,7 +226,13 @@ test('T1–T3 table, filters, sorting and fixed outline (German, 60 assignments)
   assert.deepEqual(await d0.locator('table.psrub thead th').allInnerTexts(), ['Kriterium', 'Lehrkraft', 'Selbst']);
   assert.deepEqual(await d0.locator('table.psrub tbody tr').first().locator('td').allInnerTexts(), ['Accuracy', 'Consolidating (C)', 'Extending (E)']);
   const punkte = await d0.locator('h4:has-text("Strengths") + ul > li').allInnerTexts();
-  assert.deepEqual(punkte, ['Rundet sicher', 'Begründet klar', 'arbeitet gut mit']);
+  assert.deepEqual(punkte, [AUFGABEN[0].good.de], 'the complete teacher text keeps punctuation, line breaks and literal markup');
+  assert.equal(await d0.locator('.pssource-text b').count(), 0, 'teacher markup is escaped');
+  for (let i = 0; i < AUFGABEN.length; i++) {
+    const detail = k.locator(`tr.psdet[data-psdetrow="${i}"]`);
+    for (const [field, heading] of [['good', 'Strengths'], ['next', 'Areas of Development']])
+      assert.deepEqual(await detail.locator(`h4:has-text("${heading}") + ul > li`).allTextContents(), AUFGABEN[i][field].de ? [AUFGABEN[i][field].de] : [], 'each German source text stays complete');
+  }
   assert.deepEqual(await d0.locator('h4:has-text("Areas of Development") + p').allInnerTexts(), ['keine Angabe'], 'empty next steps: the heading stays');
   const std0 = await d0.locator('h4:has-text("Standards") + ul > li').allInnerTexts();
   assert.equal(std0.length, Object.keys(AUFGABEN[0].std).length);
@@ -258,7 +264,13 @@ test('T4 English: the same view, no German', async () => {
     assert.deepEqual(g, GLIEDERUNG.en);
   await k.locator('tr.psrow[data-psrow="0"] [data-psdet]').click();
   assert.deepEqual(await k.locator('tr.psdet[data-psdetrow="0"] table.psrub tbody tr').first().locator('td').allInnerTexts(), ['Accuracy', 'Consolidating (C)', 'Extending (E)']);
-  assert.deepEqual(await k.locator('tr.psdet[data-psdetrow="0"] h4:has-text("Strengths") + ul > li').allInnerTexts(), ['Rounds securely', 'Explains clearly', 'works well with others']);
+  assert.deepEqual(await k.locator('tr.psdet[data-psdetrow="0"] h4:has-text("Strengths") + ul > li').allInnerTexts(), [AUFGABEN[0].good.en]);
+  assert.equal(await k.locator('tr.psdet[data-psdetrow="0"] .pssource-text b').count(), 0, 'teacher markup is escaped');
+  for (let i = 0; i < AUFGABEN.length; i++) {
+    const detail = k.locator(`tr.psdet[data-psdetrow="${i}"]`);
+    for (const [field, heading] of [['good', 'Strengths'], ['next', 'Areas of Development']])
+      assert.deepEqual(await detail.locator(`h4:has-text("${heading}") + ul > li`).allTextContents(), AUFGABEN[i][field].en ? [AUFGABEN[i][field].en] : [], 'each English source text stays complete');
+  }
   const text = await k.innerText();
   assert.match(text, /Data as of: .* · latest evaluation: /);
   assert.match(text, /Awaiting evaluation[\s\S]*Glows check/);

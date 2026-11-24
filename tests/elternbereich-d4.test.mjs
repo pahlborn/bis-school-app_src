@@ -69,7 +69,7 @@ test('T19/T17 parents: work on it now, mark as closed, keep practising - with no
   await page.evaluate(()=>{for(let i=0;i<6;i++)window.__gapRecord({world:'numbers',level:2},true);});
   await mathe(page);
   t = await liste(page);
-  assert.match(t, /Learning goal geschlossen ✓[^\n]*Stellenwert[^\n]*laut den Antworten in der App/);
+  assert.match(t, /Learning goal geschlossen ✓[^\n]*Stellenwert[^\n]*laut den Antworten in Big Quest/);
   await page.locator('[data-gapact="hold"][data-gapstd="M-N1"]').click();
   await page.waitForFunction(() => /von Ihnen offen gehalten/.test(document.querySelector('#pSchool .pgaps')?.innerText || ''));
   let g = await lies(page);
