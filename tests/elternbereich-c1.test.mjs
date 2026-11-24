@@ -17,7 +17,7 @@ const txt = (de, en) => ({ de, en });
 // measuring (M-M1, practised only in science) secure; one waiting assignment; learning skills
 const SCHULE = { version: 1, kinder: { mia: { asOf: tag(-2), tasks: [
   { day: tag(-40), area: 'math', title: 'Rounding check A', std: { 'M-N3': 'C' }, quests: ['round'], focusNext: [], good: txt('Rundet sicher auf Zehner.', 'Rounds to tens.'), next: txt('', '') },
-  { day: tag(-10), area: 'math', title: 'Rounding check B', std: { 'M-N3': 'M', 'M-N4': 'RS' }, quests: ['round', 'wordprob'], focusNext: ['wordprob'], good: txt('Runden gelingt.', 'Rounding works.'), next: txt('Sachaufgaben in zwei Schritten üben.', 'Practise two-step word problems.') },
+  { day: tag(-10), area: 'math', title: 'Rounding check B', std: { 'M-N3': 'M', 'M-N4': 'RS' }, quests: ['round', 'wordprob'], focusNext: ['wordprob'], good: txt('Runden gelingt.', 'Rounding works.'), next: txt("Sachaufgaben in zwei Schritten üben.\nHinweis: <b>Original & Text</b>.", "Practise two-step word problems.\nNote: <b>Original & text</b>.") },
   { day: tag(-8), area: 'science', title: 'Forces lab', std: { 'S-F1': 'C', 'M-M1': 'M' }, quests: ['forces', 'units'], focusNext: ['forces'], good: txt('Misst genau.', 'Measures carefully.'), next: txt('Begründen, warum etwas rutscht.', 'Explain why things slide.') },
   { day: tag(-6), area: 'learner', title: 'Learner check', std: {}, atl: { 'Thinker': 'Obs.' }, quests: [], focusNext: [], good: txt('Fragt nach.', 'Asks questions.'), next: txt('', '') },
   { day: tag(-1), area: 'english', title: 'Persuasive letter', std: {}, quests: ['opinion'], focusNext: [], pending: true, good: txt('', ''), next: txt('', '') }
@@ -123,6 +123,12 @@ test('C/G original school terms in both parent languages preserve source data', 
     assert.doesNotMatch(school, /\b(?:die App|the app)\b/i, 'visible explanatory text names Big Quest');
     for (const term of ['Meeting expectations (M)', 'Consolidating (C)', 'Requires support (RS)', 'Areas of Development', 'Learning goals', 'Evaluation']) assert.ok(school.includes(term), `${lang}: ${term}`);
     assert.ok(school.includes(SCHULE.kinder.mia.tasks[1].next[lang]), `${lang}: teacher text stays verbatim`);
+    const nextRow = page.locator('#pSchool .psteps li').filter({ hasText: source.tasks[1].title });
+    const nextText = nextRow.locator('.pssource-text');
+    assert.equal(await nextText.isVisible(), true, `${lang}: the original next text is visible in the subject`);
+    assert.equal(await nextText.innerText(), source.tasks[1].next[lang], `${lang}: visible next text keeps every character and line break`);
+    assert.equal(await nextText.evaluate(element => getComputedStyle(element).whiteSpace), 'pre-wrap');
+    assert.equal(await nextText.locator('b, script').count(), 0, `${lang}: teacher markup stays literal text`);
     assert.doesNotMatch(school, /Lücke|\b[Gg]aps?\b/);
     await page.locator('#pBack').click();
     await page.locator('details.psec[data-psec="school"] > summary').click();
