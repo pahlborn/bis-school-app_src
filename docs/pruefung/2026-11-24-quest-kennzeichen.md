@@ -57,3 +57,20 @@ Beleg: `/tmp/quest-j-v2-session-targeted.log`, Modus 0600. Ergebnis: Exit 1; 7 T
 Keine Screenshots entstanden. Keine Vollsuite oder zusätzliche Regressionen nach diesem Versuch. Die früheren 17/17 Regressionen bleiben als historischer Beleg bestehen. Keine Korrektur oder weitere Variante nach dem neuen Fehler; sofortige Stopprückgabe an Atlas. Für die unabhängige Bewertung bleibt insbesondere die gespeicherte manuelle Fokusvorbedingung gegenüber dem nachfolgenden tatsächlichen Kartenresultat zu prüfen. Eine solche Bewertung oder weitere Ausführung wurde hier nicht vorgenommen.
 
 Dieser zusätzliche Teilstand wird ausschließlich lokal als weiterer WIP gesichert. Beide früheren temporären Lesedateien bleiben gelöscht. Kein Push, PR, Merge oder Deployment.
+
+
+## Ein begrenzter Versuch mit dem vorhandenen Testdaten-Leseweg
+
+Atlas belegte anschließend die konkrete, vom früheren Entryfehler getrennte Ursache: Der Produkt-store ignoriert direkte Writeraufrufe für abgeleitete Fokus-/Historienwerte. Für genau einen neuen Versuch wurde ausschließlich der eigene Test korrigiert: Der Hook exponiert zusätzlich den bestehenden reinen Schlüsselauflöser `storeKey`; Focus-/History-/Best-/Sprach-/Profilvorbedingungen werden konsistent durch `window.localStorage.setItem` und den unveränderten `testbauLeser` vorbereitet. Die Session-Vorbedingung und sämtliche Produktregeln bleiben unverändert.
+
+Einziger freigegebener Lauf:
+
+`CHROMIUM_PATH=/usr/bin/chromium BQ_QUEST_J_SCREENSHOTS=1 node --test --test-reporter=tap tests/quest-kennzeichen.test.mjs`
+
+Beleg: `/tmp/quest-j-v2-storage-targeted.log`, Modus 0600. Ergebnis: Exit 1; 7 Tests, 6 PASS, 1 FAIL, 0 übersprungen. Die sechs Livefälle bestehen. Zusätzlich wurde innerhalb des siebten Falls der komplette Testbau-Zweig mit echter sichtbarer Fachliste erfolgreich durchlaufen: synthetische Sitzung aufgelöst und erhalten, Goal-/Manual-Focus-/New-Zuordnung, DE/EN, 0/1 je Karte, aria-labels, sichtbare Touchkarte, gesperrtes/freigeschaltetes Neuland und alle fünf Übungsspuren. Die vorherige manuelle Fokusassertion besteht damit.
+
+Danach scheitert der folgende Familienzweig bereits an seiner ausdrücklichen Konfigurations-/Sitzungsvorbedingung `prepareChild()` (eigener Test, Zeile 150, ERR_ASSERTION). Kein Entry-Timeout, TypeError oder ReferenceError. Die tatsächliche Familienkonfiguration gegenüber der vorgegebenen null-Annahme bleibt unabhängig zu klären. Es wurde keine weitere Variante, Korrektur, Produktlektüre oder Folgeausführung versucht. Die vollständige Kennzeichenabnahme beider Fassungen und der gesamte siebte Test bleiben deshalb offen.
+
+Entstandener Screenshot: `docs/pruefung/images/2026-11-24-quest-kennzeichen-test.png`. Die normale Quest-Auswahl zeigt Focus und New; das Profil wurde ausschließlich generisch als Child vorbereitet und vor der Aufnahme per Assertion geprüft. Die lokal betrachtete Aufnahme enthält die Mathematik-Auswahl und keine Personen-/Konto-/Zugangswerte. Kein Screenshot der Familienfassung entstand.
+
+Nach dem Fehler sofortige Stopprückgabe und ausschließlich lokale WIP-Sicherung von eigenem Test, Bericht und Testbau-Aufnahme. Keine Vollsuite und keine erneuten Regressionen; die früheren 17/17 bleiben historische Belege. Kein Push, PR, Merge oder Deployment. Die früheren ungültigen Läufe bleiben ausdrücklich FAIL und werden durch diesen Fortschritt nicht umgedeutet.

@@ -15,7 +15,7 @@ import { testbauLeser } from './testbau-leser.mjs';
 let browser, server;
 const hook = html => html.replace(/\}\)\(\);\s*<\/script>/, `let questJSession=null;
 window.__questJ={
-  store, focusTopics, activeGapQuests, SUBJECTS, questsIn, WORLDS, openSubject, renderHome,
+  store, storeKey, focusTopics, activeGapQuests, SUBJECTS, questsIn, WORLDS, openSubject, renderHome,
   prepareChild:()=>{
     const configured=APP_ACCOUNTS!==null;
     if(configured){
@@ -24,7 +24,7 @@ window.__questJ={
       APP_ACCOUNTS.users.push(child);
       questJSession=sessionOf(child);store.set('session',questJSession);
     }
-    store.set('name','Child');renderHome();
+    window.localStorage.setItem(storeKey('name'),JSON.stringify('Child'));renderHome();
     return {configured,resolved:configured?studentSession()?.id===questJSession.id:false};
   },
   sessionOkay:()=>questJSession?studentSession()?.id===questJSession.id&&store.get('session',null)?.id===questJSession.id:APP_ACCOUNTS===null,
@@ -47,8 +47,8 @@ after(async()=>{await browser?.close();server?.close();});
 async function render(page,{quest='numbers',mode='manual',focus=[],active=[],history={},lang='en',unlocked=[]}={}){
  return page.evaluate(({quest,mode,focus,active,history,lang,unlocked})=>{
    const G=window.__questJ;
-   for(const [k,v] of Object.entries({focusMode:mode,focusManual:focus,kidLang:lang,unlocked,ev:{},attempts:[],tried:[],due:[],...history}))G.store.set(k,v);
-   G.store.set('best_'+quest,history.best??null);
+   for(const [k,v] of Object.entries({focusMode:mode,focusManual:focus,kidLang:lang,unlocked,ev:{},attempts:[],tried:[],due:[],...history}))window.localStorage.setItem(G.storeKey(k),JSON.stringify(v));
+   window.localStorage.setItem(G.storeKey('best_'+quest),JSON.stringify(history.best??null));
    G.select(quest,active);
    const root=document.querySelector('[data-item="'+quest+'"]');
    return {badge:root?.querySelector('.quest-marker')?.textContent||'',label:root?.querySelector('.quest-marker')?.getAttribute('aria-label')||'',count:root?.querySelectorAll('.quest-marker').length||0};
