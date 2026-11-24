@@ -1,6 +1,6 @@
-# BQ-PARENTS-01-CG-TEXT V1/V2 · angehaltener Entwicklungsstand
+# BQ-PARENTS-01-CG-TEXT V1/V2/V3 · angehaltener Entwicklungsstand
 
-**Aktueller Stand 24.11.2026: V2 erneut ANGEHALTEN / UNVOLLSTÄNDIG.** Der Familienpfad ist inzwischen nachgewiesen, die zusätzliche Testinstanz-Kandidatenprüfung scheitert nach drei Anläufen. Keine vollständige Suite, kein Vollsuiten-Freeze und keine Integrationsfreigabe. Die folgenden V1-Befunde bleiben historisch erhalten; die heutige Fortsetzung steht am Ende.
+**Aktueller Stand 24.11.2026: V3 PAUSIERT / UNVOLLSTÄNDIG.** Nach drei weiteren Testaufrufen hat Atlas die Pause und ausschließlich die lokale Sicherung bestätigt. Die unterschiedlichen Ursachen und neu erreichten Teilkriterien stehen im V3-Nachtrag am Ende. Ihre Einordnung nach §6 und die sachgerechte Originaltextprüfung werden unabhängig geprüft. Keine vollständige Suite, kein Vollsuiten-Freeze und keine Integrationsfreigabe. Die V1-/V2-Befunde und abgebrochenen Läufe bleiben historisch erhalten.
 
 ## Anliegen
 
@@ -174,3 +174,35 @@ Kleinste Alternativen für eine Entscheidung, keine bereits freigegebenen Fortse
 - PR1 weiter zurückstellen. G ohne Konten bleibt PR6; kein Scope-Wachstum.
 
 Kein Push, PR, Merge, Release oder Deployment durchgeführt. Andere Worktrees unverändert. Nach Sicherung dieses unvollständigen lokalen Stands endet die Bearbeitung; Atlas führt die Entscheidung und eine etwaige unabhängige Zweitsicht.
+
+## Fortsetzung V3 · 24.11.2026 · pausierter Sicherungsstand
+
+Auftrag: [PR206, Kommentar7129870836](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7129870836), nach [frischer begrenzter Zweitsicht7129843016](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7129843016). Tatsächlicher Bearbeiter: Codex `/root/codex_cg_v3_delivery_20261124`, kein Claude-/Forge-Lauf. Eigener Worktree `/workspace/work/bq-eltern-cg-v3-20261124`, Zweig `feature/elternbereich-cg-v3-20261124`, exakt von `86d0e4789f53073048ecce752ff20ca87771195f`. Aktuelle Hauptbasis `ea840127ba8d7d5519a32179a81284093525c9b9` wurde ausschließlich in diesen Featurezweig integriert: Integrationscommit `5f3d454c242f919762fad6e619cb0f65e8d18645`, Tree `07c05eb04b64ce447b0b67b32c4be4347a32c8ff`. Keine geltende AGENTS.md in Produktbaum oder Vorfahren gefunden; acht Pflichtquellen auf der aktuellen Hauptbasis in Auftragsreihenfolge gelesen. Andere Arbeitsstände blieben unverändert.
+
+### Bestehender Testweg und drei tatsächliche Aufrufe
+
+Alle Aufrufe verwendeten vorhandenes Node24.22.1, `/usr/bin/chromium`, synthetische Fixtures und den lokalen GitHub-Nachbau. Keine Installation oder Infrastrukturänderung. Die folgenden gezielten Aufrufe sind keine Vollsuite und ergeben keinen vollständig abgenommenen Kandidaten. Logs und Exitdateien liegen geschützt unter `/tmp`.
+
+| Aufruf / Absicht | Tatsächliches Ergebnis und neue Teilkriterien |
+| --- | --- |
+| `CHROMIUM_PATH=/usr/bin/chromium node --test --test-name-pattern='Browser: die gebaute Testinstanz' tests/testinstanz.test.mjs` · geplante Vorfix-Gegenprobe, `/tmp/cg-v3-admission-red.log` | Exit1, 1Test, 0PASS/1FAIL, 0SKIP/CANCEL. Unerwarteter technischer Sondenfehler: Kindsession bei der neuen Zustandslesung noch null. Die bestehende Wartebedingung akzeptiert ein bereits im DOM vorhandenes verborgenes Home-Element. Kein fachlich roter Admission-Gegenbeleg; die ergänzte Session-Bereitschaft war noch nicht nachgewiesen. |
+| Derselbe Befehl · erneute geplante Vorfix-Gegenprobe nach Warten auf tatsächliche Session-ID, `/tmp/cg-v3-admission-red2.log` | Exit1, 1Test, 0PASS/1FAIL, 0SKIP/CANCEL. Neu erreicht: dieselbe Kindidentität zunächst pending; nach Elternaufnahme verschwand Pending bereits über einen laufenden normalen Kindabgleich. Die bestehende Sicherungshinweisassertion1 sowie DE-Sicherungstext/Knopf und Schulbegriffe wurden erreicht. Unerwarteter Folgefehler an der bestehenden zusätzlichen Originaltext-Substringassertion. Die beabsichtigte rote Admission-Gegenprobe trat nicht ein; dieser Lauf beweist keine bestimmte historische Race-Verzweigung. |
+| `CHROMIUM_PATH=/usr/bin/chromium node --test --test-name-pattern='Browser: die gebaute Testinstanz|2d Pending-Daten' tests/testinstanz.test.mjs tests/konto-anmeldung.test.mjs` · geplanter Positivlauf plus vorhandener Pending-Gegenfall, `/tmp/cg-v3-admission-green.log` | Exit1, 2Tests, 1PASS/1FAIL, 0SKIP/CANCEL. Pending-Gegenfall bestanden: Antworten vor Aufnahme nur pending, danach dieselben Ereignis-IDs genau einmal regulär. Im Kandidatenfall neu bestanden: normaler Sichtbarkeits-Rückkehrweg, verschwundene Pending-Marke, identische Kind-ID, datierte reguläre answer-Ereignisse, keine Antworten im Pending-Log, normale Eltern-Kindwahl und unveränderte vollständige reguläre Antworten nach Elternlogin. Unerwarteter Fehler an der neu eingeführten rohen `__attempts`-Sonde; die folgenden Sicherungs-/DE/EN-/Originaltextprüfungen wurden in diesem Lauf nicht erneut erreicht. |
+
+Die drei Aufrufe haben unterschiedliche konkrete Fehlerursachen. Ein geplanter Dateiname mit „red“ macht einen technischen Sondenfehler nicht zur erfolgreichen fachlichen Gegenprobe; der Dateiname „green“ macht den dritten Aufruf nicht grün. Atlas bestätigte nach Meldung die Pause. Ob §6 hier dreimal dasselbe Problem betrifft, wird vor weiterer Steuerung unabhängig geprüft. Kein weiterer Lauf ist dadurch freigegeben.
+
+### Gesicherter, weiterhin unvollständiger Testdiff
+
+Nur `tests/testinstanz.test.mjs` wurde in V3 technisch bearbeitet: tatsächliche Sessionbereitschaft vor der Kind-ID-Lesung, lesende Pending-/ID-/reguläre Ereignisbelege, vorhandener normaler Sichtbarkeits-Rückkehrabgleich vor Zusatzübung, normale Kindwahl in der Elternansicht und genaue Auswahl des Quellrecords über Titel und Tabellenindex. Der Kandidatenbaupfad lautet `/tmp/bq-cg-v3-test-kandidat`; die vorhandenen Suchlaufprüfungen18/18 und Kandidatenversion0.152.8-beta wurden vor den jeweiligen Browserprüfungen erreicht. Die bestehende Sicherungshinweisassertion1, Texte/Knöpfe und Ereignis-Unverändertheitsassertionen bleiben erhalten. Kein Pending-/Regulärdateneingriff, kein Schlüsseltransfer und keine Produkt-/Rechteänderung.
+
+Die zusätzliche rohe `__attempts`-Sonde ist eine **ungültige Annahme des Entwicklers** und bleibt im angehaltenen Diff ausdrücklich unberichtigt: Der Testbau leitet `attempts` über `store.get` aus dem regulären Ereignisprotokoll ab und persistiert keinen zweiten solchen Datenweg (`index.html`, `store`/`EV_LESEN`; `src/module/lesen.mjs`). Das ist kein bewiesener Produkt- oder Datenbereitschaftsfehler.
+
+Die Originaltext-Folgeassertion vergleicht die sichtbaren Details mit dem rohen `good`-Sprachtext. Die bestehenden Quelldaten enden in beiden Sprachen mit einem Punkt; `schoolPoints` entfernt bei der Punktdarstellung abschließende Punkte. Das ist eine noch unabhängig zu prüfende **C-Prüf-/Auftragsfrage**, kein erfolgreicher Originaltextbeleg und kein bewiesener Produktfehler. Der bisherige Verdacht einer falschen Sortierung ist nicht bestätigt: Der verglichene erste Quellrecord ist bereits der neueste und eindeutig. Die präzisierte Record-Auswahl wurde wegen der vorgeschalteten ungültigen Sonde noch nicht erneut bis zur Originaltextassertion geprüft. Es wurde weder die Originaltextassertion gelockert noch die Produktdarstellung geändert.
+
+Die historische genaue Verzweigung des früher beobachteten Sicherungshinweises0 bleibt **unbewiesen**. Die frische Diagnose belegt eine notwendige Bereitschaftsvoraussetzung; die neuen Läufe zeigen, dass ein bereits laufender normaler Abgleich sie gelegentlich rechtzeitig erfüllen kann. Aus diesen Teilbelegen folgt kein allgemeiner G-, DE/EN- oder PR1-PASS.
+
+### Pause, verbleibender Umfang und lokale Sicherung
+
+Atlas gab nach der Pause ausschließlich diesen Berichtsabschnitt und den vorhandenen Testdiff zur lokalen Sicherung frei. Danach keine weitere Probe, Korrektur oder lesende Ausbauarbeit. Keine C-Selbstbezeichnungsänderung begonnen, keine neue abschließende Verbotenprüfung, kein finaler Familien-/Testkandidaten-DE/EN-Nachweis, kein Freeze und kein vollständiges `npm test`. Version0.152.8-beta bleibt erhalten. Die frühere Familienprüfung, Fixtureversionen0.998/0.999 und V1-/V2-Fehlerhistorie werden dadurch nicht umgedeutet.
+
+Dieser Sicherungscommit ist ein **unvollständiger Pausenstand**, kein eingefrorener Abnahmekandidat. Commit/Tree werden in der Rückgabe genannt. Keine Geheimniswerte oder Namen Dritter in diesen Nachtrag aufgenommen. Kein Push, PR, Merge nach main, Release oder Deployment. Nächster Owner Atlas: enge unabhängige Prüfung der Halteregel und des sachgerechten C-Nachweises; kein weiteres Lauf-Go liegt vor.

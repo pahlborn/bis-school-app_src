@@ -351,7 +351,7 @@ async function testBrowserBeenden(browser, ctx, server) {
 }
 
 test('Browser: die gebaute Testinstanz startet mit der Anmeldung, Zugang einmal eingeben, Kind meldet sich ueber das Test-Repo an, ein Fach oeffnet sich, nur bqt_-Eintraege gelesen und geschrieben', async (t) => {
-  const candidateDir = path.join(os.tmpdir(), 'bq-cg-v2-test-kandidat');
+  const candidateDir = path.join(os.tmpdir(), 'bq-cg-v3-test-kandidat');
   const candidate = await testinstanzBauen({ ziel: candidateDir });
   assert.deepEqual([candidate.version.major, candidate.version.minor, candidate.version.patch, candidate.version.kanal], [0, 152, 8, 'beta']);
   assert.equal(candidate.pruefungen.length, 18);
@@ -406,6 +406,11 @@ test('Browser: die gebaute Testinstanz startet mit der Anmeldung, Zugang einmal 
     await page.locator('#pwUse').click();
     await page.locator('#setPwGo').click();
     await page.waitForFunction(() => document.querySelector('#kidWait') || document.querySelector('#home h1'), { timeout: 30000 });
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem('bqt_session'))?.id);
+    const child = await page.evaluate(() => JSON.parse(localStorage.getItem('bqt_session')));
+    assert.equal(child.user, 'mia.b', 'the same child enters admission');
+    assert.ok(child.id, 'admission has a child ID');
+    assert.equal(await page.evaluate(id => !!JSON.parse(localStorage.getItem('bqt_pendingAdmission') || '{}')[id], child.id), true, 'child admission is pending before the parent accepts it');
     await ELTERN.sync();
     if (await page.locator('#kidWait').count()) await page.locator('#welcomeGo').click({ timeout: 30000 });
     else {
@@ -413,6 +418,11 @@ test('Browser: die gebaute Testinstanz startet mit der Anmeldung, Zugang einmal 
       if (!(await page.locator('#home h1').count())) await page.locator('#welcomeGo').click({ timeout: 30000 });
     }
     await page.waitForSelector('#home h1');
+    // Returning to the visible page uses the normal child sync; parent admission alone is not child readiness.
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await page.waitForFunction(id => !JSON.parse(localStorage.getItem('bqt_pendingAdmission') || '{}')[id], child.id);
+    assert.equal(await page.evaluate(id => !!JSON.parse(localStorage.getItem('bqt_pendingAdmission') || '{}')[id], child.id), false, 'child admission is complete before the extra practice');
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('bqt_session')).id), child.id, 'the child ID stays identical after admission');
     await page.locator('#subjects button.subject').first().click();
     await page.waitForSelector('#subjectBody button.world');
     assert.ok(await page.locator('#subjectBody button.world').first().isVisible(), 'Fach-Seite sichtbar');
@@ -433,6 +443,10 @@ test('Browser: die gebaute Testinstanz startet mit der Anmeldung, Zugang einmal 
     await page.locator('#helpBtn').click(); await page.locator('#answerBtn').click();
     await page.locator('#nextBtn').click(); await zurStart(page);
     await page.waitForSelector('#home:not([hidden])');
+    const answers = await page.evaluate(id => JSON.parse(localStorage.getItem('bqt_' + id + '__events') || '[]').filter(e => e.type === 'answer'), child.id);
+    assert.ok(answers.length > 0 && answers.every(e => /^\d{4}-\d{2}-\d{2}$/.test(e.payload.day)), 'dated answers are in this child’s regular event log');
+    assert.equal(await page.evaluate(id => JSON.parse(localStorage.getItem('bqt_' + id + '__pendingEvents') || '[]').filter(e => e.type === 'answer').length, child.id), 0, 'the extra practice is not left in the pending log');
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
     const example = JSON.parse(lies('tests/schuldaten-beispiel.json'));
     await schulbewertungenUebernehmen({
       speicher: { geraet: d => githubSpeicher({ repo: REPO, token: TOKEN, basis: N.basis }).geraet(d) },
@@ -442,6 +456,14 @@ test('Browser: die gebaute Testinstanz startet mit der Anmeldung, Zugang einmal 
     await page.locator('#adultBtn').click();
     await page.locator('#loginUser').fill(ELTERN.user); await page.locator('#loginPw').fill(ELTERN.pw);
     await page.locator('#loginGo').click(); await page.waitForSelector('#parentClose');
+    await page.waitForFunction(user => document.querySelector('#pKidSel option[value="' + user + '"]') || document.querySelector('#pKid')?.textContent.includes(user), child.user);
+    if (await page.locator('#pKidSel').count()) {
+      if (await page.locator('#pKidSel').inputValue() !== child.user) await page.locator('#pKidSel').selectOption(child.user);
+      assert.equal(await page.locator('#pKidSel').inputValue(), child.user, 'parent selected the same child');
+    } else assert.ok((await page.locator('#pKid').innerText()).includes(child.user), 'parent header identifies the same child');
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('bqt_session')).id), child.id, 'parent login preserves the child ID');
+    assert.deepEqual(await page.evaluate(id => JSON.parse(localStorage.getItem('bqt_' + id + '__events') || '[]').filter(e => e.type === 'answer'), child.id), answers, 'parent data includes the same complete regular answers');
+    assert.ok(await page.evaluate(id => JSON.parse(localStorage.getItem('bqt_' + id + '__attempts') || '[]').some(a => /^\d{4}-\d{2}-\d{2}$/.test(a.day)), child.id), 'regular dated practice is ready for the parent');
     await elternSeite(page, 'home');
     await page.locator('[data-psec="school"] > summary').waitFor();
     assert.equal(await page.locator('.pbackup-note').count(), 1, 'candidate test parent sees the backup tip after practice');
@@ -454,8 +476,10 @@ test('Browser: die gebaute Testinstanz startet mit der Anmeldung, Zugang einmal 
       await page.locator('[data-psec="school"] > summary').click();
       const school = page.locator('[data-psec="school"]');
       assert.match(await school.innerText(), /Evaluations[\s\S]*(Consolidating \(C\)|Requires support \(RS\))/);
-      await school.locator('[data-psdet]').first().click();
-      const detail = await school.locator('.psdet').first().innerText();
+      const sourceRow = school.locator('.psrow').filter({ hasText: example.kinder.kathie.tasks[0].title });
+      const sourceIndex = await sourceRow.getAttribute('data-psrow');
+      await sourceRow.locator('[data-psdet]').click();
+      const detail = await school.locator(`.psdet[data-psdetrow="${sourceIndex}"]`).innerText();
       assert.match(detail, /Strengths[\s\S]*Areas of Development/);
       assert.ok(detail.includes(example.kinder.kathie.tasks[0].good[lang]), 'candidate test teacher text stays verbatim');
       assert.deepEqual(await records(), before, 'candidate test reading leaves every stored event unchanged');
