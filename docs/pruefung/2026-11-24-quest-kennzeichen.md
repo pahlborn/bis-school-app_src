@@ -1,3 +1,41 @@
+# Quest-Kennzeichen J · Prüfabschluss · 25.11.2026
+
+**Aktueller Status: lokal vollständig bestanden; keine Merge- oder Veröffentlichungsfreigabe.** Die beiden verbliebenen Testfehler sind präzise korrigiert. Gezielter Lauf: **39/39 PASS**. Vollständige unveränderte Testsuite: **1279/1279 PASS, 0 FAIL, 0 cancelled, 0 skipped, 0 todo, Exit 0**. Ein J-PR und dessen CI werden anschließend von Atlas koordiniert; aus diesen lokalen Ergebnissen wird kein bereits erfolgreicher GitHub-Lauf oder physischer iPad-Test abgeleitet.
+
+Auftrag: [BQ-QUEST-J-DIRECT-20261125 V2](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7158189762), ausdrücklich freigegebene direkte Codex-Vertretung in diesem Chat. Tatsächlicher Umsetzer und Testausführer der beiden Abschlusskorrekturen: `/root/codex_j_final_test_fixes_20261125`. Hauptbasis bleibt `9d034fae0cb882f289e2f12fb81350d95a31a03c`; übernommener J-Stand `2743b532bae5ca8dd2e2434bb965bdc5c2d27248`. Fortsetzungszweig: `feature/quest-symbols-j-final-20261125`.
+
+## Abschlusskorrekturen und unveränderter Produktumfang
+
+- `tests/familienfassung.test.mjs:503`: Die gebaute aktuelle Familienfassung wird weiterhin mit einer Versionsregex geprüft, jetzt passend zu **0.152.9**. Die separate genaue Versionstupelprüfung war bereits auf Patch 9. Auch die zugehörige Diagnosezeile 347 nennt nun 0.152.9-beta; historische Versionsangaben wurden nicht ersetzt.
+- `tests/startseite.test.mjs:62`: Der alte Quest-Karten-Selektor `.focus` gehört seit J zum ersetzten Darstellungselement. Die Prüfung liest jetzt genau `.quest-marker[aria-label="Focus"]`. Die genaue Gleichheit mit der bisherigen vollständigen FOCUS-Liste bleibt erhalten; Learning goal und New werden nicht als Focus gezählt. Die unveränderten Fachkachelzähler verwenden weiterhin `.focus`.
+- Der Testdiff umfasst genau **zwei Dateien mit drei geänderten Zeilen**. Keine Assertion wurde entfernt oder gelockert, kein Fall übersprungen und keine Wartezeit erhöht. Produktcode, Aufgaben-, Fokus-, Learning-goal-, Authentifizierungs- und Datenlogik sowie Abhängigkeiten und Workflows sind unverändert gegenüber dem übernommenen J-Stand. Die bereits angehobene Version **0.152.9-beta** bleibt für denselben eigenen J-PR bestehen.
+
+[Unabhängiger Argus-Review des exakten Testdiffs](https://github.com/pahlborn/bis-school-app_src/pull/206#issuecomment-7158349998): **RA_AGREED / PASS_WITH_NOTES**, keine blockierenden Befunde. Das ist ein statischer Review der beiden Testkorrekturen, keine eigene Produkt-/Runtimeprüfung durch Argus. Der frühere enge J-Produktreview und die vier gesicherten generischen Screenshots bleiben dem identischen Produktstand zugeordnet; sie werden nicht als neue Aufnahmen oder Geräteabnahme ausgegeben.
+
+## Neue Laufnachweise vom 25.11.2026
+
+Code-/Testfreeze: `d442c3fac520a82f6dec02f49ff27fa84e7f32a7`, Tree `dc0549976fbc9278236488ed13ec58affae583c8`. Der Worktree war vor und nach dem vollen Lauf sauber; HEAD blieb unverändert. Während des vollen Laufs gab es keine Edits und keine zweite Browserprüfung. Erst nach dessen Ende wurde dieser Bericht ergänzt.
+
+| Prüfung | Befehl und lokaler Beleg | Ergebnis |
+| --- | --- | --- |
+| Beide betroffenen Altdateien, J-Matrix sowie Version/App/Neuland | `CHROMIUM_PATH=/usr/bin/chromium node --test --test-reporter=tap tests/familienfassung.test.mjs tests/startseite.test.mjs tests/quest-kennzeichen.test.mjs tests/version.test.mjs tests/app.test.mjs tests/neuland.test.mjs`; `/tmp/quest-j-final-targeted-20261125.log` | 39 Tests, 39 PASS, 0 FAIL/cancelled/skipped/todo, Exit 0 |
+| Vollständige bestehende Suite | `CHROMIUM_PATH=/usr/bin/chromium npm test`; `/tmp/quest-j-final-full-suite-20261125.log` | 1279 Tests, 1279 PASS, 0 FAIL/cancelled/skipped/todo, Exit 0 |
+
+Die sieben J-Fälle prüfen weiterhin DE/EN, Test- und Familienfassung, Learning-goal-/Focus-/New-Vorrang, automatischen und manuellen Fokus, sichtbare englische Labels mit aria-label, Neuland-Historie und Freischaltung sowie Touchbreite. Die aktuelle Familienbauprüfung verlangt weiterhin alle **19/19** bestehenden Bau-/Suchlaufprüfungen und durchläuft beide Sprachfassungen. Die vorhandene vollständige Testregistrierung einschließlich ihrer Wortlistenprüfungen wurde unverändert ausgeführt; keine Wortlistenwerte werden hier ausgegeben.
+
+- Gezielter Lauf UTC: `2026-11-25T09:22:58.348021+00:00` bis `2026-11-25T09:23:36.913994+00:00`, Laufdauer `38.566 s`.
+- SHA256 gezieltes Rohlog: `73bba1df0ed5976bb05b7e4bb1bab3b8d77d15786d11448eb0065e8065ac4ea5`.
+- Vollsuite UTC: `2026-11-25T09:24:33.733473+00:00` bis `2026-11-25T09:41:19.878946+00:00`, Laufdauer `1006.146 s`; primäre Reporter-Dauer `1005434.934264 ms`.
+- SHA256 Vollsuite-Rohlog: `4470cae76de9d3df83d4e9aebd5eabc9401a6f320355365ab987a83c405b0295`, `184471 Bytes`.
+- Beide Rohlogs und die Metadaten `/tmp/quest-j-final-targeted-20261125-meta.json` sowie `/tmp/quest-j-final-full-suite-20261125-meta.json` liegen lokal mit Dateimodus 0600 und werden nicht veröffentlicht. Der volle Lauf verwendet den vorhandenen Spec-Reporter; die finalen Primärsummen sind daraus ausgewertet.
+
+Nächster Owner: Atlas für Sicherung im Produkt-Repo, CI, PR und Einholung von Peters konkreter Mergeentscheidung. Kein Push, Merge oder Veröffentlichen durch diesen Entwickler. **Physischer iPad-Test: nicht durchgeführt.** Die folgende frühere Dokumentation bleibt vollständig als Historie erhalten; dortige offene Punkte und Fehlschläge beschreiben ausschließlich die damaligen Zwischenstände.
+
+---
+
+<details>
+<summary>Historischer Prüfverlauf vom 24.11.2026 – unverändert erhalten</summary>
+
 # Quest-Kennzeichen J V2 · Prüfstand · 24.11.2026
 
 **Aktueller Status: Vollsuite abgeschlossen mit 2 Fehlern; keine Mergefreigabe.** Gezielte J-Matrix 7/7 PASS, frische Regressionen 17/17 PASS, beide gebauten UI-Fassungen und vier generische Aufnahmen belegt. Vollständiger unveränderter npm-test-Lauf: 1279 Tests, 1277 PASS, 2 FAIL, Exit 1. Geprüfter Code-/Testfreeze: `fbb989f0b52245f3e68daa1a06d3a3acf8b3d111`, Tree `91abda1288267f81f1a1361d68bb348ce7fd8e63`. Die sichere Fehlerklassifikation und Laufidentität stehen am Ende; es folgte ausschließlich diese dokumentarische Ergänzung. Frühere WIP-/Fehlerstände bleiben als Historie erhalten.
@@ -126,3 +164,5 @@ Ausschließlich sichere Fehlerklassifikation aus diesem vorhandenen Log, ohne ne
 Der Worktree war nach dem Gesamtlauf weiterhin unverändert sauber. Die Vollsuite ist ausdrücklich nicht bestanden. Es erfolgten danach ausschließlich diese Ergebnisdokumentation und ein separater docs-only Commit; keine Code-/Test-/Screenshotänderung, keine Folgeprüfung und kein blindes Nachstellen. Die Entscheidung über den sicheren nächsten Erkenntnis-/Korrekturweg liegt bei Atlas. Weitere Root-Quellvorbereitungsmethoden sind laut Atlas/Cadence angehalten; diese Arbeit setzt sie nicht fort.
 
 Die beiden temporären Lesedateien bleiben gelöscht und uncommitted. Vier generische Screenshotdateien sind bereits auf dem geprüften Freeze gesichert. Kein PR, Merge oder Deployment durch diesen Worker; die weitere Review-/CI-/Freigabekoordination übernimmt Atlas.
+
+</details>
