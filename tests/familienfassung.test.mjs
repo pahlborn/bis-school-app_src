@@ -344,7 +344,7 @@ test('Sandbox: gebaute Familienfassung - anmelden, Kind anlegen, ueben, Schulbew
   assert.equal(candidate.pruefungen.length, 19);
   assert.equal(candidate.pruefungen.every(p => p.ok), true, 'candidate family build passes every existing search check');
   await familyCopyBrowser(P, W, { html: fs.readFileSync(path.join(candidateDir, 'index.html'), 'utf8'), candidate: true });
-  t.diagnostic('C/G candidate family: 0.152.8-beta, source ' + candidate.version.hash + ', checks 19/19, DE/EN, accounts enabled, admitted synthetic child, backup tip 1, prohibited surface matches 0, ' + candidateDir);
+  t.diagnostic('C/G candidate family: 0.152.9-beta, source ' + candidate.version.hash + ', checks 19/19, DE/EN, accounts enabled, admitted synthetic child, backup tip 1, prohibited surface matches 0, ' + candidateDir);
 
 
   // Export: lesbare Seite und JSON
@@ -500,7 +500,7 @@ async function familyCopyBrowser(P, W, { html = HTML, candidate = false } = {}) 
     assert.equal(await page.locator('[data-psec="school"]').count(), 0, 'counterproof: no school section before account login');
     assert.equal(await page.locator('.pbackup-note').count(), 0, 'counterproof: no backup tip before account login');
     await page.locator('#parentClose').click();
-    if (candidate) assert.match(await page.locator('#loginVersion').innerText(), /0\.152\.8/);
+    if (candidate) assert.match(await page.locator('#loginVersion').innerText(), /0\.152\.9/);
     await page.locator('#roleAdult').click();
     await page.locator('#loginUser').fill(accountUser);
     await page.locator('#loginPw').fill(P.pw);
