@@ -84,7 +84,7 @@ Grundlage: `docs/konzept/elternbereich-entscheidungen-2026-11-18.md`, Thema 4 (�
   - **Fokus:** Quests in `focusTopics()` (automatisch oder manuell).
   - **Neuland:** Quests, die Practise Today als Neuland anbietet (noch nicht geübt, freigeschaltet), dieselbe Regel wie der Neuland-Platz.
 - Höchstens ein Kennzeichen je Karte, Vorrang Learning goal vor Fokus vor Neuland (ein Learning goal ist im automatischen Modus ohnehin im Fokus).
-- Symbole laut Beschluss: 🎯 Fokus, 🧩 Learning goal, 🧭 Neuland. **Konflikt prüfen und vor der Umsetzung Peter vorlegen:** 🧭 ist bereits das Symbol des Titels „Explorer“ in der Kopfzeile (`#rankIcon`). Vorschlag für Neuland mit Alternative (z. B. 🌱 oder ✨) im Plan.
+- Genehmigte Symbole: 🎯 Fokus, 🧩 Learning goal, 🌱 Neuland. 🌱 ist für Neuland freigegeben; 🧭 bleibt unverändert das Symbol des Titels „Explorer“ in der Kopfzeile (`#rankIcon`).
 - Kindertexte englisch und kurz (wie die übrige Kinderoberfläche), z. B. „Focus“, „Learning goal“, „New“; jeweils mit `aria-label`. Elterntexte und Handbuch folgen später.
 - Gilt für Familienfassung und Testfassung. Keine Änderung an Sternen, Titeln, Fokuslogik oder Learning-goal-Logik.
 - Abnahme: Tests für die Zuordnung (aktives Learning goal, Fokus automatisch und manuell, Neuland, Vorrang, kein Learning-goal-Kennzeichen bei manuellem Fokus), DE/EN, beide Fassungen; Screenshot der Quest-Auswahl im Statusbericht. Eigener PR mit Versionsanhebung, volle Testsuite.

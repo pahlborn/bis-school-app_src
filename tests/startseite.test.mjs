@@ -59,7 +59,7 @@ test('Focus: jedes Fokus-Thema traegt das Zeichen, die Kacheln zaehlen richtig',
   for (let f = 0; f < FAECHER.length; f++) {
     await zurStart(page);
     await page.evaluate((i) => document.querySelectorAll('#subjects button.subject')[i].click(), f);
-    mitZeichen.push(...await page.$$eval('#subjectBody button.world', (b) => b.filter((x) => x.querySelector('.focus')).map((x) => x.dataset.item)));
+    mitZeichen.push(...await page.$$eval('#subjectBody button.world', (b) => b.filter((x) => x.querySelector('.quest-marker[aria-label="Focus"]')).map((x) => x.dataset.item)));
   }
   assert.deepEqual(mitZeichen.sort(), [...FOCUS].sort());
   await ctx.close();

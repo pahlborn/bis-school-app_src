@@ -353,7 +353,7 @@ async function testBrowserBeenden(browser, ctx, server) {
 test('Browser: die gebaute Testinstanz startet mit der Anmeldung, Zugang einmal eingeben, Kind meldet sich ueber das Test-Repo an, ein Fach oeffnet sich, nur bqt_-Eintraege gelesen und geschrieben', async (t) => {
   const candidateDir = path.join(os.tmpdir(), 'bq-cg-v3-test-kandidat');
   const candidate = await testinstanzBauen({ ziel: candidateDir });
-  assert.deepEqual([candidate.version.major, candidate.version.minor, candidate.version.patch, candidate.version.kanal], [0, 152, 8, 'beta']);
+  assert.deepEqual([candidate.version.major, candidate.version.minor, candidate.version.patch, candidate.version.kanal], [0, 152, 9, 'beta']);
   assert.equal(candidate.pruefungen.length, 18);
   assert.equal(candidate.pruefungen.every(p => p.ok), true, 'candidate test build passes every existing search check');
   const server = http.createServer((req, res) => {

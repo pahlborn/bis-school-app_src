@@ -11,6 +11,15 @@ export const RELEASE_NOTES = {
   current: {
     epics: [],
     stories: [{
+      de: 'Quest-Karten zeigen ein Kennzeichen: 🧩 Learning goal, 🎯 Focus oder 🌱 New. So sieht das Kind direkt, wo Üben gerade lohnt.',
+      en: 'Quest cards show one marker: 🧩 Learning goal, 🎯 Focus or 🌱 New, so children can see where practice helps now.'
+    }],
+    bugfixes: []
+  },
+  history: [{
+    version: 'V 0.152.8 (Betaversion)',
+    epics: [],
+    stories: [{
       de: 'Big Quest zeigt Evaluations, Learning goals und Einstufungen in den Originalbegriffen der Schule. Lehrkrafttexte bleiben im Wortlaut erhalten.',
       en: 'Big Quest shows Evaluations, Learning goals and ratings in the school’s original terms. Teacher text stays verbatim.'
     }],
@@ -18,8 +27,7 @@ export const RELEASE_NOTES = {
       de: 'Die Hilfe erklärt die Übernahme durch Eltern. Der Sicherungstipp lädt zum Sichern des Lernstands ein.',
       en: 'Help explains how parents add evaluations. The backup tip invites parents to save their child’s progress.'
     }]
-  },
-  history: [{
+  }, {
     version: 'V 0.152.7 (Betaversion)',
     epics: [],
     stories: [],
