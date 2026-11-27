@@ -106,6 +106,8 @@ Grundlage: `docs/konzept/elternbereich-entscheidungen-2026-11-18.md`, Thema 4 (�
 
 - **Extras je Kind ein- und ausschalten (Peter, 27.11.):** Unter ⚙️ Einstellungen › Einstellungen für Mia › „Extras“ je ein funktionierender Schalter, voreingestellt „ein“, schon für die Beta: die vier Angebote aus „Choose your treat“ – 🌙 Pisolala (die Grenze „höchstens so spannend“, `storyCap`, bleibt darunter), 😄 Joke (auch der Witz zur Begrüßung, `greetJoke`), 🔍 Mystery Question, 📖 Word of the Day – und Explain it to me (die Karte auf der Übersicht im Elternbereich, `dailyUI.explainHTML`; Überschrift umbenennen von „Explain it · eine Frage zum Gespräch“ bzw. „Explain it · a question to talk about“ in „Explain it to me“, DE und EN, `DAILY_TEXT.explain` in `src/module/tagesinhalte.mjs`; Peter, 27.11.). Heute gibt es nur die Spannungsgrenze, keinen Schalter. Gespeichert je Kind wie `storyCap`, Ereignis `setting_set`. Ausgeschaltete Angebote erscheinen nicht in „Choose your treat“ bzw. nicht auf der Übersicht; Vorschlag nötig, was nach einer Runde mit Stern erscheint, wenn alle vier aus sind.
 
+- **Elternbereich startet auf Englisch (Peter, 27.11.):** Die meisten Eltern sprechen Englisch; Deutsch dient vor allem Entwicklung und Tests. Heute startet der Bereich für Erwachsene auf Deutsch: `PL()` in `index.html` liest `parentLang` mit Vorgabe `'de'` (Kinder `kidLang` mit `'en'`), eine zweite Vorgabe `'de'` steht bei `store.get('parentLang','de')`. Neu: Vorgabe `'en'` an beiden Stellen; eine gespeicherte Wahl bleibt, DE/EN bleibt umschaltbar. Tests, die Deutsch als Start annehmen, zuerst zählen und im Plan auflisten; Bericht an Peter vor der Umsetzung.
+
 ## I · Noch in Durchsicht (nicht umsetzen)
 
 - Fachansicht (übrige Teile), Hilfe.
