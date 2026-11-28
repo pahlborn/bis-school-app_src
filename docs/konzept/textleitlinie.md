@@ -17,6 +17,7 @@ Big Quest hilft Kindern zu wachsen, zu gedeihen und erfolgreich zu werden. Jeder
 5. **Konkretes Lob:** beschreibt Handlung, Anstrengung oder Fortschritt – „Beim letzten Mal brauchtest du einen Tipp, heute hast du es allein geschafft.“ Keine Intelligenzetiketten („schlau“), keine Vergleiche mit anderen Kindern, keine übertriebenen Superlative.
 6. **Ausprobieren ist Lernen:** Nach einer falschen Antwort ermutigt der Text zum nächsten Versuch und gibt einen Hinweis („Fast! Schau noch einmal auf die Zehner.“), statt den Fehler zu betonen.
 7. **Kurz und klar:** ein Gedanke pro Satz; Erklärungen dort, wo sie gebraucht werden, nicht als Fließtext.
+8. **Unterstützen und anbieten (Peter, 28.11.):** Texte machen Angebote – „Sie können …“, „Hilfreich ist oft …“, „Probier doch …“. Was für die Sicherheit nötig ist (z. B. Passwort aufbewahren), sagen wir klar und freundlich.
 
 ## Geltungsbereich
 

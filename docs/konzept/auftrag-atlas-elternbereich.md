@@ -1,10 +1,10 @@
 # Auftrag an Atlas: Umbau Elternbereich
 
-**Status: Abschnitte A–H (23.11.) und J (24.11.) von Peter zur Umsetzung freigegeben.** Abschnitt I ist noch in Durchsicht und wird später ergänzt – nicht umsetzen.
+**Status: Abschnitte A–H (23.11.) und J (24.11.) von Peter zur Umsetzung freigegeben.** **Angehalten seit 28.11.: A (Fokus) und D („Verwalten“ statt „Einstellungen“) – nicht umsetzen;** sie werden durch den neuen Klickdummy ersetzt (siehe `docs/konzept/fahrplan.md`, Paket 3). B, E, F und H dürfen weiterlaufen. Abschnitt I ist noch in Durchsicht und wird später ergänzt – nicht umsetzen.
 
 Grundlagen: `docs/konzept/textleitlinie.md` (vor allem Regel 4: Originalbegriffe) und `docs/konzept/elternbereich-entscheidungen-2026-11-18.md` (Abschnitt „Begriffe und Evaluations-Seite“, 23.11.). Vorlage für die Gestaltung ist Peters Klickdummy (5 Seiten: Übersicht, Fachansicht, Hilfe, Verwalten, Evaluations); Peter stellt ihn bei der Freigabe bereit.
 
-## A · Fokus
+## A · Fokus (angehalten seit 28.11., nicht umsetzen)
 
 **A1 · Areas of Development aus übernommenen Evaluations speisen den automatischen Fokus**
 - Heute: `classTopics` (Zeile ~2386) filtert von Eltern übernommene Evaluations aus (`!t.manual`), und das Formular „Evaluation übernehmen“ schreibt kein `focusNext`. Ohne vorbereitete Daten greift deshalb die feste Liste `FOCUS` (8 Quests).
@@ -38,7 +38,7 @@ Ersetzt den Abschnitt „Schulische Einstufungen“. Erreichbar über „Verwalt
 
 Alle sichtbaren Texte (DE und EN) nach Textleitlinie Regel 4 umstellen, u. a.: „Lücke“, „Lücken laut Schule“, „Wird sicherer“, „Braucht Unterstützung“, „Next steps“, „Schulische Einstufungen“. Der Hilfetext „Neue Bewertungen der Schule werden bei Gelegenheit übernommen“ ist sachlich falsch (Eltern übernehmen selbst) und wird ersetzt. Big Quest spricht von sich als „Big Quest“, nicht als „die App“ (z. B. „Übungsstand in Big Quest“, „Big Quest übt …“, „Über Big Quest“). Interne Namen im Code dürfen bleiben.
 
-## D · „Verwalten“ statt „Einstellungen“
+## D · „Verwalten“ statt „Einstellungen“ (angehalten seit 28.11., nicht umsetzen)
 
 - Knopf in der Kopfzeile und Seitentitel heißen „Verwalten“. Die Seite hat zwei Teile:
   1. **[Kind]** („gilt nur für dieses Kind“): Evaluations (Knopf „Evaluation übernehmen“, die zwei neuesten Einträge mit Zählern je Stufe, „Alle Evaluations ›“ zur Evaluations-Seite), 🎯 Fokus für Practise Today (A2), Lernen & Spaß, Profil und Klasse, Freigaben.
@@ -107,6 +107,8 @@ Grundlage: `docs/konzept/elternbereich-entscheidungen-2026-11-18.md`, Thema 4 (�
 - **Extras je Kind ein- und ausschalten (Peter, 27.11.):** Unter ⚙️ Einstellungen › Einstellungen für Mia › „Extras“ je ein funktionierender Schalter, voreingestellt „ein“, schon für die Beta: die vier Angebote aus „Choose your treat“ – 🌙 Pisolala (die Grenze „höchstens so spannend“, `storyCap`, bleibt darunter), 😄 Joke (auch der Witz zur Begrüßung, `greetJoke`), 🔍 Mystery Question, 📖 Word of the Day – und Explain it to me (die Karte auf der Übersicht im Elternbereich, `dailyUI.explainHTML`; Überschrift umbenennen von „Explain it · eine Frage zum Gespräch“ bzw. „Explain it · a question to talk about“ in „Explain it to me“, DE und EN, `DAILY_TEXT.explain` in `src/module/tagesinhalte.mjs`; Peter, 27.11.). Heute gibt es nur die Spannungsgrenze, keinen Schalter. Gespeichert je Kind wie `storyCap`, Ereignis `setting_set`. Ausgeschaltete Angebote erscheinen nicht in „Choose your treat“ bzw. nicht auf der Übersicht; Vorschlag nötig, was nach einer Runde mit Stern erscheint, wenn alle vier aus sind.
 
 - **Elternbereich startet auf Englisch (Peter, 27.11.):** Die meisten Eltern sprechen Englisch; Deutsch dient vor allem Entwicklung und Tests. Heute startet der Bereich für Erwachsene auf Deutsch: `PL()` in `index.html` liest `parentLang` mit Vorgabe `'de'` (Kinder `kidLang` mit `'en'`), eine zweite Vorgabe `'de'` steht bei `store.get('parentLang','de')`. Neu: Vorgabe `'en'` an beiden Stellen; eine gespeicherte Wahl bleibt, DE/EN bleibt umschaltbar. Tests, die Deutsch als Start annehmen, zuerst zählen und im Plan auflisten; Bericht an Peter vor der Umsetzung.
+
+- **IB-Bezüge und Schul-Motto entfernen, Leitbild umsetzen (Peter, 27./28.11.):** Alle Stellen aus `docs/konzept/leitbild.md`, Abschnitt „Textdurchsicht“, ändern: Startzeile mit IB/PYP entfernen, Motto „Believe. Inspire. Succeed.“ (Startbildschirm, Geburtstag, Übungsblatt HTML/PDF) durch „Be curious. Be brave. Keep growing.“ ersetzen, Leitsatz „Every quest makes you grow.“ im Wissensbaum, Zitate der Schule und IB-Namen im Konzept durch die Grundsätze ersetzen, Rückmeldungen „Reflective!“/„Balanced!“ anpassen, Code-Kommentare auf das Leitbild verweisen lassen. Dazu die Abzeichen umbenennen (Brave Spark, Problem Solver, Creative Cookie, Amazing Attitude, Unplugged Hero, Curiosity Champion, Mission Finisher, Practice Pro; Regel „Name ohne Steigerung“ noch offen, Namen vor der Umsetzung mit Kindern testen), die Pisolala-Geschichte mit „Risk-taker“ und die Quizfrage „ATL stands for…“ anpassen, Quellengruppe „IB und Schule“ umbenennen. Tests, die die alten Texte prüfen, mitändern. Wichtiger Hinweis neu (alle sechs Sätze, siehe Leitbild). Offen: Überschrift „Learner Profile Attributes“ in den Evaluations.
 
 ## I · Noch in Durchsicht (nicht umsetzen)
 
