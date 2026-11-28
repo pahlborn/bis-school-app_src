@@ -21,6 +21,7 @@ Angelegt am 28.11.2026 nach der Bestandsaufnahme vom 27.11. (Git-Tags lassen sic
 | `sicherung/stand-test-0.152.8` | `6b14cc1` (Merge #245) | Quellstand des Testsystems big-quest-test.github.io, 0.152.8-beta, veröffentlicht 24.11.2026 15:51 (Veröffentlichungs-Commit `18f9b83` im Auslieferungs-Repo) |
 | `sicherung/stand-alt-test-v148` | `b24890c` | Quellstand der alten Testadresse, Legacy v148, Build 06.11.2026 07:14 |
 | `sicherung/vor-umbau-2026-11-28` | `81b5a96` (Merge #250) | main vor dem Umbau, Quellstand 0.152.9-beta |
+| `sicherung/stand-test-0.152.9` | `81b5a96` (Merge #250) | Quellstand des Testsystems, 0.152.9-beta mit den Quest-Kennzeichen (J), veröffentlicht am 28.11.2026 (Veröffentlichungs-Commit `07830de`, `--live-pruefen` gleich, 1.279/1.279 Tests) |
 
 Der Quellstand des bisherigen Produktivsystems (Legacy v148, Veröffentlichung `7a988ef` vom 06.11.2026 06:40) ist nicht eindeutig belegt und hat deshalb keinen Sicherungspunkt.
 
@@ -33,6 +34,12 @@ Der Quellstand des bisherigen Produktivsystems (Legacy v148, Veröffentlichung `
 | B Evaluations-Seite, E „Was deinem Kind gefällt“ entfällt, F Übungsblätter unter „Verwalten“, H Fächerzeilen | freigegeben, nicht umgesetzt | dürfen weiterlaufen; passen zum neuen Klickdummy |
 | **A Fokus** | freigegeben, nicht umgesetzt | **angehalten:** wird durch die Aufgabensteuerung im neuen Klickdummy (Seite 4) ersetzt → Paket 3 |
 | **D „Verwalten“ statt „Einstellungen“** | freigegeben, nicht umgesetzt | **angehalten:** ersetzt durch die Trennung „Verwalten“ (Evaluations, Aufgabensteuerung, Übungsblätter) und „⚙️ Einstellungen“ (Seite 6) → Paket 3 |
+
+## Pflegezweig der laufenden Beta
+
+`beta/0.152` – angelegt am 28.11.2026 auf `81b5a96`, dem Stand, der als 0.152.9-beta auf der Testinstanz läuft. Hier landen nur Fehlerbehebungen, die Tester brauchen, mit Nummern 0.152.10, 0.152.11 … – jede mit Peters Freigabe, eigenem PR gegen `beta/0.152` und Veröffentlichung über Peters lokalen Chat. Was dort behoben wird, kommt zusätzlich nach main.
+
+Der Umbau läuft auf main ab **0.160.0-beta** (Peter, 28.11.; 0.153.x ist durch ältere Proben belegt). Der Rückweg bei Problemen: den Stand aus `beta/0.152` mit der nächsthöheren Nummer erneut veröffentlichen.
 
 ## Pakete in dieser Reihenfolge
 
