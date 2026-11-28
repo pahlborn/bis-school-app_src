@@ -14,7 +14,7 @@ Datei: [lernaufgaben-ui-agnostisch.html](../prototypen/lernaufgaben-ui-agnostisc
 
 Die HTML-Datei ist als einzelne Datei zum Öffnen in einem Browser ausgelegt. Sie enthält ihre Darstellung und Bedienung selbst; es werden keine BQ-Dateien oder externen Ressourcen benötigt. Die Auswahl der Beispiele ist eine manuelle Navigation im Bedienlabor, keine neue Steuerung einer Übungsrunde. Eine DE/EN-Umschaltung ist vorhanden.
 
-Acht Beispiele sind bedienbar: Bruchbild auswählen, Zahl eingeben, Bruch auf dem Zahlenstrahl platzieren, Zahlen zuordnen, eine Bruchfläche aufbauen, Balken aus Tabellendaten erzeugen, eine eigene Skizze zeichnen sowie eine reale Messung erklären. Bei den beiden letzten Beispielen wird ausdrücklich keine automatische Richtigbewertung vorgetäuscht.
+Der aktuelle Stand enthält zehn Beispiele: Bruchbild auswählen, Zahl eingeben, Bruch auf dem Zahlenstrahl platzieren, Zahlen zuordnen, eine Bruchfläche aufbauen, Balken aus Tabellendaten erzeugen, eine eigene Skizze zeichnen, eine reale Messung erklären, eine Textantwort auswählen und eine Reihenfolge bilden. Bei Skizze und realer Messung wird ausdrücklich keine automatische Richtigbewertung vorgetäuscht. Der erste Stand mit acht Beispielen und seine Prüfungen bleiben unten als V1 dokumentiert; die aktuelle Fortschreibung mit Familien als V2.
 
 Für die Besprechung ist pro Beispiel zu entscheiden:
 
@@ -23,13 +23,13 @@ Für die Besprechung ist pro Beispiel zu entscheiden:
 3. Welche Antwort lässt sich automatisch prüfen, welche Leistung braucht menschliche Besprechung?
 4. Wie wird dieselbe Aufgabe sinnvoll auf Papier gestellt?
 
-In der getrennten Prüfansicht stehen je Typ Einsatzbedingungen, Bedienwege, Bewertungsgrenzen, die Entsprechung auf Papier und eine offene Entwurfsentscheidung. Pro Beispiel kann Peter „Geeignet“, „Weiter prüfen“ oder „Nicht nutzen“ markieren und eine Notiz ergänzen. „Entscheidungen herunterladen“ erzeugt eine Textdatei mit allen acht Typen und den eigenen Markierungen/Notizen.
+In der getrennten Prüfansicht stehen je Typ Einsatzbedingungen, Bedienwege, Bewertungsgrenzen, die Entsprechung auf Papier und eine offene Entwurfsentscheidung. Unter „Passende Aufgabenfamilien (Beispiele)“ sind je drei bis vier Familien mit Status und gegebenenfalls Codebelegen aufgeführt. Pro Beispiel kann Peter „Geeignet“, „Weiter prüfen“ oder „Nicht nutzen“ markieren und eine Notiz ergänzen. „Entscheidungen herunterladen“ erzeugt eine Textdatei mit allen zehn Typen, Familien, Statusangaben und den eigenen Markierungen/Notizen.
 
 Markierungen und Notizen sind Vorschläge für die gemeinsame Entscheidung, keine Schulbewertungen. Sie bleiben ausschließlich im Arbeitsspeicher des geöffneten Dokuments. Sprachwechsel und „Aufgabe neu starten“ erhalten die Einschätzung und Notiz; „Alles zurücksetzen“ oder erneutes Öffnen verlieren sie. Für die Aufbewahrung dient der ausdrückliche Download. „Papieransicht“ und „Drucken“ zeigen das ausgewählte Beispiel mit leerer Arbeitsfläche, ohne vorherige Antworten oder Prüfansicht.
 
-## Prüfung
+## Prüfung des ersten Stands (V1, acht Beispiele)
 
-**Fest geprüfter HTML-Stand:** `469dae2ce3ca1fedcb7854e6bc993dba3a3cd957`, Datei-SHA-256 `168308169310053423faa22f089e25f9e16c45ba6a427dea06e9e2c3a657dfbb`, 54.012 Byte. Der folgende Prüfbericht ändert diese HTML-Bytes nicht.
+**Historischer, fest geprüfter HTML-Stand:** `469dae2ce3ca1fedcb7854e6bc993dba3a3cd957`, Datei-SHA-256 `168308169310053423faa22f089e25f9e16c45ba6a427dea06e9e2c3a657dfbb`, 54.012 Byte. Berichtskopf dieses ersten Stands: `c076551eb60787d0d19dc6a1a33d5147736d4bee`. Die folgenden Zahlen gelten dieser V1; die spätere Erweiterung erhält eigene Ergebnisse.
 
 Atlas prüfte selbst mit vorhandenem Playwright und systemischem **Chromium 156.0.8078.79**. Ergebnis: **58 gezielte Prüfungen bestanden**, einschließlich einer emulierten Touchprobe, sowie **80 Ansichten** aus 8 Typen × DE/EN × 320/375/768/1024/1440 px ohne horizontalen Überlauf und mit mindestens 44 × 44 px großen sichtbaren Schaltflächen. **0 JavaScriptfehler, 0 Netzwerkanfragen** im abschließenden Lauf bei deaktiviertem Netzwerk.
 
@@ -48,8 +48,55 @@ Zwei konkrete Darstellungsbefunde wurden vor Abschluss korrigiert: SVG-Koordinat
 
 Es wurde keine volle BQ-Testsuite als Ersatz für die Prüfung des unabhängigen Mockups ausgeführt. Keine neuen Abhängigkeiten, Workflows, Server oder Hostingkonfiguration wurden eingerichtet. Die Wörterliste hat im HTML keinen wörtlichen Treffer; Diff/Dateiumfang werden vor der PR geprüft.
 
+## Erweiterung: Familien und vorhandene Bedienformen (V2)
+
+Peter bittet anschließend, passende Aufgabenfamilien je Bedienform zu zeigen und vorhandene BQ-Bedienformen einzubeziehen. Atlas hat dafür erneut den Produktstand `main@81b5a96e0075f12890cda3638ce96ac542e9ebda` und den genauen PR-252-Kopf geprüft. Es geht weiterhin nur um den unabhängigen Entwurf.
+
+### Was im BQ-Aufgabenablauf bereits implementiert ist
+
+Der normale Renderer unterstützt drei Antwortarten: **Auswahl** mit Text- oder Bild/HTML-Antworten, **Zahleneingabe** und **Reihenfolge durch aufeinanderfolgendes Antippen**. Belege: `index.html:1239–1258`, `:2662–2694`, `:3024–3038`. Die Zifferntastatur nimmt dort bis zu vier Ziffern auf. Die Papierdarstellung bildet diese Arten als Auswahl, Antwortzeile oder Nummerierung ab (`index.html:3648–3651`). Das ist ein statischer Codeabgleich des Aufgabenablaufs, kein Audit sämtlicher Konten-, Einstellungs- oder Erwachsenenformulare und kein Nachweis einer installierten Fassung.
+
+V1 zeigte Bildauswahl und Zahleneingabe. Ein eigenes Textauswahl- und Reihenfolgenbeispiel fehlten; diese sind in V2 ergänzt. Damit sind die drei vorhandenen Antwortarten des normalen BQ-Aufgabenablaufs als repräsentative Beispiele einbezogen. Es ist kein identischer Nachbau aller Eingabegrenzen, Hilfen und Bewertungsabläufe von BQ. Gruppen-Zuordnung ist eine andere Bedienung als Reihenfolge. Eine vorhandene Grafik ist ebenfalls kein Beleg für ein interaktiv veränderbares Diagramm oder einen beweglichen Zahlenstrahlpunkt.
+
+### Familien und Bedienformen getrennt beurteilen
+
+Die angezeigten Familien sind fachliche **Beispiele**, kein vollständiger Katalog aller BQ-Aufgaben oder ein neuer Lehrplan. Die Kennzeichnung hat zwei Ebenen: Ist die **Bedienform** in BQ vorhanden? Und ist die **fachliche Familie** vorhanden, nur freischaltbare Vorschau, verwandt mit anderer Bedienung oder ein neuer Vorschlag? „Verwandt“ behauptet ausdrücklich keine Gleichwertigkeit der geforderten Handlung.
+
+Die folgenden Primärquellen beziehen sich auf denselben Main-Commit. `I` bezeichnet `index.html`, `Z` `src/module/zahlenfragen.mjs`, `R` `src/module/rundungsfragen.mjs`.
+
+| Bedienform im Entwurf | Codeabgleich und passende fachliche Beispiele |
+|---|---|
+| Bild auswählen | Bedienform vorhanden. Passendes Uhrbild wählen ist regulär belegt (`Z:45–54`, `I:1305`). Bruchanteile erkennen ist Vorschau (`Z:331–338`, `I:1726,2140`), dort allerdings Balken im Fragetext mit **Textantworten**; das Bruchbild-Auswahlbeispiel des Mockups ist eine neue Darstellungsvariante. |
+| Zahl eingeben | Bedienform vorhanden. Fehlenden Summanden finden (`I:1437–1439`), Rest-/zweischrittige Sachaufgaben (`I:1490–1505`) und Strichlisten zählen (`I:1669`) sind regulär; Malfakten und Bruchteil einer Menge sind Vorschau (`I:1694–1726,2139–2140`). |
+| Punkt platzieren | Neue Bedienform. Ganze Zahlen oder Brüche selbst platzieren sind Vorschläge. Zahlenstrahlsprünge ablesen ist verwandt, aber in BQ als Auswahlantwort umgesetzt (`Z:65–73`). |
+| Gruppen zuordnen | Neue Bedienform. Gerade/ungerade unterscheiden ist regulär als einzelne Auswahlfrage belegt (`Z:122–127`); mehrere Zahlen in Gruppen einteilen ist eine andere Handlung. Formen nach Eigenschaften oder in zwei Merkmalen sortieren sind Vorschläge. |
+| Fläche aufbauen | Neue Bedienform. Bruchteile selbst färben, Flächen zusammensetzen und Symmetriebilder ergänzen sind Vorschläge. Der vorhandene Vorschau-Balken wird abgelesen (`Z:331–338`), nicht vom Kind eingefärbt. |
+| Balken bauen | Neue Bedienform. Daten aus Tabelle oder eigener Erhebung darstellen sind Vorschläge. Vorgegebene Balken, Skalen und Linien lesen ist regulär vorhanden (`Z:172–216`, `I:1403,2146`), kein Diagrammeditor. |
+| Skizze zeichnen | Neue Bildschirmbedienung. Formen, Symmetrien und Netze selbst darstellen sind Vorschläge. Vorhandene freie Papierfelder für Rechenweg/Erklärung (`I:3623,3651–3674`) sind Arbeitsraum, keine automatisch bewertete Zeichenfamilie. |
+| Messen und erklären | Die reale Handlung mit eigener Erfassung und Erklärung ist ein Vorschlag. Einheiten wählen oder eine vorgegebene Linealmarke ablesen ist regulär vorhanden (`Z:138–169`), aber belegt kein reales Anlegen und Messen. |
+| Text auswählen | Bedienform vorhanden. Stellenwert (`Z:76–119`), gerade/ungerade (`Z:122–127`), Runden (`R:36–62,117–123`), Einheitenwahl (`Z:138–149`) und Diagrammlesen (`Z:172–216`) enthalten konkrete Auswahlfragen. |
+| Reihenfolge bilden | Bedienform vorhanden. Versuchs-/Methodenschritte (`I:1270–1279`), OREO-Absatz (`I:1332–1335,1466`), Erzähl-/Anleitungssätze in Specific Examples (`I:1417–1431`) und deutsche Anleitung (`I:1523`) sind regulär belegt. Eine neue mathematische Zahlen-Sortierfamilie folgt daraus nicht automatisch. |
+
+Die fünf Vorschauquests sind `times`, `fractions`, `area`, `elapsed`, `mass` (`I:2139–2143`); tatsächliche Freischaltungen einzelner Kinder bleiben unbekannt. Aus diesem Abgleich werden keine Standardcodes, Schulbewertungen oder produktiven Questzuordnungen erzeugt.
+
+### Prüfung der Erweiterung
+
+**Fest geprüfter V2-HTML-Stand:** `e9be7a781664b53fea1d5a75a133103f18585163`; Datei-SHA-256 `5019e5b4cdb5e0c00e91a95213978f7c0794d333bb674d0a644a7d792a583419`, 72.672 Byte. Dieser Bericht ändert die geprüften HTML-Bytes nicht.
+
+Atlas las alle 36 beispielhaften Familienzuordnungen und ihre getrennten Statusangaben gegen die oben genannten Main-Quellen. Das sind Zuordnungen einschließlich verwandter Inhalte, keine Behauptung von 36 unterschiedlichen oder vollständig implementierten Familien. Vorhanden/Vorschau/neue Bedienung werden nicht miteinander verrechnet.
+
+Die eigene abschließende Browserprüfung mit Chromium 156.0.8078.79 ergab **89 bestandene gezielte Prüfungen** sowie **100 Ansichten** (10 Typen × DE/EN × 320/375/768/1024/1440 px) ohne horizontalen Überlauf und mit Schaltflächen ab 44 × 44 px. Beobachtet wurden:
+
+- Alle zehn leeren Antworten ohne Richtigmeldung; passende Status- und Familiensektion für jeden Typ.
+- Bisherige acht Bedienwege erneut geprüft. Textauswahl und Reihenfolge zusätzlich leer, falsch, unvollständig, richtig, per Tastatur und nach Korrektur; Reihenfolge auch mit emulierten Touch-Eingaben.
+- Textantwort, Reihenfolge, Notiz und Entscheidung beim Sprachwechsel erhalten. Familien und Status auf Englisch; TXT-Export mit allen zehn Typen, Familien, Status, Notiz und Quellenstand.
+- Zehn getrennte Browser-PDF-Druckproben, jeweils eine A4-Seite, ohne Familien-/Prüfspalte, Notiz oder vorherige Antwort. Die Reihenfolgeaufgabe bleibt auf Papier ungeordnet und unnummeriert.
+- **0 JavaScriptfehler und 0 Netzwerkanfragen** im abschließenden Lauf mit deaktiviertem Netzwerk. Vorhandene Quellenlinks wurden nicht automatisch geöffnet. Wörterliste ohne wörtlichen Treffer im HTML; Diffumfang weiterhin nur die zwei Entwurfs-/Prüfdateien gegenüber Main.
+
+Die oben beschriebenen Grenzen bleiben bestehen: `page.setContent` derselben HTML-Bytes wegen administrativ gesperrter Datei-Navigation; kein echter iPad-/Safari-/Screenreader-Test, kein Auslieferungsnachweis und keine volle BQ-Testsuite. Die V1-Zahlen werden nicht als neue Ausführung ausgegeben.
+
 ## Verantwortliche und nächster Schritt
 
-Umsetzung: tatsächliche freigegebene Codex-Entwicklungsvertretung `dev_agnostic_ui_mock_20261128`, eigener Produktzweig `mock/lernaufgaben-ui-dev-20261128` am oben genannten Ausgangscommit. Atlas führt im Zweig `mock/lernaufgaben-ui-20261128` zusammen und prüft die Bedienung. Es wurde kein Claude-/Forge-Lauf behauptet.
+Umsetzung: tatsächliche freigegebene Codex-Entwicklungsvertretung `dev_agnostic_ui_mock_20261128`, zuerst eigener Produktzweig `mock/lernaufgaben-ui-dev-20261128`; für die Familienfortschreibung neuer Worktree/Zweig `bq-ui-familien-dev-20261128` / `mock/lernaufgaben-familien-dev-20261128` ab PR-Kopf `c076551eb60787d0d19dc6a1a33d5147736d4bee`, HTML-Lieferung `49fa7cf5235d860175d4b4210adcffe2356b2725`. Atlas führt im unveränderten PR-Zweig `mock/lernaufgaben-ui-20261128` zusammen und prüft Quellen und Bedienung selbst. Es wurde kein Claude-/Forge-Lauf behauptet.
 
 Peter bespricht anschließend den Entwurf. Umfang und Freigabe einer späteren BQ-Integration werden getrennt festgelegt. Kein Main-Merge und keine App-Veröffentlichung aus diesem Auftrag.
