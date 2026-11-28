@@ -35,7 +35,7 @@ Jede Änderung an Texten, Belohnungen oder Abläufen wird an der Spalte **Kernge
 | 8 | Balanced | Lernen auch ohne Bildschirm | **Big Quest ist ein freiwilliger Zusatz, nie Ersatz für Unterricht, Hausaufgaben oder Spielen draußen.** | Ideen ohne Bildschirm, Übungsblätter, Kalender-Erinnerung freiwillig; Abzeichen Unplugged Hero |
 | 9 | „caring … community“ · „assume responsibility“ | Erwachsene begleiten, die Schule bleibt maßgeblich | **Eltern helfen so, wie die Schule es macht, und tragen die Verantwortung.** Die Bewertung macht die Schule, nicht Big Quest. | „So können Sie Mia helfen“, Hinweis „Übungsstand ist keine Bewertung“, Evaluations aus Toddle |
 | 10 | „life-long learning“ | Freude am Lernen bleibt | **Belohnungen beschreiben die Tat und übertreiben nicht.** Lob nennt, was das Kind getan hat; Steigerung kommt über Stufen, nicht über große Worte. | Lob-Texte in `motivationsworte.mjs` (heute schon tatbezogen); Abzeichen schlicht → Silber → Gold |
-| 11 | „caring … community“ | dienen statt bestimmen | **Big Quest bietet an, hilft und dient; es schreibt Eltern, Lehrkräften und Kindern nichts vor.** Die Schule und die Eltern entscheiden. | Textleitlinie Regel 8; Empfehlungen als Angebot („Sie können …“); Hinweis „Die Anzeigen in Big Quest sind lediglich Hinweise …“ |
+| 11 | „caring … community“ | unterstützen, die Entscheidung bleibt bei der Familie | **Big Quest unterstützt Familien beim Üben. Die Entscheidungen bleiben bei Schule, Eltern und Kindern.** | Textleitlinie Regel 8; Empfehlungen als Angebot („Sie können …“); Hinweis „Die Anzeigen in Big Quest sind lediglich Hinweise …“ |
 
 ## Regeln für Texte und Code
 
