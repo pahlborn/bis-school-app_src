@@ -25,6 +25,8 @@ Für die Besprechung ist pro Beispiel zu entscheiden:
 
 In der getrennten Prüfansicht stehen je Typ Einsatzbedingungen, Bedienwege, Bewertungsgrenzen, die Entsprechung auf Papier und eine offene Entwurfsentscheidung. Unter „Passende Aufgabenfamilien (Beispiele)“ sind je drei bis vier Familien mit Status und gegebenenfalls Codebelegen aufgeführt. Pro Beispiel kann Peter „Geeignet“, „Weiter prüfen“ oder „Nicht nutzen“ markieren und eine Notiz ergänzen. „Entscheidungen herunterladen“ erzeugt eine Textdatei mit allen zehn Typen, Familien, Statusangaben und den eigenen Markierungen/Notizen.
 
+Die aktuelle V3 ergänzt „Welcher Lernweg passt?“ mit einer begründeten Empfehlung sowie Bedingungen für digitale Bearbeitung, Papier oder reale Handlung. Direkt bei jeder Aufgabe führt „Zum Übungsblatt“ zur passenden Vorlage. „Zur Bildschirmaufgabe“ führt mit erhaltenen Eingaben zurück. Medienempfehlung und Gründe stehen ebenfalls im TXT-Export.
+
 Markierungen und Notizen sind Vorschläge für die gemeinsame Entscheidung, keine Schulbewertungen. Sie bleiben ausschließlich im Arbeitsspeicher des geöffneten Dokuments. Sprachwechsel und „Aufgabe neu starten“ erhalten die Einschätzung und Notiz; „Alles zurücksetzen“ oder erneutes Öffnen verlieren sie. Für die Aufbewahrung dient der ausdrückliche Download. „Papieransicht“ und „Drucken“ zeigen das ausgewählte Beispiel mit leerer Arbeitsfläche, ohne vorherige Antworten oder Prüfansicht.
 
 ## Prüfung des ersten Stands (V1, acht Beispiele)
@@ -95,8 +97,44 @@ Die eigene abschließende Browserprüfung mit Chromium 156.0.8078.79 ergab **89 
 
 Die oben beschriebenen Grenzen bleiben bestehen: `page.setContent` derselben HTML-Bytes wegen administrativ gesperrter Datei-Navigation; kein echter iPad-/Safari-/Screenreader-Test, kein Auslieferungsnachweis und keine volle BQ-Testsuite. Die V1-Zahlen werden nicht als neue Ausführung ausgegeben.
 
+## Erweiterung: begründeter Wechsel zwischen digital und analog (V3)
+
+Peter legt für die nächste Fortschreibung fest: Digital arbeiten, wenn es für das Lernziel sinnvoll und erfolgversprechend ist; andernfalls Übungsblätter und reale Handlungen nutzen. Der Mock soll diese Wahl und den Ausweichweg begründen. Ausgangspunkt ist der geprüfte PR-Kopf `f3b3589236dc019b0a614dd0a26edc3304b2b778`; das Produkt-Main bleibt unverändert.
+
+Die Empfehlungen sind **begründete Entwurfsentscheidungen**, keine gemessenen Wirksamkeitsnachweise oder von Oxford vorgegebenen digitalen Bedienregeln. Maßgeblich ist die geforderte Lernhandlung. Eine Zahl am Bildschirm kann ein Ergebnis zeigen; sie belegt nicht automatisch Rechenweg, eigene Konstruktion oder korrektes reales Messen.
+
+Übungsblätter sind dabei ein regulärer Lernweg. Der Wechsel soll die Aufgabe auf Papier verständlich ausführbar machen, statt bloß eine Bildschirmansicht auszudrucken. Ohne Drucker kann das Kind die Aufgabe am Bildschirm lesen und auf einem Blatt oder im Heft bearbeiten. Ein reales Lineal oder andere Materialien lassen sich durch den Bildschirm nicht ersetzen.
+
+Pro Beispiel sind Empfehlung, Nutzen der digitalen Variante, Gründe für Papier/reale Handlung, Material und Grenze der Ergebnisprüfung sichtbar. Der direkte Weg zum ausgewählten Übungsblatt und zurück erhält die bisherige digitale Antwort sowie Notizen und Markierungen. Das Blatt bleibt für die eigene Bearbeitung leer. Es wird weder eine Papierleistung automatisch als richtig gewertet noch eine BQ-Erledigung gespeichert.
+
+| Gezeigte Beispiele | Empfehlung im Entwurf | Begründung und analoger Weg |
+|---|---|---|
+| Bild-/Textauswahl, vorgegebene Reihenfolge | Digital sinnvoll | Vorgegebene Antworten oder Schritte vergleichen. Für eigene Zeichnung, Rechnung, längere Texte und selbst formulierte Anleitungen bietet Papier freien Arbeitsraum. |
+| Zahleneingabe | Kombination | Das Zahlenergebnis ist vergleichbar; der eigene Rechenweg und die Strategie werden auf Papier gezeigt und besprochen. |
+| Zahlenstrahl, Bruchraster, Balkendiagramm | Kombination | Die digitale Vorlage unterstützt begrenzte Eingaben. Eigene Einteilung, gleichmäßiges Teilen oder freier Diagrammaufbau brauchen zusätzliche Konstruktion. Die vorhandenen Papierentwürfe geben Achtel bzw. Diagrammachsen/Skala weiter vor; sie behaupten keine Prüfung freier Skalierung. |
+| Eigene Skizze | Übungsblatt bevorzugt | Eigenes Zeichnen und der Gebrauch von Lineal oder Geodreieck werden auf Papier sichtbar. Eine digitale erklärende Skizze bleibt mit passender Eingabe möglich. |
+| Reales Messen | Reale Handlung nötig | Ein echtes Blatt und ein Lineal sind erforderlich. Bildschirm, Übungsblatt oder Heft können die Beobachtung dokumentieren; sie ersetzen das Anlegen und Ablesen nicht. |
+
+Diese Empfehlungen gelten für die konkrete Beispielaufgabe und ihr Lernziel, nicht pauschal für jede Familie unter einer Bedienform. Beide Wege sind im Entwurf zugänglich. Bei Skizze und Messung ist der analoge Weg hervorgehoben; die digitale Gesprächsaktion bleibt zum Vergleich verfügbar.
+
+### Prüfung der Medienwege
+
+**Fest geprüfter V3-HTML-Stand:** `c5c4d68b7fb8bb0ed96815b6ee2b1209a4b7c7ab`; Datei-SHA-256 `ec44ba77cf37878250b8f79287ce5daec2a1ba1f5fb0c584cb923e626d6a39fd`, 89.153 Byte. Dieser Bericht ändert die geprüften HTML-Bytes nicht. Die 36 Familienzuordnungen samt Quellenblock sind gegenüber V2 bytegleich.
+
+Atlas hat die zehn Medienempfehlungen und Begründungen vollständig gelesen und die fertige Übergabe selbst mit Chromium 156.0.8078.79 geprüft: **174 gezielte Prüfungen bestanden**, **100 Bildschirmansichten** ohne Überlauf und mit Schaltflächen ab 44 × 44 px sowie **20 einseitige A4-PDF-Proben** (zehn Beispiele jeweils in DE/EN).
+
+- Zehn unterschiedliche, auf die konkrete Aufgabe bezogene Begründungen samt digitalen/analogen Bedingungen, Material und Prüfgrenzen vorhanden. Der analoge Weg bei Skizze/Messen ist die hervorgehobene Aktion.
+- Für alle zehn Beispiele in DE und EN: direkter Wechsel per Tastatur zum Blatt, Fokus auf der Papierüberschrift, Rückweg mit Fokus auf „Zum Übungsblatt“. Die vollständigen Antwort- und Reviewdaten blieben exakt erhalten, einschließlich Skizze, Zuordnung, Teilreihenfolge und Notizen/Markierungen. Eine zusätzliche emulierte Touchprobe bestätigte Hin-/Rückweg mit erhaltener Reihenfolge.
+- Alle zwanzig Papieranweisungen sind analog formuliert; keine Anweisungen zum Tippen/Klicken und keine vorherigen Antworten oder Reviewnotizen. Druckausgaben enthalten weder Familien-/Prüfspalte noch Bildschirm-Eingabesteuerung. Material und der Weg ohne Drucker sind in der Vorschau sichtbar.
+- TXT-Exporte in DE/EN enthalten Medienempfehlung und Begründung für alle zehn Beispiele. Zeichnung und reale Messung geben weiter keine automatische Richtigmeldung aus.
+- 100 Bildschirmansichten aus zehn Typen × DE/EN × 320/375/768/1024/1440 px geprüft. **0 JavaScriptfehler und 0 automatische Netzwerkanfragen** bei deaktiviertem Netzwerk. Die Wörterliste hat im HTML keinen wörtlichen Treffer.
+
+Die Prüfgrenzen bleiben dieselben: identische HTML-Bytes über `page.setContent` wegen administrativ gesperrter Datei-Navigation; keine echte iPad-/Safari-/Screenreader-Abnahme, keine physischen Ausdrucke und kein Lernwirksamkeitsnachweis. BQ-Code, BQ-Testsuite, Version, Speicherung und Veröffentlichungswege wurden nicht geändert. Frühere V1-/V2-Prüfungen bleiben getrennt dokumentiert.
+
 ## Verantwortliche und nächster Schritt
 
 Umsetzung: tatsächliche freigegebene Codex-Entwicklungsvertretung `dev_agnostic_ui_mock_20261128`, zuerst eigener Produktzweig `mock/lernaufgaben-ui-dev-20261128`; für die Familienfortschreibung neuer Worktree/Zweig `bq-ui-familien-dev-20261128` / `mock/lernaufgaben-familien-dev-20261128` ab PR-Kopf `c076551eb60787d0d19dc6a1a33d5147736d4bee`, HTML-Lieferung `49fa7cf5235d860175d4b4210adcffe2356b2725`. Atlas führt im unveränderten PR-Zweig `mock/lernaufgaben-ui-20261128` zusammen und prüft Quellen und Bedienung selbst. Es wurde kein Claude-/Forge-Lauf behauptet.
+
+Medienwege V3: dieselbe tatsächliche Codex-Vertretung im neuen Worktree/Zweig `bq-ui-analog-dev-20261128` / `mock/lernaufgaben-analog-dev-20261128` ab `f3b3589236dc019b0a614dd0a26edc3304b2b778`, HTML-Lieferung `1fd66e22f76ce5744fbb8b9826ac89cf746cd796`. Atlas hat sie in denselben PR übernommen und wie oben beschrieben selbst geprüft.
 
 Peter bespricht anschließend den Entwurf. Umfang und Freigabe einer späteren BQ-Integration werden getrennt festgelegt. Kein Main-Merge und keine App-Veröffentlichung aus diesem Auftrag.
