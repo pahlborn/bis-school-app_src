@@ -40,6 +40,8 @@ Der Quellstand des bisherigen Produktivsystems (Legacy v148, Veröffentlichung `
 
 `beta/0.152` – angelegt am 28.11.2026 auf `81b5a96`, dem Stand, der als 0.152.9-beta auf der Testinstanz läuft. Hier landen nur Fehlerbehebungen, die Tester brauchen, mit Nummern 0.152.10, 0.152.11 … – jede mit Peters Freigabe, eigenem PR gegen `beta/0.152` und Veröffentlichung über Peters lokalen Chat. Was dort behoben wird, kommt zusätzlich nach main.
 
+Gefundene Fehler stehen in `docs/fehler-backlog.md`.
+
 Der Umbau läuft auf main ab **0.160.0-beta** (Peter, 28.11.; 0.153.x ist durch ältere Proben belegt). Der Rückweg bei Problemen: den Stand aus `beta/0.152` mit der nächsthöheren Nummer erneut veröffentlichen.
 
 ## Pakete in dieser Reihenfolge
