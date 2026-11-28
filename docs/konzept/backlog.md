@@ -1,6 +1,6 @@
-# Vormerkungen aus der Durchsicht des Elternbereichs
+# Backlog – gesammelte Entscheidungen und Ideen
 
-Stand 28.11.2026 · **gesammelt, nicht freigegeben – kein Auftrag.** Hier stehen Entscheidungen und Prüfpunkte aus Peters Durchsicht des Klickdummys (claude.ai-Artefakt „Elternbereich Entwurf“), damit nichts verloren geht. In einen Auftrag an Atlas kommen sie erst, wenn Peter „Auftrag schreiben“ sagt (`docs/konzept/fahrplan.md`, Regel 3). Der Name im Klickdummy ist ein Platzhalter: **[Name]** = Name des Kindes.
+Stand 28.11.2026 · **Backlog = Sammlung, kein Umsetzungsauftrag.** Hier stehen Entscheidungen, Ideen und Prüfpunkte, für alle Agenten lesbar – vor allem aus Peters Durchsicht des Klickdummys (claude.ai-Artefakt „Elternbereich Entwurf“), damit nichts verloren geht. In einen Auftrag an Atlas kommen sie erst, wenn Peter „Auftrag schreiben“ sagt (`docs/konzept/fahrplan.md`, Regel 3). Der Name im Klickdummy ist ein Platzhalter: **[Name]** = Name des Kindes.
 
 ## Paket 2 · Rechtliche Bereinigung
 
@@ -13,7 +13,7 @@ Bereits festgehalten in `docs/konzept/leitbild.md` (Textdurchsicht) und im Backl
 
 ## Paket 3 · Elternbereich neu (ersetzt A, D und E)
 
-| Nr. | Vormerkung | Stand |
+| Nr. | Eintrag | Stand |
 | --- | --- | --- |
 | 3.1 | **Übersicht „Auf einen Blick · [Name]“** wie heutiges `glanceHTML`: Seit Ihrem letzten Besuch (Aufgaben, Abzeichen, Titel, geschlossene Learning goals), Titel mit nächstem Ziel, Das gelingt, Daran arbeiten wir, Idee für zu Hause; rechts klein „Ihr letzter Besuch: Wochentag, Datum“; Quests in den Zeilen sind Links in ihr Fach (kein gemeinsamer „Mehr dazu“-Link). „Daily Quick Tip“ entfällt. Titel aus „Wo steht [Name]?“ in den Blick. | entschieden |
 | 3.2 | **„Was [Name] gefällt“ bleibt** (letzte Daumen zu Pisolala, Joke, Word of the Day, Mystery Question; 👎 bei Witz „kommt nicht wieder“). Abschnitt E angehalten. | entschieden |
