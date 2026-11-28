@@ -1,6 +1,6 @@
 # Auftrag an Atlas: Umbau Elternbereich
 
-**Status: Abschnitte A–H (23.11.) und J (24.11.) von Peter zur Umsetzung freigegeben.** **Angehalten seit 28.11.: A (Fokus) und D („Verwalten“ statt „Einstellungen“) – nicht umsetzen;** sie werden durch den neuen Klickdummy ersetzt (siehe `docs/konzept/fahrplan.md`, Paket 3). B, E, F und H dürfen weiterlaufen. Abschnitt I ist noch in Durchsicht und wird später ergänzt – nicht umsetzen.
+**Status: Abschnitte A–H (23.11.) und J (24.11.) von Peter zur Umsetzung freigegeben.** **Angehalten seit 28.11.: A (Fokus), D („Verwalten“ statt „Einstellungen“) und E („Was deinem Kind gefällt“ entfällt) – nicht umsetzen;** sie werden durch den neuen Klickdummy ersetzt (siehe `docs/konzept/fahrplan.md`, Paket 3). B, F und H dürfen weiterlaufen. Abschnitt I ist noch in Durchsicht und wird später ergänzt – nicht umsetzen.
 
 Grundlagen: `docs/konzept/textleitlinie.md` (vor allem Regel 4: Originalbegriffe) und `docs/konzept/elternbereich-entscheidungen-2026-11-18.md` (Abschnitt „Begriffe und Evaluations-Seite“, 23.11.). Vorlage für die Gestaltung ist Peters Klickdummy (5 Seiten: Übersicht, Fachansicht, Hilfe, Verwalten, Evaluations); Peter stellt ihn bei der Freigabe bereit.
 
@@ -47,7 +47,7 @@ Alle sichtbaren Texte (DE und EN) nach Textleitlinie Regel 4 umstellen, u. a.: �
 - Die Übersicht zeigt keine Zeile und keinen Abschnitt zu Evaluations mehr; dort steht nur der Lernerfolg.
 - Hilfetexte mit Wegangaben („Einstellungen › …“) auf „Verwalten › …“ umstellen.
 
-## E · Übersicht: „Was deinem Kind gefällt“ entfällt
+## E · Übersicht: „Was deinem Kind gefällt“ entfällt (angehalten seit 28.11., nicht umsetzen – der neue Klickdummy behält den Abschnitt)
 
 - Der Abschnitt (`parentHTML` in `src/module/inhaltsfeedback.mjs`, eingebunden in `parentHomeHTML`) wird aus dem Elternbereich entfernt. Grund: Die Daumen sollen dem Team zeigen, was Kindern gefällt; für Eltern ist eine Liste der letzten 6 Daumen ohne Nutzen.
 - Speichern bleibt unverändert: ein Daumen je Inhalt (`contentFeedback`), Ereignis `content_vote`, 👎 bei Witzen blendet den Witz für dieses Kind aus.
