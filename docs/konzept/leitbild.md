@@ -36,6 +36,7 @@ Jede Änderung an Texten, Belohnungen oder Abläufen wird an der Spalte **Kernge
 | 9 | „caring … community“ · „assume responsibility“ | Erwachsene begleiten, die Schule bleibt maßgeblich | **Eltern helfen so, wie die Schule es macht, und tragen die Verantwortung.** Die Bewertung macht die Schule, nicht Big Quest. | „So können Sie Mia helfen“, Hinweis „Übungsstand ist keine Bewertung“, Evaluations aus Toddle |
 | 10 | „life-long learning“ | Freude am Lernen bleibt | **Belohnungen beschreiben die Tat und übertreiben nicht.** Lob nennt, was das Kind getan hat; Steigerung kommt über Stufen, nicht über große Worte. | Lob-Texte in `motivationsworte.mjs` (heute schon tatbezogen); Abzeichen schlicht → Silber → Gold |
 | 11 | „caring … community“ | unterstützen, die Entscheidung bleibt bei der Familie | **Big Quest unterstützt Familien beim Üben. Die Entscheidungen bleiben bei Schule, Eltern und Kindern.** | Textleitlinie Regel 8; Empfehlungen als Angebot („Sie können …“); Hinweis „Die Anzeigen in Big Quest sind lediglich Hinweise …“ |
+| 12 | „assume responsibility“ · „caring community“ | Vertrauen durch Offenheit | **Alles, was Big Quest tut, ist nachvollziehbar.** In der App kurz beantwortet, im Anwenderhandbuch ausführlich: Steuerung, Belohnungen, Evaluations, Daten. Auf jede Nachfrage gibt es eine Antwort. | Hilfe in drei Stufen (Kurz beantwortet · Anwenderhandbuch · Leitgedanken von Big Quest); Fahrplan-Regel „Jedes Paket ergänzt das Handbuch“ |
 
 ## Regeln für Texte und Code
 
