@@ -2,6 +2,8 @@
 
 Stand 28.11.2026 · **Entscheidungsvorlage, keine freigegebene Regeländerung.**
 
+Fortschreibung nach der Diskussion: [Drei beispielhafte Jahresverläufe mit pädagogischen Quellen und nachvollziehbarer Rechnung](jahresverlaeufe-belohnungen-2026-11-28.md). Die Titelfolge einschließlich der Rolle von Professor und möglicher Folgestufen bleibt offen. Peters Diskussionsbeiträge sind keine automatisch beschlossenen Regeln.
+
 Grundlage: `main` **062ab8776c4d1d8f1e9ca57650dc30110d5a2c2f**. Erarbeitet von Atlas mit einem eigenständigen Konzeptbeitrag der **Codex-Vertretung in der Rolle Nova**. Nova hat ausschließlich gelesen; Atlas hat diese Vorlage verfasst. Keine App-Dateien, Schwellen oder freigegebenen Entscheidungen geändert.
 
 ## 1. Das Problem und die Richtung
@@ -62,13 +64,13 @@ Anschließend eine kleine Verhaltensprobe: Nach einem hohen Titel ein neues Ange
 
 ## 7. Abgrenzung und nächster Auftrag
 
-Diese Vorlage bereitet Entscheidungen für **Paket 4 „Karriereleiter“** vor. Sie startet weder dieses Paket noch Paket 3 oder eine neue Inhaltsproduktion. Die Reihenfolge im Fahrplan bleibt bestehen. Die dort erwähnte Analyse vom 28.11. wird hier nicht als zusätzlich geprüfter Bericht ausgegeben; berücksichtigt sind die verlinkten Quellen und Novas Quellcodelektüre.
+Diese Vorlage bereitet Entscheidungen für **Paket 4 „Karriereleiter“** vor. Sie startet weder dieses Paket noch Paket 3 oder eine neue Inhaltsproduktion. Die Reihenfolge im Fahrplan bleibt bestehen. In dieser ersten Fassung waren die verlinkten Quellen und Novas Quellcodelektüre berücksichtigt; der spätere Abgleich der von Peter verlinkten Ausarbeitung „Big Quest Belohnungen“ steht in der oben verlinkten Fortschreibung.
 
 Vor Umsetzung zu entscheiden: die beschriebenen Rollen der vorhandenen Belohnungen, „jede Aufgabe“ mit oder ohne eigene Sammelwirkung, die vorgeschlagene Änderung des Ausdauer-Auslösers und das konkrete nächste Angebot nach dem höchsten Titel. Zahlen folgen aus Inhaltsübersicht und Verlaufsprüfung. Normative Entscheidungsdokumente bleiben bis zu Peters Freigabe unverändert.
 
 ## Quellen und Nachweisgrenzen
 
-Alle Codebezüge gelten für den oben genannten Ausgangsstand; keine Prüfung einer laufenden App oder eines echten Kinderkontos. Der Beitrag Nova ist eine konzeptionelle Zweitlektüre, keine unabhängige Abnahme. Keine Motivationswirkung gemessen. Nur diese Vorlage ist neu.
+Alle Codebezüge dieser ersten Vorlage gelten für den oben genannten Ausgangsstand; die Fortschreibung nennt ihren neu geprüften Main-Stand gesondert. Keine Prüfung einer laufenden App oder eines echten Kinderkontos. Der Beitrag Nova ist eine konzeptionelle Zweitlektüre, keine unabhängige Abnahme. Keine Motivationswirkung gemessen. Es wurden ausschließlich Konzeptdokumente geändert.
 
 | Aussage | Quelle am geprüften Stand |
 | --- | --- |
