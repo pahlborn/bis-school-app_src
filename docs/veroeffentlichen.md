@@ -68,6 +68,14 @@ Die Testinstanz ist eine eigene Fassung der App unter **`https://big-quest-test.
 - **Aktualisierung:** Geräte holen eine neue Fassung von selbst – beim Start und beim Zurückkehren in die App (höchstens alle 5 Minuten), nie mitten in einer Runde. Die Testinstanz liest die Version dafür im Klartext von ihrer eigenen Seite; einen Schlüssel braucht sie nicht. Die Versionsnummer ist dieselbe wie bei Kathies App (Stand von `main`), nur der veröffentlichte Stand kann sich unterscheiden.
 - **Speicher:** Die Testinstanz ist mit dem privaten Repo `pahlborn/bis-school-app-testdaten` verbunden (oberste Ebene) und startet deshalb mit der Anmeldung. Ein Gerät wird einmal mit dem **Zugangscode** verbunden (Aufgabe „Erstanmeldung per QR-Code“, 06.11.): Er steckt in jeder Einladung (QR-Code und Link `#zugang=…&start=…`); ohne Einladung zeigt die App zuerst nur „Gerät verbinden“ (QR-Code in der App scannen oder Link einfügen). Einladungen: `node werkzeug/testpersonen.mjs --anlegen` (erst kurz vor der Probe) schreibt je Person eine HTML-Datei nach `%LOCALAPPDATA%\bis-school-app\testinstanz\einladungen\` – nur lokal, Peter verschickt sie selbst. Minimalset für die nächste Probe: nur `admin`, `peter.ahlborn`, `jonas.testpapa`; `kathie` wird absichtlich nicht vorangelegt, sondern von Peter selbst in der App angelegt.
 
+### Versionen und Zweige ab 28.11.2026 (Peter)
+
+Verbindlich ist `docs/konzept/fahrplan.md`. Kurz:
+- **Laufende Beta:** Fehlerbehebungen für Tester entstehen auf dem Pflegezweig `beta/0.152` (Nummern 0.152.10 …) und werden von dort veröffentlicht.
+- **Umbau:** läuft auf `main` ab **0.160.0-beta**. Ein Umbau-Paket wird erst veröffentlicht, wenn es vollständig ist, die Tests grün sind und Peter freigibt.
+- **Vor jeder Veröffentlichung** einen Sicherungszweig `sicherung/stand-test-<Version>` auf genau den Stand setzen, der veröffentlicht wird.
+- **Rückweg:** Es gibt kein Zurück auf eine kleinere Nummer; ein älterer Stand wird mit der nächsthöheren Nummer erneut veröffentlicht.
+
 ## 6. Familienfassung (Stufe 4) – nur nach Peters Go für Stufe 4
 Die Familienfassung ersetzt bei der Umstellung Kathies App an **derselben Adresse** (`https://pahlborn.github.io/bis-school-app/`, Repo `pahlborn/bis-school-app`). Sie ist der Testbau mit Konten im Speicher, **ohne** `konten.json`, **ohne** Schuldaten im Code und ohne Testpersonen, verbunden mit dem privaten Repo `pahlborn/bis-school-app-familie`, und **verschlüsselt mit dem Familienpasswort** wie bisher (gleicher Schlüssel, Geräte bleiben angemeldet). Im Browser liegt alles unter `bqf_` – Kathies bisherige Einträge (`bq2_…`) liest und ändert sie nie; der Rückweg findet sie unverändert.
 
