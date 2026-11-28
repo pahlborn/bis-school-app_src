@@ -11,6 +11,7 @@ Stand 28.11.2026 · Peters Vorgabe: Änderungen in sinnvoller Reihenfolge und si
 5. **Jedes Paket nennt die Grundsätze aus `docs/konzept/leitbild.md`,** denen es dient, und hält sich an `docs/konzept/textleitlinie.md`. **Jedes Paket ergänzt das Anwenderhandbuch** um das, was es in Big Quest ändert (Notizen genügen, bis das Handbuch steht).
 6. **Kein langer Umbau-Zweig.** Jedes Paket hat einen eigenen kurzen Zweig mit PR und Tests; main ändert sich nur nach Peters Ja. Veröffentlicht wird nur über Peters lokalen Chat mit Freigabe, nie automatisch.
 7. **Sicherungspunkte:** vor dem Umbau und vor jeder Veröffentlichung ein Sicherungszweig `sicherung/…` auf genau dem Stand, der live ist oder live geht.
+8. **Backlog pflegen (Peter, 28.11.):** Ergänzungen von `docs/konzept/backlog.md`, `docs/fehler-backlog.md` und `docs/konzept/handbuch-notizen.md` darf Claude ohne Rückfrage mergen – sie sind Sammlung, kein Auftrag. Aufträge, Regeln und Änderungen an Leitbild, Textleitlinie oder diesem Fahrplan nur mit Peters ausdrücklichem Ja.
 
 ## Sicherungspunkte
 
