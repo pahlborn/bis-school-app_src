@@ -48,13 +48,15 @@ Der Umbau läuft auf main ab **0.160.0-beta** (Peter, 28.11.; 0.153.x ist durch 
 | --- | --- | --- | --- | --- |
 | 1 | **Grundlagen** (nur Dokumente) | Leitbild, dieser Fahrplan, Anhalten von A und D; Wichtiger Hinweis; Textleitlinie Regel 8 | – | in Arbeit (PR #253) |
 | 2 | **Rechtliche Bereinigung** (App, klein; dringend, weil das Testsystem unverschlüsselt öffentlich ist) | Textdurchsicht aus dem Leitbild: IB/PYP und Motto der Schule entfernen, neues Motto, Leitsatz im Wissensbaum, Über Big Quest und Wichtiger Hinweis neu, Zitate der Schule im Konzept ersetzen, Rückmeldungen, Code-Kommentare, Quizfrage „ATL“, Pisolala „Risk-taker“, Quellengruppe; **Abzeichen-Namen** | Paket 1 gemergt; Abzeichen-Namen endgültig (Regel „Name ohne Steigerung“) | Entscheidungen fast fertig |
-| 3 | **Elternbereich neu** (ersetzt A, D und E) | Klickdummy-Seiten 1–6 als Abschnitt I: Übersicht, Fachansicht, Hilfe, Verwalten mit Aufgabensteuerung, Evaluations, ⚙️ Einstellungen; Extras-Schalter, Start auf Englisch, Learning-goal-Punkte aus dem Backlog, Vormerkungen | Klickdummy entschieden; Paket 2 umgesetzt | Klickdummy in Durchsicht |
+| 3 | **Elternbereich neu** (ersetzt A, D und E) | Klickdummy-Seiten 1–6 als Abschnitt I: Übersicht, Fachansicht, Hilfe, Verwalten mit Aufgabensteuerung, Evaluations, ⚙️ Einstellungen; Extras-Schalter, Start auf Englisch, Learning-goal-Punkte aus dem Backlog, Vormerkungen | Klickdummy entschieden; Paket 2 umgesetzt | Klickdummy in Durchsicht; gesammelt im Backlog `docs/konzept/backlog.md` |
 | 4 | **Karriereleiter** (Belohnungen) | Sterne, Sternenregen, Titel, Abzeichen-Auslöser und Stufen nach der Analyse vom 28.11. (Befunde 2–10), Frage „vier Belohnungen zu viel?“, Grafik fürs Handbuch | Entscheidungen zur Analyse; Paket 2 umgesetzt (Namen) | Analyse fertig, Entscheidungen offen |
 | 5 | **Englisch und Handbuch** | Klickdummy und Elterntexte auf Englisch durchsehen; Handbuch ersetzt nach gemeinsamem Abgleich den Elternteil des Konzepttexts | Pakete 3 und 4 umgesetzt | später |
 
 **Begleitend vor der Beta:** fachkundige Prüfung von Wichtigem Hinweis, Impressum, Datenschutz, Motto, Abzeichen-Namen und Begriffen aus Toddle (nach Paket 2, vor der Beta mit fremden Familien).
 
 ## Eingang (noch keinem Paket zugeordnet)
+
+Ausführlich gesammelt wird im Backlog `docs/konzept/backlog.md` (Sammlung, kein Auftrag); Fehler der laufenden Beta in `docs/fehler-backlog.md`.
 
 - Überschrift „Learner Profile Attributes“ in den Evaluations: behalten oder umbenennen (wird nach Paket 1 entschieden, dann Paket 2 oder 3).
 - iPad-Hülle für die Familienfassung oder echte App (Toddle-Übernahme außerhalb des Testsystems).
