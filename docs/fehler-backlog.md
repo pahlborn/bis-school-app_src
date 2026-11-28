@@ -5,7 +5,7 @@ Fehler, die Tester auf der Testinstanz finden. Behoben wird auf dem Pflegezweig 
 | Nr. | gefunden | Version | Fehler | Stand |
 | --- | --- | --- | --- | --- |
 | F-001 | Peter, 28.11.2026 | 0.152.9-beta | Daumen 👍/👎 bei Witz, Pisolala, Word of the Day: keine sichtbare Rückmeldung, lässt sich mehrfach drücken | offen, nicht freigegeben |
-| F-002 | Peter, 28.11.2026 | 0.152.9-beta | „Kind anlegen“ zeigt nur einen QR-Code, keinen Link – auf demselben Gerät wie dem der Eltern nicht nutzbar | offen, Lösung zu entscheiden |
+| F-002 | Peter, 28.11.2026 | 0.152.9-beta | „Kind anlegen“ zeigt nur einen QR-Code, keinen Link – auf demselben Gerät wie dem der Eltern nicht nutzbar | Lösung B entschieden, nicht freigegeben |
 
 ## F-001 · Daumen ohne sichtbare Rückmeldung
 
@@ -21,4 +21,6 @@ Fehler, die Tester auf der Testinstanz finden. Behoben wird auf dem Pflegezweig 
 - **Mögliche Lösungen (Entscheidung Peter):**
   - A: wie bei der Elternteil-Einladung zusätzlich den Link zeigen (kopieren), der auf demselben Gerät geöffnet werden kann.
   - B: zusätzlich ein Knopf „Auf diesem Gerät anmelden“: Elternteil wird abgemeldet, die erste Anmeldung des Kindes öffnet sich mit dem Start-Code (das Gerät ist schon verbunden).
-- **Grenzen:** Start-Codes nur persönlich zeigen (heutiger Hinweis bleibt); keine Codes in Protokollen; Tests für beide Wege, ein Gerät mit Eltern- und Kindkonto („Who's here?“).
+- **Entscheidung (Peter, 28.11.): Lösung B**, der QR-Code bleibt daneben für ein eigenes Gerät des Kindes; Lösung A entfällt. Grund: Ein kopierter Link öffnet sich auf dem iPad meist in Safari statt in Big Quest vom Home-Bildschirm (getrennter Speicher), im Playgrounds-Projekt ähnlich.
+- **Vor der Umsetzung prüfen und berichten:** ob der Knopf das Elternteil abmeldet oder nur den Elternbereich schließt; Ablauf auf einem Gerät, auf dem schon ein Geschwisterkind übt („Who's here?“).
+- **Grenzen:** Start-Codes nur persönlich zeigen (heutiger Hinweis bleibt); keine Codes in Protokollen; Tests für beide Wege, ein Gerät mit Eltern- und Kindkonto.
