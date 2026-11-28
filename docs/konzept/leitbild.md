@@ -7,7 +7,7 @@ Big Quest nimmt sich den Geist der Schule und des IB Primary Years Programme zum
 ## Motto und Leitsatz
 
 - **Motto:** *Be curious. Be brave. Keep growing.*
-- **Leitsatz:** *Every quest makes you grow.* – an passender Stelle in der App (Vorschlag unten).
+- **Leitsatz:** *Every quest makes you grow.* – in der Regelzeile des Wissensbaums (Peter, 28.11.).
 
 ## Vorbilder (Quellen, wörtlich)
 
@@ -53,7 +53,7 @@ Stand `main` 81b5a96 (0.152.8). Umsetzung über Atlas, erst nach Peters Freigabe
 | Startbildschirm, Motto (`index.html:550`) | „Believe. Inspire. Succeed.“ | „Be curious. Be brave. Keep growing.“ |
 | Geburtstag (`index.html:3207`) | „Happy birthday, Name! Believe. Inspire. Succeed.“ | „Happy birthday, Name! Keep growing.“ |
 | Übungsblatt, Fußzeile HTML und PDF (`index.html:3668`, `3786`) | „Believe. Inspire. Succeed.“ | „Be curious. Be brave. Keep growing.“ |
-| Wissensbaum, Regelzeile (`wissensbaum.mjs`, `TREE_TEXT.rule`) | „Grows through knowledge. Everything you have grown stays.“ | „Every quest makes you grow. Everything you have grown stays.“ (Vorschlag für den Leitsatz; DE: „Jede Quest lässt dich wachsen. Alles Gewachsene bleibt.“) |
+| Wissensbaum, Regelzeile (`wissensbaum.mjs`, `TREE_TEXT.rule`) | „Grows through knowledge. Everything you have grown stays.“ | „Every quest makes you grow. Everything you have grown stays.“ (DE: „Jede Quest lässt dich wachsen. Alles Gewachsene bleibt.“) |
 | Konzept „Grundidee“, Liste „Leitgedanken der Schule und des IB Primary Years Programme“ (`index.html:7129–7134`, EN `7222–7227`) | drei Zitate der Schule, „IB Learner Profile und Approaches to Learning“ | Überschrift „Leitgedanken von Big Quest“; Grundsätze 1, 4, 2 und 6/7 in eigenen Worten: „Fortschritt wird gefeiert, ohne zu vergleichen.“ · „Das Kind wählt Fach, Thema und Herausforderung selbst.“ · „Fehler gehören zum Lernen; eine angenommene Herausforderung zählt, gleich wie sie ausgeht.“ · „Denken, begründen, zurückschauen: Was ist gut gelungen (Glow), was will ich üben (Grow)?“ |
 | Über Big Quest, erster Absatz (DE/EN) | „… für ein Kind der 3. Klasse an einer IB-Schule (Primary Years Programme) …“ | „Big Quest ist ein spielerisches Übungsangebot für Kinder im Grundschulalter. Es begleitet die Inhalte des Schuljahres und lädt ein, zwischendurch und überall freiwillig zu üben – ergänzend zum Unterricht und zu den Hausaufgaben, nie an ihrer Stelle.“ |
 | Wichtiger Hinweis, Satz 2 | „Sie wurde weder von der Schule noch vom International Baccalaureate beauftragt, geprüft oder unterstützt.“ | „Big Quest ist ein unabhängiges, privat entwickeltes Angebot.“ (Sätze 3–6 noch in Durchsicht) |

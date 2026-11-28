@@ -1,10 +1,10 @@
 # Auftrag an Atlas: Umbau Elternbereich
 
-**Status: Abschnitte A–H (23.11.) und J (24.11.) von Peter zur Umsetzung freigegeben.** Abschnitt I ist noch in Durchsicht und wird später ergänzt – nicht umsetzen.
+**Status: Abschnitte A–H (23.11.) und J (24.11.) von Peter zur Umsetzung freigegeben.** **Angehalten seit 28.11.: A (Fokus) und D („Verwalten“ statt „Einstellungen“) – nicht umsetzen;** sie werden durch den neuen Klickdummy ersetzt (siehe `docs/konzept/fahrplan.md`, Paket 3). B, E, F und H dürfen weiterlaufen. Abschnitt I ist noch in Durchsicht und wird später ergänzt – nicht umsetzen.
 
 Grundlagen: `docs/konzept/textleitlinie.md` (vor allem Regel 4: Originalbegriffe) und `docs/konzept/elternbereich-entscheidungen-2026-11-18.md` (Abschnitt „Begriffe und Evaluations-Seite“, 23.11.). Vorlage für die Gestaltung ist Peters Klickdummy (5 Seiten: Übersicht, Fachansicht, Hilfe, Verwalten, Evaluations); Peter stellt ihn bei der Freigabe bereit.
 
-## A · Fokus
+## A · Fokus (angehalten seit 28.11., nicht umsetzen)
 
 **A1 · Areas of Development aus übernommenen Evaluations speisen den automatischen Fokus**
 - Heute: `classTopics` (Zeile ~2386) filtert von Eltern übernommene Evaluations aus (`!t.manual`), und das Formular „Evaluation übernehmen“ schreibt kein `focusNext`. Ohne vorbereitete Daten greift deshalb die feste Liste `FOCUS` (8 Quests).
@@ -38,7 +38,7 @@ Ersetzt den Abschnitt „Schulische Einstufungen“. Erreichbar über „Verwalt
 
 Alle sichtbaren Texte (DE und EN) nach Textleitlinie Regel 4 umstellen, u. a.: „Lücke“, „Lücken laut Schule“, „Wird sicherer“, „Braucht Unterstützung“, „Next steps“, „Schulische Einstufungen“. Der Hilfetext „Neue Bewertungen der Schule werden bei Gelegenheit übernommen“ ist sachlich falsch (Eltern übernehmen selbst) und wird ersetzt. Big Quest spricht von sich als „Big Quest“, nicht als „die App“ (z. B. „Übungsstand in Big Quest“, „Big Quest übt …“, „Über Big Quest“). Interne Namen im Code dürfen bleiben.
 
-## D · „Verwalten“ statt „Einstellungen“
+## D · „Verwalten“ statt „Einstellungen“ (angehalten seit 28.11., nicht umsetzen)
 
 - Knopf in der Kopfzeile und Seitentitel heißen „Verwalten“. Die Seite hat zwei Teile:
   1. **[Kind]** („gilt nur für dieses Kind“): Evaluations (Knopf „Evaluation übernehmen“, die zwei neuesten Einträge mit Zählern je Stufe, „Alle Evaluations ›“ zur Evaluations-Seite), 🎯 Fokus für Practise Today (A2), Lernen & Spaß, Profil und Klasse, Freigaben.
