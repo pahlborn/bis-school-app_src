@@ -38,7 +38,7 @@ Der Quellstand des bisherigen Produktivsystems (Legacy v148, Veröffentlichung `
 
 | Nr. | Paket | Inhalt | Voraussetzung | Stand |
 | --- | --- | --- | --- | --- |
-| 1 | **Grundlagen** (nur Dokumente) | Leitbild, dieser Fahrplan, Anhalten von A und D; Wichtiger Hinweis Sätze 3–6 | – | in Arbeit (PR #253) |
+| 1 | **Grundlagen** (nur Dokumente) | Leitbild, dieser Fahrplan, Anhalten von A und D; Wichtiger Hinweis; Textleitlinie Regel 8 | – | in Arbeit (PR #253) |
 | 2 | **Rechtliche Bereinigung** (App, klein; dringend, weil das Testsystem unverschlüsselt öffentlich ist) | Textdurchsicht aus dem Leitbild: IB/PYP und Motto der Schule entfernen, neues Motto, Leitsatz im Wissensbaum, Über Big Quest und Wichtiger Hinweis neu, Zitate der Schule im Konzept ersetzen, Rückmeldungen, Code-Kommentare, Quizfrage „ATL“, Pisolala „Risk-taker“, Quellengruppe; **Abzeichen-Namen** | Paket 1 gemergt; Abzeichen-Namen endgültig (Regel „Name ohne Steigerung“) | Entscheidungen fast fertig |
 | 3 | **Elternbereich neu** (ersetzt A und D) | Klickdummy-Seiten 1–6 als Abschnitt I: Übersicht, Fachansicht, Hilfe, Verwalten mit Aufgabensteuerung, Evaluations, ⚙️ Einstellungen; Extras-Schalter, Start auf Englisch, Learning-goal-Punkte aus dem Backlog, Vormerkungen | Klickdummy entschieden; Paket 2 umgesetzt | Klickdummy in Durchsicht |
 | 4 | **Karriereleiter** (Belohnungen) | Sterne, Sternenregen, Titel, Abzeichen-Auslöser und Stufen nach der Analyse vom 28.11. (Befunde 2–10), Frage „vier Belohnungen zu viel?“, Grafik fürs Handbuch | Entscheidungen zur Analyse; Paket 2 umgesetzt (Namen) | Analyse fertig, Entscheidungen offen |
